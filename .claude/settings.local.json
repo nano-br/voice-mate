@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(claude-api)",
+      "Skill(claude-api:*)",
+      "Bash(poetry run:*)",
+      "Bash(poetry env:*)",
+      "Bash(poetry install:*)",
+      "Bash(poetry lock:*)",
+      "WebSearch"
+    ]
+  }
+}

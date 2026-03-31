@@ -1,0 +1,52 @@
+[tool.poetry]
+name = "voice-mate"
+version = "0.1.0"
+description = "Assistente pessoal por voz — grava, transcreve com Whisper e copia para clipboard"
+packages = [{ include = "app" }]
+
+[tool.poetry.scripts]
+voice-mate = "app.main:main"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+faster-whisper = "*"
+sounddevice = "*"
+numpy = "*"
+pyperclip = "*"
+keyboard = "*"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "*"
+mypy = "*"
+pytest = "*"
+types-pyperclip = "*"
+
+# ─── Ruff ────────────────────────────────────────────────────────────────────
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "ANN"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ─── Mypy ────────────────────────────────────────────────────────────────────
+
+[tool.mypy]
+python_version = "3.12"
+disallow_untyped_defs = true
+disallow_any_generics = true
+no_implicit_optional = true
+check_untyped_defs = true
+warn_return_any = true
+ignore_missing_imports = true
+
+# ─── Pytest ──────────────────────────────────────────────────────────────────
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
