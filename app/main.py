@@ -3,6 +3,7 @@ import argparse
 from app.core.config import Config
 from app.services.audio_feedback import AudioFeedback
 from app.services.input_listener import create_listener
+from app.services.listener_keepalive import ListenerKeepalive
 from app.services.recorder import Recorder
 from app.services.recording_session import RecordingSession
 from app.services.transcriber import Transcriber
@@ -55,6 +56,17 @@ def main() -> None:
         default=120,
         help="Timeout do watchdog em segundos (padrão: 120)",
     )
+    parser.add_argument(
+        "--no-listener-refresh",
+        action="store_true",
+        help="Desabilitar reinstalação periódica do listener",
+    )
+    parser.add_argument(
+        "--listener-refresh-seconds",
+        type=int,
+        default=60,
+        help="Intervalo de reinstalação do listener em segundos (padrão: 60)",
+    )
     args = parser.parse_args()
 
     config = Config(
@@ -66,6 +78,8 @@ def main() -> None:
         max_recording_seconds=args.max_recording_seconds,
         watchdog_enabled=not args.no_watchdog,
         watchdog_timeout_seconds=args.watchdog_timeout,
+        listener_refresh_enabled=not args.no_listener_refresh,
+        listener_refresh_seconds=args.listener_refresh_seconds,
     )
 
     recorder = Recorder(sample_rate=config.sample_rate)
@@ -92,9 +106,19 @@ def main() -> None:
         watchdog = Watchdog(timeout_seconds=config.watchdog_timeout_seconds)
         watchdog.start()
 
+    keepalive: ListenerKeepalive | None = None
+    if config.listener_refresh_enabled:
+        keepalive = ListenerKeepalive(
+            listener,
+            interval_seconds=float(config.listener_refresh_seconds),
+        )
+        keepalive.start()
+
     try:
         listener.listen(session.toggle)
     except KeyboardInterrupt:
+        if keepalive is not None:
+            keepalive.stop()
         if watchdog is not None:
             watchdog.stop()
         print("\n[VoiceMate] Encerrando.")
