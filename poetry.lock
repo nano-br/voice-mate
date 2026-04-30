@@ -651,6 +651,17 @@ files = [
 ]
 
 [[package]]
+name = "mouse"
+version = "0.7.1"
+description = "Hook and simulate mouse events on Windows and Linux"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "mouse-0.7.1-py2.py3-none-any.whl", hash = "sha256:d34bb9548890089fcb11988400e26f55c624e6c7b741fff75fedfdfbd37c0016"},
+]
+
+[[package]]
 name = "mpmath"
 version = "1.3.0"
 description = "Python library for arbitrary-precision floating-point arithmetic"
@@ -4860,4 +4871,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "ba59ccc7c90b0fa4e038260e3ecc03f34112c2b398b621e9c1f839ae3d00d3c5"
+content-hash = "8dea37a8304f9ddf8f993bca237c9083b7f6051f11d1f13b01c16e8176bc2b9c"

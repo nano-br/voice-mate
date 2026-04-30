@@ -15,6 +15,7 @@ class Recorder:
         self._recording = False
         self._chunks: list[NDArray[np.float32]] = []
         self._lock = threading.Lock()
+        self._stream: sd.InputStream | None = None
 
     @property
     def is_recording(self) -> bool:
@@ -27,6 +28,13 @@ class Recorder:
                 return False
             self._recording = True
             self._chunks = []
+            self._stream = sd.InputStream(
+                samplerate=self._sample_rate,
+                channels=1,
+                dtype="float32",
+                callback=self._callback,
+            )
+            self._stream.start()
         return True
 
     def stop(self) -> NDArray[np.float32] | None:
@@ -35,6 +43,10 @@ class Recorder:
             if not self._recording:
                 return None
             self._recording = False
+            if self._stream is not None:
+                self._stream.stop()
+                self._stream.close()
+                self._stream = None
             chunks = list(self._chunks)
             self._chunks = []
 
@@ -43,16 +55,15 @@ class Recorder:
 
         return np.concatenate(chunks).flatten().astype(np.float32)
 
-    def callback(
+    def _callback(
         self,
         indata: NDArray[np.float32],
         frames: int,  # noqa: ANN001
-        time_info: Any,
+        time_info: Any,  # noqa: ANN401
         status: sd.CallbackFlags,
     ) -> None:
         """Callback do sounddevice — chamado automaticamente a cada chunk."""
         if status:
             print(f"[recorder] {status}", file=sys.stderr)
-        if self._recording:
-            with self._lock:
-                self._chunks.append(indata.copy())
+        with self._lock:
+            self._chunks.append(indata.copy())

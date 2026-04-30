@@ -7,7 +7,13 @@
       "Bash(poetry env:*)",
       "Bash(poetry install:*)",
       "Bash(poetry lock:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(wc -l /c/Users/allit/workspace/voice-mate/app/*.py /c/Users/allit/workspace/voice-mate/app/**/*.py)",
+      "Bash(python3 -c ':*)",
+      "Bash(python3)",
+      "Bash(/c/Users/allit/workspace/voice-mate/.venv/Scripts/python.exe --version)",
+      "Bash(/c/Users/allit/.pyenv/pyenv-win/shims/python --version)",
+      "Bash(poetry add:*)"
     ]
   }
 }
