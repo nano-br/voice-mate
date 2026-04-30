@@ -1,7 +1,13 @@
 [tool.poetry]
 name = "voice-mate"
 version = "0.1.0"
-description = "Assistente pessoal por voz — grava, transcreve com Whisper e copia para clipboard"
+description = "Voice assistant for Windows: press a hotkey, speak, and the transcription lands in your clipboard. Local Whisper with GPU acceleration."
+license = "MIT"
+authors = ["Álli Terhorst <alli.terhorst@gmail.com>"]
+readme = "README.md"
+homepage = "https://github.com/nano-br/voice-mate"
+repository = "https://github.com/nano-br/voice-mate"
+keywords = ["voice-assistant", "speech-to-text", "whisper", "transcription", "clipboard", "productivity"]
 packages = [{ include = "app" }]
 
 [tool.poetry.scripts]
