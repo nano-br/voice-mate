@@ -21,6 +21,7 @@ numpy = "*"
 pyperclip = "*"
 keyboard = "*"
 mouse = "*"
+claude-agent-sdk = "*"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"

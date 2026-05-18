@@ -6,10 +6,14 @@ from typing import Protocol
 
 
 class InputListener(Protocol):
-    """Interface para diferentes métodos de input (teclado, mouse, etc.)."""
+    """Interface para diferentes métodos de input (teclado, mouse, etc.).
 
-    def listen(self, on_toggle: Callable[[], None]) -> None:
-        """Bloqueia e chama on_toggle a cada evento de trigger."""
+    O callback de toggle é registrado no construtor; `listen()` apenas
+    instala o hook subjacente e bloqueia.
+    """
+
+    def listen(self) -> None:
+        """Bloqueia e dispara o callback registrado a cada evento de trigger."""
         ...
 
     def reinstall(self) -> None:
@@ -29,24 +33,29 @@ class InputListener(Protocol):
 class KeyboardHotkeyListener:
     """Escuta um hotkey global via biblioteca keyboard."""
 
-    def __init__(self, hotkey: str) -> None:
+    def __init__(self, hotkey: str, on_toggle: Callable[[], None] | None = None) -> None:
         self._hotkey = hotkey
-        self._on_toggle: Callable[[], None] | None = None
+        self._on_toggle: Callable[[], None] | None = on_toggle
         self._lock = threading.Lock()
+        self._installed = False
 
-    def listen(self, on_toggle: Callable[[], None]) -> None:
+    def listen(self, on_toggle: Callable[[], None] | None = None) -> None:
         import keyboard
 
         with self._lock:
-            self._on_toggle = on_toggle
-            keyboard.add_hotkey(self._hotkey, on_toggle)
+            if on_toggle is not None:
+                self._on_toggle = on_toggle
+            if self._on_toggle is None:
+                raise RuntimeError("Nenhum callback registrado para o hotkey")
+            keyboard.add_hotkey(self._hotkey, self._on_toggle)
+            self._installed = True
         keyboard.wait()
 
     def reinstall(self) -> None:
         import keyboard
 
         with self._lock:
-            if self._on_toggle is None:
+            if not self._installed or self._on_toggle is None:
                 return
             keyboard.unhook_all()
             keyboard.add_hotkey(self._hotkey, self._on_toggle)
@@ -60,24 +69,29 @@ class KeyboardHotkeyListener:
 class MouseButtonListener:
     """Escuta cliques de botões do mouse (inclusive botões laterais)."""
 
-    def __init__(self, button: str = "x") -> None:
+    def __init__(self, button: str = "x", on_toggle: Callable[[], None] | None = None) -> None:
         self._button = button
-        self._on_toggle: Callable[[], None] | None = None
+        self._on_toggle: Callable[[], None] | None = on_toggle
         self._lock = threading.Lock()
+        self._installed = False
 
-    def listen(self, on_toggle: Callable[[], None]) -> None:
+    def listen(self, on_toggle: Callable[[], None] | None = None) -> None:
         import mouse
 
         with self._lock:
-            self._on_toggle = on_toggle
-            mouse.on_button(on_toggle, buttons=(self._button,), types=("up",))
+            if on_toggle is not None:
+                self._on_toggle = on_toggle
+            if self._on_toggle is None:
+                raise RuntimeError("Nenhum callback registrado para o botão do mouse")
+            mouse.on_button(self._on_toggle, buttons=(self._button,), types=("up",))
+            self._installed = True
         mouse.wait()
 
     def reinstall(self) -> None:
         import mouse
 
         with self._lock:
-            if self._on_toggle is None:
+            if not self._installed or self._on_toggle is None:
                 return
             mouse.unhook_all()
             mouse.on_button(self._on_toggle, buttons=(self._button,), types=("up",))

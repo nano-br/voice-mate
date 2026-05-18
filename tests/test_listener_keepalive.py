@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import threading
 import time
-from collections.abc import Callable
 
 from app.services.listener_keepalive import ListenerKeepalive
 
@@ -14,7 +13,7 @@ class FakeListener:
         self.reinstall_calls = 0
         self.event = threading.Event()
 
-    def listen(self, on_toggle: Callable[[], None]) -> None:
+    def listen(self) -> None:
         pass
 
     def reinstall(self) -> None:

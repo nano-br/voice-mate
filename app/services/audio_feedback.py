@@ -46,3 +46,10 @@ class AudioFeedback:
     def error() -> None:
         """Tom grave — indica erro."""
         _play_tone(300, 300)
+
+    @staticmethod
+    def ai_response_ready() -> None:
+        """Tríade ascendente C5–E5–G5 — indica que a IA respondeu."""
+        _play_tone(523, 90)
+        _play_tone(659, 90)
+        _play_tone(784, 180)

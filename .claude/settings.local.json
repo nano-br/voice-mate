@@ -13,7 +13,9 @@
       "Bash(python3)",
       "Bash(/c/Users/allit/workspace/voice-mate/.venv/Scripts/python.exe --version)",
       "Bash(/c/Users/allit/.pyenv/pyenv-win/shims/python --version)",
-      "Bash(poetry add:*)"
+      "Bash(poetry add:*)",
+      "Bash(git ls-tree *)",
+      "Bash(GITHUB_TOKEN= gh pr view 1 --json state,mergeable,mergeStateStatus)"
     ]
   }
 }

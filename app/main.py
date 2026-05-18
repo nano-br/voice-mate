@@ -1,17 +1,26 @@
 import argparse
+import sys
 
-from app.core.config import Config
+from app.core.config import ClaudeChatConfig, Config, FlowConfig
 from app.services.audio_feedback import AudioFeedback
-from app.services.input_listener import create_listener
+from app.services.claude_chat_handler import ClaudeChatHandler
+from app.services.claude_runtime import ClaudeRuntime
+from app.services.input_listener import (
+    InputListener,
+    KeyboardHotkeyListener,
+    MouseButtonListener,
+)
 from app.services.listener_keepalive import ListenerKeepalive
+from app.services.multi_hotkey_listener import MultiHotkeyListener
 from app.services.recorder import Recorder
 from app.services.recording_session import RecordingSession
 from app.services.transcriber import Transcriber
+from app.services.transcription_handler import ClipboardHandler, TranscriptionHandler
 from app.services.watchdog import Watchdog
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="VoiceMate — voz para clipboard")
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="VoiceMate — voz para clipboard ou Claude")
     parser.add_argument(
         "--model",
         default="large-v3-turbo",
@@ -21,7 +30,7 @@ def main() -> None:
     parser.add_argument(
         "--hotkey",
         default="ctrl+alt+v",
-        help="Hotkey global para iniciar/parar (padrão: ctrl+alt+v)",
+        help="Hotkey global do fluxo clipboard (padrão: ctrl+alt+v)",
     )
     parser.add_argument(
         "--cpu",
@@ -67,9 +76,38 @@ def main() -> None:
         default=60,
         help="Intervalo de reinstalação do listener em segundos (padrão: 60)",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--claude-chat-hotkey",
+        default="ctrl+alt+a",
+        help="Hotkey global do fluxo voz→Claude→clipboard (padrão: ctrl+alt+a)",
+    )
+    parser.add_argument(
+        "--no-claude-chat",
+        action="store_true",
+        help="Desabilitar fluxo de chat com Claude (só clipboard)",
+    )
+    parser.add_argument(
+        "--claude-system-prompt",
+        default=None,
+        help="System prompt opcional para o fluxo Claude",
+    )
+    parser.add_argument(
+        "--claude-max-turns",
+        type=int,
+        default=50,
+        help="Máximo de turnos por sessão Claude (padrão: 50)",
+    )
+    return parser.parse_args()
 
-    config = Config(
+
+def _build_config(args: argparse.Namespace) -> Config:
+    claude_chat_enabled = not args.no_claude_chat and args.input_method == "keyboard"
+    if args.no_claude_chat is False and args.input_method == "mouse":
+        print(
+            "[VoiceMate] ⚠ Fluxo Claude requer input-method=keyboard. Desabilitando.",
+            file=sys.stderr,
+        )
+    return Config(
         model_size=args.model,
         hotkey=args.hotkey,
         use_cpu=args.cpu,
@@ -80,7 +118,85 @@ def main() -> None:
         watchdog_timeout_seconds=args.watchdog_timeout,
         listener_refresh_enabled=not args.no_listener_refresh,
         listener_refresh_seconds=args.listener_refresh_seconds,
+        claude_chat_enabled=claude_chat_enabled,
+        claude_chat_hotkey=args.claude_chat_hotkey,
+        claude_chat=ClaudeChatConfig(
+            system_prompt=args.claude_system_prompt,
+            max_turns=args.claude_max_turns,
+        ),
     )
+
+
+def _build_handlers(
+    flows: list[FlowConfig],
+    audio: AudioFeedback,
+) -> tuple[dict[str, TranscriptionHandler], list[TranscriptionHandler]]:
+    """Constrói handlers para cada fluxo. Retorna (mapa, lista para close)."""
+    handlers: dict[str, TranscriptionHandler] = {}
+    owned: list[TranscriptionHandler] = []
+    for flow in flows:
+        if flow.kind == "clipboard":
+            handler: TranscriptionHandler = ClipboardHandler(audio)
+        elif flow.kind == "claude_chat":
+            chat_cfg = flow.claude_chat or ClaudeChatConfig()
+            runtime = ClaudeRuntime(
+                system_prompt=chat_cfg.system_prompt,
+                max_turns=chat_cfg.max_turns,
+            )
+            try:
+                runtime.start()
+            except Exception as exc:  # noqa: BLE001
+                print(
+                    f"[VoiceMate] ⚠ Falha ao iniciar Claude (rode `claude login`): {exc}",
+                    file=sys.stderr,
+                )
+                continue
+            handler = ClaudeChatHandler(runtime, audio)
+        else:
+            print(f"[VoiceMate] ⚠ Fluxo desconhecido ignorado: {flow.kind}", file=sys.stderr)
+            continue
+        handlers[flow.name] = handler
+        owned.append(handler)
+    return handlers, owned
+
+
+class _HotkeyCallback:
+    """Wrapper estável (não-closure) para capturar o handler_id por hotkey."""
+
+    def __init__(self, session: RecordingSession, handler_id: str) -> None:
+        self._session = session
+        self._handler_id = handler_id
+
+    def __call__(self) -> None:
+        self._session.toggle(self._handler_id)
+
+
+def _build_listener(
+    config: Config,
+    flows: list[FlowConfig],
+    session: RecordingSession,
+) -> InputListener:
+    if config.input_method == "mouse":
+        # mouse só suporta um trigger — usa o primeiro fluxo (clipboard por default)
+        flow_name = flows[0].name
+        callback = _HotkeyCallback(session, flow_name)
+        return MouseButtonListener(button=config.mouse_button, on_toggle=callback)  # type: ignore[return-value]
+
+    # keyboard: registra um callback por hotkey distinto
+    bindings: dict[str, _HotkeyCallback] = {}
+    for flow in flows:
+        if flow.hotkey not in bindings:
+            bindings[flow.hotkey] = _HotkeyCallback(session, flow.name)
+    if len(bindings) == 1:
+        # Atalho único — usa KeyboardHotkeyListener simples
+        hotkey, cb = next(iter(bindings.items()))
+        return KeyboardHotkeyListener(hotkey=hotkey, on_toggle=cb)  # type: ignore[return-value]
+    return MultiHotkeyListener({hk: cb for hk, cb in bindings.items()})  # type: ignore[return-value]
+
+
+def main() -> None:
+    args = _parse_args()
+    config = _build_config(args)
 
     recorder = Recorder(sample_rate=config.sample_rate)
     transcriber = Transcriber(
@@ -89,16 +205,32 @@ def main() -> None:
         beam_size=config.beam_size,
     )
     audio_feedback = AudioFeedback()
-    session = RecordingSession(recorder, transcriber, audio_feedback, config)
-    listener = create_listener(config.input_method, config.hotkey, config.mouse_button)
+
+    flows = config.flows or config.build_default_flows()
+    handlers, owned_handlers = _build_handlers(flows, audio_feedback)
+    if not handlers:
+        print("[VoiceMate] Nenhum handler disponível, encerrando.", file=sys.stderr)
+        sys.exit(1)
+
+    # Reduz fluxos para os que realmente têm handler (no caso de claude falhar)
+    flows = [f for f in flows if f.name in handlers]
+    default_handler_id = "clipboard" if "clipboard" in handlers else flows[0].name
+
+    session = RecordingSession(
+        recorder=recorder,
+        transcriber=transcriber,
+        audio=audio_feedback,
+        config=config,
+        handlers=handlers,
+        default_handler_id=default_handler_id,
+    )
+    listener = _build_listener(config, flows, session)
 
     print(f"\n[VoiceMate] Pronto. Input: {config.input_method}")
-    if config.input_method == "keyboard":
-        print(f"[VoiceMate] Hotkey: {config.hotkey}")
-    else:
-        print(f"[VoiceMate] Botão do mouse: {config.mouse_button}")
+    for flow in flows:
+        label = "clipboard" if flow.kind == "clipboard" else "Claude (multi-turn)"
+        print(f"[VoiceMate] Hotkey {flow.hotkey}: → {label}")
     print(f"[VoiceMate] Tempo máximo de gravação: {config.max_recording_seconds}s")
-    print("[VoiceMate] Pressione para iniciar/parar a gravação.")
     print("[VoiceMate] Ctrl+C para sair.\n")
 
     watchdog: Watchdog | None = None
@@ -115,12 +247,19 @@ def main() -> None:
         keepalive.start()
 
     try:
-        listener.listen(session.toggle)
+        listener.listen()
     except KeyboardInterrupt:
+        pass
+    finally:
         if keepalive is not None:
             keepalive.stop()
         if watchdog is not None:
             watchdog.stop()
+        for handler in owned_handlers:
+            try:
+                handler.close()
+            except Exception as exc:  # noqa: BLE001
+                print(f"[VoiceMate] Falha ao fechar handler: {exc}", file=sys.stderr)
         print("\n[VoiceMate] Encerrando.")
 
 
