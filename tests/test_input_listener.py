@@ -69,15 +69,23 @@ def _noop() -> None:
 
 
 def test_keyboard_listener_listen_registers_hotkey(fake_keyboard: FakeKeyboardModule) -> None:
-    listener = KeyboardHotkeyListener(hotkey="ctrl+alt+v")
-    listener.listen(_noop)
+    listener = KeyboardHotkeyListener(hotkey="ctrl+alt+v", on_toggle=_noop)
+    listener.listen()
     assert fake_keyboard.hotkeys == [("ctrl+alt+v", _noop)]
     assert fake_keyboard.wait_called
 
 
-def test_keyboard_listener_reinstall_unhooks_and_re_adds(fake_keyboard: FakeKeyboardModule) -> None:
+def test_keyboard_listener_accepts_callback_via_listen_for_back_compat(
+    fake_keyboard: FakeKeyboardModule,
+) -> None:
     listener = KeyboardHotkeyListener(hotkey="ctrl+alt+v")
     listener.listen(_noop)
+    assert fake_keyboard.hotkeys == [("ctrl+alt+v", _noop)]
+
+
+def test_keyboard_listener_reinstall_unhooks_and_re_adds(fake_keyboard: FakeKeyboardModule) -> None:
+    listener = KeyboardHotkeyListener(hotkey="ctrl+alt+v", on_toggle=_noop)
+    listener.listen()
 
     listener.reinstall()
 
@@ -86,15 +94,21 @@ def test_keyboard_listener_reinstall_unhooks_and_re_adds(fake_keyboard: FakeKeyb
 
 
 def test_keyboard_listener_reinstall_noop_before_listen(fake_keyboard: FakeKeyboardModule) -> None:
-    listener = KeyboardHotkeyListener(hotkey="ctrl+alt+v")
+    listener = KeyboardHotkeyListener(hotkey="ctrl+alt+v", on_toggle=_noop)
     listener.reinstall()
     assert fake_keyboard.unhook_all_calls == 0
     assert fake_keyboard.hotkeys == []
 
 
+def test_keyboard_listener_without_callback_raises(fake_keyboard: FakeKeyboardModule) -> None:
+    listener = KeyboardHotkeyListener(hotkey="ctrl+alt+v")
+    with pytest.raises(RuntimeError):
+        listener.listen()
+
+
 def test_mouse_listener_listen_registers_button(fake_mouse: FakeMouseModule) -> None:
-    listener = MouseButtonListener(button="x")
-    listener.listen(_noop)
+    listener = MouseButtonListener(button="x", on_toggle=_noop)
+    listener.listen()
     assert len(fake_mouse.handlers) == 1
     callback, buttons, types_ = fake_mouse.handlers[0]
     assert callback is _noop
@@ -103,8 +117,8 @@ def test_mouse_listener_listen_registers_button(fake_mouse: FakeMouseModule) -> 
 
 
 def test_mouse_listener_reinstall_unhooks_and_re_adds(fake_mouse: FakeMouseModule) -> None:
-    listener = MouseButtonListener(button="x")
-    listener.listen(_noop)
+    listener = MouseButtonListener(button="x", on_toggle=_noop)
+    listener.listen()
 
     listener.reinstall()
 
@@ -114,7 +128,7 @@ def test_mouse_listener_reinstall_unhooks_and_re_adds(fake_mouse: FakeMouseModul
 
 
 def test_mouse_listener_reinstall_noop_before_listen(fake_mouse: FakeMouseModule) -> None:
-    listener = MouseButtonListener(button="x")
+    listener = MouseButtonListener(button="x", on_toggle=_noop)
     listener.reinstall()
     assert fake_mouse.unhook_all_calls == 0
     assert fake_mouse.handlers == []
