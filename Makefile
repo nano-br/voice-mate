@@ -1,9 +1,12 @@
-.PHONY: all setup_env format lint test run run-large run-turbo clean
+.PHONY: all setup_env lock format lint test run run-large run-turbo clean
 
 all: format lint test
 
 setup_env:
 	poetry install
+
+lock:
+	poetry lock
 
 format:
 	poetry run ruff format .

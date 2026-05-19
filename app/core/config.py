@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 FlowKind = Literal["clipboard", "claude_chat"]
+TTSEngine = Literal["voxcpm", "none"]
+TTSDevice = Literal["auto", "cuda", "cpu", "mps"]
 
 
 @dataclass
@@ -13,6 +15,24 @@ class ClaudeChatConfig:
     # placeholders para evolução futura — não usados ainda
     pre_ai_heuristic_enabled: bool = False
     router_model: str | None = None
+
+
+@dataclass
+class TTSConfig:
+    """Parâmetros do orquestrador de Text-to-Speech."""
+
+    enabled: bool = True
+    engine: TTSEngine = "voxcpm"
+    voice_description: str = "Uma jovem mulher brasileira, voz natural e calorosa, tom pausado e claro."
+    cfg_value: float = 2.0
+    inference_timesteps: int = 10
+    device: TTSDevice = "auto"
+    streaming: bool = True
+    save_audio_dir: str | None = None
+    optimize: bool = True
+    cache_dir: str | None = None
+    normalize: bool = False
+    denoise: bool = False
 
 
 @dataclass
@@ -44,6 +64,8 @@ class Config:
     claude_chat_enabled: bool = True
     claude_chat_hotkey: str = "ctrl+alt+a"
     claude_chat: ClaudeChatConfig = field(default_factory=ClaudeChatConfig)
+    # tts
+    tts: TTSConfig = field(default_factory=TTSConfig)
     # fluxos: se vazio, build_default_flows() é usado
     flows: list[FlowConfig] = field(default_factory=list)
     # modelos válidos para validação em runtime

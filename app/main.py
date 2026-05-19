@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from app.core.config import ClaudeChatConfig, Config, FlowConfig
+from app.core.config import ClaudeChatConfig, Config, FlowConfig, TTSConfig, TTSDevice
 from app.services.audio_feedback import AudioFeedback
 from app.services.claude_chat_handler import ClaudeChatHandler
 from app.services.claude_runtime import ClaudeRuntime
@@ -16,6 +16,7 @@ from app.services.recorder import Recorder
 from app.services.recording_session import RecordingSession
 from app.services.transcriber import Transcriber
 from app.services.transcription_handler import ClipboardHandler, TranscriptionHandler
+from app.services.tts import NullSpeaker, TextToSpeech
 from app.services.watchdog import Watchdog
 
 
@@ -97,6 +98,44 @@ def _parse_args() -> argparse.Namespace:
         default=50,
         help="Máximo de turnos por sessão Claude (padrão: 50)",
     )
+    parser.add_argument(
+        "--no-tts",
+        action="store_true",
+        help="Desabilitar TTS (a resposta do Claude só vai pro clipboard + beep)",
+    )
+    parser.add_argument(
+        "--tts-voice",
+        default=("Uma jovem mulher brasileira, voz natural e calorosa, tom pausado e claro."),
+        help="Voice description usada pelo VoxCPM2 (entre parênteses)",
+    )
+    parser.add_argument(
+        "--tts-cfg-value",
+        type=float,
+        default=2.0,
+        help="cfg_value do VoxCPM2 (1.0–3.0, padrão: 2.0)",
+    )
+    parser.add_argument(
+        "--tts-inference-timesteps",
+        type=int,
+        default=10,
+        help="inference_timesteps do VoxCPM2 (4–30, padrão: 10)",
+    )
+    parser.add_argument(
+        "--tts-device",
+        default="auto",
+        choices=["auto", "cuda", "cpu", "mps"],
+        help="Device do VoxCPM2 (padrão: auto)",
+    )
+    parser.add_argument(
+        "--tts-save-dir",
+        default=None,
+        help="Diretório onde salvar os áudios gerados (padrão: não salvar)",
+    )
+    parser.add_argument(
+        "--tts-no-streaming",
+        action="store_true",
+        help="Usar geração one-shot em vez de streaming (debug)",
+    )
     return parser.parse_args()
 
 
@@ -107,6 +146,7 @@ def _build_config(args: argparse.Namespace) -> Config:
             "[VoiceMate] ⚠ Fluxo Claude requer input-method=keyboard. Desabilitando.",
             file=sys.stderr,
         )
+    tts_device: TTSDevice = args.tts_device
     return Config(
         model_size=args.model,
         hotkey=args.hotkey,
@@ -124,12 +164,41 @@ def _build_config(args: argparse.Namespace) -> Config:
             system_prompt=args.claude_system_prompt,
             max_turns=args.claude_max_turns,
         ),
+        tts=TTSConfig(
+            enabled=not args.no_tts,
+            voice_description=args.tts_voice,
+            cfg_value=args.tts_cfg_value,
+            inference_timesteps=args.tts_inference_timesteps,
+            device=tts_device,
+            streaming=not args.tts_no_streaming,
+            save_audio_dir=args.tts_save_dir,
+        ),
     )
+
+
+def _build_speaker(config: TTSConfig) -> TextToSpeech:
+    if not config.enabled or config.engine == "none":
+        return NullSpeaker()
+    try:
+        from app.services.voxcpm_speaker import VoxCPMSpeaker
+
+        return VoxCPMSpeaker(config)
+    except Exception as exc:  # noqa: BLE001
+        print(
+            f"[VoiceMate] ⚠ TTS desativado (falha ao iniciar VoxCPM2): {exc}",
+            file=sys.stderr,
+        )
+        print(
+            "[VoiceMate]   Verifique `poetry install`, GPU/CUDA disponíveis, ou rode com `--no-tts`.",
+            file=sys.stderr,
+        )
+        return NullSpeaker()
 
 
 def _build_handlers(
     flows: list[FlowConfig],
     audio: AudioFeedback,
+    speaker: TextToSpeech,
 ) -> tuple[dict[str, TranscriptionHandler], list[TranscriptionHandler]]:
     """Constrói handlers para cada fluxo. Retorna (mapa, lista para close)."""
     handlers: dict[str, TranscriptionHandler] = {}
@@ -151,7 +220,7 @@ def _build_handlers(
                     file=sys.stderr,
                 )
                 continue
-            handler = ClaudeChatHandler(runtime, audio)
+            handler = ClaudeChatHandler(runtime, audio, speaker)
         else:
             print(f"[VoiceMate] ⚠ Fluxo desconhecido ignorado: {flow.kind}", file=sys.stderr)
             continue
@@ -207,8 +276,11 @@ def main() -> None:
     audio_feedback = AudioFeedback()
 
     flows = config.flows or config.build_default_flows()
-    handlers, owned_handlers = _build_handlers(flows, audio_feedback)
+    has_chat_flow = any(flow.kind == "claude_chat" for flow in flows)
+    speaker: TextToSpeech = _build_speaker(config.tts) if has_chat_flow else NullSpeaker()
+    handlers, owned_handlers = _build_handlers(flows, audio_feedback, speaker)
     if not handlers:
+        speaker.close()
         print("[VoiceMate] Nenhum handler disponível, encerrando.", file=sys.stderr)
         sys.exit(1)
 

@@ -8,19 +8,28 @@ import pyperclip
 
 from app.services.audio_feedback import AudioFeedback
 from app.services.claude_runtime import ClaudeRuntime
+from app.services.tts import TextToSpeech
 
 
 class ClaudeChatHandler:
     """Envia o texto transcrito para o Claude e copia a resposta no clipboard.
 
     Mantém uma única conversa multi-turn enquanto o app vive (o `ClaudeRuntime`
-    mantém o `ClaudeSDKClient` aberto). Suporta cancelamento do turno em
-    andamento via `cancel_in_flight()`.
+    mantém o `ClaudeSDKClient` aberto). Se um `TextToSpeech` ativo for injetado,
+    a resposta também é falada via TTS (e o beep tradicional é suprimido).
+    Suporta cancelamento do turno em andamento via `cancel_in_flight()` —
+    interrompe a chamada à IA e a reprodução do TTS simultaneamente.
     """
 
-    def __init__(self, runtime: ClaudeRuntime, audio: AudioFeedback) -> None:
+    def __init__(
+        self,
+        runtime: ClaudeRuntime,
+        audio: AudioFeedback,
+        speaker: TextToSpeech,
+    ) -> None:
         self._runtime = runtime
         self._audio = audio
+        self._speaker = speaker
         self._lock = threading.Lock()
         self._busy = False
         self._cancelled = False
@@ -47,8 +56,11 @@ class ClaudeChatHandler:
             response_preview = response[:200] + ("..." if len(response) > 200 else "")
             print(f"[VoiceMate] 💬 Claude: {response_preview}")
             pyperclip.copy(response)
-            self._audio.ai_response_ready()
             print("[VoiceMate] 📋 Resposta do Claude copiada para o clipboard.")
+            if self._speaker.is_active():
+                self._speaker.speak(response)
+            else:
+                self._audio.ai_response_ready()
         except asyncio.CancelledError:
             print("[VoiceMate] ✗ Chamada ao Claude cancelada.")
         except Exception as exc:  # noqa: BLE001
@@ -69,6 +81,8 @@ class ClaudeChatHandler:
                 return
             self._cancelled = True
         self._runtime.interrupt()
+        self._speaker.stop()
 
     def close(self) -> None:
         self._runtime.stop()
+        self._speaker.close()

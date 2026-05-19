@@ -54,20 +54,63 @@ class FakeAudio:
         self.error_calls += 1
 
 
+class FakeSpeaker:
+    def __init__(self, active: bool = False) -> None:
+        self._active = active
+        self.speak_calls: list[str] = []
+        self.stop_calls = 0
+        self.close_calls = 0
+
+    def is_active(self) -> bool:
+        return self._active
+
+    def speak(self, text: str) -> None:
+        self.speak_calls.append(text)
+
+    def stop(self) -> None:
+        self.stop_calls += 1
+
+    def close(self) -> None:
+        self.close_calls += 1
+
+
+def _handler(runtime: FakeRuntime, audio: FakeAudio, speaker: FakeSpeaker) -> ClaudeChatHandler:
+    return ClaudeChatHandler(runtime, audio, speaker)  # type: ignore[arg-type]
+
+
 def test_handle_copies_transcription_then_response(monkeypatch: pytest.MonkeyPatch) -> None:
     copied: list[str] = []
     monkeypatch.setattr("app.services.claude_chat_handler.pyperclip.copy", copied.append)
     runtime = FakeRuntime(response="resposta")
     audio = FakeAudio()
-    handler = ClaudeChatHandler(runtime, audio)  # type: ignore[arg-type]
+    speaker = FakeSpeaker(active=False)
+    handler = _handler(runtime, audio, speaker)
 
     handler.handle("pergunta")
 
     assert runtime.send_calls == ["pergunta"]
     assert copied == ["pergunta", "resposta"]
     assert audio.ai_response_ready_calls == 1
+    assert speaker.speak_calls == []
     assert audio.error_calls == 0
     assert handler.is_busy() is False
+
+
+def test_handle_with_active_speaker_uses_tts_instead_of_beep(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    copied: list[str] = []
+    monkeypatch.setattr("app.services.claude_chat_handler.pyperclip.copy", copied.append)
+    runtime = FakeRuntime(response="resposta falada")
+    audio = FakeAudio()
+    speaker = FakeSpeaker(active=True)
+    handler = _handler(runtime, audio, speaker)
+
+    handler.handle("pergunta")
+
+    assert copied == ["pergunta", "resposta falada"]
+    assert speaker.speak_calls == ["resposta falada"]
+    assert audio.ai_response_ready_calls == 0
 
 
 def test_handle_copies_transcription_before_calling_runtime(
@@ -86,7 +129,8 @@ def test_handle_copies_transcription_before_calling_runtime(
 
     runtime = OrderingRuntime()
     audio = FakeAudio()
-    handler = ClaudeChatHandler(runtime, audio)  # type: ignore[arg-type]
+    speaker = FakeSpeaker(active=False)
+    handler = _handler(runtime, audio, speaker)
 
     handler.handle("pergunta")
 
@@ -98,11 +142,12 @@ def test_handle_exception_keeps_transcription_in_clipboard(monkeypatch: pytest.M
     monkeypatch.setattr("app.services.claude_chat_handler.pyperclip.copy", copied.append)
     runtime = FakeRuntime(raise_exc=RuntimeError("boom"))
     audio = FakeAudio()
-    handler = ClaudeChatHandler(runtime, audio)  # type: ignore[arg-type]
+    speaker = FakeSpeaker(active=False)
+    handler = _handler(runtime, audio, speaker)
 
     handler.handle("pergunta")
 
-    assert copied == ["pergunta"]  # transcrição persiste mesmo em falha
+    assert copied == ["pergunta"]
     assert audio.error_calls == 1
     assert audio.ai_response_ready_calls == 0
     assert handler.is_busy() is False
@@ -116,11 +161,11 @@ def test_cancel_in_flight_keeps_transcription_discards_response(
     block_event = threading.Event()
     runtime = FakeRuntime(response="resposta tardia", block_event=block_event)
     audio = FakeAudio()
-    handler = ClaudeChatHandler(runtime, audio)  # type: ignore[arg-type]
+    speaker = FakeSpeaker(active=False)
+    handler = _handler(runtime, audio, speaker)
 
     worker = threading.Thread(target=handler.handle, args=("pergunta",), daemon=True)
     worker.start()
-    # espera handler entrar em busy
     deadline = time.monotonic() + 1.0
     while not handler.is_busy() and time.monotonic() < deadline:
         time.sleep(0.01)
@@ -130,25 +175,30 @@ def test_cancel_in_flight_keeps_transcription_discards_response(
     worker.join(timeout=2.0)
 
     assert runtime.interrupt_calls == 1
-    assert copied == ["pergunta"]  # transcrição permanece; só a resposta tardia é descartada
+    assert speaker.stop_calls == 1
+    assert copied == ["pergunta"]
     assert audio.ai_response_ready_calls == 0
 
 
 def test_cancel_in_flight_noop_when_idle() -> None:
     runtime = FakeRuntime()
     audio = FakeAudio()
-    handler = ClaudeChatHandler(runtime, audio)  # type: ignore[arg-type]
+    speaker = FakeSpeaker(active=False)
+    handler = _handler(runtime, audio, speaker)
 
     handler.cancel_in_flight()
 
     assert runtime.interrupt_calls == 0
+    assert speaker.stop_calls == 0
 
 
-def test_close_stops_runtime() -> None:
+def test_close_stops_runtime_and_speaker() -> None:
     runtime = FakeRuntime()
     audio = FakeAudio()
-    handler = ClaudeChatHandler(runtime, audio)  # type: ignore[arg-type]
+    speaker = FakeSpeaker(active=False)
+    handler = _handler(runtime, audio, speaker)
 
     handler.close()
 
     assert runtime.stop_calls == 1
+    assert speaker.close_calls == 1

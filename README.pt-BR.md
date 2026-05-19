@@ -2,7 +2,7 @@
 
 # VoiceMate
 
-> Pressione um atalho, fale, cole. Transcrição local com Whisper direto pro clipboard — ou roteie pelo Claude pra um turno rápido com IA.
+> Pressione um atalho, fale, cole. Transcrição local com Whisper direto no clipboard — ou passe pelo Claude e ouça a resposta da IA em voz alta.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
@@ -12,30 +12,31 @@
 
 ## Por quê
 
-Ditado na nuvem é rápido — até parar de ser. O VoiceMate roda Whisper **localmente** na sua GPU: o áudio nunca sai da sua máquina, sem latência de rede, sem mensalidade, sem trade-off de privacidade. Aperta o atalho, fala, cola onde precisar.
+Ditado na nuvem é rápido — até deixar de ser. O VoiceMate roda o Whisper **localmente** na sua GPU: o áudio nunca sai da sua máquina, sem latência de rede, sem mensalidade e sem abrir mão da privacidade. Você pressiona o atalho, fala e cola onde precisar.
 
 ## Recursos
 
-- **Atalho toggle** — aperta uma vez pra começar, aperta de novo pra parar e transcrever
-- **Dois fluxos, um microfone** — `Ctrl+Alt+V` joga a transcrição no clipboard; `Ctrl+Alt+A` envia pro Claude (multi-turn) e joga a resposta da IA no clipboard
+- **Atalho em modo toggle** — pressione uma vez para começar, pressione de novo para parar e transcrever
+- **Dois fluxos, um microfone** — `Ctrl+Alt+V` leva a transcrição para o clipboard; `Ctrl+Alt+A` manda o texto para o Claude (conversa multi-turn) e deixa a resposta da IA no clipboard
 - **Transcrição local** — `faster-whisper` (backend CTranslate2, 4–8× mais rápido que PyTorch)
 - **GPU acelerada** — CUDA float16 por padrão, com fallback CPU int8
-- **Clipboard duplo com Win+V** — o fluxo IA copia a transcrição primeiro e depois a resposta, então o histórico do clipboard do Windows mostra os dois lado a lado pra revisão
-- **O atalho de parar decide o destino** — começa com qualquer atalho; o atalho que você usar pra *parar* escolhe o handler (clipboard ou Claude)
-- **Cancelamento no voo** — apertar qualquer atalho enquanto a IA tá respondendo cancela a chamada e já inicia uma nova gravação, mantendo o contexto da conversa
-- **Listener auto-curativo** — reinstala o hook globalmente em ciclos curtos para se recuperar de remoção silenciosa do hook pelo Windows sob carga
-- **Watchdog** — monitor de saúde no nível do processo com auto-restart em travamentos
-- **Limite de gravação configurável** — proteção contra sessões esquecidas (padrão: 10 min)
-- **Feedback sonoro** — beeps distintos pra início, aviso, transcrição concluída e resposta da IA pronta
-- **Suporte a mouse** — use um botão lateral em vez do teclado, se preferir (só fluxo clipboard)
+- **TTS plugável** — a resposta do Claude é lida em voz alta com [VoxCPM2](https://github.com/OpenBMB/VoxCPM) (2B params, voice design por descrição em PT-BR, streaming). Arquitetura preparada para trocar facilmente por outras libs
+- **Histórico de clipboard via Win+V** — o fluxo de IA copia primeiro a transcrição e depois a resposta, então o histórico do Windows mostra as duas lado a lado para você conferir
+- **O atalho usado para parar decide o destino** — você pode começar com qualquer atalho; quem decide para onde o texto vai é o atalho que você pressiona para parar
+- **Cancelamento em pleno voo** — pressionar qualquer atalho enquanto a IA está respondendo (ou o TTS está falando) cancela na hora e já começa uma nova gravação, mantendo o contexto da conversa
+- **Listener auto-recuperável** — reinstala o hook global periodicamente para se recuperar da remoção silenciosa que o Windows faz com a máquina sob carga
+- **Watchdog** — monitor de saúde do processo que reinicia automaticamente em caso de travamento
+- **Limite de gravação configurável** — protege contra sessões esquecidas (padrão: 10 min)
+- **Feedback sonoro** — beeps diferentes para início, aviso, transcrição concluída e resposta da IA pronta
+- **Suporte a mouse** — dá para usar um botão lateral no lugar do teclado, se preferir (só no fluxo clipboard)
 
 ## Requisitos
 
-- Windows 10/11 (foco principal — Linux/macOS podem funcionar mas não são o alvo)
-- Python 3.12+
+- Windows 10/11 (foco principal — Linux/macOS podem funcionar, mas não são o alvo)
+- Python 3.12 (o fluxo TTS via VoxCPM2 ainda não suporta 3.13)
 - [Poetry](https://python-poetry.org/docs/#installation)
-- GPU NVIDIA com CUDA (opcional, mas recomendado)
-- **Só pra o fluxo Claude:** Node.js 18+ e o [Claude Code CLI](https://docs.claude.com/en/docs/claude-code) autenticado localmente
+- GPU NVIDIA com CUDA (opcional, mas recomendado — necessário se você quiser usar TTS com qualidade)
+- **Só para o fluxo Claude:** Node.js 18+ e o [Claude Code CLI](https://docs.claude.com/en/docs/claude-code) autenticado localmente
 
 ## Instalação
 
@@ -45,33 +46,56 @@ cd voice-mate
 make setup_env
 ```
 
-### Configurando o Claude Code (opcional — só pra o fluxo de IA)
+### Configurando o Claude Code (opcional — só para o fluxo de IA)
 
-Se você só quer o fluxo clipboard (`Ctrl+Alt+V`), pode pular essa seção e rodar com `--no-claude-chat`.
+Se você só quer o fluxo clipboard (`Ctrl+Alt+V`), pode pular esta seção e rodar com `--no-claude-chat`.
 
-Pra o fluxo IA (`Ctrl+Alt+A`), o VoiceMate conversa com o Claude através do `claude-agent-sdk`, que **reusa o `claude` CLI local e as credenciais dele** — não precisa de API key separada.
+Para o fluxo de IA (`Ctrl+Alt+A`), o VoiceMate conversa com o Claude pelo `claude-agent-sdk`, que **reaproveita o `claude` CLI local e as credenciais que já estão salvas nele** — você não precisa de uma API key separada.
 
-1. **Instale Node.js 18+** (pode pular se já tem). Baixe em [nodejs.org](https://nodejs.org/) ou use um gerenciador como `nvm-windows` / `fnm`.
+1. **Instale o Node.js 18+** (pode pular se você já tem). Baixe em [nodejs.org](https://nodejs.org/) ou use um gerenciador como `nvm-windows` / `fnm`.
 
 2. **Instale o Claude Code globalmente:**
    ```bash
    npm install -g @anthropic-ai/claude-code
    ```
 
-3. **Autentique.** Rode o CLI uma vez e siga o login interativo (abre o navegador):
+3. **Faça o login.** Rode o CLI uma vez e siga o fluxo de login interativo (ele abre o navegador):
    ```bash
    claude
    ```
-   Escolha o método de auth que você usa (conta Anthropic ou Claude Pro/Max). Digite `/exit` pra sair quando estiver dentro — as credenciais ficam salvas localmente.
+   Escolha o método de autenticação que você usa (conta Anthropic ou Claude Pro/Max). Quando entrar no chat, digite `/exit` para sair — as credenciais ficam salvas localmente.
 
-4. **Confirme que está funcionando:**
+4. **Confirme que está tudo certo:**
    ```bash
    claude --version
    claude -p "ping"
    ```
-   Se o `ping` voltar uma resposta do Claude, está pronto.
+   Se o `ping` devolver uma resposta do Claude, está pronto.
 
-Uma vez autenticado, o fluxo de IA do VoiceMate detecta automaticamente quando você roda `poetry run voice-mate`. Se o `claude` estiver ausente ou deslogado, o fluxo de IA é silenciosamente desativado e o fluxo clipboard segue funcionando.
+Depois disso, o fluxo de IA do VoiceMate detecta o Claude automaticamente quando você roda `poetry run voice-mate`. Se o `claude` não estiver instalado ou estiver deslogado, o fluxo de IA é desativado silenciosamente e o fluxo clipboard continua funcionando normalmente.
+
+### Configurando o TTS (VoxCPM2)
+
+Por padrão, a resposta do Claude é lida em voz alta usando o [VoxCPM2](https://github.com/OpenBMB/VoxCPM) — um modelo de 2B parâmetros, multilíngue (com PT-BR), com voice design por descrição textual.
+
+- A lib `voxcpm` já entra como dependência quando o ambiente é Python 3.12. Na primeira execução, o modelo é baixado automaticamente do Hugging Face (alguns GB, leva um tempinho).
+- A voz padrão é "uma jovem mulher brasileira, voz natural e calorosa, tom pausado e claro" — você pode customizar com `--tts-voice "..."`.
+- Se você não quiser TTS, rode com `--no-tts` (a resposta continua indo para o clipboard e o beep da tríade volta a tocar).
+- Se a inicialização do VoxCPM2 falhar (sem CUDA, sem espaço em disco, etc.), o app cai automaticamente para o fluxo sem TTS — você não precisa fazer nada.
+
+#### Sobre PyTorch e CUDA
+
+O `pyproject.toml` configura o `torch` e o `torchaudio` para virem da source oficial do PyTorch com build **CUDA 12.8** — então o `make setup_env` já instala a versão com GPU corretamente, sem passo extra.
+
+Para confirmar:
+
+```bash
+poetry run python -c "import torch; print('CUDA:', torch.cuda.is_available())"
+```
+
+Tem que devolver `CUDA: True`. Se devolver `False`, verifique se o driver NVIDIA está atualizado (`nvidia-smi` mostra a versão) — drivers recentes (≥ 545) já cobrem CUDA 12.8.
+
+Se você não tem GPU NVIDIA e quiser usar o app só com clipboard (sem TTS), rode com `--no-tts`. O VoxCPMSpeaker também avisa no console se detectar PyTorch sem CUDA na inicialização — fique de olho nessa mensagem.
 
 ## Uso
 
@@ -82,59 +106,71 @@ make run
 Atalhos padrão:
 
 - **`Ctrl+Alt+V`** — fluxo clipboard (transcrição → clipboard)
-- **`Ctrl+Alt+A`** — fluxo Claude (transcrição → Claude → resposta da IA no clipboard)
+- **`Ctrl+Alt+A`** — fluxo Claude (transcrição → Claude → resposta da IA no clipboard + TTS)
 
 ### Fluxo clipboard
 
-1. Pressione `Ctrl+Alt+V` para iniciar a gravação (beep de início)
+1. Pressione `Ctrl+Alt+V` para começar a gravar (beep de início)
 2. Fale normalmente
-3. Pressione `Ctrl+Alt+V` novamente para parar
-4. A transcrição vai pro clipboard (beep duplo)
-5. Cole com `Ctrl+V` onde quiser
+3. Pressione `Ctrl+Alt+V` de novo para parar
+4. A transcrição cai no clipboard (beep duplo)
+5. Cole com `Ctrl+V` onde precisar
 
-### Fluxo Claude (multi-turn)
+### Fluxo Claude (multi-turn com voz)
 
-1. Pressione `Ctrl+Alt+A` pra iniciar a gravação
-2. Fale o seu pedido
-3. Pressione `Ctrl+Alt+A` novamente pra parar — o VoiceMate transcreve, copia a transcrição pro clipboard, e envia pro Claude
-4. A resposta da IA substitui o conteúdo do clipboard e toca uma tríade ascendente (C5–E5–G5)
-5. Pressione `Ctrl+Alt+A` de novo pra fazer um follow-up — a conversa continua na mesma sessão
+1. Pressione `Ctrl+Alt+A` para começar a gravar
+2. Faça a sua pergunta ou comando
+3. Pressione `Ctrl+Alt+A` de novo para parar — o VoiceMate transcreve, copia a transcrição para o clipboard e envia o texto para o Claude
+4. A resposta da IA substitui o conteúdo do clipboard e o VoxCPM2 começa a ler em voz alta (em PT-BR)
+5. Pressione `Ctrl+Alt+A` de novo para fazer um follow-up — a conversa continua na mesma sessão
 
-**O atalho de parar decide o destino:** você pode começar com `Ctrl+Alt+V` e parar com `Ctrl+Alt+A` (ou vice-versa). O atalho que você usa pra *parar* escolhe o handler.
+**O atalho de parar decide o destino:** dá pra começar com `Ctrl+Alt+V` e parar com `Ctrl+Alt+A` (ou o contrário). Quem escolhe o destino é sempre o atalho que você usa para *parar*.
 
-**Cancelamento enquanto o Claude pensa:** apertar qualquer atalho enquanto a IA tá respondendo cancela a chamada e já inicia uma nova gravação. O contexto da conversa é preservado.
+**Cancelamento enquanto o Claude pensa ou fala:** pressionar qualquer atalho enquanto a IA está processando — ou enquanto o TTS está falando — corta na hora e já começa uma nova gravação. O contexto da conversa é preservado, então o próximo turno vê tudo o que já foi conversado.
 
-**Histórico Win+V:** como tanto a transcrição quanto a resposta da IA passam pelo clipboard, o histórico do Windows (`Win+V`) mostra os dois — útil quando você quer comparar o que falou com o que o Claude respondeu.
+**Histórico Win+V:** como a transcrição e a resposta da IA passam pelo clipboard, o histórico do Windows (`Win+V`) mostra as duas — útil para você conferir o que falou e comparar com o que o Claude respondeu.
 
 ### Opções
 
 ```bash
-# Modelo Whisper específico
+# Escolher outro modelo Whisper
 poetry run voice-mate --model medium
 
-# Atalhos customizados
+# Atalhos personalizados
 poetry run voice-mate --hotkey "ctrl+shift+r" --claude-chat-hotkey "ctrl+shift+c"
 
-# Desabilita o fluxo Claude (só clipboard)
+# Desabilitar o fluxo do Claude (só clipboard)
 poetry run voice-mate --no-claude-chat
 
-# System prompt pro Claude
+# Definir um system prompt para o Claude
 poetry run voice-mate --claude-system-prompt "Você é um assistente de produtividade conciso."
 
-# Limita os turnos da sessão multi-turn
+# Limitar os turnos da sessão multi-turn
 poetry run voice-mate --claude-max-turns 20
 
-# Forçar CPU (sem GPU disponível)
+# Desligar o TTS (resposta só vai pro clipboard + beep)
+poetry run voice-mate --no-tts
+
+# Mudar o perfil de voz do TTS
+poetry run voice-mate --tts-voice "Um homem brasileiro, voz grave e pausada."
+
+# Forçar CPU pro TTS (mais lento mas funciona sem GPU)
+poetry run voice-mate --tts-device cpu
+
+# Salvar os áudios gerados pelo TTS em um diretório
+poetry run voice-mate --tts-save-dir ./tts_logs
+
+# Forçar CPU pra transcrição Whisper (sem GPU)
 poetry run voice-mate --cpu
 
-# Usar botão lateral do mouse (só fluxo clipboard)
+# Usar botão lateral do mouse (só no fluxo clipboard)
 poetry run voice-mate --input-method mouse --mouse-button x
 
 # Ajustar watchdog e keepalive do listener
 poetry run voice-mate --listener-refresh-seconds 30 --watchdog-timeout 60
 ```
 
-### Modelos
+### Modelos Whisper
 
 | Modelo             | VRAM (GPU) | Velocidade   | Qualidade  |
 | ------------------ | ---------- | ------------ | ---------- |
@@ -145,20 +181,21 @@ poetry run voice-mate --listener-refresh-seconds 30 --watchdog-timeout 60
 | `large-v3-turbo`   | ~1.5 GB    | Rápida       | Excelente  |
 | `large-v3`         | ~3.0 GB    | Lenta        | Máxima     |
 
-Padrão é `large-v3-turbo` — melhor equilíbrio entre velocidade e qualidade, especialmente para áudio com mistura de idiomas.
+O padrão é `large-v3-turbo` — melhor equilíbrio entre velocidade e qualidade, especialmente quando o áudio tem mistura de idiomas.
 
 ## Makefile
 
 | Comando            | Descrição                                          |
 | ------------------ | -------------------------------------------------- |
-| `make setup_env`   | Instala dependências via Poetry                    |
-| `make run`         | Executa com modelo padrão (`large-v3-turbo`)       |
+| `make setup_env`   | Instala as dependências via Poetry                 |
+| `make lock`        | Regenera o `poetry.lock` (após mexer no pyproject) |
+| `make run`         | Executa com o modelo padrão (`large-v3-turbo`)     |
 | `make run-large`   | Executa com `large-v3`                             |
 | `make run-turbo`   | Executa com `large-v3-turbo`                       |
-| `make format`      | Formata código com Ruff                            |
-| `make lint`        | Lint com Ruff + type-check com Mypy                |
-| `make test`        | Executa testes com pytest                          |
-| `make clean`       | Limpa caches                                       |
+| `make format`      | Formata o código com Ruff                          |
+| `make lint`        | Roda Ruff + type-check com Mypy                    |
+| `make test`        | Executa os testes com pytest                       |
+| `make clean`       | Limpa os caches                                    |
 
 ## Arquitetura
 
@@ -166,15 +203,18 @@ Padrão é `large-v3-turbo` — melhor equilíbrio entre velocidade e qualidade,
 app/
 ├── main.py                          # Entry point + CLI + montagem dos fluxos
 ├── core/
-│   └── config.py                    # Dataclass de configuração + FlowConfig
+│   └── config.py                    # Dataclass de configuração + FlowConfig + TTSConfig
 └── services/
     ├── recorder.py                  # Captura do microfone (sounddevice)
     ├── transcriber.py               # Inferência Whisper (faster-whisper)
     ├── audio_feedback.py            # Beeps cross-platform
+    ├── audio_player.py              # Player de áudio com fila (TTS streaming)
     ├── recording_session.py         # Máquina de estado: idle → recording → processing
     ├── transcription_handler.py     # Protocol + ClipboardHandler
-    ├── claude_chat_handler.py       # Fluxo Claude: envio + clipboard duplo + cancel
+    ├── claude_chat_handler.py       # Fluxo Claude: envio + clipboard duplo + TTS + cancel
     ├── claude_runtime.py            # Ponte sync ↔ asyncio para claude-agent-sdk
+    ├── tts.py                       # Protocol TextToSpeech + NullSpeaker
+    ├── voxcpm_speaker.py            # Speaker baseado em VoxCPM2 (streaming + cancel)
     ├── input_listener.py            # Abstração de trigger (teclado/mouse)
     ├── multi_hotkey_listener.py     # Múltiplos atalhos globais com callbacks distintos
     ├── listener_keepalive.py        # Reinstalação periódica do hook (fix Windows)
@@ -183,15 +223,21 @@ app/
 
 ### Por que o listener-keepalive?
 
-No Windows, hooks de baixo nível (`WH_KEYBOARD_LL` / `WH_MOUSE_LL`) usados pelas libs de hotkey global são **removidos silenciosamente** pelo SO se o callback exceder o `LowLevelHooksTimeout` (máx 1000 ms no Win10+). Sob CPU em carga isso acontece sem aviso ([Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelkeyboardproc)). O VoiceMate re-registra o atalho a cada 60 s por padrão — então mesmo que o SO tenha matado o hook, o próximo ciclo reinstala.
+No Windows, hooks de baixo nível (`WH_KEYBOARD_LL` / `WH_MOUSE_LL`) usados pelas libs de atalho global são **removidos silenciosamente** pelo SO quando o callback ultrapassa o `LowLevelHooksTimeout` (máximo de 1000 ms no Win10+). Sob CPU em carga isso acontece sem aviso ([Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelkeyboardproc)). O VoiceMate re-registra o atalho a cada 60 s por padrão — então, mesmo que o SO tenha matado o hook, o próximo ciclo reinstala.
+
+### Por que TTS plugável?
+
+A arquitetura separa o **orquestrador** (`TextToSpeech` Protocol em `tts.py`) da **implementação concreta** (`VoxCPMSpeaker`). Isso facilita testar outras libs de TTS no futuro (edge-tts, ElevenLabs, Piper, etc.) — basta criar uma nova implementação do Protocol e plugar via configuração. Se uma lib não te agradar, você descarta só o arquivo dela.
 
 ## Stack
 
 - **[faster-whisper](https://github.com/SYSTRAN/faster-whisper)** — Whisper otimizado com CTranslate2
-- **[sounddevice](https://python-sounddevice.readthedocs.io/)** — captura do microfone
+- **[sounddevice](https://python-sounddevice.readthedocs.io/)** — captura do microfone e reprodução do TTS
 - **[keyboard](https://github.com/boppreh/keyboard)** / **[mouse](https://github.com/boppreh/mouse)** — hooks globais
 - **[pyperclip](https://github.com/asweigart/pyperclip)** — acesso ao clipboard
 - **[claude-agent-sdk](https://github.com/anthropics/claude-agent-sdk-python)** — fluxo Claude, em cima do `claude` CLI local
+- **[voxcpm](https://github.com/OpenBMB/VoxCPM)** — TTS multilíngue com voice design por descrição
+- **[soundfile](https://github.com/bastibe/python-soundfile)** — leitura/escrita de WAV (opcional, para salvar áudios TTS)
 
 ## Contribuindo
 
@@ -201,4 +247,4 @@ Issues e PRs são bem-vindos. Rode `make all` (format + lint + test) antes de ab
 
 [MIT](LICENSE) © Álli Terhorst
 
-Parte da [NanoBR](https://github.com/nano-br) — utilitários open-source para o dia a dia.
+Faz parte da [NanoBR](https://github.com/nano-br) — utilitários open-source para o dia a dia.
