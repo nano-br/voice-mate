@@ -15,20 +15,27 @@ voice-mate = "app.main:main"
 
 [tool.poetry.dependencies]
 python = "^3.12"
+# Core: sem essas deps o app nem sobe
 faster-whisper = "*"
 sounddevice = "*"
 numpy = "*"
 pyperclip = "*"
 keyboard = "*"
 mouse = "*"
-claude-agent-sdk = "*"
-voxcpm = { version = "*", python = "<3.13" }
-soundfile = "*"
 # PyTorch com CUDA: o índice padrão da PyPI entrega torch CPU-only no Windows,
 # o que faz o VoxCPM rodar 50-100× mais devagar. Forçamos a build CUDA via
 # source explícita do PyTorch.
 torch = { source = "pytorch-cu128" }
 torchaudio = { source = "pytorch-cu128" }
+# Extras opt-in (não instalam por padrão; ver [tool.poetry.extras])
+claude-agent-sdk = { version = "*", optional = true }
+voxcpm = { version = "*", python = "<3.13", optional = true }
+soundfile = { version = "*", optional = true }
+
+[tool.poetry.extras]
+claude = ["claude-agent-sdk"]
+tts = ["voxcpm", "soundfile"]
+all = ["claude-agent-sdk", "voxcpm", "soundfile"]
 
 [[tool.poetry.source]]
 name = "pytorch-cu128"
@@ -40,6 +47,7 @@ ruff = "*"
 mypy = "*"
 pytest = "*"
 types-pyperclip = "*"
+babel = "*"
 
 # ─── Ruff ────────────────────────────────────────────────────────────────────
 

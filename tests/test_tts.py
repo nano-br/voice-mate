@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.services.tts import NullSpeaker
+from app.features.tts.base import NullSpeaker
 
 
 def test_null_speaker_is_not_active() -> None:

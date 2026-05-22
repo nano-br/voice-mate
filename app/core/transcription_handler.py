@@ -4,7 +4,7 @@ from typing import Protocol
 
 import pyperclip
 
-from app.services.audio_feedback import AudioFeedback
+from app.core.audio_feedback import AudioFeedback
 
 
 class TranscriptionHandler(Protocol):

@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 from numpy.typing import NDArray
 
-from app.services.audio_player import AudioPlayer
+from app.features.tts.audio_player import AudioPlayer
 
 
 class FakeOutputStream:
@@ -58,7 +58,7 @@ def fake_sd(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         captured["stream"] = stream
         return stream
 
-    monkeypatch.setattr("app.services.audio_player.sd.OutputStream", factory)
+    monkeypatch.setattr("app.features.tts.audio_player.sd.OutputStream", factory)
     return captured
 
 
@@ -168,6 +168,55 @@ def test_feed_after_abort_is_ignored(fake_sd: dict[str, Any]) -> None:
     player.start(48000)
     stream = fake_sd["stream"]
     player.abort()
+    # após abort, esse stream específico está fechado — feed não toca nada
+    assert stream.closed is True
     player.feed(np.ones(4, dtype=np.float32))
-    out = _drive_callback(stream, 4)
-    assert np.allclose(out[:, 0], 0.0)
+
+
+def test_abort_closes_stream_zeros_reference(fake_sd: dict[str, Any]) -> None:
+    player = AudioPlayer()
+    player.start(48000)
+    stream = fake_sd["stream"]
+    player.abort()
+    assert stream.aborted is True
+    assert stream.closed is True
+
+
+def test_start_after_abort_creates_fresh_stream_and_clears_aborted(
+    fake_sd: dict[str, Any],
+) -> None:
+    """Regressão do bug em que start() era noop após abort(), descartando feeds futuros."""
+    player = AudioPlayer()
+    player.start(48000)
+    first_stream = fake_sd["stream"]
+    player.abort()
+    assert first_stream.closed is True
+
+    # novo start deve criar um stream completamente novo
+    player.start(48000)
+    second_stream = fake_sd["stream"]
+    assert second_stream is not first_stream
+    assert second_stream.started is True
+
+    # feed após start novo deve voltar a funcionar
+    player.feed(np.array([1.0, 0.5, 0.25, 0.125], dtype=np.float32))
+    out = _drive_callback(second_stream, 4)
+    assert np.allclose(out[:, 0], [1.0, 0.5, 0.25, 0.125])
+
+
+def test_start_replaces_existing_stream(fake_sd: dict[str, Any]) -> None:
+    player = AudioPlayer()
+    player.start(48000)
+    first_stream = fake_sd["stream"]
+    player.start(48000)
+    second_stream = fake_sd["stream"]
+    assert second_stream is not first_stream
+    assert first_stream.closed is True
+    assert second_stream.started is True
+
+
+def test_drain_default_timeout_returns_quickly_when_idle(fake_sd: dict[str, Any]) -> None:
+    player = AudioPlayer()
+    player.start(48000)
+    # nada na fila → drain retorna True imediatamente com default
+    assert player.drain() is True

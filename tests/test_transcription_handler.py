@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.services.transcription_handler import ClipboardHandler
+from app.core.transcription_handler import ClipboardHandler
 
 
 class FakeAudio:
@@ -23,7 +23,7 @@ class FakeAudio:
 
 def test_clipboard_handler_copies_and_beeps(monkeypatch: pytest.MonkeyPatch) -> None:
     copied: list[str] = []
-    monkeypatch.setattr("app.services.transcription_handler.pyperclip.copy", copied.append)
+    monkeypatch.setattr("app.core.transcription_handler.pyperclip.copy", copied.append)
     audio = FakeAudio()
     handler = ClipboardHandler(audio)  # type: ignore[arg-type]
 

@@ -46,6 +46,54 @@ cd voice-mate
 make setup_env
 ```
 
+### Modular install (extras)
+
+`make setup_env` installs **everything** by default (`poetry install --extras all`). Pick a smaller install if you don't need every feature:
+
+| Command                                        | What it installs                                                       |
+| ---------------------------------------------- | ---------------------------------------------------------------------- |
+| `make setup_env_minimal`                       | Just **core**: voice → transcription → clipboard. Whisper + CUDA in.   |
+| `make setup_env_claude`                        | Core + `claude-agent-sdk` (enables the `Ctrl+Alt+A` Claude flow).      |
+| `make setup_env_tts`                           | Core + `voxcpm` + `soundfile` (TTS — heavy: ~5 GB of model weights).   |
+| `make setup_env` *(default)*                   | Core + Claude + TTS (`poetry install --extras all`).                   |
+| `make setup_env_custom EXTRAS="claude tts"`    | Free combination of extras.                                            |
+
+If an extra is missing the app still starts and just disables the corresponding flow with an instructive warning (`extra 'claude' not installed`) — never a hard crash.
+
+### Languages
+
+Claude replies in PT-BR by default. To change:
+
+```bash
+# Switch the assistant to English
+make run ARGS="--output-lang en"
+```
+
+Internally, the canonical prompt (written in English) has an `{output_lang}` placeholder that is filled at runtime — no translated copies of the prompt are kept.
+
+**App messages themselves** (logs, CLI help text) are also localized via `gettext` + Babel. Default is PT-BR; switch with an env var:
+
+```bash
+# App logs in English
+VOICEMATE_LANG=en make run
+```
+
+To edit / regenerate the translation catalog:
+
+```bash
+make i18n-extract     # extract _() strings into voicemate.pot
+make i18n-update      # propagate new keys to existing .po files
+make i18n-compile     # compile .po → .mo (gettext loads .mo at runtime)
+```
+
+Catalogs live in `app/i18n/locales/{pt_BR,en}/LC_MESSAGES/voicemate.po`.
+
+### Code conventions
+
+- **Identifiers, config keys, docstrings, new comments**: English (PEP 8).
+- **LLM prompts**: canonical English with `{output_lang}` placeholder. No translated prompt copies.
+- **User-facing strings** (logs, messages, helps): English as `msgid`, translations under `app/i18n/locales/<lang>/LC_MESSAGES/voicemate.po`. PT-BR is the default. Add new translations by marking with `_()` in code + `make i18n-extract && make i18n-compile`.
+
 ### Set up Claude Code (optional — only for the AI flow)
 
 If you only want the clipboard flow (`Ctrl+Alt+V`), you can skip this section and run with `--no-claude-chat`.

@@ -5,7 +5,7 @@ from collections.abc import Callable
 
 import pytest
 
-from app.services.input_listener import (
+from app.core.input_listener import (
     KeyboardHotkeyListener,
     MouseButtonListener,
     create_listener,

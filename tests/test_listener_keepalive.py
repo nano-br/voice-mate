@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 import time
 
-from app.services.listener_keepalive import ListenerKeepalive
+from app.core.listener_keepalive import ListenerKeepalive
 
 
 class FakeListener:

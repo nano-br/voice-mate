@@ -5,7 +5,7 @@ import time
 
 import pytest
 
-from app.services.claude_chat_handler import ClaudeChatHandler
+from app.features.claude.chat_handler import ClaudeChatHandler
 
 
 class FakeRuntime:
@@ -80,7 +80,7 @@ def _handler(runtime: FakeRuntime, audio: FakeAudio, speaker: FakeSpeaker) -> Cl
 
 def test_handle_copies_transcription_then_response(monkeypatch: pytest.MonkeyPatch) -> None:
     copied: list[str] = []
-    monkeypatch.setattr("app.services.claude_chat_handler.pyperclip.copy", copied.append)
+    monkeypatch.setattr("app.features.claude.chat_handler.pyperclip.copy", copied.append)
     runtime = FakeRuntime(response="resposta")
     audio = FakeAudio()
     speaker = FakeSpeaker(active=False)
@@ -100,7 +100,7 @@ def test_handle_with_active_speaker_uses_tts_instead_of_beep(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     copied: list[str] = []
-    monkeypatch.setattr("app.services.claude_chat_handler.pyperclip.copy", copied.append)
+    monkeypatch.setattr("app.features.claude.chat_handler.pyperclip.copy", copied.append)
     runtime = FakeRuntime(response="resposta falada")
     audio = FakeAudio()
     speaker = FakeSpeaker(active=True)
@@ -118,7 +118,7 @@ def test_handle_copies_transcription_before_calling_runtime(
 ) -> None:
     events: list[str] = []
     monkeypatch.setattr(
-        "app.services.claude_chat_handler.pyperclip.copy",
+        "app.features.claude.chat_handler.pyperclip.copy",
         lambda value: events.append(f"copy:{value}"),
     )
 
@@ -139,7 +139,7 @@ def test_handle_copies_transcription_before_calling_runtime(
 
 def test_handle_exception_keeps_transcription_in_clipboard(monkeypatch: pytest.MonkeyPatch) -> None:
     copied: list[str] = []
-    monkeypatch.setattr("app.services.claude_chat_handler.pyperclip.copy", copied.append)
+    monkeypatch.setattr("app.features.claude.chat_handler.pyperclip.copy", copied.append)
     runtime = FakeRuntime(raise_exc=RuntimeError("boom"))
     audio = FakeAudio()
     speaker = FakeSpeaker(active=False)
@@ -157,7 +157,7 @@ def test_cancel_in_flight_keeps_transcription_discards_response(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     copied: list[str] = []
-    monkeypatch.setattr("app.services.claude_chat_handler.pyperclip.copy", copied.append)
+    monkeypatch.setattr("app.features.claude.chat_handler.pyperclip.copy", copied.append)
     block_event = threading.Event()
     runtime = FakeRuntime(response="resposta tardia", block_event=block_event)
     audio = FakeAudio()
@@ -202,3 +202,51 @@ def test_close_stops_runtime_and_speaker() -> None:
 
     assert runtime.stop_calls == 1
     assert speaker.close_calls == 1
+
+
+def test_handle_timeout_does_not_hang_and_marks_idle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import concurrent.futures
+
+    copied: list[str] = []
+    monkeypatch.setattr("app.features.claude.chat_handler.pyperclip.copy", copied.append)
+
+    class TimeoutRuntime(FakeRuntime):
+        def send_and_collect(self, prompt: str, timeout: float | None = None) -> str:
+            raise concurrent.futures.TimeoutError
+
+    runtime = TimeoutRuntime()
+    audio = FakeAudio()
+    speaker = FakeSpeaker(active=False)
+    handler = ClaudeChatHandler(runtime, audio, speaker, timeout_seconds=0.5)  # type: ignore[arg-type]
+
+    handler.handle("pergunta")
+
+    assert copied == ["pergunta"]  # transcrição preservada
+    assert audio.error_calls == 1
+    assert audio.ai_response_ready_calls == 0
+    assert runtime.interrupt_calls == 1  # tentou interromper o runtime travado
+    assert handler.is_busy() is False  # voltou para idle
+
+
+def test_handle_passes_configured_timeout_to_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.features.claude.chat_handler.pyperclip.copy", lambda _: None)
+
+    captured: dict[str, float | None] = {}
+
+    class TimeoutCapturingRuntime(FakeRuntime):
+        def send_and_collect(self, prompt: str, timeout: float | None = None) -> str:
+            captured["timeout"] = timeout
+            return "ok"
+
+    runtime = TimeoutCapturingRuntime()
+    audio = FakeAudio()
+    speaker = FakeSpeaker(active=False)
+    handler = ClaudeChatHandler(runtime, audio, speaker, timeout_seconds=42.0)  # type: ignore[arg-type]
+
+    handler.handle("oi")
+
+    assert captured["timeout"] == 42.0

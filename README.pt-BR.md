@@ -46,6 +46,54 @@ cd voice-mate
 make setup_env
 ```
 
+### Instalação modular (extras)
+
+O `make setup_env` instala **tudo** por padrão (`poetry install --extras all`). Se você só quer parte do app, escolha o extra:
+
+| Comando                                       | O que instala                                                            |
+| --------------------------------------------- | ------------------------------------------------------------------------ |
+| `make setup_env_minimal`                      | Só **core**: voz → transcrição → clipboard. Whisper + GPU CUDA inclusos. |
+| `make setup_env_claude`                       | Core + `claude-agent-sdk` (habilita o fluxo `Ctrl+Alt+A` com Claude).    |
+| `make setup_env_tts`                          | Core + `voxcpm` + `soundfile` (habilita TTS — pesado: ~5 GB de modelo).  |
+| `make setup_env` *(default)*                  | Core + Claude + TTS (`poetry install --extras all`).                     |
+| `make setup_env_custom EXTRAS="claude tts"`   | Combinação livre dos extras.                                             |
+
+Se um extra não está instalado, o app sobe normal e só desativa o fluxo correspondente com um warning instrutivo (`extra 'claude' não instalado`). Você nunca trava por falta de dep.
+
+### Idiomas
+
+A resposta do Claude é em PT-BR por padrão. Para mudar:
+
+```bash
+# Faz o Claude responder em inglês
+make run ARGS="--output-lang en"
+```
+
+Internamente, o prompt canônico (em inglês) tem um placeholder `{output_lang}` que é substituído em runtime — não há cópias traduzidas do prompt.
+
+**Mensagens do próprio app** (logs, helps do CLI) também são localizadas via `gettext` + Babel. Default é PT-BR; controle via env var:
+
+```bash
+# Mostra os logs do app em inglês
+VOICEMATE_LANG=en make run
+```
+
+Para editar/regenerar o catálogo de traduções:
+
+```bash
+make i18n-extract     # extrai strings _() para voicemate.pot
+make i18n-update      # propaga novas chaves para os .po existentes
+make i18n-compile     # compila .po → .mo (gettext lê o .mo em runtime)
+```
+
+Os `.po` ficam em `app/i18n/locales/{pt_BR,en}/LC_MESSAGES/voicemate.po`.
+
+### Convenções de código
+
+- **Identifiers, chaves de config, docstrings, comentários novos**: inglês (PEP 8).
+- **Prompts de LLM**: inglês canônico com placeholder `{output_lang}`. Não duplicar prompts traduzidos.
+- **Strings user-facing** (logs, mensagens, helps): inglês como `msgid`, traduções em `app/i18n/locales/<lang>/LC_MESSAGES/voicemate.po`. PT-BR é o default. Adicione novas traduções marcando com `_()` no código + `make i18n-extract && make i18n-compile`.
+
 ### Configurando o Claude Code (opcional — só para o fluxo de IA)
 
 Se você só quer o fluxo clipboard (`Ctrl+Alt+V`), pode pular esta seção e rodar com `--no-claude-chat`.
@@ -79,9 +127,42 @@ Depois disso, o fluxo de IA do VoiceMate detecta o Claude automaticamente quando
 Por padrão, a resposta do Claude é lida em voz alta usando o [VoxCPM2](https://github.com/OpenBMB/VoxCPM) — um modelo de 2B parâmetros, multilíngue (com PT-BR), com voice design por descrição textual.
 
 - A lib `voxcpm` já entra como dependência quando o ambiente é Python 3.12. Na primeira execução, o modelo é baixado automaticamente do Hugging Face (alguns GB, leva um tempinho).
-- A voz padrão é "uma jovem mulher brasileira, voz natural e calorosa, tom pausado e claro" — você pode customizar com `--tts-voice "..."`.
+- A voz padrão (descrição textual em PT-BR) é definida pela constante `DEFAULT_VOICE_DESCRIPTION` em [app/core/config.py](app/core/config.py). Você pode customizar com `--tts-voice "..."`.
 - Se você não quiser TTS, rode com `--no-tts` (a resposta continua indo para o clipboard e o beep da tríade volta a tocar).
 - Se a inicialização do VoxCPM2 falhar (sem CUDA, sem espaço em disco, etc.), o app cai automaticamente para o fluxo sem TTS — você não precisa fazer nada.
+
+#### Modos de voz (`--tts-voice-seed-mode`)
+
+O VoxCPM2 escolhe a voz a cada fala de três formas diferentes. Cada modo combina com flags distintas:
+
+| Modo (`--tts-voice-seed-mode`) | Como a voz é decidida | Flags relevantes |
+|---|---|---|
+| `auto` *(padrão)* | A 1ª fala usa **voice design** a partir de `--tts-voice` (sorteia uma voz nova). O áudio é gravado em `~/.cache/voicemate/voice_seed.wav` e as falas seguintes **clonam** essa voz. A mesma voz persiste entre execuções do app até você apagar o seed. | `--tts-voice "..."` (só para a 1ª fala) <br> `--tts-reset-seed` (apaga o seed antes de subir) <br> `--tts-voice-seed-cache-dir <path>` (muda onde grava) |
+| `fixed` | Você fornece um WAV de referência e o texto correspondente. Toda fala é clonada a partir desse WAV — voz totalmente determinística. | `--tts-voice-seed-path /path/voz.wav` *(obrigatório)* <br> `--tts-voice-seed-text "..."` *(obrigatório, transcrição do WAV)* |
+| `off` | Não usa seed nenhum. Cada turno re-sorteia uma voz nova a partir da descrição. **Cada fala soa diferente** — bom para variabilidade/teste. | `--tts-voice "..."` (aplicada em toda fala) |
+
+**Como passar args ao `make run`:** o Makefile aceita uma variável `ARGS` para repassar flags ao binário. Sem `ARGS`, o `make` ignora flags soltas na linha de comando.
+
+```bash
+# vozes aleatórias a cada turno
+make run ARGS="--tts-voice-seed-mode off"
+
+# usar um WAV de referência fixo
+make run ARGS='--tts-voice-seed-mode fixed --tts-voice-seed-path C:/voz.wav --tts-voice-seed-text "Olá, eu sou Maria."'
+
+# regerar o auto-seed na próxima execução (apaga ~/.cache/voicemate/voice_seed.wav)
+make run ARGS="--tts-reset-seed"
+
+# mudar a descrição da voz (só vale em 'off' ou na 1ª fala do 'auto')
+make run ARGS='--tts-voice "Um homem brasileiro, voz grave e pausada."'
+```
+
+Atalhos prontos no Makefile (resumo dos casos mais comuns):
+
+| Comando | O que faz |
+|---|---|
+| `make run-vozes-aleatorias` | Equivalente a `make run ARGS="--tts-voice-seed-mode off"` |
+| `make run-reset-voz` | Equivalente a `make run ARGS="--tts-reset-seed"` |
 
 #### Sobre PyTorch e CUDA
 
@@ -185,17 +266,20 @@ O padrão é `large-v3-turbo` — melhor equilíbrio entre velocidade e qualidad
 
 ## Makefile
 
-| Comando            | Descrição                                          |
-| ------------------ | -------------------------------------------------- |
-| `make setup_env`   | Instala as dependências via Poetry                 |
-| `make lock`        | Regenera o `poetry.lock` (após mexer no pyproject) |
-| `make run`         | Executa com o modelo padrão (`large-v3-turbo`)     |
-| `make run-large`   | Executa com `large-v3`                             |
-| `make run-turbo`   | Executa com `large-v3-turbo`                       |
-| `make format`      | Formata o código com Ruff                          |
-| `make lint`        | Roda Ruff + type-check com Mypy                    |
-| `make test`        | Executa os testes com pytest                       |
-| `make clean`       | Limpa os caches                                    |
+| Comando                    | Descrição                                                       |
+| -------------------------- | --------------------------------------------------------------- |
+| `make setup_env`           | Instala as dependências via Poetry                              |
+| `make lock`                | Regenera o `poetry.lock` (após mexer no pyproject)              |
+| `make run`                 | Executa com o modelo padrão (`large-v3-turbo`)                  |
+| `make run ARGS="..."`      | Igual ao anterior, mas repassa flags ao `voice-mate`            |
+| `make run-large`           | Executa com `large-v3`                                          |
+| `make run-turbo`           | Executa com `large-v3-turbo`                                    |
+| `make run-vozes-aleatorias`| TTS com voz nova a cada turno (`--tts-voice-seed-mode off`)     |
+| `make run-reset-voz`       | Apaga o auto-seed antes de subir (`--tts-reset-seed`)           |
+| `make format`              | Formata o código com Ruff                                       |
+| `make lint`                | Roda Ruff + type-check com Mypy                                 |
+| `make test`                | Executa os testes com pytest                                    |
+| `make clean`               | Limpa os caches                                                 |
 
 ## Arquitetura
 

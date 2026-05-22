@@ -4,14 +4,37 @@ from typing import Literal
 FlowKind = Literal["clipboard", "claude_chat"]
 TTSEngine = Literal["voxcpm", "none"]
 TTSDevice = Literal["auto", "cuda", "cpu", "mps"]
+ClaudeEffort = Literal["low", "medium", "high", "xhigh", "max"]
+VoiceSeedMode = Literal["auto", "fixed", "off"]
+
+# Default language code injected into LLM system prompts (placeholder
+# `{output_lang}`). The assistant replies in this language — switching it
+# is enough to change the response language without keeping translated
+# copies of the prompt. Format follows BCP-47 (e.g. "pt-BR", "en", "es").
+DEFAULT_OUTPUT_LANG = "pt-BR"
+
+# Descrição de voz default usada pelo VoxCPM2 quando não há seed (modos
+# voice_seed_mode="off" ou primeira fala do "auto"). Em modo cloning
+# (auto após primeira fala ou fixed), a voz vem do prompt_wav_path e a
+# descrição é ignorada. Mantemos a constante aqui para servir tanto como
+# default do dataclass quanto como default do CLI arg --tts-voice.
+DEFAULT_VOICE_DESCRIPTION = "Uma mulher brasileira idosa, voz natural e calorosa, tom pausado e claro."
 
 
 @dataclass
 class ClaudeChatConfig:
-    """Parâmetros do fluxo voz → Claude → clipboard."""
+    """Parâmetros do fluxo voz → Claude → clipboard.
+
+    `system_prompt = None` significa: usar o prompt canônico
+    (`claude_cli_system_prompt(output_lang)`). Passar uma string sobrescreve.
+    """
 
     system_prompt: str | None = None
     max_turns: int | None = 50
+    model: str = "claude-sonnet-4-6"
+    effort: ClaudeEffort = "low"
+    thinking_enabled: bool = False
+    timeout_seconds: float = 120.0
     # placeholders para evolução futura — não usados ainda
     pre_ai_heuristic_enabled: bool = False
     router_model: str | None = None
@@ -23,7 +46,7 @@ class TTSConfig:
 
     enabled: bool = True
     engine: TTSEngine = "voxcpm"
-    voice_description: str = "Uma jovem mulher brasileira, voz natural e calorosa, tom pausado e claro."
+    voice_description: str = DEFAULT_VOICE_DESCRIPTION
     cfg_value: float = 2.0
     inference_timesteps: int = 10
     device: TTSDevice = "auto"
@@ -33,6 +56,14 @@ class TTSConfig:
     cache_dir: str | None = None
     normalize: bool = False
     denoise: bool = False
+    voice_seed_mode: VoiceSeedMode = "off"
+
+    voice_seed_path: str | None = None
+    voice_seed_text: str | None = None
+    voice_seed_cache_dir: str | None = None
+    show_progress: bool = False
+    drain_timeout_seconds: float = 60.0
+    debug_vram: bool = False
 
 
 @dataclass
@@ -49,6 +80,7 @@ class FlowConfig:
 class Config:
     model_size: str = "large-v3-turbo"
     hotkey: str = "ctrl+alt+v"
+    output_lang: str = DEFAULT_OUTPUT_LANG
     sample_rate: int = 16000
     use_cpu: bool = False
     beam_size: int = 5

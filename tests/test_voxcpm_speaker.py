@@ -27,17 +27,9 @@ class FakeVoxCPMInstance:
         self.tts_model = FakeTTSModel()
         _fake_state["last_instance"] = self
 
-    def generate_streaming(
-        self,
-        text: str,
-        cfg_value: float,
-        inference_timesteps: int,
-        normalize: bool,
-    ) -> Iterator[NDArray[np.float32]]:
-        _fake_state["last_prompt"] = text
-        _fake_state["last_cfg"] = cfg_value
-        _fake_state["last_steps"] = inference_timesteps
-        _fake_state["last_normalize"] = normalize
+    def generate_streaming(self, **kwargs: Any) -> Iterator[NDArray[np.float32]]:  # noqa: ANN401
+        _fake_state["last_call"] = "streaming"
+        _fake_state["last_kwargs"] = kwargs
         chunks = _fake_state.get("chunks", [np.ones(8, dtype=np.float32)])
         stop_event: threading.Event | None = _fake_state.get("stop_event")
         for chunk in chunks:
@@ -48,14 +40,9 @@ class FakeVoxCPMInstance:
                 time.sleep(delay)
             yield chunk
 
-    def generate(
-        self,
-        text: str,
-        cfg_value: float,
-        inference_timesteps: int,
-        normalize: bool,
-    ) -> NDArray[np.float32]:
-        _fake_state["last_prompt"] = text
+    def generate(self, **kwargs: Any) -> NDArray[np.float32]:  # noqa: ANN401
+        _fake_state["last_call"] = "oneshot"
+        _fake_state["last_kwargs"] = kwargs
         return np.ones(16, dtype=np.float32)
 
 
@@ -93,17 +80,19 @@ class FakePlayer:
 
 
 @pytest.fixture
-def fake_voxcpm_env(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+def fake_voxcpm_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, Any]:
     _fake_state.clear()
+    # garante que o auto-seed não escolha o cache real do usuário
+    _fake_state["default_cache_dir"] = str(tmp_path / "voxcpm_cache")
     module = types.ModuleType("voxcpm")
     module.VoxCPM = FakeVoxCPM  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "voxcpm", module)
-    monkeypatch.setattr("app.services.voxcpm_speaker.AudioPlayer", FakePlayer)
+    monkeypatch.setattr("app.features.tts.voxcpm_speaker.AudioPlayer", FakePlayer)
     return _fake_state
 
 
 def _make_speaker(**overrides: Any) -> tuple[Any, FakePlayer]:  # noqa: ANN401
-    from app.services.voxcpm_speaker import VoxCPMSpeaker
+    from app.features.tts.voxcpm_speaker import VoxCPMSpeaker
 
     defaults: dict[str, Any] = {
         "enabled": True,
@@ -118,6 +107,9 @@ def _make_speaker(**overrides: Any) -> tuple[Any, FakePlayer]:  # noqa: ANN401
         "cache_dir": None,
         "normalize": True,
         "denoise": False,
+        # default off para não interferir com testes que não focam em seed
+        "voice_seed_mode": "off",
+        "voice_seed_cache_dir": _fake_state.get("default_cache_dir"),
     }
     defaults.update(overrides)
     config = TTSConfig(**defaults)
@@ -126,7 +118,7 @@ def _make_speaker(**overrides: Any) -> tuple[Any, FakePlayer]:  # noqa: ANN401
 
 
 def test_construct_loads_model_with_kwargs(fake_voxcpm_env: dict[str, Any]) -> None:
-    speaker, player = _make_speaker()
+    speaker, _ = _make_speaker()
     instance = fake_voxcpm_env["last_instance"]
 
     assert fake_voxcpm_env["model_id"] == "openbmb/VoxCPM2"
@@ -134,7 +126,6 @@ def test_construct_loads_model_with_kwargs(fake_voxcpm_env: dict[str, Any]) -> N
     assert instance.kwargs["optimize"] is False
     assert instance.kwargs["device"] == "cuda"
     assert speaker.is_active() is True
-    assert player.starts == [24000]
 
 
 def test_speak_builds_prompt_and_feeds_player(fake_voxcpm_env: dict[str, Any]) -> None:
@@ -146,11 +137,14 @@ def test_speak_builds_prompt_and_feeds_player(fake_voxcpm_env: dict[str, Any]) -
 
     speaker.speak("olá mundo")
 
-    assert fake_voxcpm_env["last_prompt"] == "(Mulher jovem) olá mundo"
-    assert fake_voxcpm_env["last_cfg"] == 2.5
-    assert fake_voxcpm_env["last_steps"] == 8
-    assert fake_voxcpm_env["last_normalize"] is True
+    kwargs = fake_voxcpm_env["last_kwargs"]
+    assert kwargs["text"] == "(Mulher jovem) olá mundo"
+    assert kwargs["cfg_value"] == 2.5
+    assert kwargs["inference_timesteps"] == 8
+    assert kwargs["normalize"] is True
+    assert "prompt_wav_path" not in kwargs  # mode == off
     assert len(player.fed) == 2
+    assert player.starts == [24000]
 
 
 def test_stop_aborts_player_and_breaks_streaming(
@@ -166,7 +160,6 @@ def test_stop_aborts_player_and_breaks_streaming(
     worker = threading.Thread(target=speaker.speak, args=("texto longo",), daemon=True)
     worker.start()
     time.sleep(0.05)
-    # marca o stop_event do gerador para simular cancelamento real do consumidor
     speaker.stop()
     stop_event.set()
     worker.join(timeout=2.0)
@@ -181,7 +174,8 @@ def test_oneshot_when_streaming_disabled(fake_voxcpm_env: dict[str, Any]) -> Non
     speaker.speak("oi")
 
     assert len(player.fed) == 1
-    assert fake_voxcpm_env["last_prompt"] == "(Voz teste) oi"
+    assert fake_voxcpm_env["last_call"] == "oneshot"
+    assert fake_voxcpm_env["last_kwargs"]["text"] == "(Voz teste) oi"
 
 
 def test_empty_text_does_nothing(fake_voxcpm_env: dict[str, Any]) -> None:
@@ -224,3 +218,117 @@ def test_save_audio_dir_writes_file(
     assert path.endswith(".wav")
     assert sr == 24000
     assert data.shape == (4,)
+
+
+# ─── Voice seed modes ──────────────────────────────────────────────────────
+
+
+def _install_fake_soundfile(monkeypatch: pytest.MonkeyPatch, written: list[Any]) -> None:
+    fake_soundfile = types.ModuleType("soundfile")
+
+    def fake_write(path: str, data: NDArray[np.float32], sample_rate: int) -> None:
+        written.append((path, data, sample_rate))
+
+    fake_soundfile.write = fake_write  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "soundfile", fake_soundfile)
+
+
+def test_voice_seed_auto_first_call_has_no_seed_and_persists(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_voxcpm_env: dict[str, Any],
+) -> None:
+    written: list[Any] = []
+    _install_fake_soundfile(monkeypatch, written)
+
+    cache_dir = tmp_path / "seedcache"
+    fake_voxcpm_env["chunks"] = [np.ones(4, dtype=np.float32)]
+    speaker, _ = _make_speaker(
+        voice_seed_mode="auto",
+        voice_seed_cache_dir=str(cache_dir),
+        voice_description="Mulher jovem",
+    )
+
+    speaker.speak("primeira fala")
+
+    kwargs = fake_voxcpm_env["last_kwargs"]
+    assert "prompt_wav_path" not in kwargs
+    assert "prompt_text" not in kwargs
+    # Sem seed → modo voice design: descrição entra entre parênteses
+    assert kwargs["text"] == "(Mulher jovem) primeira fala"
+    # auto-seed deve ter sido salvo (wav + txt)
+    assert any(p[0].endswith("voice_seed.wav") for p in written)
+    seed_text_path = cache_dir / "voice_seed.txt"
+    assert seed_text_path.exists()
+    # txt persistido é a fala pura, sem a descrição
+    assert seed_text_path.read_text(encoding="utf-8") == "primeira fala"
+
+
+def test_voice_seed_auto_second_call_uses_persisted_seed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_voxcpm_env: dict[str, Any],
+) -> None:
+    written: list[Any] = []
+    _install_fake_soundfile(monkeypatch, written)
+
+    cache_dir = tmp_path / "seedcache"
+    fake_voxcpm_env["chunks"] = [np.ones(4, dtype=np.float32)]
+    speaker, _ = _make_speaker(
+        voice_seed_mode="auto",
+        voice_seed_cache_dir=str(cache_dir),
+        voice_description="Mulher jovem",
+    )
+
+    speaker.speak("primeira fala")
+    speaker.speak("segunda fala")
+
+    kwargs = fake_voxcpm_env["last_kwargs"]
+    assert kwargs["prompt_wav_path"].endswith("voice_seed.wav")
+    assert kwargs["prompt_text"] == "primeira fala"
+    # Em modo cloning, o texto a sintetizar NÃO pode conter a descrição entre
+    # parênteses — senão o modelo lê a descrição em voz alta.
+    assert kwargs["text"] == "segunda fala"
+    assert "Mulher jovem" not in kwargs["text"]
+
+
+def test_voice_seed_fixed_passes_user_provided_wav(
+    tmp_path: Path,
+    fake_voxcpm_env: dict[str, Any],
+) -> None:
+    seed_wav = tmp_path / "minha-voz.wav"
+    seed_wav.write_bytes(b"\x00" * 16)
+
+    fake_voxcpm_env["chunks"] = [np.ones(4, dtype=np.float32)]
+    speaker, _ = _make_speaker(
+        voice_seed_mode="fixed",
+        voice_seed_path=str(seed_wav),
+        voice_seed_text="amostra minha",
+        voice_description="Voz qualquer",
+    )
+
+    speaker.speak("olá")
+
+    kwargs = fake_voxcpm_env["last_kwargs"]
+    assert kwargs["prompt_wav_path"] == str(seed_wav)
+    assert kwargs["prompt_text"] == "amostra minha"
+    # Em fixed/cloning, a descrição não vai pro texto
+    assert kwargs["text"] == "olá"
+    assert "Voz qualquer" not in kwargs["text"]
+
+
+def test_voice_seed_off_never_passes_seed(fake_voxcpm_env: dict[str, Any]) -> None:
+    fake_voxcpm_env["chunks"] = [np.ones(4, dtype=np.float32)]
+    speaker, _ = _make_speaker(voice_seed_mode="off")
+
+    speaker.speak("a")
+    speaker.speak("b")
+
+    kwargs = fake_voxcpm_env["last_kwargs"]
+    assert "prompt_wav_path" not in kwargs
+    assert "prompt_text" not in kwargs
+
+
+def test_voice_seed_fixed_requires_path_and_text(fake_voxcpm_env: dict[str, Any]) -> None:
+    with pytest.raises(ValueError, match="voice_seed_path e voice_seed_text"):
+        _make_speaker(voice_seed_mode="fixed", voice_seed_path=None, voice_seed_text=None)

@@ -4,11 +4,11 @@ from typing import Literal
 import numpy as np
 from numpy.typing import NDArray
 
+from app.core.audio_feedback import AudioFeedback
 from app.core.config import Config
-from app.services.audio_feedback import AudioFeedback
-from app.services.recorder import Recorder
-from app.services.transcriber import Transcriber
-from app.services.transcription_handler import TranscriptionHandler
+from app.core.recorder import Recorder
+from app.core.transcriber import Transcriber
+from app.core.transcription_handler import TranscriptionHandler
 
 SessionState = Literal["idle", "recording", "processing"]
 

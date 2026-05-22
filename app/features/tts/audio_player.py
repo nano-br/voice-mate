@@ -28,19 +28,29 @@ class AudioPlayer:
         self._leftover: NDArray[np.float32] | None = None
 
     def start(self, sample_rate: int) -> None:
+        """Cria um novo OutputStream — fecha o antigo se existir.
+
+        Cada chamada gera um stream fresco, evitando degradação após muitos
+        usos ou após `abort()`. Limpa flags internos para que `feed()` volte
+        a aceitar chunks normalmente.
+        """
         with self._lock:
-            if self._stream is not None:
-                return
+            old = self._stream
+            self._stream = None
             self._aborted.clear()
             self._idle.set()
             self._leftover = None
-            self._stream = sd.OutputStream(
+            self._drain_queue()
+            stream = sd.OutputStream(
                 samplerate=sample_rate,
                 channels=1,
                 dtype="float32",
                 callback=self._callback,
             )
-            self._stream.start()
+            stream.start()
+            self._stream = stream
+        if old is not None:
+            self._close_stream_safely(old)
 
     def feed(self, chunk: NDArray[np.float32]) -> None:
         if self._aborted.is_set():
@@ -52,25 +62,32 @@ class AudioPlayer:
         self._idle.clear()
         self._queue.put(chunk)
 
-    def drain(self, timeout: float | None = None) -> bool:
-        """Bloqueia até a fila esvaziar (ou `abort()`). Retorna True se idle."""
+    def drain(self, timeout: float | None = 60.0) -> bool:
+        """Bloqueia até a fila esvaziar (ou `abort()`). Retorna True se idle.
+
+        Default 60s para evitar travamento eterno caso o callback do
+        sounddevice pare de rodar por algum motivo (driver, etc).
+        """
         return self._idle.wait(timeout=timeout)
 
     def abort(self) -> None:
-        """Interrompe imediatamente, descartando buffer interno e do driver."""
+        """Interrompe imediatamente, fechando o stream e limpando o estado.
+
+        Após `abort()`, o player volta ao estado inicial — uma chamada a
+        `start()` cria um stream novo e `feed()` volta a funcionar.
+        """
         self._aborted.set()
-        while True:
-            try:
-                self._queue.get_nowait()
-            except queue.Empty:
-                break
+        self._drain_queue()
         self._leftover = None
         with self._lock:
-            if self._stream is not None:
-                try:
-                    self._stream.abort()
-                except Exception as exc:  # noqa: BLE001
-                    print(f"[AudioPlayer] abort falhou: {exc}", file=sys.stderr)
+            stream = self._stream
+            self._stream = None
+        if stream is not None:
+            try:
+                stream.abort()
+            except Exception as exc:  # noqa: BLE001
+                print(f"[AudioPlayer] abort falhou: {exc}", file=sys.stderr)
+            self._close_stream_safely(stream)
         self._idle.set()
 
     def close(self) -> None:
@@ -79,6 +96,17 @@ class AudioPlayer:
                 return
             stream = self._stream
             self._stream = None
+        self._close_stream_safely(stream)
+
+    def _drain_queue(self) -> None:
+        while True:
+            try:
+                self._queue.get_nowait()
+            except queue.Empty:
+                return
+
+    @staticmethod
+    def _close_stream_safely(stream: sd.OutputStream) -> None:
         try:
             stream.stop()
             stream.close()
