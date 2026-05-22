@@ -5,7 +5,7 @@ from collections.abc import Callable
 
 import pytest
 
-from app.services.multi_hotkey_listener import MultiHotkeyListener
+from app.core.multi_hotkey_listener import MultiHotkeyListener
 
 
 class FakeKeyboardModule:

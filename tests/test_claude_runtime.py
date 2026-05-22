@@ -56,10 +56,20 @@ class FakeClaudeSDKClient:
         self.interrupt_calls += 1
 
 
-@dataclass
 class FakeClaudeAgentOptions:
-    system_prompt: str | None = None
-    max_turns: int | None = None
+    def __init__(self, **kwargs: Any) -> None:  # noqa: ANN401 — kwargs livres do SDK
+        self.kwargs = kwargs
+        self.system_prompt = kwargs.get("system_prompt")
+        self.max_turns = kwargs.get("max_turns")
+        self.model = kwargs.get("model")
+        self.effort = kwargs.get("effort")
+        self.thinking = kwargs.get("thinking")
+
+
+class FakeThinkingConfigDisabled(dict[str, Any]):
+    def __init__(self, type: str = "disabled") -> None:  # noqa: A002
+        super().__init__()
+        self["type"] = type
 
 
 @pytest.fixture
@@ -70,12 +80,13 @@ def fake_sdk(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
     module.ClaudeAgentOptions = FakeClaudeAgentOptions  # type: ignore[attr-defined]
     module.AssistantMessage = FakeAssistantMessage  # type: ignore[attr-defined]
     module.TextBlock = FakeTextBlock  # type: ignore[attr-defined]
+    module.ThinkingConfigDisabled = FakeThinkingConfigDisabled  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "claude_agent_sdk", module)
     return module
 
 
 def test_runtime_start_and_send(fake_sdk: types.ModuleType) -> None:
-    from app.services.claude_runtime import ClaudeRuntime
+    from app.features.claude.runtime import ClaudeRuntime
 
     _fake_state["response_chunks"] = ["olá ", "mundo"]
     runtime = ClaudeRuntime(system_prompt="sys", max_turns=10)
@@ -93,7 +104,7 @@ def test_runtime_start_and_send(fake_sdk: types.ModuleType) -> None:
 
 
 def test_runtime_start_raises_when_aenter_fails(fake_sdk: types.ModuleType) -> None:
-    from app.services.claude_runtime import ClaudeRuntime
+    from app.features.claude.runtime import ClaudeRuntime
 
     _fake_state["aenter_should_raise"] = True
     runtime = ClaudeRuntime(system_prompt=None, max_turns=None)
@@ -102,7 +113,7 @@ def test_runtime_start_raises_when_aenter_fails(fake_sdk: types.ModuleType) -> N
 
 
 def test_runtime_interrupt_is_fire_and_forget(fake_sdk: types.ModuleType) -> None:
-    from app.services.claude_runtime import ClaudeRuntime
+    from app.features.claude.runtime import ClaudeRuntime
 
     runtime = ClaudeRuntime(system_prompt=None, max_turns=None)
     runtime.start()
@@ -122,7 +133,7 @@ def test_runtime_interrupt_is_fire_and_forget(fake_sdk: types.ModuleType) -> Non
 
 
 def test_runtime_send_before_start_raises(fake_sdk: types.ModuleType) -> None:
-    from app.services.claude_runtime import ClaudeRuntime
+    from app.features.claude.runtime import ClaudeRuntime
 
     runtime = ClaudeRuntime(system_prompt=None, max_turns=None)
     with pytest.raises(RuntimeError, match="não iniciado"):
@@ -130,9 +141,81 @@ def test_runtime_send_before_start_raises(fake_sdk: types.ModuleType) -> None:
 
 
 def test_runtime_stop_is_idempotent(fake_sdk: types.ModuleType) -> None:
-    from app.services.claude_runtime import ClaudeRuntime
+    from app.features.claude.runtime import ClaudeRuntime
 
     runtime = ClaudeRuntime(system_prompt=None, max_turns=None)
     runtime.start()
     runtime.stop()
     runtime.stop()  # não deve levantar
+
+
+def test_runtime_passes_model_effort_and_disables_thinking_by_default(
+    fake_sdk: types.ModuleType,
+) -> None:
+    from app.features.claude.runtime import ClaudeRuntime
+
+    runtime = ClaudeRuntime(
+        system_prompt="custom",
+        max_turns=5,
+        model="claude-sonnet-4-6",
+        effort="low",
+        thinking_enabled=False,
+    )
+    runtime.start()
+    try:
+        client = _fake_state["last_client"]
+        opts = client.options
+        assert opts.model == "claude-sonnet-4-6"
+        assert opts.effort == "low"
+        assert opts.system_prompt == "custom"
+        assert opts.max_turns == 5
+        assert opts.thinking == {"type": "disabled"}
+    finally:
+        runtime.stop()
+
+
+def test_runtime_thinking_enabled_omits_thinking_kwarg(fake_sdk: types.ModuleType) -> None:
+    from app.features.claude.runtime import ClaudeRuntime
+
+    runtime = ClaudeRuntime(
+        system_prompt=None,
+        max_turns=None,
+        model="claude-sonnet-4-6",
+        effort="medium",
+        thinking_enabled=True,
+    )
+    runtime.start()
+    try:
+        opts = _fake_state["last_client"].options
+        assert opts.thinking is None  # campo não foi adicionado a kwargs
+        assert "thinking" not in opts.kwargs
+    finally:
+        runtime.stop()
+
+
+def test_runtime_omits_optional_fields_when_none(fake_sdk: types.ModuleType) -> None:
+    from app.features.claude.runtime import ClaudeRuntime
+
+    runtime = ClaudeRuntime(system_prompt=None, max_turns=None)
+    runtime.start()
+    try:
+        opts = _fake_state["last_client"].options
+        # nenhum dos optional fields foi setado
+        assert "system_prompt" not in opts.kwargs
+        assert "max_turns" not in opts.kwargs
+        assert "model" not in opts.kwargs
+        assert "effort" not in opts.kwargs
+    finally:
+        runtime.stop()
+
+
+def test_claude_chat_config_default_leaves_system_prompt_none() -> None:
+    """Default system_prompt is None — main.py resolves it to canonical via output_lang."""
+    from app.core.config import ClaudeChatConfig
+
+    cfg = ClaudeChatConfig()
+    assert cfg.system_prompt is None
+    assert cfg.model == "claude-sonnet-4-6"
+    assert cfg.effort == "low"
+    assert cfg.thinking_enabled is False
+    assert cfg.timeout_seconds == 120.0

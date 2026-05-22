@@ -7,7 +7,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from app.core.config import Config
-from app.services.recording_session import RecordingSession
+from app.core.recording_session import RecordingSession
 
 
 class FakeRecorder:

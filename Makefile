@@ -1,9 +1,48 @@
-.PHONY: all setup_env format lint test run run-large run-turbo clean
+.PHONY: all setup_env setup_env_minimal setup_env_claude setup_env_tts setup_env_custom lock \
+        format lint test run run-large run-turbo run-vozes-aleatorias run-reset-voz \
+        i18n-extract i18n-init-pt i18n-init-en i18n-update i18n-compile clean
 
 all: format lint test
 
+# Default: instala tudo (core + claude + tts)
 setup_env:
+	poetry install --extras all
+
+# Só core (transcrição + clipboard). Sem Claude, sem TTS.
+setup_env_minimal:
 	poetry install
+
+setup_env_claude:
+	poetry install --extras claude
+
+setup_env_tts:
+	poetry install --extras tts
+
+# Instalação custom: make setup_env_custom EXTRAS="claude tts"
+setup_env_custom:
+	poetry install --extras "$(EXTRAS)"
+
+lock:
+	poetry lock
+
+# ─── i18n (gettext + Babel) ──────────────────────────────────────────────────
+# Extrai strings marcadas com _() para um catálogo .pot, gera/atualiza os .po
+# de cada idioma e compila para .mo (que o gettext carrega em runtime).
+
+i18n-extract:
+	poetry run pybabel extract -F app/i18n/babel.cfg -o app/i18n/locales/voicemate.pot app
+
+i18n-init-pt:
+	poetry run pybabel init -i app/i18n/locales/voicemate.pot -d app/i18n/locales -D voicemate -l pt_BR
+
+i18n-init-en:
+	poetry run pybabel init -i app/i18n/locales/voicemate.pot -d app/i18n/locales -D voicemate -l en
+
+i18n-update:
+	poetry run pybabel update -i app/i18n/locales/voicemate.pot -d app/i18n/locales -D voicemate
+
+i18n-compile:
+	poetry run pybabel compile -d app/i18n/locales -D voicemate
 
 format:
 	poetry run ruff format .
@@ -17,13 +56,20 @@ test:
 	poetry run pytest -v
 
 run:
-	poetry run voice-mate
+	poetry run voice-mate $(ARGS)
 
 run-large:
-	poetry run voice-mate --model large-v3
+	poetry run voice-mate --model large-v3 $(ARGS)
 
 run-turbo:
-	poetry run voice-mate --model large-v3-turbo
+	poetry run voice-mate --model large-v3-turbo $(ARGS)
+
+# Atalhos para os modos de voz mais comuns
+run-vozes-aleatorias:
+	poetry run voice-mate --tts-voice-seed-mode off $(ARGS)
+
+run-reset-voz:
+	poetry run voice-mate --tts-reset-seed $(ARGS)
 
 clean:
 	rm -rf .pytest_cache .ruff_cache .mypy_cache

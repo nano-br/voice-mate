@@ -15,9 +15,19 @@ class ClaudeRuntime:
     threads e despacham para o loop via `run_coroutine_threadsafe`.
     """
 
-    def __init__(self, system_prompt: str | None, max_turns: int | None) -> None:
+    def __init__(
+        self,
+        system_prompt: str | None,
+        max_turns: int | None,
+        model: str | None = None,
+        effort: str | None = None,
+        thinking_enabled: bool = True,
+    ) -> None:
         self._system_prompt = system_prompt
         self._max_turns = max_turns
+        self._model = model
+        self._effort = effort
+        self._thinking_enabled = thinking_enabled
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
         self._client: Any = None
@@ -94,6 +104,14 @@ class ClaudeRuntime:
             options_kwargs["system_prompt"] = self._system_prompt
         if self._max_turns is not None:
             options_kwargs["max_turns"] = self._max_turns
+        if self._model is not None:
+            options_kwargs["model"] = self._model
+        if self._effort is not None:
+            options_kwargs["effort"] = self._effort
+        if not self._thinking_enabled:
+            from claude_agent_sdk import ThinkingConfigDisabled
+
+            options_kwargs["thinking"] = ThinkingConfigDisabled(type="disabled")
         options = ClaudeAgentOptions(**options_kwargs)
         client = ClaudeSDKClient(options=options)
         await client.__aenter__()

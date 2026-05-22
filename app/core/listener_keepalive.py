@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 import threading
 
-from app.services.input_listener import InputListener
+from app.core.input_listener import InputListener
 
 
 class ListenerKeepalive:
