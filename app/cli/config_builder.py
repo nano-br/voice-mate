@@ -5,17 +5,77 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from typing import cast
 
 from app.core.config import (
     ClaudeChatConfig,
     ClaudeEffort,
     Config,
+    GpuVendor,
     TTSConfig,
     TTSDevice,
     VoiceSeedMode,
+    WhisperBackend,
 )
+from app.setup.gpu_detect import detect_gpu
+from app.setup.persisted_config import PersistedConfig
 
 _DISABLED_SYSTEM_PROMPT = ""
+
+
+def _resolve_gpu_vendor(args: argparse.Namespace, persisted: PersistedConfig) -> GpuVendor:
+    """Precedência: --cpu > --gpu-backend > config salvo > auto-detecção."""
+    if args.cpu:
+        return "cpu"
+    if args.gpu_backend is not None:
+        if args.gpu_backend == "auto":
+            return detect_gpu().vendor
+        return cast(GpuVendor, args.gpu_backend)  # nvidia | amd | cpu (validado pelo argparse)
+    if persisted.gpu_vendor is not None:
+        return persisted.gpu_vendor
+    return detect_gpu().vendor
+
+
+def _default_backend_for(vendor: GpuVendor) -> WhisperBackend:
+    # AMD não acelera no CTranslate2 (faster-whisper) → whisper.cpp + Vulkan
+    # (leve, estável, sem torch ROCm). openai-whisper fica como fallback opcional.
+    return "whispercpp" if vendor == "amd" else "faster-whisper"
+
+
+def _resolve_whisper_backend(args: argparse.Namespace, persisted: PersistedConfig, vendor: GpuVendor) -> WhisperBackend:
+    """Precedência: --cpu > --whisper-backend > config salvo > default do vendor."""
+    if args.cpu:
+        return "faster-whisper"  # melhor engine em CPU
+    if args.whisper_backend is not None:
+        return cast(WhisperBackend, args.whisper_backend)
+    if persisted.whisper_backend is not None:
+        return persisted.whisper_backend
+    return _default_backend_for(vendor)
+
+
+def _resolve_tts_enabled(args: argparse.Namespace, persisted: PersistedConfig) -> bool:
+    if args.no_tts:
+        return False
+    if persisted.tts_enabled is not None:
+        return persisted.tts_enabled
+    return True
+
+
+def _resolve_claude_enabled(args: argparse.Namespace, persisted: PersistedConfig) -> bool:
+    """CLI --no-claude-chat > fluxo salvo > default (ligado); exige keyboard."""
+    if args.no_claude_chat:
+        enabled = False
+    elif persisted.default_flow == "clipboard":
+        enabled = False
+    else:
+        enabled = True
+    if enabled and args.input_method == "mouse":
+        print(
+            "[VoiceMate] ⚠ Fluxo Claude requer input-method=keyboard. Desabilitando.",
+            file=sys.stderr,
+        )
+        return False
+    return enabled and args.input_method == "keyboard"
 
 
 def resolve_system_prompt(args: argparse.Namespace) -> str | None:
@@ -39,13 +99,12 @@ def resolve_system_prompt(args: argparse.Namespace) -> str | None:
     return None
 
 
-def build_config(args: argparse.Namespace) -> Config:
-    claude_chat_enabled = not args.no_claude_chat and args.input_method == "keyboard"
-    if args.no_claude_chat is False and args.input_method == "mouse":
-        print(
-            "[VoiceMate] ⚠ Fluxo Claude requer input-method=keyboard. Desabilitando.",
-            file=sys.stderr,
-        )
+def build_config(args: argparse.Namespace, persisted: PersistedConfig | None = None) -> Config:
+    persisted = persisted or PersistedConfig()
+    gpu_vendor = _resolve_gpu_vendor(args, persisted)
+    whisper_backend = _resolve_whisper_backend(args, persisted, gpu_vendor)
+    claude_chat_enabled = _resolve_claude_enabled(args, persisted)
+    tts_enabled = _resolve_tts_enabled(args, persisted)
     tts_device: TTSDevice = args.tts_device
     claude_effort: ClaudeEffort = args.claude_effort
     voice_seed_mode: VoiceSeedMode = args.tts_voice_seed_mode
@@ -54,6 +113,8 @@ def build_config(args: argparse.Namespace) -> Config:
         hotkey=args.hotkey,
         output_lang=args.output_lang,
         use_cpu=args.cpu,
+        gpu_vendor=gpu_vendor,
+        whisper_backend=whisper_backend,
         input_method=args.input_method,
         mouse_button=args.mouse_button,
         max_recording_seconds=args.max_recording_seconds,
@@ -72,7 +133,7 @@ def build_config(args: argparse.Namespace) -> Config:
             timeout_seconds=args.claude_timeout_seconds,
         ),
         tts=TTSConfig(
-            enabled=not args.no_tts,
+            enabled=tts_enabled,
             voice_description=args.tts_voice,
             cfg_value=args.tts_cfg_value,
             inference_timesteps=args.tts_inference_timesteps,
@@ -86,6 +147,7 @@ def build_config(args: argparse.Namespace) -> Config:
             show_progress=args.tts_show_progress,
             drain_timeout_seconds=args.tts_drain_timeout_seconds,
             debug_vram=args.tts_debug_vram,
+            gpu_vendor=gpu_vendor,
         ),
     )
 

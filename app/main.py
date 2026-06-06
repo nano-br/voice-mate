@@ -2,28 +2,26 @@ import sys
 
 from app.cli.args import parse_args
 from app.cli.config_builder import build_config, delete_existing_auto_seed
-from app.cli.wiring import build_handlers, build_listener, build_speaker
+from app.cli.wiring import build_handlers, build_listener, build_speaker, build_transcriber
 from app.core.audio_feedback import AudioFeedback
+from app.core.console import force_utf8_stdio
 from app.core.listener_keepalive import ListenerKeepalive
 from app.core.recorder import Recorder
 from app.core.recording_session import RecordingSession
-from app.core.transcriber import Transcriber
 from app.core.watchdog import Watchdog
 from app.features.tts.base import NullSpeaker, TextToSpeech
 from app.i18n import _, setup_locale
+from app.setup.persisted_config import load_persisted
 
 
 def main() -> None:
+    force_utf8_stdio()
     args = parse_args()
-    config = build_config(args)
+    config = build_config(args, load_persisted())
     setup_locale(config.output_lang)
 
     recorder = Recorder(sample_rate=config.sample_rate)
-    transcriber = Transcriber(
-        model_size=config.model_size,
-        use_cpu=config.use_cpu,
-        beam_size=config.beam_size,
-    )
+    transcriber = build_transcriber(config)
     audio_feedback = AudioFeedback()
 
     flows = config.flows or config.build_default_flows()

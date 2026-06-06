@@ -117,10 +117,15 @@ def _make_speaker(**overrides: Any) -> tuple[Any, FakePlayer]:  # noqa: ANN401
     return speaker, speaker._player  # type: ignore[attr-defined,return-value]
 
 
-def test_construct_loads_model_with_kwargs(fake_voxcpm_env: dict[str, Any]) -> None:
+def test_lazy_load_defers_model_until_first_speak(fake_voxcpm_env: dict[str, Any]) -> None:
     speaker, _ = _make_speaker()
-    instance = fake_voxcpm_env["last_instance"]
+    # Lazy: a construção NÃO carrega o modelo (sem custo de VRAM até falar).
+    assert "last_instance" not in fake_voxcpm_env
+    assert speaker.is_active() is True
 
+    # A primeira fala carrega o modelo com os kwargs corretos.
+    speaker.speak("olá")
+    instance = fake_voxcpm_env["last_instance"]
     assert fake_voxcpm_env["model_id"] == "openbmb/VoxCPM2"
     assert instance.kwargs["load_denoiser"] is False
     assert instance.kwargs["optimize"] is False

@@ -7,7 +7,7 @@ from numpy.typing import NDArray
 from app.core.audio_feedback import AudioFeedback
 from app.core.config import Config
 from app.core.recorder import Recorder
-from app.core.transcriber import Transcriber
+from app.core.transcription_backend import TranscriptionBackend
 from app.core.transcription_handler import TranscriptionHandler
 
 SessionState = Literal["idle", "recording", "processing"]
@@ -25,7 +25,7 @@ class RecordingSession:
     def __init__(
         self,
         recorder: Recorder,
-        transcriber: Transcriber,
+        transcriber: TranscriptionBackend,
         audio: AudioFeedback,
         config: Config,
         handlers: dict[str, TranscriptionHandler],

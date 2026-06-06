@@ -22,25 +22,24 @@ numpy = "*"
 pyperclip = "*"
 keyboard = "*"
 mouse = "*"
-# PyTorch com CUDA: o índice padrão da PyPI entrega torch CPU-only no Windows,
-# o que faz o VoxCPM rodar 50-100× mais devagar. Forçamos a build CUDA via
-# source explícita do PyTorch.
-torch = { source = "pytorch-cu128" }
-torchaudio = { source = "pytorch-cu128" }
+# PyTorch (torch/torchaudio) NÃO é declarado aqui de propósito: o build correto
+# depende da placa (CUDA cu128 p/ NVIDIA, ROCm p/ AMD, CPU como fallback) e os
+# wheels ROCm nem estão no PyPI. Quem instala é `app.setup.gpu_bootstrap`, via
+# `make setup` / `make configure`, que detecta a GPU e roda o pip certo.
+# voxcpm e openai-whisper dependem de torch — o setup instala o torch por último
+# (--force-reinstall) para o build da placa prevalecer sobre o CPU-only do PyPI.
 # Extras opt-in (não instalam por padrão; ver [tool.poetry.extras])
 claude-agent-sdk = { version = "*", optional = true }
 voxcpm = { version = "*", python = "<3.13", optional = true }
 soundfile = { version = "*", optional = true }
+openai-whisper = { version = "*", optional = true }
 
 [tool.poetry.extras]
 claude = ["claude-agent-sdk"]
 tts = ["voxcpm", "soundfile"]
-all = ["claude-agent-sdk", "voxcpm", "soundfile"]
-
-[[tool.poetry.source]]
-name = "pytorch-cu128"
-url = "https://download.pytorch.org/whl/cu128"
-priority = "explicit"
+# Whisper na GPU AMD: openai-whisper roda sobre o torch+ROCm que o setup instala.
+whisper-gpu = ["openai-whisper"]
+all = ["claude-agent-sdk", "voxcpm", "soundfile", "openai-whisper"]
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"

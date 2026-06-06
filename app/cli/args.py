@@ -33,6 +33,24 @@ def _add_core_args(parser: argparse.ArgumentParser) -> None:
         help="Forçar uso de CPU em vez de GPU (usa int8)",
     )
     parser.add_argument(
+        "--gpu-backend",
+        default=None,
+        choices=["auto", "nvidia", "amd", "cpu"],
+        help=(
+            "Vendor da GPU. 'auto' detecta a placa; omitido usa o config salvo "
+            "(~/.config/voicemate/config.toml) ou detecta. Sobrescreve o salvo."
+        ),
+    )
+    parser.add_argument(
+        "--whisper-backend",
+        default=None,
+        choices=["faster-whisper", "whispercpp", "openai-whisper"],
+        help=(
+            "Motor de transcrição. Omitido = automático pelo vendor "
+            "(NVIDIA→faster-whisper/CUDA, AMD→whisper.cpp/Vulkan, CPU→faster-whisper)."
+        ),
+    )
+    parser.add_argument(
         "--input-method",
         default="keyboard",
         choices=["keyboard", "mouse"],

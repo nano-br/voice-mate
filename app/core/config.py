@@ -7,6 +7,18 @@ TTSDevice = Literal["auto", "cuda", "cpu", "mps"]
 ClaudeEffort = Literal["low", "medium", "high", "xhigh", "max"]
 VoiceSeedMode = Literal["auto", "fixed", "off"]
 
+# Vendor da GPU resolvido em runtime (detectado, persistido ou via --gpu-backend).
+# No PyTorch+ROCm a placa AMD se reporta como "cuda" (HIP se disfarça de CUDA),
+# então o device do torch é "cuda" tanto p/ NVIDIA quanto p/ AMD; o vendor serve
+# para escolher o backend de transcrição e a mensagem de reinstalação correta.
+GpuVendor = Literal["nvidia", "amd", "cpu"]
+# Motor de transcrição:
+#   - faster-whisper (CTranslate2): acelera NVIDIA/CPU (não tem ROCm).
+#   - whispercpp: whisper.cpp + Vulkan, backend preferido na AMD — leve
+#     (~2-3 GB c/ turbo fp16/q8), estável e vendor-agnóstico, sem torch ROCm.
+#   - openai-whisper: fallback torch (roda na GPU AMD via ROCm, mas ~4,8 GB).
+WhisperBackend = Literal["faster-whisper", "whispercpp", "openai-whisper"]
+
 # Default language code injected into LLM system prompts (placeholder
 # `{output_lang}`). The assistant replies in this language — switching it
 # is enough to change the response language without keeping translated
@@ -64,6 +76,9 @@ class TTSConfig:
     show_progress: bool = False
     drain_timeout_seconds: float = 60.0
     debug_vram: bool = False
+    # Vendor da GPU (só p/ escolher a dica de reinstalação correta no aviso
+    # de "torch sem aceleração"). O device em si continua vindo de `device`.
+    gpu_vendor: GpuVendor = "cpu"
 
 
 @dataclass
@@ -84,6 +99,13 @@ class Config:
     sample_rate: int = 16000
     use_cpu: bool = False
     beam_size: int = 5
+    # GPU resolvida em runtime: vendor + motor de transcrição. O default é o
+    # mais seguro (CPU + faster-whisper); o setup/persistência/CLI sobrescrevem.
+    gpu_vendor: GpuVendor = "cpu"
+    whisper_backend: WhisperBackend = "faster-whisper"
+    # Diretório com whisper-cli.exe + DLLs + modelo GGUF (backend whispercpp).
+    # None → ~/.cache/voicemate/whispercpp (preenchido pelo make setup).
+    whispercpp_dir: str | None = None
     input_method: str = "keyboard"
     mouse_button: str = "x"
     max_recording_seconds: int = 600

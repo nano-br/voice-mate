@@ -3,8 +3,14 @@ from faster_whisper import WhisperModel
 from numpy.typing import NDArray
 
 
-class Transcriber:
-    """Transcreve áudio usando faster-whisper (CTranslate2 backend)."""
+class FasterWhisperBackend:
+    """Transcreve áudio usando faster-whisper (CTranslate2 backend).
+
+    Cobre NVIDIA (device="cuda", int8_float16) e CPU (int8). NÃO serve para a
+    AMD: o CTranslate2 não tem backend ROCm e trava na gfx1201 — nesse caso a
+    factory `cli.wiring.build_transcriber` escolhe o backend openai-whisper.
+    Satisfaz o Protocol `core.transcription_backend.TranscriptionBackend`.
+    """
 
     def __init__(self, model_size: str, use_cpu: bool, beam_size: int) -> None:
         device = "cpu" if use_cpu else "cuda"
@@ -19,3 +25,7 @@ class Transcriber:
         """Retorna o texto transcrito, ou string vazia se nenhuma fala detectada."""
         segments, _ = self._model.transcribe(audio, beam_size=self._beam_size)
         return " ".join(seg.text for seg in segments).strip()
+
+
+# Back-compat: código/testes que importam `Transcriber` continuam funcionando.
+Transcriber = FasterWhisperBackend

@@ -1,12 +1,27 @@
-.PHONY: all setup_env setup_env_minimal setup_env_claude setup_env_tts setup_env_custom lock \
+.PHONY: all setup configure setup_env setup_env_minimal setup_env_claude setup_env_tts setup_env_custom lock \
         format lint test run run-large run-turbo run-vozes-aleatorias run-reset-voz \
         i18n-extract i18n-init-pt i18n-init-en i18n-update i18n-compile clean
 
 all: format lint test
 
-# Default: instala tudo (core + claude + tts)
+# ─── Setup recomendado ───────────────────────────────────────────────────────
+# Detecta a GPU (NVIDIA/AMD/CPU), confirma com você, instala o torch certo
+# (CUDA cu128 / ROCm / CPU) + os módulos escolhidos, e lembra a escolha em
+# ~/.config/voicemate/config.toml. Funciona em PowerShell e Git Bash.
+setup:
+	poetry install
+	poetry run python -m app.setup.gpu_bootstrap
+
+# Re-pergunta vendor/módulo/TTS e reinstala o torch certo (sem mexer no resto).
+configure:
+	poetry run python -m app.setup.gpu_bootstrap --reconfigure
+
+# ─── Setup legado (assume NVIDIA) ────────────────────────────────────────────
+# Compat com o fluxo antigo: instala tudo + torch CUDA. Prefira `make setup`,
+# que também cobre AMD/CPU.
 setup_env:
 	poetry install --extras all
+	poetry run python -m app.setup.gpu_bootstrap --vendor nvidia --yes --extras all
 
 # Só core (transcrição + clipboard). Sem Claude, sem TTS.
 setup_env_minimal:

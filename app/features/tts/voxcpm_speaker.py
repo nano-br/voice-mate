@@ -38,18 +38,39 @@ class VoxCPMSpeaker:
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
         self._closed = False
+        self._load_failed = False
         self._seed_path: str | None = None
         self._seed_text: str | None = None
         self._auto_seed_cache_dir: Path | None = None
         self._configure_voice_seed()
-        self._model: Any = self._load_model()
-        self._sample_rate: int = int(self._model.tts_model.sample_rate)
+        # Lazy load: o modelo (~5-6 GB de VRAM) só carrega na PRIMEIRA fala.
+        # Sessões que usam só o clipboard nunca pagam esse custo de VRAM/tempo.
+        self._model: Any = None
+        self._sample_rate: int = 16000
 
     def is_active(self) -> bool:
-        return not self._closed
+        return not self._closed and not self._load_failed
+
+    def _ensure_model(self) -> bool:
+        """Carrega o modelo sob demanda (1ª fala). Retorna False se falhar."""
+        if self._model is not None:
+            return True
+        if self._load_failed:
+            return False
+        try:
+            model = self._load_model()
+            self._sample_rate = int(model.tts_model.sample_rate)
+            self._model = model
+            return True
+        except Exception as exc:  # noqa: BLE001
+            print(f"[VoxCPMSpeaker] ⚠ Falha ao carregar VoxCPM2: {exc}", file=sys.stderr)
+            self._load_failed = True
+            return False
 
     def speak(self, text: str) -> None:
         if self._closed or not text.strip():
+            return
+        if not self._ensure_model():
             return
         self._stop_event.clear()
         collected: list[NDArray[np.float32]] = []
@@ -164,28 +185,41 @@ class VoxCPMSpeaker:
 
         _vox2.tqdm = _identity  # type: ignore[assignment]
 
-    @staticmethod
-    def _warn_if_torch_lacks_cuda() -> None:
+    def _warn_if_torch_lacks_cuda(self) -> None:
         try:
             import torch
         except ImportError:
             return
+        # Em ROCm o torch reporta CUDA disponível (HIP se disfarça de cuda),
+        # então isto cobre tanto NVIDIA quanto AMD acelerados.
         if torch.cuda.is_available():
             return
         print(
-            "[VoxCPMSpeaker] ⚠ PyTorch sem CUDA detectado — VoxCPM rodará em CPU "
+            "[VoxCPMSpeaker] ⚠ PyTorch sem aceleração de GPU — VoxCPM rodará em CPU "
             "(síntese ~50-100× mais lenta que GPU).",
             file=sys.stderr,
         )
-        print(
-            "[VoxCPMSpeaker]   Para habilitar GPU, reinstale o PyTorch com build CUDA:",
-            file=sys.stderr,
-        )
-        print(
-            "[VoxCPMSpeaker]   poetry run pip install --upgrade --index-url "
-            "https://download.pytorch.org/whl/cu128 torch torchaudio",
-            file=sys.stderr,
-        )
+        if self._config.gpu_vendor == "amd":
+            print(
+                "[VoxCPMSpeaker]   Para a GPU AMD, instale o torch ROCm "
+                "(driver Adrenalin >= 26.2.2). Rode: make configure",
+                file=sys.stderr,
+            )
+            print(
+                "[VoxCPMSpeaker]   Wheels: https://repo.radeon.com/rocm/windows/ "
+                "(torch/torchaudio +rocm, cp312, win_amd64)",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                "[VoxCPMSpeaker]   Para a GPU NVIDIA, reinstale o PyTorch com build CUDA:",
+                file=sys.stderr,
+            )
+            print(
+                "[VoxCPMSpeaker]   poetry run pip install --upgrade --index-url "
+                "https://download.pytorch.org/whl/cu128 torch torchaudio",
+                file=sys.stderr,
+            )
 
     def _speak_streaming(self, text: str, collected: list[NDArray[np.float32]]) -> None:
         self._player.start(self._sample_rate)

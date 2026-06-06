@@ -1,0 +1,41 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from app.core.config import Config
+from app.features import whispercpp
+
+
+def test_resolve_dir_default() -> None:
+    cfg = Config()
+    assert whispercpp.resolve_dir(cfg) == Path.home() / ".cache" / "voicemate" / "whispercpp"
+
+
+def test_resolve_dir_override(tmp_path: Path) -> None:
+    cfg = Config(whispercpp_dir=str(tmp_path))
+    assert whispercpp.resolve_dir(cfg) == tmp_path
+
+
+def test_is_available_false_when_dir_empty(tmp_path: Path) -> None:
+    cfg = Config(whispercpp_dir=str(tmp_path))
+    assert whispercpp.is_available(cfg) is False
+
+
+def test_is_available_true_with_exe_and_model(tmp_path: Path) -> None:
+    (tmp_path / "whisper-cli.exe").write_bytes(b"x")
+    (tmp_path / "ggml-large-v3-turbo.bin").write_bytes(b"x")
+    cfg = Config(whispercpp_dir=str(tmp_path))
+    assert whispercpp.is_available(cfg) is True
+
+
+def test_is_available_false_with_exe_but_no_model(tmp_path: Path) -> None:
+    (tmp_path / "whisper-cli.exe").write_bytes(b"x")
+    cfg = Config(whispercpp_dir=str(tmp_path))
+    assert whispercpp.is_available(cfg) is False
+
+
+def test_find_model_picks_ggml_bin(tmp_path: Path) -> None:
+    (tmp_path / "ggml-large-v3-turbo.bin").write_bytes(b"x")
+    found = whispercpp.find_model(tmp_path)
+    assert found is not None
+    assert found.name == "ggml-large-v3-turbo.bin"

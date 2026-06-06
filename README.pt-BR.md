@@ -18,8 +18,8 @@ Ditado na nuvem é rápido — até deixar de ser. O VoiceMate roda o Whisper **
 
 - **Atalho em modo toggle** — pressione uma vez para começar, pressione de novo para parar e transcrever
 - **Dois fluxos, um microfone** — `Ctrl+Alt+V` leva a transcrição para o clipboard; `Ctrl+Alt+A` manda o texto para o Claude (conversa multi-turn) e deixa a resposta da IA no clipboard
-- **Transcrição local** — `faster-whisper` (backend CTranslate2, 4–8× mais rápido que PyTorch)
-- **GPU acelerada** — CUDA float16 por padrão, com fallback CPU int8
+- **Transcrição local** — `faster-whisper` (CTranslate2) em NVIDIA/CPU, ou `whisper.cpp` + Vulkan em GPUs AMD (~1,6 GB de VRAM, large-v3-turbo) — o backend é escolhido automaticamente conforme a placa
+- **GPU acelerada, agnóstica de fabricante** — NVIDIA (CUDA) **e** AMD (Vulkan + ROCm) suportadas, com fallback automático para CPU. VRAM ociosa ≈ 0 (transcrição roda como subprocess; TTS carrega sob demanda na 1ª fala)
 - **TTS plugável** — a resposta do Claude é lida em voz alta com [VoxCPM2](https://github.com/OpenBMB/VoxCPM) (2B params, voice design por descrição em PT-BR, streaming). Arquitetura preparada para trocar facilmente por outras libs
 - **Histórico de clipboard via Win+V** — o fluxo de IA copia primeiro a transcrição e depois a resposta, então o histórico do Windows mostra as duas lado a lado para você conferir
 - **O atalho usado para parar decide o destino** — você pode começar com qualquer atalho; quem decide para onde o texto vai é o atalho que você pressiona para parar
@@ -35,7 +35,10 @@ Ditado na nuvem é rápido — até deixar de ser. O VoiceMate roda o Whisper **
 - Windows 10/11 (foco principal — Linux/macOS podem funcionar, mas não são o alvo)
 - Python 3.12 (o fluxo TTS via VoxCPM2 ainda não suporta 3.13)
 - [Poetry](https://python-poetry.org/docs/#installation)
-- GPU NVIDIA com CUDA (opcional, mas recomendado — necessário se você quiser usar TTS com qualidade)
+- GPU é opcional, mas muito recomendada (necessária para TTS com latência decente):
+  - **NVIDIA** com CUDA, **ou**
+  - **AMD** (RDNA — ex.: RX 7000/9000) via ROCm-on-Windows, com o driver AMD Adrenalin ≥ 26.2.2
+  - Sem GPU? Roda em CPU mesmo assim (mais lento — considere `--no-tts`)
 - **Só para o fluxo Claude:** Node.js 18+ e o [Claude Code CLI](https://docs.claude.com/en/docs/claude-code) autenticado localmente
 
 ## Instalação
@@ -43,20 +46,26 @@ Ditado na nuvem é rápido — até deixar de ser. O VoiceMate roda o Whisper **
 ```bash
 git clone https://github.com/nano-br/voice-mate.git
 cd voice-mate
-make setup_env
+make setup
 ```
+
+O `make setup` **detecta sua GPU** (NVIDIA / AMD / nenhuma), confirma com você, instala o build do PyTorch correto (CUDA `cu128` para NVIDIA, ROCm para AMD, ou CPU) mais os módulos que você escolher, e lembra tudo em `~/.config/voicemate/config.toml`. Re-rode o seletor quando quiser com **`make configure`** (ex.: depois de trocar de placa).
+
+> **Nota AMD:** o `make setup` instala o PyTorch ROCm (para o VoxCPM/TTS) e baixa o **whisper.cpp + Vulkan** (para a transcrição). Os wheels ROCm **não** estão no PyPI e o driver AMD Adrenalin (≥ 26.2.2) precisa já estar instalado — o setup avisa se o driver parecer ausente. Veja "Backends de GPU" abaixo.
 
 ### Instalação modular (extras)
 
-O `make setup_env` instala **tudo** por padrão (`poetry install --extras all`). Se você só quer parte do app, escolha o extra:
+O `make setup` pergunta quais módulos você quer. Se preferir instalar de forma não interativa, os targets granulares continuam existindo (atenção: eles **não** instalam o build de GPU do PyTorch — rode `make configure` depois, ou use `make setup`):
 
 | Comando                                       | O que instala                                                            |
 | --------------------------------------------- | ------------------------------------------------------------------------ |
-| `make setup_env_minimal`                      | Só **core**: voz → transcrição → clipboard. Whisper + GPU CUDA inclusos. |
+| `make setup_env_minimal`                      | Só **core**: voz → transcrição → clipboard.                              |
 | `make setup_env_claude`                       | Core + `claude-agent-sdk` (habilita o fluxo `Ctrl+Alt+A` com Claude).    |
 | `make setup_env_tts`                          | Core + `voxcpm` + `soundfile` (habilita TTS — pesado: ~5 GB de modelo).  |
-| `make setup_env` *(default)*                  | Core + Claude + TTS (`poetry install --extras all`).                     |
+| `make setup_env` *(legado, assume NVIDIA)*    | Core + Claude + TTS + PyTorch CUDA (`--extras all`).                     |
 | `make setup_env_custom EXTRAS="claude tts"`   | Combinação livre dos extras.                                             |
+
+Extras (passados ao `poetry install --extras`): `claude`, `tts`, `whisper-gpu` (transcrição na GPU AMD via `openai-whisper`), `all`.
 
 Se um extra não está instalado, o app sobe normal e só desativa o fluxo correspondente com um warning instrutivo (`extra 'claude' não instalado`). Você nunca trava por falta de dep.
 
@@ -164,19 +173,32 @@ Atalhos prontos no Makefile (resumo dos casos mais comuns):
 | `make run-vozes-aleatorias` | Equivalente a `make run ARGS="--tts-voice-seed-mode off"` |
 | `make run-reset-voz` | Equivalente a `make run ARGS="--tts-reset-seed"` |
 
-#### Sobre PyTorch e CUDA
+#### Backends de GPU (NVIDIA / AMD / CPU)
 
-O `pyproject.toml` configura o `torch` e o `torchaudio` para virem da source oficial do PyTorch com build **CUDA 12.8** — então o `make setup_env` já instala a versão com GPU corretamente, sem passo extra.
+O `torch`/`torchaudio` **não** ficam fixados no `pyproject.toml` — o build certo depende da placa, e os wheels ROCm da AMD nem estão no PyPI. O `make setup` (via `app.setup.gpu_bootstrap`) detecta a GPU e instala o build correto:
 
-Para confirmar:
+| Fabricante | Build do PyTorch          | Transcrição                  | TTS (VoxCPM2) |
+| ---------- | ------------------------- | ---------------------------- | ------------- |
+| NVIDIA     | CUDA `cu128`              | `faster-whisper` (CUDA)      | GPU (CUDA)    |
+| AMD        | ROCm (`repo.radeon.com`)  | **whisper.cpp + Vulkan**     | GPU (ROCm)    |
+| nenhuma    | CPU                       | `faster-whisper` (int8)      | CPU (lento)   |
+
+Na AMD, a transcrição **não** usa o PyTorch ROCm — usa **whisper.cpp + Vulkan**, um binário nativo pequeno (`whisper-cli.exe` + DLLs Vulkan) mais um modelo GGUF (large-v3-turbo fp16), que o `make setup` baixa para `~/.cache/voicemate/whispercpp/` (verificado por SHA-256). Por quê: o `faster-whisper`/CTranslate2 não tem backend ROCm e trava na RDNA4 (gfx1201). O whisper.cpp é mais leve (~1,6 GB de VRAM vs ~4,8 GB do openai-whisper) e só roda enquanto transcreve. O `openai-whisper` (extra `whisper-gpu`) continua disponível como fallback opcional baseado em torch. O PyTorch ROCm ainda é instalado na AMD — mas só para o VoxCPM (TTS).
+
+Para confirmar que a aceleração está ativa:
 
 ```bash
-poetry run python -c "import torch; print('CUDA:', torch.cuda.is_available())"
+poetry run python -c "import torch; print('GPU:', torch.cuda.is_available())"
 ```
 
-Tem que devolver `CUDA: True`. Se devolver `False`, verifique se o driver NVIDIA está atualizado (`nvidia-smi` mostra a versão) — drivers recentes (≥ 545) já cobrem CUDA 12.8.
+Tem que devolver `GPU: True` (no ROCm o HIP da AMD se reporta como `cuda` — então `True` é o correto também na AMD). Se devolver `False`:
 
-Se você não tem GPU NVIDIA e quiser usar o app só com clipboard (sem TTS), rode com `--no-tts`. O VoxCPMSpeaker também avisa no console se detectar PyTorch sem CUDA na inicialização — fique de olho nessa mensagem.
+- **NVIDIA:** atualize o driver (`nvidia-smi`); drivers recentes (≥ 545) cobrem CUDA 12.8.
+- **AMD:** instale/atualize o driver Adrenalin (≥ 26.2.2) e rode `make configure`.
+
+Se você não tem GPU e só quer o fluxo clipboard, rode com `--no-tts`. O VoxCPMSpeaker também imprime um aviso (ciente do fabricante) na inicialização quando detecta PyTorch sem aceleração.
+
+Dá para sobrescrever a detecção por execução com `--gpu-backend {auto,nvidia,amd,cpu}` e `--whisper-backend {faster-whisper,openai-whisper}`.
 
 ## Uso
 
@@ -244,6 +266,10 @@ poetry run voice-mate --tts-save-dir ./tts_logs
 # Forçar CPU pra transcrição Whisper (sem GPU)
 poetry run voice-mate --cpu
 
+# Sobrescrever a detecção de GPU / backend de transcrição nesta execução
+poetry run voice-mate --gpu-backend amd                       # força AMD (ROCm)
+poetry run voice-mate --gpu-backend nvidia --whisper-backend faster-whisper
+
 # Usar botão lateral do mouse (só no fluxo clipboard)
 poetry run voice-mate --input-method mouse --mouse-button x
 
@@ -268,7 +294,9 @@ O padrão é `large-v3-turbo` — melhor equilíbrio entre velocidade e qualidad
 
 | Comando                    | Descrição                                                       |
 | -------------------------- | --------------------------------------------------------------- |
-| `make setup_env`           | Instala as dependências via Poetry                              |
+| `make setup`               | Detecta a GPU, instala o PyTorch certo + módulos, lembra a escolha |
+| `make configure`           | Re-roda o seletor de GPU/módulos (ex.: após trocar de placa)    |
+| `make setup_env`           | Instalação legada (assume NVIDIA + todos os extras)             |
 | `make lock`                | Regenera o `poetry.lock` (após mexer no pyproject)              |
 | `make run`                 | Executa com o modelo padrão (`large-v3-turbo`)                  |
 | `make run ARGS="..."`      | Igual ao anterior, mas repassa flags ao `voice-mate`            |

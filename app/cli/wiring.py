@@ -14,10 +14,64 @@ from app.core.input_listener import (
 from app.core.multi_hotkey_listener import MultiHotkeyListener
 from app.core.prompts import claude_cli_system_prompt
 from app.core.recording_session import RecordingSession
+from app.core.transcriber import FasterWhisperBackend
+from app.core.transcription_backend import TranscriptionBackend
 from app.core.transcription_handler import ClipboardHandler, TranscriptionHandler
 from app.features import claude as claude_feature
+from app.features import openai_whisper as openai_whisper_feature
 from app.features import tts as tts_feature
+from app.features import whispercpp as whispercpp_feature
 from app.features.tts.base import NullSpeaker, TextToSpeech
+
+
+def _faster_whisper_cpu(config: Config) -> TranscriptionBackend:
+    return FasterWhisperBackend(model_size=config.model_size, use_cpu=True, beam_size=config.beam_size)
+
+
+def _try_openai_whisper(config: Config) -> TranscriptionBackend | None:
+    if not openai_whisper_feature.is_available():
+        return None
+    try:
+        return openai_whisper_feature.build_backend(config)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[VoiceMate] ⚠ Falha no openai-whisper: {exc}", file=sys.stderr)
+        return None
+
+
+def _try_whispercpp(config: Config) -> TranscriptionBackend | None:
+    if not whispercpp_feature.is_available(config):
+        print(
+            "[VoiceMate] ⚠ whisper.cpp não encontrado (rode `make configure`); tentando fallback.",
+            file=sys.stderr,
+        )
+        return _try_openai_whisper(config)
+    try:
+        return whispercpp_feature.build_backend(config)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[VoiceMate] ⚠ Falha no whisper.cpp; caindo para fallback: {exc}", file=sys.stderr)
+        return _try_openai_whisper(config)
+
+
+def build_transcriber(config: Config) -> TranscriptionBackend:
+    """Escolhe o motor de transcrição a partir de `gpu_vendor`/`whisper_backend`.
+
+    AMD → whisper.cpp + Vulkan (leve, estável, sem torch ROCm; o CTranslate2 do
+    faster-whisper não acelera em ROCm e trava na gfx1201). NVIDIA →
+    faster-whisper CUDA. CPU/`--cpu` → faster-whisper CPU. Cadeia de fallback
+    segura: whisper.cpp → openai-whisper → faster-whisper CPU.
+    """
+    if not config.use_cpu:
+        backend: TranscriptionBackend | None = None
+        if config.whisper_backend == "whispercpp":
+            backend = _try_whispercpp(config)
+        elif config.whisper_backend == "openai-whisper":
+            backend = _try_openai_whisper(config)
+        if backend is not None:
+            return backend
+
+    # faster-whisper: NVIDIA acelera em CUDA; AMD/CPU/fallback vão para CPU (CT2 não tem ROCm).
+    use_cpu = config.use_cpu or config.gpu_vendor in ("amd", "cpu")
+    return FasterWhisperBackend(model_size=config.model_size, use_cpu=use_cpu, beam_size=config.beam_size)
 
 
 def build_speaker(config: TTSConfig) -> TextToSpeech:
