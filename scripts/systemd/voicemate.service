@@ -1,0 +1,24 @@
+# VoiceMate — daemon de voz (WSL2/Linux). Template: o `make setup` instala uma
+# cópia renderizada em ~/.config/systemd/user/voicemate.service (ajustando o
+# WorkingDirectory para o checkout real).
+#
+# Manual:
+#   cp scripts/systemd/voicemate.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now voicemate
+#   loginctl enable-linger $USER   # mantém o serviço vivo sem sessão aberta
+
+[Unit]
+Description=VoiceMate voice-to-clipboard daemon
+After=default.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/voice-mate
+# WSLg: áudio (mic RDPSource + playback RDPSink) via PulseAudio do WSLg.
+Environment=PULSE_SERVER=unix:/mnt/wslg/PulseServer
+ExecStart=/usr/bin/env poetry run voice-mate --trigger socket
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

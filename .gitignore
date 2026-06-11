@@ -210,3 +210,10 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# VoiceMate — dados locais de avaliação STT (make stt-eval)
+samples/**/*.wav
+samples/**/baseline.json
+
+# PyTorch TunableOp (ROCm) — cache de tuning gravado em runtime
+tunableop_results*.csv

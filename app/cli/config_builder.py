@@ -12,15 +12,24 @@ from app.core.config import (
     ClaudeEffort,
     Config,
     GpuVendor,
+    SttStrategy,
+    TranscriptionLanguage,
     TTSConfig,
     TTSDevice,
+    TTSEngine,
     VoiceSeedMode,
     WhisperBackend,
+    WhispercppMode,
 )
+from app.platform.kinds import PlatformKind, TriggerKind
 from app.setup.gpu_detect import detect_gpu
 from app.setup.persisted_config import PersistedConfig
 
 _DISABLED_SYSTEM_PROMPT = ""
+
+# Idiomas que o enum TranscriptionLanguage suporta (menos "auto") — usado para
+# derivar o idioma da transcrição a partir do output_lang (BCP-47).
+_KNOWN_TRANSCRIPTION_LANGS = frozenset({"pt", "en", "es", "fr", "de", "it", "ja", "zh"})
 
 
 def _resolve_gpu_vendor(args: argparse.Namespace, persisted: PersistedConfig) -> GpuVendor:
@@ -51,6 +60,21 @@ def _resolve_whisper_backend(args: argparse.Namespace, persisted: PersistedConfi
     if persisted.whisper_backend is not None:
         return persisted.whisper_backend
     return _default_backend_for(vendor)
+
+
+def _derive_transcription_language(output_lang: str) -> TranscriptionLanguage:
+    """Deriva o idioma da transcrição do output_lang (BCP-47 → ISO 639-1)."""
+    code = output_lang.replace("_", "-").split("-")[0].lower()
+    if code in _KNOWN_TRANSCRIPTION_LANGS:
+        return cast(TranscriptionLanguage, code)
+    return "auto"
+
+
+def _resolve_transcription_language(args: argparse.Namespace, output_lang: str) -> TranscriptionLanguage:
+    """Precedência: --transcription-language explícito > derivado do output_lang."""
+    if args.transcription_language is not None:
+        return cast(TranscriptionLanguage, args.transcription_language)
+    return _derive_transcription_language(output_lang)
 
 
 def _resolve_tts_enabled(args: argparse.Namespace, persisted: PersistedConfig) -> bool:
@@ -99,6 +123,25 @@ def resolve_system_prompt(args: argparse.Namespace) -> str | None:
     return None
 
 
+def _resolve_stt_strategy(args: argparse.Namespace, persisted: PersistedConfig) -> SttStrategy:
+    """Precedência: --stt-strategy > config salvo > auto."""
+    flag = getattr(args, "stt_strategy", None)
+    if flag is not None:
+        return cast(SttStrategy, flag)
+    if persisted.stt_strategy is not None:
+        return persisted.stt_strategy
+    return "auto"
+
+
+def _resolve_daemon_port(args: argparse.Namespace, persisted: PersistedConfig) -> int:
+    flag = getattr(args, "daemon_port", None)
+    if flag is not None:
+        return int(flag)
+    if persisted.daemon_port is not None:
+        return persisted.daemon_port
+    return 47821
+
+
 def build_config(args: argparse.Namespace, persisted: PersistedConfig | None = None) -> Config:
     persisted = persisted or PersistedConfig()
     gpu_vendor = _resolve_gpu_vendor(args, persisted)
@@ -108,6 +151,8 @@ def build_config(args: argparse.Namespace, persisted: PersistedConfig | None = N
     tts_device: TTSDevice = args.tts_device
     claude_effort: ClaudeEffort = args.claude_effort
     voice_seed_mode: VoiceSeedMode = args.tts_voice_seed_mode
+    whispercpp_mode: WhispercppMode = cast(WhispercppMode, args.whispercpp_mode)
+    transcription_language = _resolve_transcription_language(args, args.output_lang)
     return Config(
         model_size=args.model,
         hotkey=args.hotkey,
@@ -115,6 +160,14 @@ def build_config(args: argparse.Namespace, persisted: PersistedConfig | None = N
         use_cpu=args.cpu,
         gpu_vendor=gpu_vendor,
         whisper_backend=whisper_backend,
+        stt_strategy=_resolve_stt_strategy(args, persisted),
+        ct2_rocm_ok=persisted.ct2_rocm_ok,
+        # Precedência: flag > config salvo > auto-detect (resolvido em main.py).
+        platform=cast(PlatformKind, args.platform) if getattr(args, "platform", None) else persisted.platform,
+        trigger=cast(TriggerKind, args.trigger) if getattr(args, "trigger", None) else persisted.trigger,
+        daemon_port=_resolve_daemon_port(args, persisted),
+        whispercpp_mode=whispercpp_mode,
+        transcription_language=transcription_language,
         input_method=args.input_method,
         mouse_button=args.mouse_button,
         max_recording_seconds=args.max_recording_seconds,
@@ -134,6 +187,8 @@ def build_config(args: argparse.Namespace, persisted: PersistedConfig | None = N
         ),
         tts=TTSConfig(
             enabled=tts_enabled,
+            engine=cast(TTSEngine, args.tts_engine),
+            language=transcription_language,
             voice_description=args.tts_voice,
             cfg_value=args.tts_cfg_value,
             inference_timesteps=args.tts_inference_timesteps,

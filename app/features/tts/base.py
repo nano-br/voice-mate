@@ -23,6 +23,23 @@ class TextToSpeech(Protocol):
         """Sintetiza e reproduz o texto. Bloqueia até o fim ou até `stop()`."""
         ...
 
+    def warmup(self) -> None:
+        """Pré-aquece o speaker (carrega modelo/tuna kernels) fora do 1º turno.
+
+        Chamado em background no startup para a 1ª frase já sair realtime.
+        Idempotente. No-op em NullSpeaker e em speakers desligados.
+        """
+        ...
+
+    def wait_done(self, timeout: float | None = None) -> bool:
+        """Espera o áudio enfileirado terminar de tocar (fim do turno).
+
+        Para speakers com pipeline (`speak()` enfileira e retorna), o handler
+        chama isto ao final para aguardar a reprodução. Speakers que já bloqueiam
+        em `speak()` podem retornar True imediatamente.
+        """
+        ...
+
     def stop(self) -> None:
         """Interrompe imediatamente a reprodução em andamento."""
         ...
@@ -40,6 +57,12 @@ class NullSpeaker:
 
     def speak(self, text: str) -> None:
         return None
+
+    def warmup(self) -> None:
+        return None
+
+    def wait_done(self, timeout: float | None = None) -> bool:
+        return True
 
     def stop(self) -> None:
         return None

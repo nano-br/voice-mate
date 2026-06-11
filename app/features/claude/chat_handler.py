@@ -5,12 +5,12 @@ import concurrent.futures
 import sys
 import threading
 
-import pyperclip
-
 from app.core.audio_feedback import AudioFeedback
 from app.core.chat import ChatBackend
+from app.features.claude.sentence_buffer import SentenceBuffer
 from app.features.tts.base import TextToSpeech
 from app.i18n import _
+from app.platform.clipboard import ClipboardWriter, PyperclipWriter
 
 
 class ClaudeChatHandler:
@@ -31,11 +31,13 @@ class ClaudeChatHandler:
         audio: AudioFeedback,
         speaker: TextToSpeech,
         timeout_seconds: float = 120.0,
+        clipboard: ClipboardWriter | None = None,
     ) -> None:
         self._runtime = runtime
         self._audio = audio
         self._speaker = speaker
         self._timeout_seconds = timeout_seconds
+        self._clipboard: ClipboardWriter = clipboard if clipboard is not None else PyperclipWriter()
         self._lock = threading.Lock()
         self._busy = False
         self._cancelled = False
@@ -46,14 +48,17 @@ class ClaudeChatHandler:
             self._cancelled = False
         transcription_preview = text[:200] + ("..." if len(text) > 200 else "")
         print(_("[VoiceMate] ✓ Transcription: {preview}").format(preview=transcription_preview))
-        pyperclip.copy(text)
+        self._clipboard.copy(text)
         print(_("[VoiceMate] 📋 Transcription copied to clipboard."))
         try:
             print(_("[VoiceMate] 🤖 Calling Claude..."))
-            response = self._runtime.send_and_collect(text, timeout=self._timeout_seconds)
-            with self._lock:
-                cancelled = self._cancelled
-            if cancelled:
+            # Com TTS ativo: streaming por frase (fala a 1ª frase antes de a resposta
+            # terminar). Sem TTS: coleta completa + beep (caminho original).
+            if self._speaker.is_active():
+                response = self._stream_and_speak(text)
+            else:
+                response = self._runtime.send_and_collect(text, timeout=self._timeout_seconds)
+            if self._is_cancelled():
                 print(_("[VoiceMate] ✗ Claude response discarded (cancelled)."))
                 return
             if not response:
@@ -61,11 +66,9 @@ class ClaudeChatHandler:
                 return
             response_preview = response[:200] + ("..." if len(response) > 200 else "")
             print(_("[VoiceMate] 💬 Claude: {preview}").format(preview=response_preview))
-            pyperclip.copy(response)
+            self._clipboard.copy(response)
             print(_("[VoiceMate] 📋 Claude response copied to clipboard."))
-            if self._speaker.is_active():
-                self._speaker.speak(response)
-            else:
+            if not self._speaker.is_active():
                 self._audio.ai_response_ready()
         except asyncio.CancelledError:
             print("[VoiceMate] ✗ Chamada ao Claude cancelada.")
@@ -83,6 +86,40 @@ class ClaudeChatHandler:
             with self._lock:
                 self._busy = False
                 self._cancelled = False
+
+    def _stream_and_speak(self, text: str) -> str:
+        """Consome o stream do Claude, fala frase a frase e devolve o texto completo.
+
+        `speak()` enfileira cada frase no player persistente e retorna; o áudio toca
+        enquanto a próxima frase é gerada (pipeline, sem buracos). `wait_done()` ao
+        final aguarda a reprodução terminar. O texto completo é acumulado p/ o clipboard.
+        """
+        buffer = SentenceBuffer()
+        parts: list[str] = []
+        for delta in self._runtime.stream(text, timeout=self._timeout_seconds):
+            if self._is_cancelled():
+                break
+            parts.append(delta)
+            if not self._speak_all(buffer.feed(delta)):
+                break
+        if not self._is_cancelled():
+            tail = buffer.flush()
+            if tail:
+                self._speaker.speak(tail)
+            self._speaker.wait_done()
+        return "".join(parts)
+
+    def _speak_all(self, sentences: list[str]) -> bool:
+        """Fala cada frase em ordem; retorna False se cancelado no meio."""
+        for sentence in sentences:
+            if self._is_cancelled():
+                return False
+            self._speaker.speak(sentence)
+        return True
+
+    def _is_cancelled(self) -> bool:
+        with self._lock:
+            return self._cancelled
 
     def is_busy(self) -> bool:
         with self._lock:

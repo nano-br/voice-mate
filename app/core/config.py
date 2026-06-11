@@ -1,8 +1,12 @@
 from dataclasses import dataclass, field
 from typing import Literal
 
+from app.platform.kinds import PlatformKind, TriggerKind
+
 FlowKind = Literal["clipboard", "claude_chat"]
-TTSEngine = Literal["voxcpm", "none"]
+# Engine de TTS: omnivoice (k2-fsa, padrão — leve/rápido, 24 kHz), voxcpm
+# (OpenBMB, alternativo — 2B, mais pesado) ou none (desliga).
+TTSEngine = Literal["omnivoice", "voxcpm", "none"]
 TTSDevice = Literal["auto", "cuda", "cpu", "mps"]
 ClaudeEffort = Literal["low", "medium", "high", "xhigh", "max"]
 VoiceSeedMode = Literal["auto", "fixed", "off"]
@@ -18,6 +22,29 @@ GpuVendor = Literal["nvidia", "amd", "cpu"]
 #     (~2-3 GB c/ turbo fp16/q8), estável e vendor-agnóstico, sem torch ROCm.
 #   - openai-whisper: fallback torch (roda na GPU AMD via ROCm, mas ~4,8 GB).
 WhisperBackend = Literal["faster-whisper", "whispercpp", "openai-whisper"]
+
+# Estratégia de STT na AMD (cadeia de fallback; "auto" escolhe a melhor disponível):
+#   - auto: faster-whisper-rocm (se o CT2-ROCm instalado/validado) → whispercpp →
+#     openai-whisper → faster-whisper CPU.
+#   - faster-whisper-rocm: força o faster-whisper na GPU via fork ROCm do
+#     CTranslate2 (qualidade idêntica ao faster-whisper CUDA da main).
+#   - whispercpp / openai-whisper: força o backend correspondente.
+SttStrategy = Literal["auto", "faster-whisper-rocm", "whispercpp", "openai-whisper"]
+
+# Modo do backend whisper.cpp:
+#   - server: sobe o whisper-server.exe uma vez (modelo quente na VRAM) e faz
+#     POST /inference por fala — elimina a recarga do modelo a cada transcrição
+#     do modo cli. É o default (realtime).
+#   - cli: roda whisper-cli.exe por fala (recarrega o modelo do disco toda vez).
+WhispercppMode = Literal["server", "cli"]
+
+# Idioma fixado na transcrição. O Whisper aceita um único idioma (sem lista
+# secundária), mas faz code-switching: com o idioma principal fixado, termos
+# estrangeiros embutidos na fala (ex.: termos técnicos em inglês no meio do
+# português) ainda saem corretos. Fixar (em vez de "auto") dá estabilidade —
+# evita o detector errar e classificar uma fala curta inteira no idioma errado.
+# Default é derivado do output_lang em cli.config_builder.
+TranscriptionLanguage = Literal["auto", "pt", "en", "es", "fr", "de", "it", "ja", "zh"]
 
 # Default language code injected into LLM system prompts (placeholder
 # `{output_lang}`). The assistant replies in this language — switching it
@@ -43,7 +70,9 @@ class ClaudeChatConfig:
 
     system_prompt: str | None = None
     max_turns: int | None = 50
-    model: str = "claude-sonnet-4-6"
+    # Haiku 4.5: menor time-to-first-token, ideal p/ voz realtime com respostas
+    # curtas. NÃO aceita o parâmetro `effort` (o runtime o omite p/ modelos Haiku).
+    model: str = "claude-haiku-4-5"
     effort: ClaudeEffort = "low"
     thinking_enabled: bool = False
     timeout_seconds: float = 120.0
@@ -57,7 +86,10 @@ class TTSConfig:
     """Parâmetros do orquestrador de Text-to-Speech."""
 
     enabled: bool = True
-    engine: TTSEngine = "voxcpm"
+    engine: TTSEngine = "omnivoice"
+    # Idioma passado ao engine (OmniVoice usa p/ melhorar fonemização/prosódia).
+    # Derivado do output_lang em cli.config_builder; "auto" = engine decide.
+    language: TranscriptionLanguage = "pt"
     voice_description: str = DEFAULT_VOICE_DESCRIPTION
     cfg_value: float = 2.0
     inference_timesteps: int = 10
@@ -103,7 +135,28 @@ class Config:
     # mais seguro (CPU + faster-whisper); o setup/persistência/CLI sobrescrevem.
     gpu_vendor: GpuVendor = "cpu"
     whisper_backend: WhisperBackend = "faster-whisper"
-    # Diretório com whisper-cli.exe + DLLs + modelo GGUF (backend whispercpp).
+    # Estratégia STT na AMD (cadeia de fallback). "auto" usa ct2_rocm_ok para
+    # decidir se tenta o faster-whisper-rocm primeiro.
+    stt_strategy: SttStrategy = "auto"
+    # Resultado da validação do CTranslate2-ROCm feita pelo setup (persistido):
+    # True = build validado (usar faster-whisper na GPU AMD); False = falhou
+    # (não re-tentar a cada boot); None = nunca tentado.
+    ct2_rocm_ok: bool | None = None
+    # Ambiente e gatilho resolvidos em runtime (None = auto-detect em main/builder).
+    # platform decide os defaults de gatilho/clipboard; trigger escolhe o listener
+    # (keyboard-hooks no Windows, pynput em X11, evdev em Wayland, socket no WSL2).
+    platform: PlatformKind | None = None
+    trigger: TriggerKind | None = None
+    # Porta do daemon HTTP local quando trigger == "socket" (WSL2). O script do
+    # lado Windows (scripts/windows/) faz POST /trigger nesta porta.
+    daemon_port: int = 47821
+    # Modo do whisper.cpp (server = modelo quente, default; cli = subprocess/fala).
+    whispercpp_mode: WhispercppMode = "server"
+    # Idioma fixado na transcrição. Default "pt" (consistente com output_lang
+    # default pt-BR); cli.config_builder deriva do output_lang quando não há
+    # --transcription-language explícito.
+    transcription_language: TranscriptionLanguage = "pt"
+    # Diretório com whisper-cli.exe / whisper-server.exe + DLLs + modelo GGUF.
     # None → ~/.cache/voicemate/whispercpp (preenchido pelo make setup).
     whispercpp_dir: str | None = None
     input_method: str = "keyboard"

@@ -12,5 +12,6 @@ def test_null_speaker_methods_are_noop() -> None:
     speaker = NullSpeaker()
     # Não devem levantar nem retornar nada significativo.
     speaker.speak("qualquer coisa")
+    speaker.warmup()
     speaker.stop()
     speaker.close()

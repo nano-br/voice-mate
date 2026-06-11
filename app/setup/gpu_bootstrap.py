@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
+import shutil
 import subprocess
 import sys
 import urllib.request
@@ -25,7 +27,9 @@ from typing import cast
 
 from app.core.config import FlowKind, GpuVendor, WhisperBackend
 from app.core.console import force_utf8_stdio
-from app.setup.gpu_detect import amd_driver_warning, detect_gpu
+from app.platform.detect import default_trigger, detect_platform
+from app.platform.kinds import PlatformKind
+from app.setup.gpu_detect import GpuInfo, amd_driver_warning, detect_gpu
 from app.setup.persisted_config import PersistedConfig, load_persisted, save_persisted
 
 # Wheels ROCm-on-Windows oficiais da AMD (não estão no PyPI). Verificar/atualizar
@@ -50,6 +54,9 @@ _TORCH_INDEX: dict[str, str] = {
     "nvidia": "https://download.pytorch.org/whl/cu128",
     "cpu": "https://download.pytorch.org/whl/cpu",
 }
+# Linux/WSL2 + AMD: wheels ROCm oficiais do PyTorch (index público — sem o
+# passo rocm_sdk_* que só existe no Windows).
+_TORCH_INDEX_LINUX_AMD = "https://download.pytorch.org/whl/rocm7.2"
 
 # whisper.cpp + Vulkan (backend de transcrição preferido na AMD). Binário nativo
 # (não-pip) + modelo GGUF, baixados com SHA-256 fixado p/ integridade. O modelo
@@ -66,6 +73,23 @@ _WCPP_MODEL_SHA256 = "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8
 # Do zip só guardamos o necessário: os CLIs + as DLLs (Vulkan/ggml/whisper).
 _WCPP_KEEP_EXACT = ("whisper-cli.exe", "whisper-server.exe")
 
+# Linux: build from source (binário oficial Linux+Vulkan não é distribuído).
+# Tag pinada p/ reprodutibilidade; binários estáticos (BUILD_SHARED_LIBS=OFF).
+_WCPP_LINUX_REPO = "https://github.com/ggml-org/whisper.cpp"
+_WCPP_LINUX_TAG = "v1.8.6"
+_WCPP_LINUX_APT_HINT = "sudo apt install -y git cmake build-essential libvulkan-dev glslc vulkan-tools"
+
+# Modelo Q8_0 (near-lossless, ~0,9 GB vs ~1,6 GB do fp16) — opção p/ VRAM curta.
+_WCPP_MODEL_Q8_NAME = "ggml-large-v3-turbo-q8_0.bin"
+_WCPP_MODEL_Q8_URL = f"https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{_WCPP_MODEL_Q8_NAME}?download=true"
+_WCPP_MODEL_Q8_SHA256 = "317eb69c11673c9de1e1f0d459b253999804ec71ac4c23c17ecf5fbe24e259a1"
+
+# silero-VAD em GGML (corte por silêncio — evita cortar palavras no meio).
+# Só baixado no Linux: o binário pinado do Windows é antigo e não tem --vad.
+_WCPP_VAD_NAME = "ggml-silero-v5.1.2.bin"
+_WCPP_VAD_URL = f"https://huggingface.co/ggml-org/whisper-vad/resolve/main/{_WCPP_VAD_NAME}?download=true"
+_WCPP_VAD_SHA256 = "29940d98d42b91fbd05ce489f3ecf7c72f0a42f027e4875919a28fb4c04ea2cf"
+
 
 def main(argv: list[str] | None = None) -> int:
     force_utf8_stdio()
@@ -73,9 +97,13 @@ def main(argv: list[str] | None = None) -> int:
     interactive = not args.yes
 
     saved = load_persisted()
+    platform = detect_platform()
+    trigger = default_trigger(platform)
+    print(f"[setup] Plataforma: {platform} (gatilho default: {trigger})")
     info = detect_gpu()
     name = f" — {info.device_name}" if info.device_name else ""
-    print(f"[setup] GPU detectada: {info.vendor.upper()}{name}")
+    gfx = f" [{info.gfx_target}]" if info.gfx_target else ""
+    print(f"[setup] GPU detectada: {info.vendor.upper()}{name}{gfx}")
     warning = amd_driver_warning(info)
     if warning:
         print(warning, file=sys.stderr)
@@ -97,16 +125,36 @@ def main(argv: list[str] | None = None) -> int:
     backend: WhisperBackend = "whispercpp" if vendor == "amd" else "faster-whisper"
     extras = set(args.extras.split()) if args.extras is not None else _compute_extras(flow, tts_enabled)
 
+    # Linux nativo: hotkeys precisam de pynput/evdev (extra linux). WSL2 usa o
+    # daemon HTTP (sem dependência extra).
+    if platform in ("linux-x11", "linux-wayland"):
+        extras.add("linux")
+
     print(
-        f"\n[setup] Plano: vendor={vendor}, transcrição={backend}, fluxo={flow}, "
-        f"tts={tts_enabled}, extras=[{' '.join(sorted(extras)) or '—'}]"
+        f"\n[setup] Plano: plataforma={platform}, vendor={vendor}, transcrição={backend}, "
+        f"fluxo={flow}, tts={tts_enabled}, extras=[{' '.join(sorted(extras)) or '—'}]"
     )
 
     _poetry_install_extras(extras)
-    _install_torch(vendor)
+    torch_ok = _install_torch(vendor, platform)
     _verify_torch(vendor)
+    if not torch_ok and vendor != "cpu":
+        print(
+            "[setup] ⚠ A instalação do torch da GPU falhou (veja o erro acima). "
+            "Sem ela o app cai para CPU. Corrija e rode `make configure`.",
+            file=sys.stderr,
+        )
     if backend == "whispercpp":
-        _install_whispercpp()
+        if platform == "windows":
+            _install_whispercpp()
+        else:
+            _install_whispercpp_linux(interactive)
+
+    # CTranslate2-ROCm (faster-whisper na GPU AMD — qualidade idêntica à main).
+    # Build pesado e opt-in; falha NÃO aborta (cadeia cai p/ whisper.cpp).
+    ct2_rocm_ok: bool | None = saved.ct2_rocm_ok
+    if vendor == "amd" and platform != "windows":
+        ct2_rocm_ok = _maybe_install_ct2_rocm(info, saved, interactive)
 
     if _prompt_yes_no("\nSalvar essas escolhas para a próxima execução?", True, interactive):
         save_persisted(
@@ -115,14 +163,73 @@ def main(argv: list[str] | None = None) -> int:
                 whisper_backend=backend,
                 tts_enabled=tts_enabled,
                 default_flow=flow,
+                platform=platform,
+                trigger=trigger,
+                stt_strategy=saved.stt_strategy or "auto",
+                ct2_rocm_ok=ct2_rocm_ok,
+                daemon_port=saved.daemon_port,
             )
         )
         print("[setup] ✓ Escolhas salvas em ~/.config/voicemate/config.toml")
     else:
         print("[setup] Escolhas não salvas (valem só para esta instalação).")
 
+    if platform == "wsl2":
+        _maybe_install_systemd_unit(interactive)
+
     print("\n[setup] Pronto! Rode:  make run")
+    print("[setup] Diagnóstico do ambiente (áudio/mic/hotkeys):  make doctor")
+    if platform == "wsl2":
+        print("[setup] WSL2: registre as hotkeys do lado Windows — veja docs/wsl2.md.")
     return 0
+
+
+def _maybe_install_systemd_unit(interactive: bool) -> None:
+    """Instala o user service do systemd (autostart do daemon no WSL2). Opt-in."""
+    template = Path(__file__).resolve().parents[2] / "scripts" / "systemd" / "voicemate.service"
+    if not template.exists():
+        return
+    if not _prompt_yes_no("\nInstalar o serviço systemd (daemon inicia junto com o WSL)?", False, interactive):
+        print("[setup] Serviço systemd não instalado (instruções em docs/wsl2.md).")
+        return
+    unit_dir = Path.home() / ".config" / "systemd" / "user"
+    unit_dir.mkdir(parents=True, exist_ok=True)
+    repo_root = Path(__file__).resolve().parents[2]
+    content = template.read_text(encoding="utf-8").replace(
+        "WorkingDirectory=%h/voice-mate", f"WorkingDirectory={repo_root}"
+    )
+    (unit_dir / "voicemate.service").write_text(content, encoding="utf-8")
+    ok = _run(["systemctl", "--user", "daemon-reload"], "Recarregando units do systemd (user)...")
+    if ok:
+        _run(["systemctl", "--user", "enable", "--now", "voicemate"], "Habilitando o serviço voicemate...")
+        print("[setup] ✓ Serviço instalado. Logs: journalctl --user -u voicemate -f")
+        print("[setup]   Para sobreviver sem sessão aberta: loginctl enable-linger $USER")
+
+
+def _maybe_install_ct2_rocm(info: GpuInfo, saved: PersistedConfig, interactive: bool) -> bool | None:
+    from app.setup import ct2_rocm
+
+    if saved.ct2_rocm_ok is True and ct2_rocm.is_installed():
+        print("[setup] CTranslate2-ROCm já instalado e validado (reusando).")
+        return True
+    default_try = saved.ct2_rocm_ok is not False  # já falhou antes → default Não
+    wants = _prompt_yes_no(
+        "\nInstalar o CTranslate2-ROCm? (faster-whisper na GPU AMD — qualidade máxima;\n"
+        "build from source DEMORADO. Se pular ou falhar, o whisper.cpp assume.)",
+        default_try,
+        interactive,
+    )
+    if not wants:
+        print("[setup] CT2-ROCm pulado (whisper.cpp será o backend de transcrição).")
+        return saved.ct2_rocm_ok
+    ok = ct2_rocm.install(info.gfx_target)
+    if not ok:
+        print(
+            "[setup] ⚠ CT2-ROCm falhou — seguindo com whisper.cpp (sem abortar). "
+            "Corrija os pré-requisitos e rode `make configure` para re-tentar.",
+            file=sys.stderr,
+        )
+    return ok
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -209,9 +316,27 @@ def _ask(prompt: str) -> str:
         return ""
 
 
-def _install_torch(vendor: GpuVendor) -> bool:
+def _install_torch(vendor: GpuVendor, platform: PlatformKind) -> bool:
     pip = [sys.executable, "-m", "pip", "install"]
+    if vendor == "amd" and platform != "windows":
+        # Linux/WSL2: wheels ROCm oficiais do index do PyTorch — sem o passo
+        # rocm_sdk_* (que é exclusivo do ROCm-on-Windows).
+        return _run(
+            pip + ["--force-reinstall", "--index-url", _TORCH_INDEX_LINUX_AMD, "torch", "torchaudio"],
+            "Instalando torch ROCm (AMD, Linux/WSL2)...",
+        )
     if vendor == "amd":
+        # Os wheels ROCm da AMD são cp312-only — num Python diferente o pip
+        # rejeita ("not a supported wheel on this platform") e sobraria o torch
+        # CPU. Falha cedo e claro em vez de instalar GPU pela metade.
+        if sys.version_info[:2] != (3, 12):
+            ver = f"{sys.version_info.major}.{sys.version_info.minor}"
+            print(
+                f"[setup] ⚠ As wheels ROCm exigem Python 3.12 (este é {ver}). "
+                "Recrie o ambiente com 3.12 (`poetry env use 3.12`) e rode `make configure`.",
+                file=sys.stderr,
+            )
+            return False
         # 1) runtime ROCm SDK (sem ele o torch ROCm nem importa).
         ok_sdk = _run(pip + ["--no-cache-dir", *_ROCM_SDK_WHEELS], "Instalando ROCm SDK (runtime AMD)...")
         # 2) torch+torchaudio ROCm: --force-reinstall vence o torch CPU que o
@@ -274,6 +399,88 @@ def _install_whispercpp() -> bool:
         return False
     print(f"[setup] ✓ whisper.cpp pronto em {_WHISPERCPP_DIR}")
     return True
+
+
+def _install_whispercpp_linux(interactive: bool) -> bool:
+    """Builda o whisper.cpp (Vulkan, binário estático) e baixa modelo + VAD.
+
+    Vulkan é o backend default no Linux/WSL2 hoje: o HIP p/ gfx120X ainda está
+    em PR no whisper.cpp (ggml-org/whisper.cpp#3757). Quando mergear, dá para
+    trocar o flag do cmake por -DGGML_HIP=ON.
+    """
+    _WHISPERCPP_DIR.mkdir(parents=True, exist_ok=True)
+    cli = _WHISPERCPP_DIR / "whisper-cli"
+    server = _WHISPERCPP_DIR / "whisper-server"
+    model = _WHISPERCPP_DIR / _WCPP_MODEL_NAME
+    vad = _WHISPERCPP_DIR / _WCPP_VAD_NAME
+
+    binaries_ok = cli.exists() and server.exists()
+    if not binaries_ok:
+        missing = [tool for tool in ("git", "cmake", "g++", "glslc") if shutil.which(tool) is None]
+        if missing:
+            print(
+                f"[setup] ⚠ Ferramentas ausentes p/ compilar o whisper.cpp: {', '.join(missing)}",
+                file=sys.stderr,
+            )
+            print(f"[setup]   Instale com: {_WCPP_LINUX_APT_HINT}", file=sys.stderr)
+            return False
+        binaries_ok = _build_whispercpp_linux()
+        if not binaries_ok:
+            return False
+
+    ok = True
+    if not model.exists():
+        # fp16 turbo (qualidade de referência). Q8_0 fica disponível p/ quem
+        # quiser economizar VRAM (baixa manualmente; find_model pega qualquer ggml-*).
+        ok = _download_verified(_WCPP_MODEL_URL, model, _WCPP_MODEL_SHA256) and ok
+    if not vad.exists():
+        ok = _download_verified(_WCPP_VAD_URL, vad, _WCPP_VAD_SHA256) and ok
+    if ok:
+        print(f"[setup] ✓ whisper.cpp (Linux/Vulkan) pronto em {_WHISPERCPP_DIR}")
+    return ok
+
+
+def _build_whispercpp_linux() -> bool:
+    src = _WHISPERCPP_DIR / "src"
+    build = src / "build"
+    if not (src / ".git").exists():
+        if not _run(
+            ["git", "clone", "--depth", "1", "--branch", _WCPP_LINUX_TAG, _WCPP_LINUX_REPO, str(src)],
+            f"Clonando whisper.cpp {_WCPP_LINUX_TAG}...",
+        ):
+            return False
+    if not _run(
+        [
+            "cmake",
+            "-S",
+            str(src),
+            "-B",
+            str(build),
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DGGML_VULKAN=1",
+            "-DBUILD_SHARED_LIBS=OFF",
+            "-DWHISPER_BUILD_TESTS=OFF",
+        ],
+        "Configurando build do whisper.cpp (cmake + Vulkan)...",
+    ):
+        return False
+    jobs = str(max(1, (os.cpu_count() or 4) - 1))
+    if not _run(
+        ["cmake", "--build", str(build), "--parallel", jobs],
+        "Compilando whisper.cpp (alguns minutos)...",
+    ):
+        return False
+    copied = 0
+    for name in ("whisper-cli", "whisper-server"):
+        built = build / "bin" / name
+        if built.exists():
+            target = _WHISPERCPP_DIR / name
+            shutil.copy2(built, target)
+            target.chmod(0o755)
+            copied += 1
+        else:
+            print(f"[setup] ⚠ Binário não encontrado após o build: {built}", file=sys.stderr)
+    return copied == 2
 
 
 def _extract_whispercpp(zip_path: Path) -> None:

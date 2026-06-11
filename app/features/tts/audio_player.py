@@ -26,13 +26,28 @@ class AudioPlayer:
         self._idle = threading.Event()
         self._idle.set()
         self._leftover: NDArray[np.float32] | None = None
+        self._sample_rate: int | None = None
+
+    def ensure_started(self, sample_rate: int) -> None:
+        """Garante um stream aberto e compatível — abre só se necessário.
+
+        Diferente de `start()`, **não reabre** se já há um stream ativo com o
+        mesmo sample_rate. Isso mantém UM stream persistente entre frases/turnos,
+        eliminando os cliques de abrir/fechar a cada fala e os buracos entre falas.
+        """
+        with self._lock:
+            ready = self._stream is not None and not self._aborted.is_set() and self._sample_rate == sample_rate
+        if ready:
+            return
+        self.start(sample_rate)
 
     def start(self, sample_rate: int) -> None:
         """Cria um novo OutputStream — fecha o antigo se existir.
 
         Cada chamada gera um stream fresco, evitando degradação após muitos
         usos ou após `abort()`. Limpa flags internos para que `feed()` volte
-        a aceitar chunks normalmente.
+        a aceitar chunks normalmente. Prefira `ensure_started()` no caminho
+        normal de fala; use `start()` para forçar um stream novo.
         """
         with self._lock:
             old = self._stream
@@ -49,6 +64,7 @@ class AudioPlayer:
             )
             stream.start()
             self._stream = stream
+            self._sample_rate = sample_rate
         if old is not None:
             self._close_stream_safely(old)
 
@@ -82,6 +98,7 @@ class AudioPlayer:
         with self._lock:
             stream = self._stream
             self._stream = None
+            self._sample_rate = None
         if stream is not None:
             try:
                 stream.abort()
@@ -96,6 +113,7 @@ class AudioPlayer:
                 return
             stream = self._stream
             self._stream = None
+            self._sample_rate = None
         self._close_stream_safely(stream)
 
     def _drain_queue(self) -> None:

@@ -39,3 +39,29 @@ def test_find_model_picks_ggml_bin(tmp_path: Path) -> None:
     found = whispercpp.find_model(tmp_path)
     assert found is not None
     assert found.name == "ggml-large-v3-turbo.bin"
+
+
+def test_find_model_ignores_vad_models(tmp_path: Path) -> None:
+    (tmp_path / "ggml-silero-v5.1.2.bin").write_bytes(b"vad")
+    (tmp_path / "ggml-large-v3-turbo.bin").write_bytes(b"model")
+    model = whispercpp.find_model(tmp_path)
+    assert model is not None
+    assert model.name == "ggml-large-v3-turbo.bin"
+
+
+def test_find_vad_model(tmp_path: Path) -> None:
+    assert whispercpp.find_vad_model(tmp_path) is None
+    (tmp_path / "ggml-large-v3-turbo.bin").write_bytes(b"model")
+    assert whispercpp.find_vad_model(tmp_path) is None
+    (tmp_path / "ggml-silero-v5.1.2.bin").write_bytes(b"vad")
+    vad = whispercpp.find_vad_model(tmp_path)
+    assert vad is not None
+    assert vad.name == "ggml-silero-v5.1.2.bin"
+
+
+def test_is_available_with_linux_binaries(tmp_path: Path) -> None:
+    # Linux: binários sem .exe
+    (tmp_path / "whisper-server").write_bytes(b"x")
+    (tmp_path / "ggml-large-v3-turbo-q8_0.bin").write_bytes(b"x")
+    cfg = Config(whispercpp_dir=str(tmp_path), whispercpp_mode="server")
+    assert whispercpp.is_available(cfg) is True

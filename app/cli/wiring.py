@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 
 from app.core.audio_feedback import AudioFeedback
 from app.core.config import ClaudeChatConfig, Config, FlowConfig, TTSConfig
@@ -22,10 +23,28 @@ from app.features import openai_whisper as openai_whisper_feature
 from app.features import tts as tts_feature
 from app.features import whispercpp as whispercpp_feature
 from app.features.tts.base import NullSpeaker, TextToSpeech
+from app.platform.clipboard import ClipboardWriter, create_clipboard_writer
+from app.platform.detect import default_trigger, detect_platform
+from app.platform.kinds import TriggerKind
+from app.platform.listeners import (
+    EvdevHotkeyListener,
+    PynputHotkeyListener,
+    SocketTriggerListener,
+)
 
 
-def _faster_whisper_cpu(config: Config) -> TranscriptionBackend:
-    return FasterWhisperBackend(model_size=config.model_size, use_cpu=True, beam_size=config.beam_size)
+def _whisper_language(config: Config) -> str | None:
+    """Idioma fixado p/ o faster-whisper ("auto" → None = detectar)."""
+    return None if config.transcription_language == "auto" else config.transcription_language
+
+
+def _faster_whisper(config: Config, use_cpu: bool) -> TranscriptionBackend:
+    return FasterWhisperBackend(
+        model_size=config.model_size,
+        use_cpu=use_cpu,
+        beam_size=config.beam_size,
+        language=_whisper_language(config),
+    )
 
 
 def _try_openai_whisper(config: Config) -> TranscriptionBackend | None:
@@ -44,46 +63,100 @@ def _try_whispercpp(config: Config) -> TranscriptionBackend | None:
             "[VoiceMate] ⚠ whisper.cpp não encontrado (rode `make configure`); tentando fallback.",
             file=sys.stderr,
         )
-        return _try_openai_whisper(config)
+        return None
     try:
         return whispercpp_feature.build_backend(config)
     except Exception as exc:  # noqa: BLE001
         print(f"[VoiceMate] ⚠ Falha no whisper.cpp; caindo para fallback: {exc}", file=sys.stderr)
-        return _try_openai_whisper(config)
+        return None
+
+
+def _try_faster_whisper_rocm(config: Config) -> TranscriptionBackend | None:
+    """faster-whisper na GPU AMD via fork ROCm do CTranslate2 (HIP reporta "cuda").
+
+    Falha aqui é persistida (`ct2_rocm_ok = false`) para a cadeia não pagar o
+    custo de re-tentar a cada boot — `make configure` re-valida e re-arma.
+    """
+    try:
+        return _faster_whisper(config, use_cpu=False)
+    except Exception as exc:  # noqa: BLE001
+        print(
+            f"[VoiceMate] ⚠ faster-whisper (CT2-ROCm) falhou na GPU AMD: {exc}",
+            file=sys.stderr,
+        )
+        print("[VoiceMate]   Desabilitando até o próximo `make configure`.", file=sys.stderr)
+        try:
+            from app.setup.persisted_config import update_persisted
+
+            update_persisted(ct2_rocm_ok=False)
+        except Exception as persist_exc:  # noqa: BLE001
+            print(f"[VoiceMate] ⚠ Falha ao persistir ct2_rocm_ok: {persist_exc}", file=sys.stderr)
+        return None
+
+
+def _build_amd_transcriber(config: Config) -> TranscriptionBackend:
+    """Cadeia AMD: faster-whisper-rocm → whisper.cpp (server) → openai-whisper → CPU.
+
+    A estratégia explícita (--stt-strategy/persisted) entra no topo da cadeia;
+    com "auto", o CT2-ROCm só é tentado se o setup o validou (ct2_rocm_ok).
+    """
+    strategy = config.stt_strategy
+    if strategy == "auto" and config.whisper_backend == "openai-whisper":
+        strategy = "openai-whisper"  # --whisper-backend explícito continua respeitado
+
+    try_rocm = strategy == "faster-whisper-rocm" or (strategy == "auto" and config.ct2_rocm_ok is True)
+    if try_rocm:
+        backend = _try_faster_whisper_rocm(config)
+        if backend is not None:
+            return backend
+    if strategy in ("auto", "faster-whisper-rocm", "whispercpp"):
+        backend = _try_whispercpp(config)
+        if backend is not None:
+            return backend
+    backend = _try_openai_whisper(config)
+    if backend is not None:
+        return backend
+    print("[VoiceMate] ⚠ Nenhum backend GPU disponível na AMD; usando faster-whisper em CPU.", file=sys.stderr)
+    return _faster_whisper(config, use_cpu=True)
 
 
 def build_transcriber(config: Config) -> TranscriptionBackend:
-    """Escolhe o motor de transcrição a partir de `gpu_vendor`/`whisper_backend`.
+    """Escolhe o motor de transcrição a partir de vendor/estratégia.
 
-    AMD → whisper.cpp + Vulkan (leve, estável, sem torch ROCm; o CTranslate2 do
-    faster-whisper não acelera em ROCm e trava na gfx1201). NVIDIA →
-    faster-whisper CUDA. CPU/`--cpu` → faster-whisper CPU. Cadeia de fallback
-    segura: whisper.cpp → openai-whisper → faster-whisper CPU.
+    `--cpu` → faster-whisper CPU. AMD → cadeia `_build_amd_transcriber` (meta:
+    qualidade ≥ faster-whisper CUDA da main). NVIDIA → faster-whisper CUDA
+    (comportamento da main), com whispercpp/openai-whisper opt-in via
+    --whisper-backend. Sem GPU → faster-whisper CPU.
     """
-    if not config.use_cpu:
-        backend: TranscriptionBackend | None = None
-        if config.whisper_backend == "whispercpp":
-            backend = _try_whispercpp(config)
-        elif config.whisper_backend == "openai-whisper":
-            backend = _try_openai_whisper(config)
+    if config.use_cpu:
+        return _faster_whisper(config, use_cpu=True)
+
+    if config.gpu_vendor == "amd":
+        return _build_amd_transcriber(config)
+
+    if config.whisper_backend == "whispercpp":
+        backend = _try_whispercpp(config)
+        if backend is not None:
+            return backend
+    elif config.whisper_backend == "openai-whisper":
+        backend = _try_openai_whisper(config)
         if backend is not None:
             return backend
 
-    # faster-whisper: NVIDIA acelera em CUDA; AMD/CPU/fallback vão para CPU (CT2 não tem ROCm).
-    use_cpu = config.use_cpu or config.gpu_vendor in ("amd", "cpu")
-    return FasterWhisperBackend(model_size=config.model_size, use_cpu=use_cpu, beam_size=config.beam_size)
+    return _faster_whisper(config, use_cpu=config.gpu_vendor == "cpu")
 
 
 def build_speaker(config: TTSConfig) -> TextToSpeech:
     if not config.enabled or config.engine == "none":
         return NullSpeaker()
-    if not tts_feature.is_available():
+    extra = "voxcpm" if config.engine == "voxcpm" else "tts"
+    if not tts_feature.is_available(config.engine):
         print(
-            "[VoiceMate] ⚠ TTS desativado: extra 'tts' não instalado.",
+            f"[VoiceMate] ⚠ TTS desativado: pacotes do engine '{config.engine}' não instalados.",
             file=sys.stderr,
         )
         print(
-            "[VoiceMate]   Instale com: poetry install --extras tts (ou rode com --no-tts).",
+            f"[VoiceMate]   Instale com: poetry install --extras {extra} (ou rode com --no-tts).",
             file=sys.stderr,
         )
         return NullSpeaker()
@@ -91,11 +164,11 @@ def build_speaker(config: TTSConfig) -> TextToSpeech:
         return tts_feature.build_default_speaker(config)
     except Exception as exc:  # noqa: BLE001
         print(
-            f"[VoiceMate] ⚠ TTS desativado (falha ao iniciar VoxCPM2): {exc}",
+            f"[VoiceMate] ⚠ TTS desativado (falha ao iniciar engine '{config.engine}'): {exc}",
             file=sys.stderr,
         )
         print(
-            "[VoiceMate]   Verifique `poetry install --extras tts`, GPU/CUDA disponíveis, ou rode com `--no-tts`.",
+            f"[VoiceMate]   Verifique `poetry install --extras {extra}`, GPU disponível, ou rode com `--no-tts`.",
             file=sys.stderr,
         )
         return NullSpeaker()
@@ -121,13 +194,16 @@ def build_handlers(
     audio: AudioFeedback,
     speaker: TextToSpeech,
     output_lang: str,
+    clipboard: ClipboardWriter | None = None,
 ) -> tuple[dict[str, TranscriptionHandler], list[TranscriptionHandler]]:
     """Build a handler per flow and the list of owned handlers (for close())."""
     handlers: dict[str, TranscriptionHandler] = {}
     owned: list[TranscriptionHandler] = []
+    if clipboard is None:
+        clipboard = create_clipboard_writer(detect_platform())
     for flow in flows:
         if flow.kind == "clipboard":
-            handler: TranscriptionHandler = ClipboardHandler(audio)
+            handler: TranscriptionHandler = ClipboardHandler(audio, clipboard=clipboard)
         elif flow.kind == "claude_chat":
             if not claude_feature.is_available():
                 print(
@@ -160,6 +236,7 @@ def build_handlers(
                 audio,
                 speaker,
                 timeout_seconds=chat_cfg.timeout_seconds,
+                clipboard=clipboard,
             )
         else:
             print(f"[VoiceMate] ⚠ Fluxo desconhecido ignorado: {flow.kind}", file=sys.stderr)
@@ -180,20 +257,50 @@ class _HotkeyCallback:
         self._session.toggle(self._handler_id)
 
 
+def resolve_trigger(config: Config) -> TriggerKind:
+    """Gatilho efetivo: explícito no config, senão o default da plataforma."""
+    if config.trigger is not None:
+        return config.trigger
+    return default_trigger(config.platform or detect_platform())
+
+
 def build_listener(
     config: Config,
     flows: list[FlowConfig],
     session: RecordingSession,
 ) -> InputListener:
+    trigger = resolve_trigger(config)
+
     if config.input_method == "mouse":
-        flow_name = flows[0].name
-        callback = _HotkeyCallback(session, flow_name)
-        return MouseButtonListener(button=config.mouse_button, on_toggle=callback)  # type: ignore[return-value]
+        if trigger != "keyboard-hooks":
+            print(
+                f"[VoiceMate] ⚠ --input-method mouse só é suportado no Windows (trigger={trigger}); "
+                "usando hotkeys de teclado.",
+                file=sys.stderr,
+            )
+        else:
+            flow_name = flows[0].name
+            callback = _HotkeyCallback(session, flow_name)
+            return MouseButtonListener(button=config.mouse_button, on_toggle=callback)  # type: ignore[return-value]
+
+    if trigger == "socket":
+        # Bindings por NOME do flow (o request diz {"flow": ...}); "stop decide
+        # o destino" é preservado: cada request equivale ao hotkey daquele flow.
+        flow_bindings: dict[str, Callable[[], None]] = {
+            flow.name: _HotkeyCallback(session, flow.name) for flow in flows
+        }
+        return SocketTriggerListener(flow_bindings, port=config.daemon_port)  # type: ignore[return-value]
 
     bindings: dict[str, _HotkeyCallback] = {}
     for flow in flows:
         if flow.hotkey not in bindings:
             bindings[flow.hotkey] = _HotkeyCallback(session, flow.name)
+
+    if trigger == "pynput":
+        return PynputHotkeyListener(dict(bindings))  # type: ignore[return-value]
+    if trigger == "evdev":
+        return EvdevHotkeyListener(dict(bindings))  # type: ignore[return-value]
+
     if len(bindings) == 1:
         hotkey, cb = next(iter(bindings.items()))
         return KeyboardHotkeyListener(hotkey=hotkey, on_toggle=cb)  # type: ignore[return-value]

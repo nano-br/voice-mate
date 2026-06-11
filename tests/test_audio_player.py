@@ -78,6 +78,35 @@ def test_start_creates_stream(fake_sd: dict[str, Any]) -> None:
     assert stream.started is True
 
 
+def test_ensure_started_opens_once_and_reuses(fake_sd: dict[str, Any]) -> None:
+    player = AudioPlayer()
+    player.ensure_started(24000)
+    first = fake_sd["stream"]
+    player.ensure_started(24000)  # mesmo rate → NÃO reabre (stream persistente)
+    assert fake_sd["stream"] is first
+    assert first.stopped is False
+    assert first.closed is False
+
+
+def test_ensure_started_reopens_on_rate_change(fake_sd: dict[str, Any]) -> None:
+    player = AudioPlayer()
+    player.ensure_started(24000)
+    first = fake_sd["stream"]
+    player.ensure_started(48000)  # rate diferente → reabre
+    assert fake_sd["stream"] is not first
+    assert fake_sd["stream"].samplerate == 48000
+    assert first.stopped is True
+
+
+def test_ensure_started_reopens_after_abort(fake_sd: dict[str, Any]) -> None:
+    player = AudioPlayer()
+    player.ensure_started(24000)
+    first = fake_sd["stream"]
+    player.abort()
+    player.ensure_started(24000)  # após abort, precisa de stream novo
+    assert fake_sd["stream"] is not first
+
+
 def test_feed_and_callback_drains_queue(fake_sd: dict[str, Any]) -> None:
     player = AudioPlayer()
     player.start(48000)

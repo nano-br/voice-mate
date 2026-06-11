@@ -1,8 +1,14 @@
 from __future__ import annotations
 
-import pytest
-
 from app.core.transcription_handler import ClipboardHandler
+
+
+class FakeClipboard:
+    def __init__(self) -> None:
+        self.copied: list[str] = []
+
+    def copy(self, text: str) -> None:
+        self.copied.append(text)
 
 
 class FakeAudio:
@@ -21,15 +27,14 @@ class FakeAudio:
         self.error_calls += 1
 
 
-def test_clipboard_handler_copies_and_beeps(monkeypatch: pytest.MonkeyPatch) -> None:
-    copied: list[str] = []
-    monkeypatch.setattr("app.core.transcription_handler.pyperclip.copy", copied.append)
+def test_clipboard_handler_copies_and_beeps() -> None:
+    clipboard = FakeClipboard()
     audio = FakeAudio()
-    handler = ClipboardHandler(audio)  # type: ignore[arg-type]
+    handler = ClipboardHandler(audio, clipboard=clipboard)  # type: ignore[arg-type]
 
     handler.handle("texto transcrito")
 
-    assert copied == ["texto transcrito"]
+    assert clipboard.copied == ["texto transcrito"]
     assert audio.transcription_complete_calls == 1
 
 

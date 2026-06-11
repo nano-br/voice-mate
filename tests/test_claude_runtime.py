@@ -215,7 +215,41 @@ def test_claude_chat_config_default_leaves_system_prompt_none() -> None:
 
     cfg = ClaudeChatConfig()
     assert cfg.system_prompt is None
-    assert cfg.model == "claude-sonnet-4-6"
+    assert cfg.model == "claude-haiku-4-5"
     assert cfg.effort == "low"
     assert cfg.thinking_enabled is False
     assert cfg.timeout_seconds == 120.0
+
+
+def test_runtime_omits_effort_for_haiku(fake_sdk: types.ModuleType) -> None:
+    """Haiku 4.5 retorna 400 se receber effort — o runtime deve omiti-lo."""
+    from app.features.claude.runtime import ClaudeRuntime
+
+    runtime = ClaudeRuntime(
+        system_prompt=None,
+        max_turns=None,
+        model="claude-haiku-4-5",
+        effort="low",
+        thinking_enabled=False,
+    )
+    runtime.start()
+    try:
+        opts = _fake_state["last_client"].options
+        assert opts.model == "claude-haiku-4-5"
+        assert "effort" not in opts.kwargs
+    finally:
+        runtime.stop()
+
+
+def test_runtime_stream_yields_text_deltas(fake_sdk: types.ModuleType) -> None:
+    from app.features.claude.runtime import ClaudeRuntime
+
+    _fake_state["response_chunks"] = ["Primeira. ", "Segunda."]
+    runtime = ClaudeRuntime(system_prompt=None, max_turns=None)
+    runtime.start()
+    try:
+        deltas = list(runtime.stream("pergunta"))
+        assert deltas == ["Primeira. ", "Segunda."]
+        assert _fake_state["last_client"].queries == ["pergunta"]
+    finally:
+        runtime.stop()

@@ -1,5 +1,5 @@
-.PHONY: all setup configure setup_env setup_env_minimal setup_env_claude setup_env_tts setup_env_custom lock \
-        format lint test run run-large run-turbo run-vozes-aleatorias run-reset-voz \
+.PHONY: all setup configure doctor setup_env setup_env_minimal setup_env_claude setup_env_tts setup_env_custom lock \
+        format lint test stt-eval run run-large run-turbo run-vozes-aleatorias run-reset-voz \
         i18n-extract i18n-init-pt i18n-init-en i18n-update i18n-compile clean
 
 all: format lint test
@@ -15,6 +15,11 @@ setup:
 # Re-pergunta vendor/módulo/TTS e reinstala o torch certo (sem mexer no resto).
 configure:
 	poetry run python -m app.setup.gpu_bootstrap --reconfigure
+
+# Diagnóstico do ambiente: áudio/mic (WSLg), grupo input (evdev), whisper.cpp,
+# Claude CLI, torch+GPU. Nunca aborta — imprime ✓/✗ com a correção de cada item.
+doctor:
+	poetry run python -m app.setup.doctor
 
 # ─── Setup legado (assume NVIDIA) ────────────────────────────────────────────
 # Compat com o fluxo antigo: instala tudo + torch CUDA. Prefira `make setup`,
@@ -69,6 +74,13 @@ lint:
 
 test:
 	poetry run pytest -v
+
+# Gate de qualidade STT: WER + palavras quebradas por backend, contra amostras
+# locais (samples/ptbr/*.wav + .ref.txt). Ex.:
+#   make stt-eval ARGS="--backends faster-whisper --save-baseline"  # gravar baseline (main/NVIDIA)
+#   make stt-eval ARGS="--backends whispercpp"                      # comparar
+stt-eval:
+	poetry run python -m tools.stt_eval $(ARGS)
 
 run:
 	poetry run voice-mate $(ARGS)

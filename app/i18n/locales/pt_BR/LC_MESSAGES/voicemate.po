@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-05-21 14:42-0300\n"
+"POT-Creation-Date: 2026-06-11 20:34-0300\n"
 "PO-Revision-Date: 2026-05-21 14:45-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: pt_BR\n"
@@ -17,11 +17,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: app/main.py:37
+#: app/main.py:47
 msgid "[VoiceMate] No handler available; exiting."
 msgstr "[VoiceMate] Nenhum handler disponível, encerrando."
 
-#: app/main.py:53
+#: app/main.py:63
 #, python-brace-format
 msgid ""
 "\n"
@@ -30,72 +30,91 @@ msgstr ""
 "\n"
 "[VoiceMate] Pronto. Input: {input_method}"
 
-#: app/main.py:55
+#: app/main.py:65
+#, python-brace-format
+msgid "[VoiceMate] Platform: {platform} (trigger: {trigger})"
+msgstr "[VoiceMate] Plataforma: {platform} (gatilho: {trigger})"
+
+#: app/main.py:71
+#, python-brace-format
+msgid "[VoiceMate] Daemon listening on http://127.0.0.1:{port} (POST /trigger)."
+msgstr "[VoiceMate] Daemon escutando em http://127.0.0.1:{port} (POST /trigger)."
+
+#: app/main.py:75
+msgid ""
+"[VoiceMate] Register the Windows-side hotkeys with scripts/windows"
+"/voicemate-hotkeys.ahk (or .ps1)."
+msgstr ""
+"[VoiceMate] Registre as hotkeys do lado Windows com scripts/windows"
+"/voicemate-hotkeys.ahk (ou .ps1)."
+
+#: app/main.py:78
 msgid "clipboard"
 msgstr "clipboard"
 
-#: app/main.py:55
+#: app/main.py:78
 msgid "Claude (multi-turn)"
 msgstr "Claude (multi-turn)"
 
-#: app/main.py:56
+#: app/main.py:79
 #, python-brace-format
 msgid "[VoiceMate] Hotkey {hotkey}: → {label}"
 msgstr "[VoiceMate] Atalho {hotkey}: → {label}"
 
-#: app/main.py:57
+#: app/main.py:80
 #, python-brace-format
 msgid "[VoiceMate] Max recording: {seconds}s"
 msgstr "[VoiceMate] Tempo máximo de gravação: {seconds}s"
 
-#: app/main.py:58
+#: app/main.py:81
 msgid "[VoiceMate] Ctrl+C to exit.\n"
 msgstr "[VoiceMate] Ctrl+C para sair.\n"
 
-#: app/features/claude/chat_handler.py:48
+#: app/features/claude/chat_handler.py:50
 #, python-brace-format
 msgid "[VoiceMate] ✓ Transcription: {preview}"
 msgstr "[VoiceMate] ✓ Transcrição: {preview}"
 
-#: app/features/claude/chat_handler.py:50
+#: app/features/claude/chat_handler.py:52
 msgid "[VoiceMate] 📋 Transcription copied to clipboard."
 msgstr "[VoiceMate] 📋 Transcrição copiada para o clipboard."
 
-#: app/features/claude/chat_handler.py:52
+#: app/features/claude/chat_handler.py:54
 msgid "[VoiceMate] 🤖 Calling Claude..."
 msgstr "[VoiceMate] 🤖 Chamando Claude..."
 
-#: app/features/claude/chat_handler.py:57
+#: app/features/claude/chat_handler.py:62
 msgid "[VoiceMate] ✗ Claude response discarded (cancelled)."
 msgstr "[VoiceMate] ✗ Resposta do Claude descartada (cancelada)."
 
-#: app/features/claude/chat_handler.py:60
+#: app/features/claude/chat_handler.py:65
 msgid "[VoiceMate] Claude returned an empty response."
 msgstr "[VoiceMate] Claude retornou resposta vazia."
 
-#: app/features/claude/chat_handler.py:63
+#: app/features/claude/chat_handler.py:68
 #, python-brace-format
 msgid "[VoiceMate] 💬 Claude: {preview}"
 msgstr "[VoiceMate] 💬 Claude: {preview}"
 
-#: app/features/claude/chat_handler.py:65
+#: app/features/claude/chat_handler.py:70
 msgid "[VoiceMate] 📋 Claude response copied to clipboard."
 msgstr "[VoiceMate] 📋 Resposta do Claude copiada para o clipboard."
 
-#: app/features/tts/voxcpm_speaker.py:57
+#: app/features/tts/voxcpm_speaker.py:87
 msgid "cloning"
 msgstr "clonagem"
 
-#: app/features/tts/voxcpm_speaker.py:57
+#: app/features/tts/voxcpm_speaker.py:87
 msgid "voice-design"
 msgstr "voice-design"
 
-#: app/features/tts/voxcpm_speaker.py:58
+#: app/features/tts/voxcpm_speaker.py:88
 #, python-brace-format
 msgid "[VoxCPMSpeaker] 🔊 Synthesizing voice ({mode})..."
 msgstr "[VoxCPMSpeaker] 🔊 Sintetizando voz ({mode})..."
 
-#: app/features/tts/voxcpm_speaker.py:75
+#: app/features/tts/voxcpm_speaker.py:105
 #, python-brace-format
 msgid "[VoxCPMSpeaker] ✓ Playback finished ({elapsed:.1f}s)."
 msgstr "[VoxCPMSpeaker] ✓ Reprodução concluída ({elapsed:.1f}s)."
+

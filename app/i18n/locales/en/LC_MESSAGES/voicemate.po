@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-21 14:42-0300\n"
+"POT-Creation-Date: 2026-06-11 20:34-0300\n"
 "PO-Revision-Date: 2026-05-21 14:42-0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -18,83 +18,99 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: app/main.py:37
+#: app/main.py:47
 msgid "[VoiceMate] No handler available; exiting."
 msgstr ""
 
-#: app/main.py:53
+#: app/main.py:63
 #, python-brace-format
 msgid ""
 "\n"
 "[VoiceMate] Ready. Input: {input_method}"
 msgstr ""
 
-#: app/main.py:55
+#: app/main.py:65
+#, python-brace-format
+msgid "[VoiceMate] Platform: {platform} (trigger: {trigger})"
+msgstr ""
+
+#: app/main.py:71
+#, python-brace-format
+msgid "[VoiceMate] Daemon listening on http://127.0.0.1:{port} (POST /trigger)."
+msgstr ""
+
+#: app/main.py:75
+msgid ""
+"[VoiceMate] Register the Windows-side hotkeys with scripts/windows"
+"/voicemate-hotkeys.ahk (or .ps1)."
+msgstr ""
+
+#: app/main.py:78
 msgid "clipboard"
 msgstr ""
 
-#: app/main.py:55
+#: app/main.py:78
 msgid "Claude (multi-turn)"
 msgstr ""
 
-#: app/main.py:56
+#: app/main.py:79
 #, python-brace-format
 msgid "[VoiceMate] Hotkey {hotkey}: → {label}"
 msgstr ""
 
-#: app/main.py:57
+#: app/main.py:80
 #, python-brace-format
 msgid "[VoiceMate] Max recording: {seconds}s"
 msgstr ""
 
-#: app/main.py:58
+#: app/main.py:81
 msgid "[VoiceMate] Ctrl+C to exit.\n"
 msgstr ""
 
-#: app/features/claude/chat_handler.py:48
+#: app/features/claude/chat_handler.py:50
 #, python-brace-format
 msgid "[VoiceMate] ✓ Transcription: {preview}"
 msgstr ""
 
-#: app/features/claude/chat_handler.py:50
+#: app/features/claude/chat_handler.py:52
 msgid "[VoiceMate] 📋 Transcription copied to clipboard."
 msgstr ""
 
-#: app/features/claude/chat_handler.py:52
+#: app/features/claude/chat_handler.py:54
 msgid "[VoiceMate] 🤖 Calling Claude..."
 msgstr ""
 
-#: app/features/claude/chat_handler.py:57
+#: app/features/claude/chat_handler.py:62
 msgid "[VoiceMate] ✗ Claude response discarded (cancelled)."
 msgstr ""
 
-#: app/features/claude/chat_handler.py:60
+#: app/features/claude/chat_handler.py:65
 msgid "[VoiceMate] Claude returned an empty response."
 msgstr ""
 
-#: app/features/claude/chat_handler.py:63
+#: app/features/claude/chat_handler.py:68
 #, python-brace-format
 msgid "[VoiceMate] 💬 Claude: {preview}"
 msgstr ""
 
-#: app/features/claude/chat_handler.py:65
+#: app/features/claude/chat_handler.py:70
 msgid "[VoiceMate] 📋 Claude response copied to clipboard."
 msgstr ""
 
-#: app/features/tts/voxcpm_speaker.py:57
+#: app/features/tts/voxcpm_speaker.py:87
 msgid "cloning"
 msgstr ""
 
-#: app/features/tts/voxcpm_speaker.py:57
+#: app/features/tts/voxcpm_speaker.py:87
 msgid "voice-design"
 msgstr ""
 
-#: app/features/tts/voxcpm_speaker.py:58
+#: app/features/tts/voxcpm_speaker.py:88
 #, python-brace-format
 msgid "[VoxCPMSpeaker] 🔊 Synthesizing voice ({mode})..."
 msgstr ""
 
-#: app/features/tts/voxcpm_speaker.py:75
+#: app/features/tts/voxcpm_speaker.py:105
 #, python-brace-format
 msgid "[VoxCPMSpeaker] ✓ Playback finished ({elapsed:.1f}s)."
 msgstr ""

@@ -39,7 +39,8 @@ class WhisperCppBackend:
         self._model = model
         self._beam = config.beam_size
         self._sample_rate = config.sample_rate
-        print(f"[VoiceMate] Carregando Whisper '{model.stem}' (whisper.cpp + Vulkan)...")
+        self._language = config.transcription_language
+        print(f"[VoiceMate] Carregando Whisper '{model.stem}' (whisper.cpp + Vulkan, idioma={self._language})...")
         print("[VoiceMate] Modelo pronto.")
 
     def transcribe(self, audio: NDArray[np.float32]) -> str:
@@ -59,12 +60,17 @@ class WhisperCppBackend:
                 "-bs",
                 str(self._beam),
                 "-l",
-                "auto",
+                self._language,
                 "-otxt",
                 "-of",
                 str(out_prefix),
                 "-np",
             ]
+            from app.features.whispercpp import find_vad_model
+
+            vad_model = find_vad_model(self._model.parent)
+            if vad_model is not None:
+                cmd += ["--vad", "--vad-model", str(vad_model)]
             # encoding/errors fixos: o whisper-cli emite UTF-8 (barras de progresso,
             # texto multilíngue) que o cp1252 padrão do Windows não decodifica —
             # sem isto, o thread leitor do subprocess levanta UnicodeDecodeError.
@@ -80,7 +86,11 @@ class WhisperCppBackend:
                 tail = (proc.stderr or "")[-400:]
                 raise RuntimeError(f"whisper-cli falhou (código {proc.returncode}): {tail}")
             text = txt_path.read_text(encoding="utf-8") if txt_path.exists() else ""
-            return " ".join(line.strip() for line in text.splitlines() if line.strip())
+            # Concatenação fiel: o -otxt grava um segmento por linha, cada um já
+            # com seu espaço à esquerda quando aplicável. Re-juntar com " " após
+            # strip() por linha inseria espaço dentro de palavras quando um
+            # segmento quebrava no meio de uma ("pa lavra").
+            return "".join(text.splitlines()).strip()
         finally:
             for leftover in (wav_path, txt_path):
                 try:

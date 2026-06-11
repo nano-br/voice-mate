@@ -1,9 +1,26 @@
 from __future__ import annotations
 
 import asyncio
+import queue
 import sys
 import threading
-from typing import Any
+import time
+from collections.abc import Iterator
+from typing import Any, cast
+
+# Sentinela de fim de stream colocada na fila pela coroutine produtora.
+_STREAM_END = object()
+
+
+def _model_supports_effort(model: str | None) -> bool:
+    """O parâmetro `effort` não é aceito pelo Haiku 4.5 (retorna 400).
+
+    Sonnet/Opus aceitam. Quando o modelo não é conhecido (None → default do SDK),
+    assumimos que suporta (o default histórico era Sonnet).
+    """
+    if not model:
+        return True
+    return "haiku" not in model.lower()
 
 
 class ClaudeRuntime:
@@ -63,6 +80,36 @@ class ClaudeRuntime:
         future = asyncio.run_coroutine_threadsafe(self._send(prompt), self._loop)
         return future.result(timeout=timeout)
 
+    def stream(self, prompt: str, timeout: float | None = None) -> Iterator[str]:
+        """Produz os deltas de texto da resposta conforme chegam (realtime).
+
+        A coroutine produtora roda no loop dedicado e empilha cada `TextBlock.text`
+        numa `queue.Queue`; este gerador (rodando na thread chamadora) consome a
+        fila. Exceções do lado async são propagadas; `interrupt()` encerra o stream
+        naturalmente (o `receive_response` se esgota). Bloquear no `speak()` entre
+        os `yield` é o que sobrepõe a fala com a geração que segue enchendo a fila.
+        """
+        if self._loop is None or self._client is None:
+            raise RuntimeError("ClaudeRuntime não iniciado")
+        bridge: queue.Queue[object] = queue.Queue()
+        future = asyncio.run_coroutine_threadsafe(self._send_stream(prompt, bridge), self._loop)
+        deadline = None if timeout is None else time.monotonic() + timeout
+        try:
+            while True:
+                remaining = None if deadline is None else max(0.0, deadline - time.monotonic())
+                try:
+                    item = bridge.get(timeout=remaining)
+                except queue.Empty as exc:
+                    raise TimeoutError(f"Claude excedeu timeout ({timeout:.0f}s) no stream.") from exc
+                if item is _STREAM_END:
+                    break
+                if isinstance(item, BaseException):
+                    raise item
+                yield cast(str, item)
+        finally:
+            if not future.done():
+                future.cancel()
+
     def interrupt(self) -> None:
         """Pede ao client para abortar o turno atual (fire-and-forget)."""
         if self._loop is None or self._client is None:
@@ -106,8 +153,13 @@ class ClaudeRuntime:
             options_kwargs["max_turns"] = self._max_turns
         if self._model is not None:
             options_kwargs["model"] = self._model
-        if self._effort is not None:
+        if self._effort is not None and _model_supports_effort(self._model):
             options_kwargs["effort"] = self._effort
+        elif self._effort is not None:
+            print(
+                f"[ClaudeRuntime] effort='{self._effort}' ignorado: {self._model} não suporta o parâmetro.",
+                file=sys.stderr,
+            )
         if not self._thinking_enabled:
             from claude_agent_sdk import ThinkingConfigDisabled
 
@@ -129,6 +181,22 @@ class ClaudeRuntime:
                     if isinstance(block, TextBlock):
                         chunks.append(block.text)
         return "".join(chunks)
+
+    async def _send_stream(self, prompt: str, bridge: queue.Queue[object]) -> None:
+        from claude_agent_sdk import AssistantMessage, TextBlock
+
+        assert self._client is not None
+        try:
+            await self._client.query(prompt)
+            async for msg in self._client.receive_response():
+                if isinstance(msg, AssistantMessage):
+                    for block in msg.content:
+                        if isinstance(block, TextBlock) and block.text:
+                            bridge.put(block.text)
+        except BaseException as exc:  # noqa: BLE001 — propagado ao consumidor via fila
+            bridge.put(exc)
+        finally:
+            bridge.put(_STREAM_END)
 
     async def _safe_interrupt(self) -> None:
         if self._client is None:

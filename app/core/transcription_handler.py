@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import Protocol
 
-import pyperclip
-
 from app.core.audio_feedback import AudioFeedback
+from app.platform.clipboard import ClipboardWriter, PyperclipWriter
 
 
 class TranscriptionHandler(Protocol):
@@ -22,11 +21,12 @@ class TranscriptionHandler(Protocol):
 class ClipboardHandler:
     """Copia o texto cru para o clipboard e toca o som de transcrição concluída."""
 
-    def __init__(self, audio: AudioFeedback) -> None:
+    def __init__(self, audio: AudioFeedback, clipboard: ClipboardWriter | None = None) -> None:
         self._audio = audio
+        self._clipboard: ClipboardWriter = clipboard if clipboard is not None else PyperclipWriter()
 
     def handle(self, text: str) -> None:
-        pyperclip.copy(text)
+        self._clipboard.copy(text)
         self._audio.transcription_complete()
         preview = text[:100] + ("..." if len(text) > 100 else "")
         print(f"[VoiceMate] ✓ Copiado: {preview}")

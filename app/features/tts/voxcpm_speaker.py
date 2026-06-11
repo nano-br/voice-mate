@@ -51,6 +51,15 @@ class VoxCPMSpeaker:
     def is_active(self) -> bool:
         return not self._closed and not self._load_failed
 
+    def warmup(self) -> None:
+        """Pré-carrega o modelo fora do 1º turno (chamado em background no startup)."""
+        if self._closed or self._load_failed:
+            return
+        self._ensure_model()
+
+    def wait_done(self, timeout: float | None = None) -> bool:  # noqa: ARG002 — speak() já bloqueia
+        return True
+
     def _ensure_model(self) -> bool:
         """Carrega o modelo sob demanda (1ª fala). Retorna False se falhar."""
         if self._model is not None:

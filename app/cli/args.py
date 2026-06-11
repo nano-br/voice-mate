@@ -51,6 +51,58 @@ def _add_core_args(parser: argparse.ArgumentParser) -> None:
         ),
     )
     parser.add_argument(
+        "--stt-strategy",
+        default=None,
+        choices=["auto", "faster-whisper-rocm", "whispercpp", "openai-whisper"],
+        help=(
+            "Estratégia de STT na AMD (cadeia de fallback). Omitido = config salvo ou "
+            "'auto' (faster-whisper-rocm se validado pelo setup → whispercpp → "
+            "openai-whisper → CPU). 'faster-whisper-rocm' força o CT2-ROCm na GPU."
+        ),
+    )
+    parser.add_argument(
+        "--platform",
+        default=None,
+        choices=["windows", "linux-x11", "linux-wayland", "wsl2"],
+        help="Ambiente de execução. Omitido = config salvo ou auto-detecção.",
+    )
+    parser.add_argument(
+        "--trigger",
+        default=None,
+        choices=["keyboard-hooks", "pynput", "evdev", "socket"],
+        help=(
+            "Mecanismo do gatilho. Omitido = default da plataforma "
+            "(windows→keyboard-hooks, x11→pynput, wayland→evdev, wsl2→socket/daemon)."
+        ),
+    )
+    parser.add_argument(
+        "--daemon-port",
+        type=int,
+        default=None,
+        help="Porta do daemon HTTP local quando trigger=socket (padrão: 47821).",
+    )
+    parser.add_argument(
+        "--whispercpp-mode",
+        default="server",
+        choices=["server", "cli"],
+        help=(
+            "Modo do whisper.cpp. 'server' (padrão): sobe o whisper-server.exe uma vez "
+            "(modelo quente na VRAM, realtime). 'cli': roda whisper-cli.exe por fala "
+            "(recarrega o modelo toda vez — mais lento)."
+        ),
+    )
+    parser.add_argument(
+        "--transcription-language",
+        default=None,
+        choices=["auto", "pt", "en", "es", "fr", "de", "it", "ja", "zh"],
+        help=(
+            "Idioma fixado na transcrição. Omitido = derivado do --output-lang "
+            "(pt-BR→pt, en→en). Fixar dá estabilidade e ainda transcreve termos "
+            "estrangeiros embutidos (code-switching). 'auto' detecta por fala "
+            "(menos estável em falas curtas)."
+        ),
+    )
+    parser.add_argument(
         "--input-method",
         default="keyboard",
         choices=["keyboard", "mouse"],
@@ -129,14 +181,20 @@ def _add_claude_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--claude-model",
-        default="claude-sonnet-4-6",
-        help="Modelo Claude (padrão: claude-sonnet-4-6)",
+        default="claude-haiku-4-5",
+        help=(
+            "Modelo Claude (padrão: claude-haiku-4-5 — menor latência p/ voz realtime). "
+            "Use claude-sonnet-4-6 para respostas mais elaboradas."
+        ),
     )
     parser.add_argument(
         "--claude-effort",
         default="low",
         choices=["low", "medium", "high", "xhigh", "max"],
-        help="Nível de esforço do Claude (padrão: low — prioriza velocidade)",
+        help=(
+            "Nível de esforço do Claude (padrão: low — prioriza velocidade). "
+            "Ignorado em modelos Haiku, que não aceitam o parâmetro."
+        ),
     )
     parser.add_argument(
         "--claude-enable-thinking",
@@ -156,6 +214,15 @@ def _add_tts_args(parser: argparse.ArgumentParser) -> None:
         "--no-tts",
         action="store_true",
         help="Desabilitar TTS (a resposta do Claude só vai pro clipboard + beep)",
+    )
+    parser.add_argument(
+        "--tts-engine",
+        default="omnivoice",
+        choices=["omnivoice", "voxcpm", "none"],
+        help=(
+            "Engine de TTS. 'omnivoice' (padrão): leve/rápido, 24 kHz. "
+            "'voxcpm': alternativo (mais pesado). 'none': desliga."
+        ),
     )
     parser.add_argument(
         "--tts-voice",
@@ -198,19 +265,15 @@ def _add_tts_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--tts-voice-seed-mode",
-        default="auto",
+        default="off",
         choices=["auto", "fixed", "off"],
         help=(
-            "Como o VoxCPM2 escolhe a voz a cada fala. "
-            "'auto' (padrão): a primeira fala gera uma voz pela descrição "
-            "(--tts-voice) e o áudio é salvo em ~/.cache/voicemate/voice_seed.wav; "
-            "as falas seguintes usam esse WAV como referência (clonagem), "
-            "mantendo a MESMA voz na sessão e em sessões futuras "
-            "(use --tts-reset-seed para regerar). "
-            "'fixed': usa o WAV fornecido em --tts-voice-seed-path + "
-            "--tts-voice-seed-text como referência; voz totalmente determinística. "
-            "'off': não usa seed nenhum — cada fala re-sorteia uma voz "
-            "condicionada à descrição (--tts-voice). Cada turno soa diferente."
+            "Como o TTS escolhe a voz. "
+            "'off' (padrão): voz fixa por DESCRIÇÃO (--tts-voice) — voice design, "
+            "sem clonagem; com seed fixo a MESMA voz sai em toda fala (rápido e "
+            "consistente). 'fixed': clonagem a partir do WAV em --tts-voice-seed-path "
+            "+ --tts-voice-seed-text. 'auto': clonagem auto — a 1ª fala vira referência "
+            "e as seguintes a clonam (mais lento; pode variar a voz no meio da resposta)."
         ),
     )
     parser.add_argument(

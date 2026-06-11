@@ -14,7 +14,9 @@ packages = [{ include = "app" }]
 voice-mate = "app.main:main"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+# Travado em 3.12: os wheels ROCm da AMD (torch/torchaudio) são cp312-only e o
+# voxcpm exige <3.13. Em 3.13 o `make setup` instala torch CPU silenciosamente.
+python = ">=3.12,<3.13"
 # Core: sem essas deps o app nem sobe
 faster-whisper = "*"
 sounddevice = "*"
@@ -26,20 +28,29 @@ mouse = "*"
 # depende da placa (CUDA cu128 p/ NVIDIA, ROCm p/ AMD, CPU como fallback) e os
 # wheels ROCm nem estão no PyPI. Quem instala é `app.setup.gpu_bootstrap`, via
 # `make setup` / `make configure`, que detecta a GPU e roda o pip certo.
-# voxcpm e openai-whisper dependem de torch — o setup instala o torch por último
-# (--force-reinstall) para o build da placa prevalecer sobre o CPU-only do PyPI.
+# omnivoice/voxcpm/openai-whisper dependem de torch — o setup instala o torch por
+# último (--force-reinstall) para o build da placa prevalecer sobre o CPU-only do PyPI.
 # Extras opt-in (não instalam por padrão; ver [tool.poetry.extras])
 claude-agent-sdk = { version = "*", optional = true }
+omnivoice = { version = "*", optional = true }
 voxcpm = { version = "*", python = "<3.13", optional = true }
 soundfile = { version = "*", optional = true }
 openai-whisper = { version = "*", optional = true }
+# Linux: hotkeys globais (pynput p/ X11, evdev p/ Wayland — evdev só compila em Linux)
+pynput = { version = "*", optional = true }
+evdev = { version = "*", optional = true, markers = "sys_platform == 'linux'" }
 
 [tool.poetry.extras]
 claude = ["claude-agent-sdk"]
-tts = ["voxcpm", "soundfile"]
+# tts = engine padrão (OmniVoice). Para o engine alternativo, use o extra voxcpm.
+tts = ["omnivoice", "soundfile"]
+voxcpm = ["voxcpm", "soundfile"]
 # Whisper na GPU AMD: openai-whisper roda sobre o torch+ROCm que o setup instala.
 whisper-gpu = ["openai-whisper"]
-all = ["claude-agent-sdk", "voxcpm", "soundfile", "openai-whisper"]
+# Linux nativo/WSL2: listeners de hotkey (pynput/evdev). No WSL2 o gatilho é o
+# daemon HTTP (sem dependência extra), mas o extra cobre o Linux nativo.
+linux = ["pynput", "evdev"]
+all = ["claude-agent-sdk", "omnivoice", "voxcpm", "soundfile", "openai-whisper", "pynput", "evdev"]
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"
