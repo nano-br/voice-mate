@@ -37,6 +37,7 @@ def run_checks() -> list[CheckResult]:
     results: list[CheckResult] = [CheckResult("Plataforma detectada", True, f"{platform} (gatilho: {trigger})")]
     if platform == "wsl2":
         results += _check_wslg_audio()
+        results += _check_wsl_clipboard()
     results += _check_sounddevice()
     results += _check_trigger(platform, trigger)
     results += _check_whispercpp()
@@ -83,6 +84,34 @@ def _check_wslg_audio() -> list[CheckResult]:
         )
     )
     return results
+
+
+def _check_wsl_clipboard() -> list[CheckResult]:
+    """Algum caminho de escrita no clipboard precisa existir no WSL.
+
+    Com `appendWindowsPath=false` no /etc/wsl.conf o clip.exe some do PATH —
+    o app usa o caminho absoluto via interop, mas o interop precisa estar
+    habilitado (ou um utilitário Linux instalado).
+    """
+    from app.platform.clipboard import _WINDOWS_CLIP_EXE
+
+    options: list[str] = []
+    if shutil.which("wl-copy"):
+        options.append("wl-copy")
+    if shutil.which("xclip"):
+        options.append("xclip")
+    if shutil.which("clip.exe"):
+        options.append("clip.exe (PATH)")
+    elif _WINDOWS_CLIP_EXE.exists():
+        options.append(str(_WINDOWS_CLIP_EXE))
+    return [
+        CheckResult(
+            "Clipboard (escrita)",
+            bool(options),
+            ", ".join(options) or "nenhum mecanismo encontrado",
+            fix=("Habilite o interop em /etc/wsl.conf ([interop] enabled=true) ou: sudo apt install -y wl-clipboard"),
+        )
+    ]
 
 
 def _check_sounddevice() -> list[CheckResult]:
