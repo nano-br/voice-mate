@@ -55,6 +55,7 @@ class FakeAudio:
         self.recording_started_calls = 0
         self.transcription_complete_calls = 0
         self.timeout_warning_calls = 0
+        self.error_calls = 0
 
     def recording_started(self) -> None:
         self.recording_started_calls += 1
@@ -64,6 +65,9 @@ class FakeAudio:
 
     def timeout_warning(self) -> None:
         self.timeout_warning_calls += 1
+
+    def error(self) -> None:
+        self.error_calls += 1
 
 
 class FakeHandler:
@@ -199,6 +203,32 @@ def test_toggle_during_processing_cancels_and_restarts() -> None:
     assert handler.cancel_calls == 1
     assert handler.handle_done.wait(timeout=2.0)
     # recorder começou nova gravação
+    assert recorder.start_calls == 2
+    assert recorder.is_recording
+
+
+def test_transcriber_exception_recovers_to_idle() -> None:
+    """Exceção na transcrição não pode prender a sessão em `processing`:
+    o estado volta a idle, audio.error() toca e o próximo toggle grava normal."""
+
+    class BoomTranscriber(FakeTranscriber):
+        def transcribe(self, audio: NDArray[np.float32]) -> str:
+            raise RuntimeError("whisper explodiu")
+
+    handler = FakeHandler()
+    session, recorder, _, audio, _ = _make_session(handlers={"clipboard": handler}, transcriber=BoomTranscriber())
+
+    session.toggle("clipboard")  # start
+    session.toggle("clipboard")  # stop → transcribe levanta na thread
+    deadline = time.monotonic() + 2.0
+    while audio.error_calls == 0 and time.monotonic() < deadline:
+        time.sleep(0.01)
+
+    assert audio.error_calls == 1
+    assert handler.handle_calls == []
+
+    # Sessão se recuperou: novo toggle inicia gravação de novo (estado idle).
+    session.toggle("clipboard")
     assert recorder.start_calls == 2
     assert recorder.is_recording
 

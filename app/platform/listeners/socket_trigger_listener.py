@@ -18,12 +18,24 @@ listeners.
 from __future__ import annotations
 
 import json
+import sys
 import threading
+import traceback
 from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 DEFAULT_DAEMON_PORT = 47821
+
+
+def _run_callback_logged(flow: str, callback: Callable[[], None]) -> None:
+    """Roda o callback do trigger SEM engolir exceção: thread daemon que morre
+    calada deixaria o toggle "não fazer nada" sem nenhuma pista no log."""
+    try:
+        callback()
+    except Exception:  # noqa: BLE001 — fronteira de thread: logar é o tratamento
+        print(f"[VoiceMate] ❌ Erro no trigger do flow '{flow}':", file=sys.stderr)
+        traceback.print_exc()
 
 
 class SocketTriggerListener:
@@ -112,7 +124,9 @@ def _build_handler(
                 return
             # Responde já e roda o callback fora do ciclo do request: o gatilho
             # do lado Windows não deve esperar a transcrição terminar.
-            threading.Thread(target=callback, daemon=True, name=f"Trigger-{flow}").start()
+            threading.Thread(
+                target=_run_callback_logged, args=(flow, callback), daemon=True, name=f"Trigger-{flow}"
+            ).start()
             self._respond(200, {"ok": True, "flow": flow})
 
         def _respond(self, status: int, payload: dict[str, object]) -> None:

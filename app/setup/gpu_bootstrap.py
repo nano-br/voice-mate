@@ -94,7 +94,13 @@ _WCPP_KEEP_EXACT = ("whisper-cli.exe", "whisper-server.exe")
 # Tag pinada p/ reprodutibilidade; binários estáticos (BUILD_SHARED_LIBS=OFF).
 _WCPP_LINUX_REPO = "https://github.com/ggml-org/whisper.cpp"
 _WCPP_LINUX_TAG = "v1.8.6"
-_WCPP_LINUX_APT_HINT = "sudo apt install -y git cmake build-essential libvulkan-dev glslc vulkan-tools"
+# Nota: spirv-headers/spirv-tools/glslang-tools são necessários p/ compilar os
+# shaders Vulkan (sem eles o cmake falha em SPIRV-Headers/glslangValidator).
+# `libglslang-dev` NÃO existe com esse nome no Ubuntu 24.04 — não sugerir.
+_WCPP_LINUX_APT_HINT = (
+    "sudo apt install -y git cmake build-essential libvulkan-dev glslc vulkan-tools "
+    "spirv-headers spirv-tools glslang-tools"
+)
 
 # Modelo Q8_0 (near-lossless, ~0,9 GB vs ~1,6 GB do fp16) — opção p/ VRAM curta.
 _WCPP_MODEL_Q8_NAME = "ggml-large-v3-turbo-q8_0.bin"
@@ -489,7 +495,7 @@ def _install_whispercpp_linux(interactive: bool) -> bool:
 
     binaries_ok = cli.exists() and server.exists()
     if not binaries_ok:
-        missing = [tool for tool in ("git", "cmake", "g++", "glslc") if shutil.which(tool) is None]
+        missing = [tool for tool in ("git", "cmake", "g++", "glslc", "glslangValidator") if shutil.which(tool) is None]
         if missing:
             print(
                 f"[setup] ⚠ Ferramentas ausentes p/ compilar o whisper.cpp: {', '.join(missing)}",

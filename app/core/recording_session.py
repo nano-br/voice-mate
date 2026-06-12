@@ -1,4 +1,6 @@
+import sys
 import threading
+import traceback
 from typing import Literal
 
 import numpy as np
@@ -120,36 +122,48 @@ class RecordingSession:
         self._stop_and_dispatch()
 
     def _stop_and_dispatch(self) -> None:
-        result: NDArray[np.float32] | None = self._recorder.stop()
-        with self._lock:
-            stop_id = self._stop_handler_id
-            self._stop_handler_id = None
-            if self._state != "processing":
-                # Usuário cancelou e iniciou nova gravação; abortamos silenciosamente.
-                return
-            if stop_id is None:
-                self._state = "idle"
-                return
-            self._active_handler_id = stop_id
+        """Para a gravação, transcreve e despacha — roda em thread própria.
 
-        if result is None:
-            print("[VoiceMate] Nenhum áudio capturado.")
-            self._finish_processing_locked(stop_id)
-            return
-
-        duration = len(result) / self._sample_rate
-        print(f"[VoiceMate] ⏳ Transcrevendo {duration:.1f}s de áudio...")
-        text = self._transcriber.transcribe(result)
-        if not text:
-            print("[VoiceMate] Nenhuma fala detectada.")
-            self._finish_processing_locked(stop_id)
-            return
-
-        handler = self._handlers[stop_id]
+        Qualquer exceção aqui é logada (traceback) e o estado SEMPRE volta a
+        idle: uma thread daemon que morre calada deixaria a sessão presa em
+        `processing` e o toggle "morto" sem nenhuma pista no log.
+        """
+        stop_id: str | None = None
         try:
-            handler.handle(text)
+            result: NDArray[np.float32] | None = self._recorder.stop()
+            with self._lock:
+                stop_id = self._stop_handler_id
+                self._stop_handler_id = None
+                if self._state != "processing":
+                    # Usuário cancelou e iniciou nova gravação; abortamos silenciosamente.
+                    return
+                if stop_id is None:
+                    self._state = "idle"
+                    return
+                self._active_handler_id = stop_id
+
+            if result is None:
+                print("[VoiceMate] Nenhum áudio capturado.")
+                return
+
+            duration = len(result) / self._sample_rate
+            print(f"[VoiceMate] ⏳ Transcrevendo {duration:.1f}s de áudio...")
+            text = self._transcriber.transcribe(result)
+            if not text:
+                print("[VoiceMate] Nenhuma fala detectada.")
+                return
+
+            self._handlers[stop_id].handle(text)
+        except Exception:  # noqa: BLE001 — fronteira de thread: logar + se recuperar
+            print("[VoiceMate] ❌ Erro ao processar a gravação:", file=sys.stderr)
+            traceback.print_exc()
+            try:
+                self._audio.error()
+            except Exception:  # noqa: BLE001, S110 — beep é best-effort
+                pass
         finally:
-            self._finish_processing_locked(stop_id)
+            if stop_id is not None:
+                self._finish_processing_locked(stop_id)
 
     def _finish_processing_locked(self, stop_id: str) -> None:
         with self._lock:

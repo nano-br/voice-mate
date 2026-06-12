@@ -117,3 +117,43 @@ def test_unknown_route_is_404(listener: tuple[SocketTriggerListener, dict[str, _
 def test_empty_bindings_raise() -> None:
     with pytest.raises(ValueError, match="ao menos um binding"):
         SocketTriggerListener({}, port=0)
+
+
+def test_callback_exception_is_logged_and_server_keeps_serving(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Exceção no callback não pode ser silenciosa (thread daemon morta sem log
+    era o sintoma 'trigger não faz nada') nem derrubar o servidor."""
+    raised = threading.Event()
+
+    def boom() -> None:
+        raised.set()
+        raise RuntimeError("toggle explodiu")
+
+    instance = SocketTriggerListener({"clipboard": boom}, port=0)
+    thread = threading.Thread(target=instance.listen, daemon=True)
+    thread.start()
+    deadline = time.monotonic() + 5.0
+    while instance.port == 0 and time.monotonic() < deadline:
+        time.sleep(0.01)
+    try:
+        status, _body = _post(instance.port, "/trigger", {"flow": "clipboard"})
+        assert status == 200  # o request responde mesmo com o callback quebrando
+        assert raised.wait(timeout=5.0)
+
+        # O traceback é assíncrono (thread do callback) — aguarda aparecer no stderr.
+        err = ""
+        deadline = time.monotonic() + 5.0
+        while "toggle explodiu" not in err and time.monotonic() < deadline:
+            time.sleep(0.05)
+            err += capsys.readouterr().err
+        assert "toggle explodiu" in err
+        assert "Erro no trigger do flow 'clipboard'" in err
+
+        # Servidor continua vivo e atendendo.
+        status, body = _get(instance.port, "/health")
+        assert status == 200
+        assert body["status"] == "ok"
+    finally:
+        instance.stop()
+        thread.join(timeout=5.0)

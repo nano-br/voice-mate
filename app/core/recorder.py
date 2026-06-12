@@ -43,10 +43,18 @@ class Recorder:
             if not self._recording:
                 return None
             self._recording = False
-            if self._stream is not None:
-                self._stream.stop()
-                self._stream.close()
-                self._stream = None
+            stream = self._stream
+            self._stream = None
+
+        # stream.stop() FORA do lock: o PortAudio bloqueia até o callback em
+        # voo retornar, e o _callback precisa do mesmo lock para appendar o
+        # chunk — segurá-lo aqui deadlockava o toggle (visível no WSLg, onde
+        # os callbacks do PulseAudio-RDP são lentos/frequentes).
+        if stream is not None:
+            stream.stop()
+            stream.close()
+
+        with self._lock:
             chunks = list(self._chunks)
             self._chunks = []
 

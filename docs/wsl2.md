@@ -24,8 +24,12 @@ hotkeys globais do Windows não chegam a processos em background do WSL.
 4. Pacotes de áudio/build no Ubuntu:
    ```bash
    sudo apt install -y libportaudio2 libasound2-plugins pulseaudio-utils \
-                       git cmake build-essential libvulkan-dev glslc vulkan-tools
+                       git cmake build-essential libvulkan-dev glslc vulkan-tools \
+                       spirv-headers spirv-tools glslang-tools
    ```
+   > Os três últimos são exigidos pela compilação dos shaders Vulkan do
+   > whisper.cpp (`SPIRV-Headers`/`glslangValidator`). `libglslang-dev` não
+   > existe com esse nome no Ubuntu 24.04 — os pacotes acima bastam.
 
 ## Instalação
 
