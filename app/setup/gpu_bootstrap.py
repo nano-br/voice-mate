@@ -32,31 +32,48 @@ from app.platform.kinds import PlatformKind
 from app.setup.gpu_detect import GpuInfo, amd_driver_warning, detect_gpu
 from app.setup.persisted_config import PersistedConfig, load_persisted, save_persisted
 
+# ── Releases ROCm (uma constante por trilha; as trilhas têm versões PRÓPRIAS) ──
+# Windows (ROCm-on-Windows): wheels em https://repo.radeon.com/rocm/windows/.
+_ROCM_WIN_VER = "7.2.1"
+# Linux/WSL2: a LINHA é "7.2" (pacote WSL 7.2.70200) e os wheels manylinux são
+# "+rocm7.2.0" — em https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2/.
+# (Não confundir com a trilha "7.2.4", que é Linux nativo e não tem usecase wsl.)
+_ROCM_LINUX_LINE = "7.2"
+
 # Wheels ROCm-on-Windows oficiais da AMD (não estão no PyPI). Verificar/atualizar
 # para a última release em https://repo.radeon.com/rocm/windows/ ao manter.
-_ROCM_REL = "rocm-rel-7.2.1"
+_ROCM_REL = f"rocm-rel-{_ROCM_WIN_VER}"
 _ROCM_BASE = f"https://repo.radeon.com/rocm/windows/{_ROCM_REL}"
 # Passo 1: runtime ROCm SDK. O torch ROCm DEPENDE dele só para importar — sem
 # ele, `import torch` quebra com ModuleNotFoundError: rocm_sdk. (Comando oficial
 # da AMD; torchvision é omitido de propósito — o projeto não usa.)
 _ROCM_SDK_WHEELS = [
-    f"{_ROCM_BASE}/rocm_sdk_core-7.2.1-py3-none-win_amd64.whl",
-    f"{_ROCM_BASE}/rocm_sdk_devel-7.2.1-py3-none-win_amd64.whl",
-    f"{_ROCM_BASE}/rocm_sdk_libraries_custom-7.2.1-py3-none-win_amd64.whl",
-    f"{_ROCM_BASE}/rocm-7.2.1.tar.gz",
+    f"{_ROCM_BASE}/rocm_sdk_core-{_ROCM_WIN_VER}-py3-none-win_amd64.whl",
+    f"{_ROCM_BASE}/rocm_sdk_devel-{_ROCM_WIN_VER}-py3-none-win_amd64.whl",
+    f"{_ROCM_BASE}/rocm_sdk_libraries_custom-{_ROCM_WIN_VER}-py3-none-win_amd64.whl",
+    f"{_ROCM_BASE}/rocm-{_ROCM_WIN_VER}.tar.gz",
 ]
 # Passo 2: torch + torchaudio ROCm.
 _ROCM_WHEELS = [
-    f"{_ROCM_BASE}/torch-2.9.1+rocm7.2.1-cp312-cp312-win_amd64.whl",
-    f"{_ROCM_BASE}/torchaudio-2.9.1+rocm7.2.1-cp312-cp312-win_amd64.whl",
+    f"{_ROCM_BASE}/torch-2.9.1+rocm{_ROCM_WIN_VER}-cp312-cp312-win_amd64.whl",
+    f"{_ROCM_BASE}/torchaudio-2.9.1+rocm{_ROCM_WIN_VER}-cp312-cp312-win_amd64.whl",
 ]
 _TORCH_INDEX: dict[str, str] = {
     "nvidia": "https://download.pytorch.org/whl/cu128",
     "cpu": "https://download.pytorch.org/whl/cpu",
 }
-# Linux/WSL2 + AMD: wheels ROCm oficiais do PyTorch (index público — sem o
-# passo rocm_sdk_* que só existe no Windows).
-_TORCH_INDEX_LINUX_AMD = "https://download.pytorch.org/whl/rocm7.2"
+# Linux/WSL2 + AMD: wheels manylinux que a AMD publica e TESTA para WSL
+# (torch+torchvision+torchaudio+triton casados com o ROCm da linha). Preferidos
+# ao índice do pytorch.org porque são a combinação validada pela AMD — e o
+# triton (TunableOp/flash-attn) só vem por aqui. Exigem numpy < 2.0 e cp312.
+_ROCM_LINUX_BASE = f"https://repo.radeon.com/rocm/manylinux/rocm-rel-{_ROCM_LINUX_LINE}"
+_ROCM_LINUX_NUMPY_PIN = "numpy==1.26.4"
+_ROCM_LINUX_WHEELS = [
+    f"{_ROCM_LINUX_BASE}/torch-2.9.1%2Brocm7.2.0.lw.git7e1940d4-cp312-cp312-linux_x86_64.whl",
+    f"{_ROCM_LINUX_BASE}/torchvision-0.24.0%2Brocm7.2.0.gitb919bd0c-cp312-cp312-linux_x86_64.whl",
+    f"{_ROCM_LINUX_BASE}/torchaudio-2.9.0%2Brocm7.2.0.gite3c6ee2b-cp312-cp312-linux_x86_64.whl",
+    f"{_ROCM_LINUX_BASE}/triton-3.5.1%2Brocm7.2.0.gita272dfa8-cp312-cp312-linux_x86_64.whl",
+]
 
 # whisper.cpp + Vulkan (backend de transcrição preferido na AMD). Binário nativo
 # (não-pip) + modelo GGUF, baixados com SHA-256 fixado p/ integridade. O modelo
@@ -316,15 +333,71 @@ def _ask(prompt: str) -> str:
         return ""
 
 
+def _linux_rocm_torch_already_ok() -> bool:
+    """True se o venv já tem um torch +rocm acelerando — não sobrescrever.
+
+    Protege uma instalação validada manualmente (ex.: wheels do repo.radeon.com)
+    de um --force-reinstall que trocaria uma build testada por outra.
+    """
+    code = "import torch; print(torch.__version__); print(torch.cuda.is_available())"
+    try:
+        proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    lines = (proc.stdout or "").strip().splitlines()
+    if proc.returncode != 0 or len(lines) < 2:
+        return False
+    version, accelerated = lines[0], lines[1].strip().lower() == "true"
+    return "+rocm" in version and accelerated
+
+
+def _cleanup_libhsa() -> None:
+    """Remove a libhsa-runtime64 embutida no torch (passo oficial AMD p/ WSL).
+
+    No WSL o runtime HSA correto vem do sistema (usecase wsl); a cópia dentro do
+    wheel pode sombreá-lo. Em releases recentes o arquivo nem existe — ausência
+    é OK, o passo é mantido por segurança para outras versões.
+    """
+    code = "import torch, pathlib; print(pathlib.Path(torch.__file__).parent / 'lib')"
+    try:
+        proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return
+    lib_dir = Path((proc.stdout or "").strip())
+    if proc.returncode != 0 or not lib_dir.is_dir():
+        return
+    for lib in lib_dir.glob("libhsa-runtime64.so*"):
+        try:
+            lib.unlink()
+            print(f"[setup] Removido {lib.name} do torch (o runtime HSA do WSL é o do sistema).")
+        except OSError:
+            pass
+
+
 def _install_torch(vendor: GpuVendor, platform: PlatformKind) -> bool:
     pip = [sys.executable, "-m", "pip", "install"]
     if vendor == "amd" and platform != "windows":
-        # Linux/WSL2: wheels ROCm oficiais do index do PyTorch — sem o passo
-        # rocm_sdk_* (que é exclusivo do ROCm-on-Windows).
-        return _run(
-            pip + ["--force-reinstall", "--index-url", _TORCH_INDEX_LINUX_AMD, "torch", "torchaudio"],
-            "Instalando torch ROCm (AMD, Linux/WSL2)...",
+        # Linux/WSL2: wheels manylinux do repo.radeon.com (a combinação que a
+        # AMD testa p/ WSL: torch+torchvision+torchaudio+triton + numpy<2).
+        if sys.version_info[:2] != (3, 12):
+            ver = f"{sys.version_info.major}.{sys.version_info.minor}"
+            print(
+                f"[setup] ⚠ Os wheels ROCm Linux são cp312 (este Python é {ver}). "
+                "Recrie o ambiente com 3.12 (`poetry env use 3.12`) e rode `make configure`.",
+                file=sys.stderr,
+            )
+            return False
+        if _linux_rocm_torch_already_ok():
+            print("[setup] ✓ torch ROCm já presente e acelerando — mantendo a instalação validada.")
+            print("[setup]   (para forçar reinstalação: pip uninstall torch e rode `make configure`)")
+            return True
+        ok = _run(
+            pip + ["--force-reinstall", _ROCM_LINUX_NUMPY_PIN, *_ROCM_LINUX_WHEELS],
+            "Instalando torch ROCm (wheels oficiais da AMD p/ Linux/WSL2)...",
         )
+        if ok:
+            _cleanup_libhsa()
+        return ok
     if vendor == "amd":
         # Os wheels ROCm da AMD são cp312-only — num Python diferente o pip
         # rejeita ("not a supported wheel on this platform") e sobraria o torch

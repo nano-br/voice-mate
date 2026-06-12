@@ -7,6 +7,7 @@ from app.setup.gpu_detect import (
     _parse_gfx_target,
     _parse_lspci_amd,
     _parse_rocm_smi_product,
+    _parse_rocminfo_marketing_name,
 )
 
 _ROCM_SMI_OUT = """
@@ -75,3 +76,27 @@ def test_parse_gfx_target() -> None:
 
 def test_parse_gfx_target_absent() -> None:
     assert _parse_gfx_target("Name: AMD Ryzen CPU\n") is None
+
+
+# rocminfo real lista o agente CPU primeiro, com Marketing Name próprio — o
+# parser tem que pular o Ryzen e devolver o nome da placa (WSL2: rocminfo é a
+# única ferramenta que funciona; rocm-smi/amd-smi não operam lá).
+_ROCMINFO_WITH_CPU_NAME = """
+Agent 1
+  Name:                    AMD Ryzen 7 9800X3D
+  Marketing Name:          AMD Ryzen 7 9800X3D 8-Core Processor
+  Device Type:             CPU
+Agent 2
+  Name:                    gfx1201
+  Marketing Name:          AMD Radeon RX 9070 XT
+  Device Type:             GPU
+"""
+
+
+def test_parse_rocminfo_marketing_name_skips_cpu_agent() -> None:
+    assert _parse_rocminfo_marketing_name(_ROCMINFO_WITH_CPU_NAME) == "AMD Radeon RX 9070 XT"
+
+
+def test_parse_rocminfo_marketing_name_absent() -> None:
+    assert _parse_rocminfo_marketing_name("Marketing Name: AMD Ryzen 7 9800X3D\n") is None
+    assert _parse_rocminfo_marketing_name("") is None

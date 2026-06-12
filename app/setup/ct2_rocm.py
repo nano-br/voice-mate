@@ -29,7 +29,7 @@ _BUILD_DIR = _SRC_DIR / "build"
 _PREFIX_DIR = _CACHE_DIR / "prefix"
 _MARKER_PATH = _CACHE_DIR / "installed.json"
 
-_APT_HINT = "sudo apt install -y git cmake build-essential  # + ROCm dev: hipcc/hipblas (rocm-hip-sdk)"
+_APT_HINT = "sudo apt install -y git cmake build-essential rocm-hip-sdk  # rocm-hip-sdk = hipcc + hipBLAS"
 
 
 def is_installed() -> bool:
@@ -103,6 +103,9 @@ def runtime_env() -> dict[str, str]:
     current = env.get("LD_LIBRARY_PATH", "")
     if lib_dir not in current.split(":"):
         env["LD_LIBRARY_PATH"] = f"{lib_dir}:{current}" if current else lib_dir
+    # Mesmo workaround do runtime (wiring): allocator default do CT2 dá
+    # "Memory access fault" em gfx1201 — validar já com o allocator certo.
+    env.setdefault("CT2_CUDA_ALLOCATOR", "cub_caching")
     return env
 
 

@@ -77,6 +77,12 @@ def _try_faster_whisper_rocm(config: Config) -> TranscriptionBackend | None:
     Falha aqui é persistida (`ct2_rocm_ok = false`) para a cadeia não pagar o
     custo de re-tentar a cada boot — `make configure` re-valida e re-arma.
     """
+    import os
+
+    # Workaround validado p/ gfx1201 (RX 9070 XT): o allocator default do CT2
+    # causa "Memory access fault" — cub_caching evita. setdefault: respeita
+    # quem já exportou outro valor no ambiente.
+    os.environ.setdefault("CT2_CUDA_ALLOCATOR", "cub_caching")
     try:
         return _faster_whisper(config, use_cpu=False)
     except Exception as exc:  # noqa: BLE001

@@ -57,7 +57,7 @@ def _check_wslg_audio() -> list[CheckResult]:
             "WSLg PulseServer (socket)",
             socket_ok,
             str(_WSLG_PULSE_SOCKET) if socket_ok else "socket não existe",
-            fix="Atualize o WSL (`wsl --update` no Windows) e confira guiVraiApplications no .wslconfig.",
+            fix="Atualize o WSL (`wsl --update` no Windows) e confira guiApplications no .wslconfig.",
         )
     )
     results.append(

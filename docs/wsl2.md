@@ -69,6 +69,42 @@ loginctl enable-linger $USER     # serviço vivo mesmo sem terminal aberto
 journalctl --user -u voicemate -f  # logs
 ```
 
+## PyTorch ROCm — fonte dos wheels
+
+No Linux/WSL2 + AMD o `make setup` instala os **wheels manylinux do
+`repo.radeon.com`** (torch + torchvision + torchaudio + triton, com
+`numpy==1.26.4`) — é a combinação que a AMD publica e testa para WSL.
+
+Se o venv **já tem** um torch `+rocm` acelerando (instalação validada
+manualmente), o setup **não reinstala por cima** — ele detecta e mantém. Para
+forçar a reinstalação: `pip uninstall torch` dentro do venv e `make configure`.
+
+> A trilha de ROCm do WSL é a **7.2** (pacote `7.2.70200`, instalado com
+> `amdgpu-install --usecase=wsl,rocm --no-dkms`). Não use a `7.2.4` — é a trilha
+> de Linux nativo e não tem o usecase `wsl`.
+
+## Variáveis de ambiente recomendadas (`~/.bashrc`)
+
+```bash
+export PULSE_SERVER=unix:/mnt/wslg/PulseServer       # mic/áudio do WSLg
+export PYTORCH_HIP_ALLOC_CONF=expandable_segments:True   # fragmentação de VRAM
+export FLASH_ATTENTION_TRITON_AMD_ENABLE="TRUE"      # flash-attn via Triton (RDNA4)
+```
+
+O app já cuida sozinho de `PYTORCH_TUNABLEOP_*`/`MIOPEN_*` (cache em
+`~/.cache/voicemate`) e de `CT2_CUDA_ALLOCATOR=cub_caching` (workaround do
+faster-whisper-ROCm em gfx1201) — exportar é opcional, vale para outros apps.
+
+> **Não** sete `HSA_OVERRIDE_GFX_VERSION` nem `HSA_ENABLE_DXG_DETECTION`: a
+> RX 9070 XT é reconhecida nativamente como `gfx1201` pela trilha WSL do ROCm.
+
+## Limitações conhecidas do WSL2 (não são erros)
+
+- `rocm-smi` / `amd-smi` **não funcionam** no WSL2 — a detecção do app usa
+  `rocminfo` (que funciona). VRAM: `cat /sys/class/drm/card0/device/mem_info_vram_used`.
+- VRAM visível < 16 GB (~13–14 GB úteis — overhead da camada DXCore/librocdxg).
+- Overhead geral de ~10–20% vs Linux nativo.
+
 ## Microfone no WSLg
 
 O WSLg expõe o microfone do Windows como source PulseAudio (`RDPSource`):

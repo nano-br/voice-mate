@@ -113,7 +113,17 @@ def _detect_amd_windows() -> tuple[str | None, str | None]:
 
 
 def _detect_amd_linux() -> tuple[str | None, str | None]:
-    """AMD no Linux/WSL2: rocm-smi → amd-smi → lspci (do mais ao menos específico)."""
+    """AMD no Linux/WSL2: rocminfo → rocm-smi → amd-smi → lspci.
+
+    O rocminfo vem primeiro de propósito: é a única das ferramentas que funciona
+    TAMBÉM no WSL2 (rocm-smi/amd-smi não operam lá por limitação de arquitetura),
+    e o "Marketing Name" dele traz o nome comercial exato (ex.: "AMD Radeon
+    RX 9070 XT") — o lspci, último fallback, mostra só o nome do chip.
+    """
+    if shutil.which("rocminfo") is not None:
+        name = _parse_rocminfo_marketing_name(_run(["rocminfo"]) or "")
+        if name:
+            return (name, _amdgpu_kernel_version())
     if shutil.which("rocm-smi") is not None:
         name = _parse_rocm_smi_product(_run(["rocm-smi", "--showproductname"]) or "")
         if name:
@@ -127,6 +137,23 @@ def _detect_amd_linux() -> tuple[str | None, str | None]:
         if name:
             return (name, _amdgpu_kernel_version())
     return (None, None)
+
+
+def _parse_rocminfo_marketing_name(out: str) -> str | None:
+    """Nome comercial da GPU na saída do `rocminfo`.
+
+    O rocminfo lista agentes CPU e GPU, ambos com "Marketing Name"; filtramos
+    pelo que parece placa de vídeo (Radeon/Instinct/Graphics) para não devolver
+    o nome do Ryzen.
+    """
+    for line in out.splitlines():
+        if "marketing name" not in line.lower():
+            continue
+        value = line.split(":", 1)[-1].strip()
+        low = value.lower()
+        if value and ("radeon" in low or "instinct" in low or "graphics" in low):
+            return value
+    return None
 
 
 def _parse_rocm_smi_product(out: str) -> str | None:
