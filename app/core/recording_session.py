@@ -1,5 +1,6 @@
 import sys
 import threading
+import time
 import traceback
 from typing import Literal
 
@@ -51,6 +52,7 @@ class RecordingSession:
         self._state: SessionState = "idle"
         self._stop_handler_id: str | None = None
         self._active_handler_id: str | None = None
+        self._slow_warning_shown = False
 
     def toggle(self, handler_id: str) -> None:
         if handler_id not in self._handlers:
@@ -148,7 +150,9 @@ class RecordingSession:
 
             duration = len(result) / self._sample_rate
             print(f"[VoiceMate] ⏳ Transcrevendo {duration:.1f}s de áudio...")
+            started_at = time.perf_counter()
             text = self._transcriber.transcribe(result)
+            self._warn_if_slow(duration, time.perf_counter() - started_at)
             if not text:
                 print("[VoiceMate] Nenhuma fala detectada.")
                 return
@@ -164,6 +168,24 @@ class RecordingSession:
         finally:
             if stop_id is not None:
                 self._finish_processing_locked(stop_id)
+
+    def _warn_if_slow(self, audio_seconds: float, elapsed: float) -> None:
+        """Detecta backend sem GPU (fallback silencioso p/ CPU/software).
+
+        Transcrição saudável na GPU roda bem abaixo do tempo real; 3× o tempo
+        do áudio (com piso de 5s p/ absorver warmup) indica que o backend está
+        rodando em CPU/Vulkan-software. Avisa uma vez por sessão.
+        """
+        if self._slow_warning_shown or elapsed <= max(5.0, 3.0 * audio_seconds):
+            return
+        self._slow_warning_shown = True
+        ratio = elapsed / audio_seconds if audio_seconds > 0 else float("inf")
+        print(
+            f"[VoiceMate] ⚠ Transcrição {ratio:.0f}× mais lenta que o áudio "
+            f"({elapsed:.0f}s p/ {audio_seconds:.0f}s) — o backend provavelmente está SEM GPU. "
+            "Rode `make doctor` para diagnóstico.",
+            file=sys.stderr,
+        )
 
     def _finish_processing_locked(self, stop_id: str) -> None:
         with self._lock:

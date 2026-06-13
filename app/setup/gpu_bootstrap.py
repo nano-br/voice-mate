@@ -146,7 +146,9 @@ def main(argv: list[str] | None = None) -> int:
         tts_enabled = False
 
     backend: WhisperBackend = "whispercpp" if vendor == "amd" else "faster-whisper"
-    extras = set(args.extras.split()) if args.extras is not None else _compute_extras(flow, tts_enabled)
+    extras = (
+        set(args.extras.split()) if args.extras is not None else _compute_extras(flow, tts_enabled, vendor, platform)
+    )
 
     # Linux nativo: hotkeys precisam de pynput/evdev (extra linux). WSL2 usa o
     # daemon HTTP (sem dependência extra).
@@ -269,14 +271,17 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _compute_extras(flow: FlowKind, tts_enabled: bool) -> set[str]:
-    # AMD usa whisper.cpp (binário, não-pip) p/ transcrição — sem extra openai-whisper.
-    # O torch ROCm (instalado à parte) cobre o VoxCPM/TTS.
+def _compute_extras(flow: FlowKind, tts_enabled: bool, vendor: GpuVendor, platform: PlatformKind) -> set[str]:
     extras: set[str] = set()
     if flow == "claude_chat":
         extras.add("claude")
         if tts_enabled:
             extras.add("tts")
+    # AMD em Linux/WSL2: openai-whisper (sobre o torch ROCm) é o backend GPU
+    # de transcrição confiável — no WSL2 o Vulkan do whisper.cpp só enxerga
+    # llvmpipe (CPU por software), então a cadeia precisa dele instalado.
+    if vendor == "amd" and platform != "windows":
+        extras.add("whisper-gpu")
     return extras
 
 

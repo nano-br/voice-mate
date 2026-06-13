@@ -23,6 +23,9 @@ class OpenAIWhisperBackend:
         device = self._resolve_device(config)
         self._beam_size = config.beam_size
         self._fp16 = device == "cuda"
+        # Idioma fixado (≠"auto"): estabilidade + pula a detecção por fala
+        # (mesma regra dos outros backends; code-switching continua funcionando).
+        self._language: str | None = None if config.transcription_language == "auto" else config.transcription_language
         print(f"[VoiceMate] Carregando Whisper '{config.model_size}' (openai-whisper) em {device.upper()}...")
         print("[VoiceMate] (primeira execução baixa o modelo automaticamente)")
         self._model = whisper.load_model(config.model_size, device=device)
@@ -49,6 +52,7 @@ class OpenAIWhisperBackend:
             audio,
             beam_size=self._beam_size,
             fp16=self._fp16,
+            language=self._language,
             verbose=False,
         )
         text = result.get("text", "")

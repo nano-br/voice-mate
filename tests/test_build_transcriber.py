@@ -129,6 +129,35 @@ def test_amd_strategy_whispercpp_skips_ct2(monkeypatch: pytest.MonkeyPatch) -> N
     assert FakeFasterWhisper.calls == []
 
 
+def test_amd_wsl2_prefers_openai_over_whispercpp(monkeypatch: pytest.MonkeyPatch) -> None:
+    # No WSL2 o Vulkan do whisper.cpp é llvmpipe (CPU) — openai-whisper (torch
+    # ROCm) deve vir ANTES, mesmo com os dois disponíveis.
+    _enable_whispercpp(monkeypatch)
+    _enable_openai(monkeypatch)
+    config = Config(gpu_vendor="amd", platform="wsl2", stt_strategy="auto")
+    backend = wiring.build_transcriber(config)
+    assert isinstance(backend, FakeBackend)
+    assert backend.name == "openai-whisper"
+
+
+def test_amd_wsl2_falls_back_to_whispercpp_when_openai_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    _enable_whispercpp(monkeypatch)  # openai indisponível (default da fixture)
+    config = Config(gpu_vendor="amd", platform="wsl2", stt_strategy="auto")
+    backend = wiring.build_transcriber(config)
+    assert isinstance(backend, FakeBackend)
+    assert backend.name == "whispercpp"
+
+
+def test_amd_linux_native_prefers_whispercpp(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Linux nativo: RADV alcança a GPU — whisper.cpp+Vulkan segue na frente.
+    _enable_whispercpp(monkeypatch)
+    _enable_openai(monkeypatch)
+    config = Config(gpu_vendor="amd", platform="linux-x11", stt_strategy="auto")
+    backend = wiring.build_transcriber(config)
+    assert isinstance(backend, FakeBackend)
+    assert backend.name == "whispercpp"
+
+
 def test_amd_chain_falls_back_to_openai_then_cpu(monkeypatch: pytest.MonkeyPatch) -> None:
     # whispercpp indisponível, openai disponível → openai
     _enable_openai(monkeypatch)

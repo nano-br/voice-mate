@@ -18,7 +18,25 @@ from app.features.whispercpp.server_backend import (
     _audio_to_wav_bytes,
     _build_multipart,
     _parse_response,
+    _vulkan_device_warning,
 )
+
+
+def test_vulkan_warning_on_llvmpipe() -> None:
+    log = "ggml_vulkan: Found 1 Vulkan devices:\nggml_vulkan: 0 = llvmpipe (LLVM 20.1.2, 256 bits) (CPU)\n"
+    warning = _vulkan_device_warning(log)
+    assert warning is not None
+    assert "MUITO lenta" in warning
+    assert "make configure" in warning
+
+
+def test_vulkan_warning_none_on_real_gpu() -> None:
+    log = "ggml_vulkan: 0 = AMD Radeon RX 9070 XT (RADV GFX1201) (GPU)\n"
+    assert _vulkan_device_warning(log) is None
+
+
+def test_vulkan_warning_none_on_empty_log() -> None:
+    assert _vulkan_device_warning("loading model...\nwhisper init\n") is None
 
 
 def test_parse_response_json_text_field() -> None:

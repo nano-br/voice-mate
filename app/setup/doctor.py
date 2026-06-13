@@ -41,6 +41,8 @@ def run_checks() -> list[CheckResult]:
     results += _check_sounddevice()
     results += _check_trigger(platform, trigger)
     results += _check_whispercpp()
+    if platform in ("wsl2", "linux-x11", "linux-wayland"):
+        results += _check_vulkan_gpu(platform)
     results += _check_claude()
     results += _check_torch_gpu()
     return results
@@ -193,6 +195,50 @@ def _check_trigger(platform: PlatformKind, trigger: TriggerKind) -> list[CheckRe
             )
         ]
     return [CheckResult("Gatilho (hooks do Windows)", True, "libs keyboard/mouse")]
+
+
+def _parse_vulkan_devices(summary: str) -> list[tuple[str, str]]:
+    """Pares (deviceName, deviceType) da saída do `vulkaninfo --summary`."""
+    devices: list[tuple[str, str]] = []
+    name: str | None = None
+    dtype: str | None = None
+    for line in summary.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("deviceName"):
+            name = stripped.split("=", 1)[-1].strip()
+        elif stripped.startswith("deviceType"):
+            dtype = stripped.split("=", 1)[-1].strip()
+        if name is not None and dtype is not None:
+            devices.append((name, dtype))
+            name = dtype = None
+    return devices
+
+
+def _check_vulkan_gpu(platform: PlatformKind) -> list[CheckResult]:
+    """O Vulkan enxerga uma GPU real? (relevante p/ o backend whisper.cpp).
+
+    No WSL2 o Mesa só expõe llvmpipe (CPU por software) — whisper.cpp "Vulkan"
+    ali roda em software e leva minutos por fala. A GPU real no WSL2 só é
+    alcançável via ROCm (openai-whisper / CT2-ROCm).
+    """
+    if shutil.which("vulkaninfo") is None:
+        return [CheckResult("Vulkan (GPU p/ whisper.cpp)", None, "vulkaninfo ausente (vulkan-tools)")]
+    out = ""
+    try:
+        proc = subprocess.run(["vulkaninfo", "--summary"], capture_output=True, text=True, timeout=20)
+        out = proc.stdout or ""
+    except (OSError, subprocess.SubprocessError) as exc:
+        return [CheckResult("Vulkan (GPU p/ whisper.cpp)", None, f"não verificado: {exc}")]
+    devices = _parse_vulkan_devices(out)
+    real_gpus = [name for name, dtype in devices if "CPU" not in dtype.upper() and "llvmpipe" not in name.lower()]
+    detail = ", ".join(f"{name} [{dtype}]" for name, dtype in devices) or "nenhum device"
+    fix = (
+        "No WSL2 isso é esperado: Vulkan não alcança a GPU — use openai-whisper/CT2-ROCm "
+        "(make configure). Em Linux nativo: instale o driver Vulkan da GPU (mesa-vulkan-drivers)."
+        if platform == "wsl2"
+        else "Instale o driver Vulkan da GPU (mesa-vulkan-drivers) ou use openai-whisper."
+    )
+    return [CheckResult("Vulkan (GPU p/ whisper.cpp)", bool(real_gpus), detail, fix=fix)]
 
 
 def _check_whispercpp() -> list[CheckResult]:

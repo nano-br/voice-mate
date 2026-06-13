@@ -70,6 +70,25 @@ def _build_multipart(fields: dict[str, str], filename: str, file_bytes: bytes) -
     return bytes(body), f"multipart/form-data; boundary={boundary}"
 
 
+def _vulkan_device_warning(log_text: str) -> str | None:
+    """Warning quando o Vulkan do whisper-server caiu num device de software.
+
+    No WSL2 o Mesa só expõe llvmpipe (CPU) — a GPU real é alcançável apenas via
+    ROCm. Detectar isso no boot evita o sintoma "transcrição leva minutos".
+    """
+    for line in log_text.splitlines():
+        low = line.lower()
+        if "ggml_vulkan" not in low and "found device" not in low and "devices:" not in low:
+            continue
+        if "llvmpipe" in low or "dozen" in low or "(cpu)" in low:
+            return (
+                f"Vulkan SEM GPU real ({line.strip()}) — a transcrição será MUITO lenta. "
+                "No WSL2 a GPU AMD só acelera via ROCm: use openai-whisper ou CT2-ROCm "
+                "(rode `make configure`)."
+            )
+    return None
+
+
 def _parse_response(raw: str) -> str:
     """Extrai o texto do JSON `{"text": ...}` do server.
 
@@ -102,6 +121,7 @@ class WhisperCppServerBackend:
         self._port = _free_port()
         self._base_url = f"http://127.0.0.1:{self._port}"
         self._proc: subprocess.Popen[bytes] | None = None
+        self._log_path: Path = exe.parent / "server.log"
         self._start()
 
     def transcribe(self, audio: NDArray[np.float32]) -> str:
@@ -146,16 +166,37 @@ class WhisperCppServerBackend:
             f"[VoiceMate] Subindo whisper-server '{self._model.stem}' "
             f"(whisper.cpp, idioma={self._language}, vad={'on' if vad_model else 'off'})..."
         )
-        # stdout/stderr descartados: o server é verboso e já temos logs próprios.
-        self._proc = subprocess.Popen(  # noqa: S603
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            cwd=str(self._exe.parent),
-        )
+        # stdout/stderr vão para um arquivo de log (não DEVNULL): é onde o ggml
+        # imprime qual device Vulkan foi escolhido — essencial p/ detectar o
+        # llvmpipe (Vulkan por software) no WSL2.
+        log_file = self._log_path.open("wb")
+        try:
+            self._proc = subprocess.Popen(  # noqa: S603
+                cmd,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                cwd=str(self._exe.parent),
+            )
+        finally:
+            log_file.close()  # o filho herda o fd; o nosso handle pode fechar
         self._wait_ready()
+        self._report_vulkan_device()
         self._warmup()
         print("[VoiceMate] Modelo pronto (quente).")
+
+    def _report_vulkan_device(self) -> None:
+        """Loga o device Vulkan escolhido e avisa se for software (llvmpipe)."""
+        try:
+            log_text = self._log_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return
+        for line in log_text.splitlines():
+            if "ggml_vulkan" in line.lower() and "device" in line.lower():
+                print(f"[VoiceMate] {line.strip()}")
+                break
+        warning = _vulkan_device_warning(log_text)
+        if warning:
+            print(f"[VoiceMate] ⚠ {warning}", file=sys.stderr)
 
     def _wait_ready(self, timeout: float = _READY_TIMEOUT_SECONDS) -> None:
         """Espera o server aceitar conexões (modelo já carregado nesse ponto)."""

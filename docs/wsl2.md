@@ -73,6 +73,40 @@ loginctl enable-linger $USER     # serviço vivo mesmo sem terminal aberto
 journalctl --user -u voicemate -f  # logs
 ```
 
+## Performance de STT no WSL2 (importante)
+
+**No WSL2 o whisper.cpp via Vulkan NÃO acelera na GPU.** O Mesa, dentro do WSL2,
+só expõe o `llvmpipe` — uma implementação de Vulkan **por software, rodando na
+CPU**. A RX 9070 XT só é alcançável via **ROCm/HIP** (`/dev/dxg`), não via
+Vulkan. Rodar o `large-v3-turbo` no llvmpipe leva **minutos** por fala.
+
+Por isso, no WSL2 a cadeia de transcrição prioriza o que de fato usa a GPU:
+
+```
+faster-whisper-rocm (se CT2-ROCm validado)  →  openai-whisper (torch ROCm)  →  whisper.cpp (último recurso)  →  CPU
+```
+
+O **openai-whisper** roda sobre o mesmo torch ROCm que já acelera o TTS
+(OmniVoice) — `make configure` o instala automaticamente na AMD/Linux. Uma fala
+de 5 s deve transcrever em ~1–3 s.
+
+Como confirmar o device Vulkan escolhido pelo whisper.cpp (quando ele é usado):
+o servidor agora grava o log em `~/.cache/voicemate/whispercpp/server.log` — a
+linha `ggml_vulkan: found device:` mostra `llvmpipe` no WSL2. O `make doctor`
+também sinaliza isso ("Vulkan SEM GPU real").
+
+### CT2-ROCm (faster-whisper na GPU) — opt-in de qualidade máxima
+
+Recupera a qualidade idêntica à da `main` (faster-whisper CUDA) na GPU AMD. É um
+build pesado (`make configure` → aceitar o CTranslate2-ROCm). Risco conhecido em
+gfx1201: relatos de *memory access fault* (OpenNMT/CTranslate2#2021); o app já
+aplica o workaround `CT2_CUDA_ALLOCATOR=cub_caching`. Se o build/validação
+falhar, a cadeia cai sozinha para o openai-whisper (decisão persistida em
+`ct2_rocm_ok`). O `hipcc` já vem com o usecase `rocm` do ROCm 7.2.
+
+> O whisper.cpp **HIP** (em vez de Vulkan) resolveria isso nativamente, mas o PR
+> de suporte a gfx120X (ggml-org/whisper.cpp#3757) ainda não foi mergeado.
+
 ## PyTorch ROCm — fonte dos wheels
 
 No Linux/WSL2 + AMD o `make setup` instala os **wheels manylinux do

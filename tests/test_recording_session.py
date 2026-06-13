@@ -4,6 +4,7 @@ import threading
 import time
 
 import numpy as np
+import pytest
 from numpy.typing import NDArray
 
 from app.core.config import Config
@@ -231,6 +232,45 @@ def test_transcriber_exception_recovers_to_idle() -> None:
     session.toggle("clipboard")
     assert recorder.start_calls == 2
     assert recorder.is_recording
+
+
+def test_slow_transcription_warns_once(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    """Backend lento (sem GPU) → aviso de RTF impresso uma vez por sessão."""
+    from app.core import recording_session as rs
+
+    # perf_counter retorna 0 antes e 30 depois de cada transcribe → 30s p/ áudio de 1s.
+    ticks = iter([0.0, 30.0] * 10)
+    monkeypatch.setattr(rs.time, "perf_counter", lambda: next(ticks))
+
+    handler = FakeHandler()
+    session, recorder, _, _, _ = _make_session(handlers={"clipboard": handler})
+    recorder.next_audio = np.zeros(16000, dtype=np.float32)  # 1s @ 16kHz
+
+    session.toggle("clipboard")
+    session.toggle("clipboard")
+    assert handler.handle_done.wait(timeout=2.0)
+
+    captured = capsys.readouterr()
+    assert "mais lenta que o áudio" in captured.err
+    assert captured.err.count("mais lenta que o áudio") == 1
+
+
+def test_fast_transcription_no_warning(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.core import recording_session as rs
+
+    ticks = iter([0.0, 0.3] * 10)  # 0.3s p/ áudio de 1s → saudável
+    monkeypatch.setattr(rs.time, "perf_counter", lambda: next(ticks))
+
+    handler = FakeHandler()
+    session, recorder, _, _, _ = _make_session(handlers={"clipboard": handler})
+    recorder.next_audio = np.zeros(16000, dtype=np.float32)
+
+    session.toggle("clipboard")
+    session.toggle("clipboard")
+    assert handler.handle_done.wait(timeout=2.0)
+
+    captured = capsys.readouterr()
+    assert "mais lenta" not in captured.err
 
 
 def test_handler_close_not_called_by_session() -> None:

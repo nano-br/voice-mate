@@ -101,27 +101,40 @@ def _try_faster_whisper_rocm(config: Config) -> TranscriptionBackend | None:
 
 
 def _build_amd_transcriber(config: Config) -> TranscriptionBackend:
-    """Cadeia AMD: faster-whisper-rocm → whisper.cpp (server) → openai-whisper → CPU.
+    """Cadeia AMD: faster-whisper-rocm → (GPU intermediários por plataforma) → CPU.
 
     A estratégia explícita (--stt-strategy/persisted) entra no topo da cadeia;
     com "auto", o CT2-ROCm só é tentado se o setup o validou (ct2_rocm_ok).
+
+    A ordem dos intermediários depende da plataforma: no WSL2 o Vulkan só
+    enxerga llvmpipe (implementação por software, CPU) — a GPU real só é
+    alcançável via ROCm —, então o openai-whisper (torch ROCm) vem ANTES do
+    whisper.cpp. No Linux nativo (RADV) e Windows, whisper.cpp+Vulkan acelera
+    de verdade e segue na frente.
     """
     strategy = config.stt_strategy
     if strategy == "auto" and config.whisper_backend == "openai-whisper":
         strategy = "openai-whisper"  # --whisper-backend explícito continua respeitado
+    platform = config.platform or detect_platform()
 
     try_rocm = strategy == "faster-whisper-rocm" or (strategy == "auto" and config.ct2_rocm_ok is True)
     if try_rocm:
         backend = _try_faster_whisper_rocm(config)
         if backend is not None:
             return backend
-    if strategy in ("auto", "faster-whisper-rocm", "whispercpp"):
-        backend = _try_whispercpp(config)
+
+    if strategy == "whispercpp":
+        order = [_try_whispercpp, _try_openai_whisper]
+    elif strategy == "openai-whisper":
+        order = [_try_openai_whisper]
+    elif platform == "wsl2":
+        order = [_try_openai_whisper, _try_whispercpp]
+    else:
+        order = [_try_whispercpp, _try_openai_whisper]
+    for factory in order:
+        backend = factory(config)
         if backend is not None:
             return backend
-    backend = _try_openai_whisper(config)
-    if backend is not None:
-        return backend
     print("[VoiceMate] ⚠ Nenhum backend GPU disponível na AMD; usando faster-whisper em CPU.", file=sys.stderr)
     return _faster_whisper(config, use_cpu=True)
 
