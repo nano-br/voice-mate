@@ -9,6 +9,23 @@ import numpy as np
 import sounddevice as sd
 from numpy.typing import NDArray
 
+from app.platform.detect import detect_platform
+
+# Buffer de saída por plataforma. No WSLg o áudio sai por PulseAudio sobre RDP,
+# que tem jitter alto: blocos minúsculos (blocksize=0, ~34 ms) esvaziam o buffer
+# no meio da fala → underrun → chiado. blocksize=4096 @ 24 kHz (~170 ms) +
+# latency=0.2 dão ~340 ms efetivos (medido), folga suficiente p/ o RDP.
+# Windows/WASAPI já funciona com o default — não mexer.
+_WSL_LINUX_BLOCKSIZE = 4096
+_WSL_LINUX_LATENCY = 0.2
+
+
+def _default_audio_params() -> tuple[int, float | str | None]:
+    """(blocksize, latency) conforme a plataforma. WSL2/Linux → buffer maior."""
+    if detect_platform() in ("wsl2", "linux-x11", "linux-wayland"):
+        return _WSL_LINUX_BLOCKSIZE, _WSL_LINUX_LATENCY
+    return 0, None  # Windows/macOS: default do PortAudio
+
 
 class AudioPlayer:
     """Player de áudio com fila para chunks float32 mono.
@@ -18,7 +35,10 @@ class AudioPlayer:
     e aborta o buffer do driver).
     """
 
-    def __init__(self) -> None:
+    def __init__(self, blocksize: int | None = None, latency: float | str | None = None) -> None:
+        default_blocksize, default_latency = _default_audio_params()
+        self._blocksize = default_blocksize if blocksize is None else blocksize
+        self._latency = default_latency if latency is None else latency
         self._queue: queue.Queue[NDArray[np.float32]] = queue.Queue()
         self._stream: sd.OutputStream | None = None
         self._lock = threading.Lock()
@@ -27,6 +47,7 @@ class AudioPlayer:
         self._idle.set()
         self._leftover: NDArray[np.float32] | None = None
         self._sample_rate: int | None = None
+        self._underflow_logged = False
 
     def ensure_started(self, sample_rate: int) -> None:
         """Garante um stream aberto e compatível — abre só se necessário.
@@ -55,11 +76,14 @@ class AudioPlayer:
             self._aborted.clear()
             self._idle.set()
             self._leftover = None
+            self._underflow_logged = False
             self._drain_queue()
             stream = sd.OutputStream(
                 samplerate=sample_rate,
                 channels=1,
                 dtype="float32",
+                blocksize=self._blocksize,
+                latency=self._latency,
                 callback=self._callback,
             )
             stream.start()
@@ -138,8 +162,11 @@ class AudioPlayer:
         time_info: Any,  # noqa: ANN401
         status: sd.CallbackFlags,
     ) -> None:
-        if status:
+        if status and not self._underflow_logged:
+            # Loga só a 1ª ocorrência por stream — antes floodava o console a cada
+            # callback. Um underflow isolado no início (fila ainda enchendo) é normal.
             print(f"[AudioPlayer] {status}", file=sys.stderr)
+            self._underflow_logged = True
         if self._aborted.is_set():
             outdata.fill(0)
             return

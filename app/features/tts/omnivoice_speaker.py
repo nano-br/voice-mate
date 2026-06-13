@@ -18,7 +18,6 @@ Consistência de voz reaproveita o mesmo esquema do VoxCPM (`voice_seed_mode`):
 
 from __future__ import annotations
 
-import os
 import sys
 import threading
 import time
@@ -29,6 +28,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from app.core.config import TTSConfig
+from app.core.rocm_env import configure_rocm_env
 from app.features.tts.audio_player import AudioPlayer
 
 # Nomes específicos do OmniVoice p/ não colidir com o seed do VoxCPM (16 kHz) —
@@ -182,36 +182,13 @@ class OmniVoiceSpeaker:
         return model
 
     def _configure_rocm_env(self) -> None:
-        """Configura ROCm (MIOpen + TunableOp) via env vars — chave p/ realtime na AMD.
+        """Configura ROCm (MIOpen FAST + TunableOp) — chave p/ realtime na AMD.
 
-        **MIOpen `FIND_MODE=FAST`** é a correção principal: sem ele, as convoluções do
-        codec de áudio caem no solver `GemmFwdRest` com workspace=0 (bug do PyTorch
-        ROCm/Windows) — inundando o console com warnings e degradando sob contenção.
-        FAST usa heurística, **zera os warnings** e dá síntese estável (~RTF 0.4 em
-        frases variadas, sem freezes por comprimento). `MIOPEN_USER_DB_PATH` persiste
-        a find-db p/ não re-procurar a cada run.
-
-        TunableOp (complementar) tuna os GEMMs do transformer; limites baixos
-        (DURATION/ITERATIONS) evitam congelar a fala em comprimentos novos.
-
-        Precisa rodar ANTES de o torch importar (daí o __init__). `setdefault` respeita
-        overrides do usuário. Só na AMD (gpu_vendor).
+        Delega à função compartilhada (mesma usada pelo STT no boot); aqui serve
+        ao caminho de teste isolado e como segurança caso o speaker seja criado
+        fora do `main()`. Precisa rodar ANTES de o torch importar (daí o __init__).
         """
-        if self._config.gpu_vendor != "amd":
-            return
-        cache = self._resolve_auto_seed_cache_dir()
-        try:
-            cache.mkdir(parents=True, exist_ok=True)
-        except OSError:
-            pass
-        # MIOpen — correção do workspace=0/GemmFwdRest (convoluções do codec).
-        os.environ.setdefault("MIOPEN_FIND_MODE", "FAST")
-        os.environ.setdefault("MIOPEN_USER_DB_PATH", str(cache / "miopen"))
-        # TunableOp — GEMMs do transformer; limites baixos = sem freeze por comprimento.
-        os.environ.setdefault("PYTORCH_TUNABLEOP_ENABLED", "1")
-        os.environ.setdefault("PYTORCH_TUNABLEOP_FILENAME", str(cache / "tunableop.csv"))
-        os.environ.setdefault("PYTORCH_TUNABLEOP_MAX_TUNING_DURATION_MS", "15")
-        os.environ.setdefault("PYTORCH_TUNABLEOP_MAX_TUNING_ITERATIONS", "5")
+        configure_rocm_env(self._config.gpu_vendor, self._resolve_auto_seed_cache_dir())
 
     def _resolve_device_and_dtype(self, torch: Any) -> tuple[str, Any]:  # noqa: ANN401
         """Mapeia config.device → device_map do OmniVoice + dtype (bf16 na GPU)."""

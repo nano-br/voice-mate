@@ -156,6 +156,17 @@ pactl list sinks short      # deve listar RDPSink (saída de áudio)
 Se o PortAudio (sounddevice) não enxergar os devices, instale o shim ALSA→Pulse
 (`libasound2-plugins`, ver pré-requisitos) — o `make doctor` confere tudo isso.
 
+### Chiado no TTS (buffer de áudio)
+
+No WSLg o áudio de saída passa por PulseAudio sobre RDP, com jitter alto. Com o
+buffer default (~34 ms) o player "fome" no meio da fala → underrun → um chiado.
+O app define `PULSE_LATENCY_MSEC=200` no boot e abre o stream com um bloco maior
+(~340 ms efetivos), absorvendo o jitter. Para ajustar manualmente:
+
+```bash
+export PULSE_LATENCY_MSEC=300   # mais folga (latência maior) se ainda chiar
+```
+
 > Privacidade: confira em Configurações do Windows → Privacidade → Microfone
 > que apps desktop podem usar o microfone.
 

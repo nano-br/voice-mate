@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from typing import Any
 
 import numpy as np
@@ -57,3 +58,14 @@ class OpenAIWhisperBackend:
         )
         text = result.get("text", "")
         return text.strip() if isinstance(text, str) else ""
+
+    def warmup(self) -> None:
+        """Transcreve 1s de silêncio p/ pagar a busca de kernels MIOpen no startup.
+
+        Sem isto, a 1ª transcrição real paga o custo (dezenas de segundos na AMD),
+        ainda por cima disputando GPU com o warmup do TTS. Best-effort: silencioso.
+        """
+        try:
+            self.transcribe(np.zeros(16000, dtype=np.float32))
+        except Exception as exc:  # noqa: BLE001 — warmup é best-effort
+            print(f"[VoiceMate] ⚠ warmup do openai-whisper falhou (seguindo): {exc}", file=sys.stderr)

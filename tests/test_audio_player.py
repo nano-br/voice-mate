@@ -56,6 +56,7 @@ def fake_sd(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
             callback=kwargs["callback"],
         )
         captured["stream"] = stream
+        captured["kwargs"] = kwargs
         return stream
 
     monkeypatch.setattr("app.features.tts.audio_player.sd.OutputStream", factory)
@@ -76,6 +77,43 @@ def test_start_creates_stream(fake_sd: dict[str, Any]) -> None:
     assert stream.samplerate == 48000
     assert stream.channels == 1
     assert stream.started is True
+
+
+def test_explicit_blocksize_latency_passed_to_stream(fake_sd: dict[str, Any]) -> None:
+    player = AudioPlayer(blocksize=4096, latency=0.2)
+    player.start(24000)
+    assert fake_sd["kwargs"]["blocksize"] == 4096
+    assert fake_sd["kwargs"]["latency"] == 0.2
+
+
+def test_default_params_wsl2_use_bigger_buffer(fake_sd: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.features.tts.audio_player.detect_platform", lambda: "wsl2")
+    player = AudioPlayer()
+    player.start(24000)
+    assert fake_sd["kwargs"]["blocksize"] == 4096
+    assert fake_sd["kwargs"]["latency"] == 0.2
+
+
+def test_default_params_windows_keep_portaudio_default(
+    fake_sd: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("app.features.tts.audio_player.detect_platform", lambda: "windows")
+    player = AudioPlayer()
+    player.start(24000)
+    assert fake_sd["kwargs"]["blocksize"] == 0
+    assert fake_sd["kwargs"]["latency"] is None
+
+
+def test_underflow_logged_once_per_stream(fake_sd: dict[str, Any], capsys: pytest.CaptureFixture[str]) -> None:
+    player = AudioPlayer()
+    player.start(24000)
+    stream = fake_sd["stream"]
+    # Vários callbacks com status truthy (underflow) seguidos.
+    for _ in range(5):
+        outdata: NDArray[np.float32] = np.zeros((512, 1), dtype=np.float32)
+        stream.callback(outdata, 512, None, 1)  # status truthy = underflow
+    err = capsys.readouterr().err
+    assert err.count("[AudioPlayer]") == 1  # logado só 1× apesar dos 5 underflows
 
 
 def test_ensure_started_opens_once_and_reuses(fake_sd: dict[str, Any]) -> None:

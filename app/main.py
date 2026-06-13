@@ -1,3 +1,4 @@
+import os
 import sys
 import threading
 
@@ -9,12 +10,25 @@ from app.core.console import force_utf8_stdio
 from app.core.listener_keepalive import ListenerKeepalive
 from app.core.recorder import Recorder
 from app.core.recording_session import RecordingSession
+from app.core.rocm_env import configure_rocm_env
 from app.core.watchdog import Watchdog
 from app.features.tts.base import NullSpeaker, TextToSpeech
 from app.i18n import _, setup_locale
 from app.platform.clipboard import create_clipboard_writer
 from app.platform.detect import default_trigger, detect_platform
+from app.platform.kinds import PlatformKind
 from app.setup.persisted_config import load_persisted
+
+
+def _configure_audio_env(platform: PlatformKind) -> None:
+    """No WSLg/Linux, dá ao PulseAudio um buffer maior (evita o chiado de underrun).
+
+    O `latency` do PortAudio é quase ignorado pelo host Pulse; quem controla o
+    buffer é a env var PULSE_LATENCY_MSEC. Setada cedo, antes de qualquer uso de
+    sounddevice (TTS, beeps, mic). Respeita override do usuário.
+    """
+    if platform in ("wsl2", "linux-x11", "linux-wayland"):
+        os.environ.setdefault("PULSE_LATENCY_MSEC", "200")
 
 
 def main() -> None:
@@ -27,9 +41,19 @@ def main() -> None:
     config.platform = config.platform or detect_platform()
     config.trigger = config.trigger or default_trigger(config.platform)
 
+    # Env cedo, ANTES de tocar em torch/sounddevice: MIOpen/TunableOp (STT + TTS
+    # herdam o FAST/cache) e o buffer maior do PulseAudio no WSLg.
+    configure_rocm_env(config.gpu_vendor)
+    _configure_audio_env(config.platform)
+
     recorder = Recorder(sample_rate=config.sample_rate)
     transcriber = build_transcriber(config)
     audio_feedback = AudioFeedback()
+    # Pré-aquece o STT em background (paga a busca de kernels MIOpen no startup)
+    # para a 1ª transcrição real já sair rápida em vez de levar dezenas de segundos.
+    transcriber_warmup = getattr(transcriber, "warmup", None)
+    if callable(transcriber_warmup):
+        threading.Thread(target=transcriber_warmup, daemon=True, name="STTWarmup").start()
 
     flows = config.flows or config.build_default_flows()
     has_chat_flow = any(flow.kind == "claude_chat" for flow in flows)
