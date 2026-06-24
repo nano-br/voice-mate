@@ -7,13 +7,14 @@ hotkeys globais do Windows não chegam a processos em background do WSL.
 
 ```
 [Windows]  Ctrl+Alt+V / Ctrl+Alt+A
-   │  voicemate-hotkeys.ahk (ou .ps1)
-   ▼  POST http://127.0.0.1:47821/trigger {"flow": ...}
-[WSL2]  VoiceMate daemon (trigger=socket)
+   │  voicemate-hotkeys.ps1 (ou .ahk)
+   │  POST /register → client_id ; POST /trigger {"flow"} → ação (gravando/transcrevendo)
+   ▼  GET /result ← texto  →  Set-Clipboard nativo no Windows
+[WSL2]  VoiceMate daemon (trigger=socket, 127.0.0.1:47821)
    ├── mic via PulseAudio do WSLg (RDPSource)
-   ├── STT na GPU AMD (faster-whisper CT2-ROCm → whisper.cpp Vulkan)
-   ├── clipboard (sincroniza com o Windows; fallback clip.exe)
-   └── Claude + TTS (OmniVoice em PyTorch ROCm)
+   ├── STT na GPU AMD (openai-whisper torch ROCm; CT2-ROCm opt-in)
+   ├── publica o texto p/ o Windows buscar (clipboard nativo, confiável)
+   └── Claude + TTS (OmniVoice na GPU / Kokoro na CPU)
 ```
 
 ## Pré-requisitos
@@ -23,10 +24,14 @@ hotkeys globais do Windows não chegam a processos em background do WSL.
 3. **ROCm dentro do WSL** ([guia oficial AMD](https://rocm.docs.amd.com/projects/radeon/en/latest/docs/install/wsl/install-radeon.html)) — `rocminfo` deve listar a GPU (ex.: `gfx1201`).
 4. Pacotes de áudio/build no Ubuntu:
    ```bash
-   sudo apt install -y libportaudio2 libasound2-plugins pulseaudio-utils \
+   sudo apt install -y libportaudio2 libasound2-plugins pulseaudio-utils wl-clipboard \
                        git cmake build-essential libvulkan-dev glslc vulkan-tools \
-                       spirv-headers spirv-tools glslang-tools
+                       spirv-headers spirv-tools glslang-tools espeak-ng
    ```
+   > `espeak-ng` só é necessário para o engine de TTS **Kokoro** (G2P do PT-BR).
+   > `wl-clipboard` (wl-copy) é o caminho de clipboard nativo do WSLg e sincroniza
+   > com o Windows — mais confiável que o `clip.exe` via interop, que falha quando
+   > o systemd remove o binfmt do WSLInterop ("Exec format error").
    > Os três últimos são exigidos pela compilação dos shaders Vulkan do
    > whisper.cpp (`SPIRV-Headers`/`glslangValidator`). `libglslang-dev` não
    > existe com esse nome no Ubuntu 24.04 — os pacotes acima bastam.
@@ -42,13 +47,15 @@ make setup     # detecta WSL2 + AMD, instala torch ROCm, whisper.cpp (Vulkan),
 make doctor    # diagnóstico: mic/áudio WSLg, binários, GPU — com correções
 ```
 
-No Windows, registre as hotkeys (escolha UMA das opções):
+No Windows, registre as hotkeys:
 
-- **AutoHotkey v2** (recomendado): dê dois cliques em
-  `scripts\windows\voicemate-hotkeys.ahk`. Para iniciar com o Windows, coloque
-  um atalho dele em `shell:startup`.
-- **PowerShell puro**:
+- **PowerShell** (recomendado — também seta o clipboard nativo via `/result`):
   `powershell -ExecutionPolicy Bypass -File scripts\windows\voicemate-hotkeys.ps1`
+  Para iniciar com o Windows, crie um atalho em `shell:startup` (veja o cabeçalho
+  do script).
+- **AutoHotkey v2**: dê dois cliques em `scripts\windows\voicemate-hotkeys.ahk`.
+  Hoje ele **só dispara o gatilho** — o clipboard nativo é feito pelo script
+  PowerShell.
 
 ## Rodando
 
@@ -59,6 +66,23 @@ make run    # no WSL — imprime a porta do daemon e fica escutando
 Aperte `Ctrl+Alt+V` em qualquer lugar do Windows → beep → fale → `Ctrl+Alt+V`
 de novo → transcrição no clipboard do Windows. `Ctrl+Alt+A` faz o fluxo Claude
 (resposta no clipboard + falada via TTS).
+
+### Como o texto chega ao clipboard do Windows
+
+No WSL2 a ponte de clipboard do WSLg (e o `clip.exe` via interop) é instável — às
+vezes o texto transcrito não chega ao Windows. Por isso quem escreve o clipboard
+de verdade é o **lado Windows**: o daemon publica o resultado e o script de
+hotkeys faz `GET /result`, setando o clipboard nativo com `Set-Clipboard` (com
+read-back + reasserção, à prova da contenção momentânea do clipboard). O daemon
+expõe um protocolo **com estado** para isso, em `127.0.0.1:47821`:
+
+- `POST /register` → um `client_id` (vários ouvintes podem coexistir);
+- `POST /trigger {"flow"}` → devolve a **ação** (`started`/`stopped`/`restarted`):
+  feedback imediato de que o atalho foi recebido e do que ele fez;
+- `GET /status` / `GET /result` → estado e texto, com `?scope=all` (default —
+  ouve qualquer consumidor) ou `?scope=mine` (só o que aquele `client_id`
+  iniciou), e `?since=<seq>` para drenar os resultados em ordem sem perder
+  nenhum.
 
 ### Autostart (systemd)
 
@@ -143,6 +167,30 @@ faster-whisper-ROCm em gfx1201) — exportar é opcional, vale para outros apps.
 - VRAM visível < 16 GB (~13–14 GB úteis — overhead da camada DXCore/librocdxg).
 - Overhead geral de ~10–20% vs Linux nativo.
 
+## Engines de TTS (resposta falada do Claude)
+
+| Engine | Voz | Onde roda | RTF (RX 9070 XT) |
+|---|---|---|---|
+| `omnivoice` (padrão) | clona voz (difusão) | GPU | ~0.7 (satura a GPU na síntese) |
+| `kokoro` | fixa (~82M) | **CPU** por padrão | **~0.24 (realtime, GPU livre)** |
+
+No WSL2/AMD o **Kokoro roda na CPU** de propósito: medimos RTF ~0.24 (realtime) e,
+assim, a síntese **não disputa a GPU com a transcrição** — que é o que causava o
+chiado por contenção. (Curiosidade: no ROCm os kernels do Kokoro ainda são lentos,
+RTF ~1.8 na GPU; CPU é melhor nos dois sentidos.) Trocar:
+
+```bash
+make run ARGS="--tts-engine kokoro --tts-kokoro-voice pf_dora"
+# vozes PT-BR: pf_dora (feminina), pm_alex / pm_santa (masculinas)
+# --tts-device cuda força a GPU (não recomendado aqui — mais lento)
+```
+
+Pré-requisitos do Kokoro: o extra (`poetry install --extras kokoro`). O `espeak-ng`
+do PT-BR vem embarcado via `espeakng-loader` (dependência do misaki) — o pacote de
+sistema `espeak-ng` é só um reforço. A prosódia PT-BR do Kokoro é mais "robótica"
+que a do OmniVoice (difusão); é a troca por realtime sem mexer na GPU. Compare e
+use o que preferir.
+
 ## Microfone no WSLg
 
 O WSLg expõe o microfone do Windows como source PulseAudio (`RDPSource`):
@@ -174,7 +222,8 @@ export PULSE_LATENCY_MSEC=300   # mais folga (latência maior) se ainda chiar
 
 | Sintoma | Causa provável | Correção |
 |---|---|---|
-| Hotkey não faz nada | daemon parado / script Windows não rodando | `make run` no WSL; rode o .ahk/.ps1 |
+| Hotkey não faz nada | daemon parado / script Windows não rodando | `make run` no WSL; rode o .ps1 |
+| Clipboard não atualiza | script PowerShell parado | veja o feedback no console do .ps1 (gravando/transcrevendo/confirmado) |
 | "Daemon offline" no Windows | porta diferente / firewall | confira `--daemon-port` e o print do `make run` |
 | Sem device de entrada | mic WSLg desabilitado | `wsl --update`; `make doctor` |
 | Transcrição lenta (10–50x) | caiu p/ CPU silenciosamente | `make doctor` (torch GPU); `rocminfo` |

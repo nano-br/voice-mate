@@ -25,7 +25,7 @@ import zipfile
 from pathlib import Path
 from typing import cast
 
-from app.core.config import FlowKind, GpuVendor, WhisperBackend
+from app.core.config import FlowKind, GpuVendor, TTSEngine, WhisperBackend
 from app.core.console import force_utf8_stdio
 from app.platform.detect import default_trigger, detect_platform
 from app.platform.kinds import PlatformKind
@@ -139,15 +139,20 @@ def main(argv: list[str] | None = None) -> int:
         vendor = _prompt_vendor(saved.gpu_vendor or info.vendor, interactive)
 
     flow = _prompt_flow(interactive, saved.default_flow or "claude_chat")
+    tts_engine: TTSEngine = saved.tts_engine or "kokoro"
     if flow == "claude_chat":
         default_tts = saved.tts_enabled if saved.tts_enabled is not None else True
         tts_enabled = _prompt_yes_no("Habilitar TTS (resposta falada do Claude)?", default_tts, interactive)
+        if tts_enabled:
+            tts_engine = _prompt_tts_engine(saved.tts_engine or "kokoro", interactive)
     else:
         tts_enabled = False
 
     backend: WhisperBackend = "whispercpp" if vendor == "amd" else "faster-whisper"
     extras = (
-        set(args.extras.split()) if args.extras is not None else _compute_extras(flow, tts_enabled, vendor, platform)
+        set(args.extras.split())
+        if args.extras is not None
+        else _compute_extras(flow, tts_enabled, vendor, platform, tts_engine)
     )
 
     # Linux nativo: hotkeys precisam de pynput/evdev (extra linux). WSL2 usa o
@@ -187,6 +192,7 @@ def main(argv: list[str] | None = None) -> int:
                 gpu_vendor=vendor,
                 whisper_backend=backend,
                 tts_enabled=tts_enabled,
+                tts_engine=tts_engine,
                 default_flow=flow,
                 platform=platform,
                 trigger=trigger,
@@ -271,12 +277,16 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _compute_extras(flow: FlowKind, tts_enabled: bool, vendor: GpuVendor, platform: PlatformKind) -> set[str]:
+def _compute_extras(
+    flow: FlowKind, tts_enabled: bool, vendor: GpuVendor, platform: PlatformKind, tts_engine: TTSEngine
+) -> set[str]:
     extras: set[str] = set()
     if flow == "claude_chat":
         extras.add("claude")
         if tts_enabled:
-            extras.add("tts")
+            # Cada engine tem seu extra do poetry (kokoro=leve/CPU, tts=omnivoice,
+            # voxcpm=alternativo). "tts" é o default p/ engines sem extra próprio.
+            extras.add({"kokoro": "kokoro", "voxcpm": "voxcpm"}.get(tts_engine, "tts"))
     # AMD em Linux/WSL2: openai-whisper (sobre o torch ROCm) é o backend GPU
     # de transcrição confiável — no WSL2 o Vulkan do whisper.cpp só enxerga
     # llvmpipe (CPU por software), então a cadeia precisa dele instalado.
@@ -307,6 +317,17 @@ def _prompt_vendor(default: GpuVendor, interactive: bool) -> GpuVendor:
         "amd": "amd",
         "cpu": "cpu",
     }
+    return mapping.get(raw, default)
+
+
+def _prompt_tts_engine(default: TTSEngine, interactive: bool) -> TTSEngine:
+    if not interactive:
+        return default
+    print("\nQual engine de TTS (voz da resposta do Claude)?")
+    print("  1) kokoro — leve, roda na CPU, realtime, NÃO satura a GPU (sem chiado). Vozes fixas.")
+    print("  2) omnivoice — clona voz, qualidade alta, mas pesado na GPU (pode chiar no WSL2).")
+    raw = _ask(f"Escolha [1-2] (Enter = {default}): ").lower()
+    mapping: dict[str, TTSEngine] = {"1": "kokoro", "2": "omnivoice", "kokoro": "kokoro", "omnivoice": "omnivoice"}
     return mapping.get(raw, default)
 
 

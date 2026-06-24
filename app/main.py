@@ -11,6 +11,7 @@ from app.core.listener_keepalive import ListenerKeepalive
 from app.core.recorder import Recorder
 from app.core.recording_session import RecordingSession
 from app.core.rocm_env import configure_rocm_env
+from app.core.session_status import SessionStatus
 from app.core.watchdog import Watchdog
 from app.features.tts.base import NullSpeaker, TextToSpeech
 from app.i18n import _, setup_locale
@@ -18,6 +19,19 @@ from app.platform.clipboard import create_clipboard_writer
 from app.platform.detect import default_trigger, detect_platform
 from app.platform.kinds import PlatformKind
 from app.setup.persisted_config import load_persisted
+
+
+def _start_warmup_thread(transcriber: object, speaker: TextToSpeech) -> None:
+    """Aquece STT e TTS em UMA thread, em sequência (evita disputa de GPU)."""
+
+    def _warmup_all() -> None:
+        stt_warmup = getattr(transcriber, "warmup", None)
+        if callable(stt_warmup):
+            stt_warmup()
+        if speaker.is_active():
+            speaker.warmup()
+
+    threading.Thread(target=_warmup_all, daemon=True, name="Warmup").start()
 
 
 def _configure_audio_env(platform: PlatformKind) -> None:
@@ -49,22 +63,23 @@ def main() -> None:
     recorder = Recorder(sample_rate=config.sample_rate)
     transcriber = build_transcriber(config)
     audio_feedback = AudioFeedback()
-    # Pré-aquece o STT em background (paga a busca de kernels MIOpen no startup)
-    # para a 1ª transcrição real já sair rápida em vez de levar dezenas de segundos.
-    transcriber_warmup = getattr(transcriber, "warmup", None)
-    if callable(transcriber_warmup):
-        threading.Thread(target=transcriber_warmup, daemon=True, name="STTWarmup").start()
 
     flows = config.flows or config.build_default_flows()
     has_chat_flow = any(flow.kind == "claude_chat" for flow in flows)
     if args.tts_reset_seed:
         delete_existing_auto_seed(config.tts)
     speaker: TextToSpeech = build_speaker(config.tts) if has_chat_flow else NullSpeaker()
-    # Pré-aquece o TTS em background (carrega modelo + tuna kernels ROCm) para a
-    # 1ª frase falada já sair realtime, em paralelo com o resto do startup.
-    if speaker.is_active():
-        threading.Thread(target=speaker.warmup, daemon=True, name="TTSWarmup").start()
-    clipboard = create_clipboard_writer(config.platform)
+    # Warmup SERIALIZADO em background (STT depois TTS, nunca concorrente): ambos
+    # pagam o tuning de kernels ROCm no startup. Rodar os dois ao mesmo tempo
+    # trava a GPU — a 1ª transcrição chegou a levar 45s (vs ~3s isolada) e o
+    # thrash glitcha o áudio do WSLg. Em sequência cada um roda rápido.
+    _start_warmup_thread(transcriber, speaker)
+
+    # Hub de estado da sessão: estado vivo + último resultado, consultável pelos
+    # consumidores (o script de hotkeys do Windows). No WSL2 o clipboard nativo é
+    # setado pelo lado Windows (via /result) — o hub guarda a última transcrição.
+    status = SessionStatus()
+    clipboard = create_clipboard_writer(config.platform, status)
     handlers, owned_handlers = build_handlers(flows, audio_feedback, speaker, config.output_lang, clipboard=clipboard)
     if not handlers:
         speaker.close()
@@ -81,8 +96,9 @@ def main() -> None:
         config=config,
         handlers=handlers,
         default_handler_id=default_handler_id,
+        status=status,
     )
-    listener = build_listener(config, flows, session)
+    listener = build_listener(config, flows, session, status)
 
     print(_("\n[VoiceMate] Ready. Input: {input_method}").format(input_method=config.input_method))
     print(

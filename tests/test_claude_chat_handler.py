@@ -4,6 +4,8 @@ import threading
 import time
 from collections.abc import Iterator
 
+import pytest
+
 from app.features.claude.chat_handler import ClaudeChatHandler
 
 
@@ -137,6 +139,36 @@ def test_handle_with_active_speaker_uses_tts_instead_of_beep() -> None:
     assert clipboard.copied == ["pergunta", "resposta falada"]
     assert speaker.speak_calls == ["resposta falada"]
     assert audio.ai_response_ready_calls == 0
+
+
+def test_streaming_announces_first_token(capsys: pytest.CaptureFixture[str]) -> None:
+    """Na 1ª delta do stream, avisa que o Claude começou a responder."""
+    runtime = FakeRuntime(response="resposta falada")
+    speaker = FakeSpeaker(active=True)
+    handler = _handler(runtime, FakeAudio(), speaker)
+
+    handler.handle("pergunta")
+
+    out = capsys.readouterr().out
+    assert "Claude respondendo..." in out
+
+
+def test_heartbeat_prints_while_processing(capsys: pytest.CaptureFixture[str]) -> None:
+    """O heartbeat (caminho sem TTS) imprime 'processando' enquanto o Claude pensa."""
+    from app.features.claude.chat_handler import _Heartbeat
+
+    with _Heartbeat(interval=0.05):
+        time.sleep(0.16)
+    out = capsys.readouterr().out
+    assert "Claude processando..." in out
+
+
+def test_heartbeat_silent_when_fast(capsys: pytest.CaptureFixture[str]) -> None:
+    from app.features.claude.chat_handler import _Heartbeat
+
+    with _Heartbeat(interval=10.0):
+        pass  # sai antes do 1º tick
+    assert "processando" not in capsys.readouterr().out
 
 
 def test_handle_copies_transcription_before_calling_runtime() -> None:

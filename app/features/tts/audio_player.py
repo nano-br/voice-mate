@@ -3,13 +3,44 @@ from __future__ import annotations
 import queue
 import sys
 import threading
-from typing import Any
+from typing import Any, Protocol
 
 import numpy as np
 import sounddevice as sd
 from numpy.typing import NDArray
 
 from app.platform.detect import detect_platform
+
+
+class AudioSink(Protocol):
+    """Interface comum dos players de áudio (sounddevice e paplay)."""
+
+    def ensure_started(self, sample_rate: int) -> None: ...
+
+    def start(self, sample_rate: int) -> None: ...
+
+    def feed(self, chunk: NDArray[np.float32]) -> None: ...
+
+    def drain(self, timeout: float | None = 60.0) -> bool: ...
+
+    def abort(self) -> None: ...
+
+    def close(self) -> None: ...
+
+
+def create_audio_player() -> AudioSink:
+    """Escolhe o player por plataforma.
+
+    Linux/WSL2 com `paplay`: PulseAudio nativo (robusto no WSLg, sem o deadlock
+    do PortAudio sobre RDP que pendurava o app). Windows (WASAPI): sounddevice.
+    """
+    if detect_platform() in ("wsl2", "linux-x11", "linux-wayland"):
+        from app.features.tts.paplay_player import PaplayPlayer, paplay_available
+
+        if paplay_available():
+            return PaplayPlayer()
+    return AudioPlayer()
+
 
 # Buffer de saída por plataforma. No WSLg o áudio sai por PulseAudio sobre RDP,
 # que tem jitter alto: blocos minúsculos (blocksize=0, ~34 ms) esvaziam o buffer

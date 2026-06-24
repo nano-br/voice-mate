@@ -87,7 +87,7 @@ def fake_voxcpm_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str
     module = types.ModuleType("voxcpm")
     module.VoxCPM = FakeVoxCPM  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "voxcpm", module)
-    monkeypatch.setattr("app.features.tts.voxcpm_speaker.AudioPlayer", FakePlayer)
+    monkeypatch.setattr("app.features.tts.voxcpm_speaker.create_audio_player", FakePlayer)
     return _fake_state
 
 

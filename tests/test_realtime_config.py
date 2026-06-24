@@ -95,6 +95,20 @@ def test_tts_engine_voxcpm_flag() -> None:
     assert config.tts.engine == "voxcpm"
 
 
+def test_tts_engine_uses_persisted_when_no_flag() -> None:
+    from app.setup.persisted_config import PersistedConfig
+
+    config = build_config(parse_args([]), PersistedConfig(tts_engine="kokoro"))
+    assert config.tts.engine == "kokoro"  # escolha do setup vale sem flag
+
+
+def test_tts_engine_flag_overrides_persisted() -> None:
+    from app.setup.persisted_config import PersistedConfig
+
+    config = build_config(parse_args(["--tts-engine", "omnivoice"]), PersistedConfig(tts_engine="kokoro"))
+    assert config.tts.engine == "omnivoice"  # flag explícita vence o persistido
+
+
 def test_claude_model_defaults_to_haiku() -> None:
     config = build_config(parse_args([]))
     assert config.claude_chat.model == "claude-haiku-4-5"

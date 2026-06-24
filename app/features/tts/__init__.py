@@ -26,6 +26,12 @@ def is_available(engine: TTSEngine = "omnivoice") -> bool:
         except ImportError:
             return False
         return True
+    if engine == "kokoro":
+        try:
+            import kokoro  # noqa: F401
+        except ImportError:
+            return False
+        return True
     if engine == "voxcpm":
         try:
             import voxcpm  # noqa: F401
@@ -47,6 +53,10 @@ def build_default_speaker(config: TTSConfig) -> TextToSpeech:
         from app.features.tts.voxcpm_speaker import VoxCPMSpeaker
 
         return VoxCPMSpeaker(config)
+    if config.engine == "kokoro":
+        from app.features.tts.kokoro_speaker import KokoroSpeaker
+
+        return KokoroSpeaker(config)
     from app.features.tts.omnivoice_speaker import OmniVoiceSpeaker
 
     return OmniVoiceSpeaker(config)

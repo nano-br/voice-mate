@@ -8,6 +8,11 @@ from numpy.typing import NDArray
 
 from app.core.config import Config
 
+_WHISPER_SAMPLE_RATE = 16000
+# Acima disso, vale rodar o VAD p/ cortar silêncio (áudio longo). Abaixo, o
+# áudio já transcreve em sub-segundo e o VAD só adicionaria latência.
+_VAD_MIN_SAMPLES = 20 * _WHISPER_SAMPLE_RATE
+
 
 class OpenAIWhisperBackend:
     """Transcreve com openai-whisper sobre torch (CUDA/HIP-ROCm ou CPU).
@@ -49,11 +54,29 @@ class OpenAIWhisperBackend:
         return "cuda"
 
     def transcribe(self, audio: NDArray[np.float32]) -> str:
+        # Áudio longo: corta o silêncio com VAD antes de transcrever (o
+        # openai-whisper não tem VAD embutido como o faster-whisper). Áudio
+        # curto (comandos do dia a dia) passa direto — já é sub-segundo.
+        if audio.shape[0] > _VAD_MIN_SAMPLES:
+            from app.features.openai_whisper.vad import trim_to_speech
+
+            audio = trim_to_speech(audio, _WHISPER_SAMPLE_RATE)
         result: dict[str, Any] = self._model.transcribe(
             audio,
             beam_size=self._beam_size,
             fp16=self._fp16,
             language=self._language,
+            # temperature=0.0 desliga a escada de fallback do Whisper
+            # (0.0, 0.2…1.0): por padrão, quando um segmento de baixa confiança
+            # "falha" nos limiares (comum em áudio de microfone real), ele
+            # RE-DECODIFICA o mesmo trecho até 6×. Em áudio longo/ruidoso isso
+            # multiplica os forward-passes e crava a GPU. Fixar em 0.0 mantém a
+            # decodificação determinística e rápida.
+            temperature=0.0,
+            # condition_on_previous_text=False: evita o contexto crescer ao
+            # longo de áudio longo contínuo (que desacelera cada janela de 30s)
+            # e reduz o risco de loop de repetição. Prioriza velocidade.
+            condition_on_previous_text=False,
             verbose=False,
         )
         text = result.get("text", "")

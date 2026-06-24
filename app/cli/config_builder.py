@@ -85,6 +85,15 @@ def _resolve_tts_enabled(args: argparse.Namespace, persisted: PersistedConfig) -
     return True
 
 
+def _resolve_tts_engine(args: argparse.Namespace, persisted: PersistedConfig) -> TTSEngine:
+    """Precedência: --tts-engine explícito > engine salvo no setup > "omnivoice"."""
+    if args.tts_engine is not None:  # flag default = None (não informado)
+        return cast(TTSEngine, args.tts_engine)
+    if persisted.tts_engine is not None:
+        return persisted.tts_engine
+    return "omnivoice"
+
+
 def _resolve_claude_enabled(args: argparse.Namespace, persisted: PersistedConfig) -> bool:
     """CLI --no-claude-chat > fluxo salvo > default (ligado); exige keyboard."""
     if args.no_claude_chat:
@@ -187,9 +196,10 @@ def build_config(args: argparse.Namespace, persisted: PersistedConfig | None = N
         ),
         tts=TTSConfig(
             enabled=tts_enabled,
-            engine=cast(TTSEngine, args.tts_engine),
+            engine=_resolve_tts_engine(args, persisted),
             language=transcription_language,
             voice_description=args.tts_voice,
+            kokoro_voice=args.tts_kokoro_voice,
             cfg_value=args.tts_cfg_value,
             inference_timesteps=args.tts_inference_timesteps,
             device=tts_device,

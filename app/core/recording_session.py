@@ -2,7 +2,6 @@ import sys
 import threading
 import time
 import traceback
-from typing import Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -10,10 +9,9 @@ from numpy.typing import NDArray
 from app.core.audio_feedback import AudioFeedback
 from app.core.config import Config
 from app.core.recorder import Recorder
+from app.core.session_status import SessionState, SessionStatus, ToggleAction, ToggleOutcome
 from app.core.transcription_backend import TranscriptionBackend
 from app.core.transcription_handler import TranscriptionHandler
-
-SessionState = Literal["idle", "recording", "processing"]
 
 
 class RecordingSession:
@@ -23,6 +21,11 @@ class RecordingSession:
     cancela o handler ativo e inicia uma nova gravação imediatamente.
     O `handler_id` passado em `toggle()` é usado apenas quando o trigger
     PARA a gravação (decide o destino do texto).
+
+    `toggle()` devolve um `ToggleOutcome` na hora (a decisão start/stop é
+    síncrona sob lock — só a transcrição é assíncrona), para o gatilho saber o
+    que aconteceu. Se um `SessionStatus` for injetado, as transições de estado
+    são publicadas nele (estado vivo consultável pelos consumidores).
     """
 
     def __init__(
@@ -33,6 +36,7 @@ class RecordingSession:
         config: Config,
         handlers: dict[str, TranscriptionHandler],
         default_handler_id: str = "clipboard",
+        status: SessionStatus | None = None,
     ) -> None:
         if not handlers:
             raise ValueError("RecordingSession precisa de ao menos um handler")
@@ -46,6 +50,7 @@ class RecordingSession:
         self._warning_percent = config.timeout_warning_percent
         self._handlers = handlers
         self._default_handler_id = default_handler_id
+        self._status = status
         self._lock = threading.Lock()
         self._warning_timer: threading.Timer | None = None
         self._timeout_timer: threading.Timer | None = None
@@ -53,20 +58,30 @@ class RecordingSession:
         self._stop_handler_id: str | None = None
         self._active_handler_id: str | None = None
         self._slow_warning_shown = False
+        # op_seq: a sessão é a autoridade. Cada gravação que COMEÇA abre uma
+        # operação nova; o STOP continua a mesma (vai a processing).
+        self._op_counter = 0
+        self._op_seq = 0
+        self._op_flow: str | None = None
+        self._op_client_id: str | None = None
 
-    def toggle(self, handler_id: str) -> None:
+    def toggle(self, handler_id: str, client_id: str | None = None) -> ToggleOutcome | None:
         if handler_id not in self._handlers:
             print(f"[VoiceMate] ⚠ Handler desconhecido: {handler_id}")
-            return
+            return None
         handler_to_cancel: TranscriptionHandler | None = None
+        outcome: ToggleOutcome | None = None
         with self._lock:
             state = self._state
             if state == "idle":
-                self._start_locked()
+                self._start_locked(handler_id, client_id)
+                outcome = self._outcome_locked("started")
             elif state == "recording":
                 self._stop_handler_id = handler_id
                 self._cancel_timers()
                 self._state = "processing"
+                self._publish_state_locked("processing")
+                outcome = self._outcome_locked("stopped")
                 threading.Thread(target=self._stop_and_dispatch, daemon=True).start()
             elif state == "processing":
                 active = self._active_handler_id
@@ -80,13 +95,34 @@ class RecordingSession:
                 handler_to_cancel.cancel_in_flight()
             with self._lock:
                 if self._state == "processing":
-                    self._start_locked()
+                    self._start_locked(handler_id, client_id)
+                    outcome = self._outcome_locked("restarted")
+                else:
+                    outcome = self._outcome_locked("started")
+        return outcome
 
-    def _start_locked(self) -> None:
+    def _outcome_locked(self, action: ToggleAction) -> ToggleOutcome:
+        return ToggleOutcome(
+            action=action,
+            op_seq=self._op_seq,
+            state=self._state,
+            flow=self._op_flow or self._default_handler_id,
+        )
+
+    def _publish_state_locked(self, state: SessionState) -> None:
+        if self._status is not None:
+            self._status.set_operation(self._op_seq, state, self._op_flow, self._op_client_id)
+
+    def _start_locked(self, handler_id: str, client_id: str | None) -> None:
         if not self._recorder.start():
             self._state = "idle"
             return
         self._state = "recording"
+        self._op_counter += 1
+        self._op_seq = self._op_counter
+        self._op_flow = handler_id
+        self._op_client_id = client_id
+        self._publish_state_locked("recording")
         self._audio.recording_started()
         print("[VoiceMate] 🎙  Gravando... (pressione para parar)")
         self._schedule_timers_locked()
@@ -121,6 +157,7 @@ class RecordingSession:
             self._cancel_timers()
             self._stop_handler_id = self._default_handler_id
             self._state = "processing"
+            self._publish_state_locked("processing")
         self._stop_and_dispatch()
 
     def _stop_and_dispatch(self) -> None:
@@ -188,7 +225,14 @@ class RecordingSession:
         )
 
     def _finish_processing_locked(self, stop_id: str) -> None:
+        op_seq: int | None = None
         with self._lock:
             if self._state == "processing" and self._active_handler_id == stop_id:
                 self._state = "idle"
                 self._active_handler_id = None
+                op_seq = self._op_seq
+        # Publica idle FORA do lock da sessão (o hub tem o próprio lock) e só se
+        # esta finalização foi quem realmente voltou a idle — mark_idle ignora se
+        # uma nova operação já abriu por cima (sem corrida).
+        if op_seq is not None and self._status is not None:
+            self._status.mark_idle(op_seq)

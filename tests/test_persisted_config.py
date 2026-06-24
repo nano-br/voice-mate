@@ -45,6 +45,18 @@ def test_invalid_enum_values_are_dropped(tmp_path: Path) -> None:
     assert loaded.default_flow is None
 
 
+def test_tts_engine_roundtrips(tmp_path: Path) -> None:
+    path = tmp_path / "config.toml"
+    save_persisted(PersistedConfig(tts_engine="kokoro"), path)
+    assert load_persisted(path).tts_engine == "kokoro"
+
+
+def test_invalid_tts_engine_is_dropped(tmp_path: Path) -> None:
+    path = tmp_path / "config.toml"
+    path.write_text('tts_engine = "festival"\n', encoding="utf-8")
+    assert load_persisted(path).tts_engine is None
+
+
 def test_whispercpp_backend_roundtrips(tmp_path: Path) -> None:
     # Regressão: "whispercpp" não estava em _BACKENDS e a escolha AMD
     # persistida era descartada silenciosamente a cada boot.

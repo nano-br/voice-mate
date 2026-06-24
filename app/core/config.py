@@ -4,9 +4,14 @@ from typing import Literal
 from app.platform.kinds import PlatformKind, TriggerKind
 
 FlowKind = Literal["clipboard", "claude_chat"]
-# Engine de TTS: omnivoice (k2-fsa, padrão — leve/rápido, 24 kHz), voxcpm
-# (OpenBMB, alternativo — 2B, mais pesado) ou none (desliga).
-TTSEngine = Literal["omnivoice", "voxcpm", "none"]
+# Engine de TTS:
+#   - omnivoice (k2-fsa, padrão): difusão multilíngue, 24 kHz, CLONA voz, mas
+#     pesado/compute-bound (satura a GPU na síntese).
+#   - kokoro (hexgrad, Apache-2.0): ~82M, NÃO-difusão, 24 kHz, vozes FIXAS (sem
+#     clonagem), GPU baixíssima e realtime — bom p/ AMD/WSL2 sem saturar a GPU.
+#   - voxcpm (OpenBMB, alternativo): 2B, mais pesado.
+#   - none: desliga.
+TTSEngine = Literal["omnivoice", "kokoro", "voxcpm", "none"]
 TTSDevice = Literal["auto", "cuda", "cpu", "mps"]
 ClaudeEffort = Literal["low", "medium", "high", "xhigh", "max"]
 VoiceSeedMode = Literal["auto", "fixed", "off"]
@@ -93,6 +98,9 @@ class TTSConfig:
     voice_description: str = DEFAULT_VOICE_DESCRIPTION
     cfg_value: float = 2.0
     inference_timesteps: int = 10
+    # Voz fixa do Kokoro (só vale p/ engine="kokoro"; o Kokoro não clona voz).
+    # pf_dora = feminina PT-BR; pm_alex/pm_santa = masculinas PT-BR.
+    kokoro_voice: str = "pf_dora"
     device: TTSDevice = "auto"
     streaming: bool = True
     save_audio_dir: str | None = None

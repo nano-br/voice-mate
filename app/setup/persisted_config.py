@@ -14,7 +14,7 @@ from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any
 
-from app.core.config import FlowKind, GpuVendor, SttStrategy, WhisperBackend
+from app.core.config import FlowKind, GpuVendor, SttStrategy, TTSEngine, WhisperBackend
 from app.platform.kinds import PlatformKind, TriggerKind
 
 CONFIG_DIR = Path.home() / ".config" / "voicemate"
@@ -26,6 +26,7 @@ _FLOWS: tuple[FlowKind, ...] = ("clipboard", "claude_chat")
 _PLATFORMS: tuple[PlatformKind, ...] = ("windows", "linux-x11", "linux-wayland", "wsl2")
 _TRIGGERS: tuple[TriggerKind, ...] = ("keyboard-hooks", "pynput", "evdev", "socket")
 _STT_STRATEGIES: tuple[SttStrategy, ...] = ("auto", "faster-whisper-rocm", "whispercpp", "openai-whisper")
+_TTS_ENGINES: tuple[TTSEngine, ...] = ("omnivoice", "kokoro", "voxcpm", "none")
 
 
 @dataclass
@@ -35,6 +36,7 @@ class PersistedConfig:
     gpu_vendor: GpuVendor | None = None
     whisper_backend: WhisperBackend | None = None
     tts_enabled: bool | None = None
+    tts_engine: TTSEngine | None = None
     default_flow: FlowKind | None = None
     platform: PlatformKind | None = None
     trigger: TriggerKind | None = None
@@ -62,6 +64,7 @@ def load_persisted(path: Path = CONFIG_PATH) -> PersistedConfig:
         gpu_vendor=_read_choice(data, "gpu_vendor", _VENDORS),
         whisper_backend=_read_choice(data, "whisper_backend", _BACKENDS),
         tts_enabled=_read_bool(data, "tts_enabled"),
+        tts_engine=_read_choice(data, "tts_engine", _TTS_ENGINES),
         default_flow=_read_choice(data, "default_flow", _FLOWS),
         platform=_read_choice(data, "platform", _PLATFORMS),
         trigger=_read_choice(data, "trigger", _TRIGGERS),

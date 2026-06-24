@@ -9,6 +9,7 @@ from numpy.typing import NDArray
 
 from app.core.config import Config
 from app.core.recording_session import RecordingSession
+from app.core.session_status import SessionStatus
 
 
 class FakeRecorder:
@@ -109,6 +110,7 @@ class FakeHandler:
 def _make_session(
     handlers: dict[str, FakeHandler] | None = None,
     transcriber: FakeTranscriber | None = None,
+    status: SessionStatus | None = None,
 ) -> tuple[RecordingSession, FakeRecorder, FakeTranscriber, FakeAudio, dict[str, FakeHandler]]:
     recorder = FakeRecorder()
     transcriber = transcriber or FakeTranscriber()
@@ -122,6 +124,7 @@ def _make_session(
         config=config,
         handlers=handlers,  # type: ignore[arg-type]
         default_handler_id=next(iter(handlers)),
+        status=status,
     )
     return session, recorder, transcriber, audio, handlers
 
@@ -271,6 +274,67 @@ def test_fast_transcription_no_warning(capsys: pytest.CaptureFixture[str], monke
 
     captured = capsys.readouterr()
     assert "mais lenta" not in captured.err
+
+
+def test_toggle_returns_action_and_op_seq() -> None:
+    """toggle devolve a operação na hora — base do feedback ao gatilho."""
+    handlers = {"clipboard": FakeHandler(), "claude_chat": FakeHandler()}
+    session, _, _, _, _ = _make_session(handlers=handlers)
+
+    started = session.toggle("clipboard")
+    assert started is not None
+    assert started.action == "started"
+    assert started.op_seq == 1
+    assert started.state == "recording"
+    assert started.flow == "clipboard"
+
+    stopped = session.toggle("claude_chat")  # stop decide o destino
+    assert stopped is not None
+    assert stopped.action == "stopped"
+    assert stopped.op_seq == 1  # mesma operação (vai a processing)
+    assert stopped.state == "processing"
+    assert handlers["claude_chat"].handle_done.wait(timeout=2.0)
+
+
+def test_toggle_unknown_handler_returns_none() -> None:
+    session, _, _, _, _ = _make_session()
+    assert session.toggle("nope") is None
+
+
+def test_status_publishes_recording_then_idle() -> None:
+    status = SessionStatus()
+    cid = status.register()
+    handler = FakeHandler()
+    session, _, _, _, _ = _make_session(handlers={"clipboard": handler}, status=status)
+
+    session.toggle("clipboard", client_id=cid)  # start
+    st = status.status(cid, "all")
+    assert st["state"] == "recording"
+    assert st["op_seq"] == 1
+    assert st["client_id"] == cid
+
+    session.toggle("clipboard", client_id=cid)  # stop → processing → ... → idle
+    assert handler.handle_done.wait(timeout=2.0)
+    deadline = time.monotonic() + 2.0
+    while status.status(cid, "all")["state"] != "idle" and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert status.status(cid, "all")["state"] == "idle"
+
+
+def test_restart_during_processing_opens_new_op_seq() -> None:
+    block = threading.Event()
+    handler = FakeHandler(block_event=block)
+    status = SessionStatus()
+    session, _, _, _, _ = _make_session(handlers={"claude_chat": handler}, status=status)
+
+    session.toggle("claude_chat")  # start (op 1)
+    session.toggle("claude_chat")  # stop → processing
+    assert handler.handle_started.wait(timeout=2.0)
+    restarted = session.toggle("claude_chat")  # cancela + nova gravação
+    assert restarted is not None
+    assert restarted.action == "restarted"
+    assert restarted.op_seq == 2  # operação nova
+    assert handler.handle_done.wait(timeout=2.0)
 
 
 def test_handler_close_not_called_by_session() -> None:

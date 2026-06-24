@@ -44,8 +44,31 @@ def run_checks() -> list[CheckResult]:
     if platform in ("wsl2", "linux-x11", "linux-wayland"):
         results += _check_vulkan_gpu(platform)
     results += _check_claude()
+    results += _check_kokoro_espeak()
     results += _check_torch_gpu()
     return results
+
+
+def _check_kokoro_espeak() -> list[CheckResult]:
+    """Kokoro precisa do espeak-ng (G2P do PT-BR).
+
+    Heurística: só checa se o pacote `kokoro` estiver instalado (o engine é
+    escolha de runtime via --tts-engine, não persistida — instalar o extra
+    sinaliza intenção de usar). Sem espeak-ng, o load do Kokoro falha no PT-BR.
+    """
+    from app.features import tts as tts_feature
+
+    if not tts_feature.is_available("kokoro"):
+        return []
+    has_espeak = shutil.which("espeak-ng") is not None
+    return [
+        CheckResult(
+            "espeak-ng (Kokoro PT-BR)",
+            has_espeak,
+            "encontrado" if has_espeak else "ausente — Kokoro PT-BR falha sem ele",
+            fix="sudo apt install -y espeak-ng",
+        )
+    ]
 
 
 # ─── Checagens ───────────────────────────────────────────────────────────────
@@ -89,31 +112,44 @@ def _check_wslg_audio() -> list[CheckResult]:
 
 
 def _check_wsl_clipboard() -> list[CheckResult]:
-    """Algum caminho de escrita no clipboard precisa existir no WSL.
+    """Escrita no clipboard no WSL2.
 
-    Com `appendWindowsPath=false` no /etc/wsl.conf o clip.exe some do PATH —
-    o app usa o caminho absoluto via interop, mas o interop precisa estar
-    habilitado (ou um utilitário Linux instalado).
+    Só os utilitários NATIVOS (wl-copy/xclip) são confiáveis no WSLg. O clip.exe
+    via interop falha quando o binfmt do WSLInterop não está registrado (comum
+    com systemd) com "Exec format error" — por isso não conta como ✓ sozinho.
     """
-    from app.platform.clipboard import _WINDOWS_CLIP_EXE
-
-    options: list[str] = []
-    if shutil.which("wl-copy"):
-        options.append("wl-copy")
-    if shutil.which("xclip"):
-        options.append("xclip")
-    if shutil.which("clip.exe"):
-        options.append("clip.exe (PATH)")
-    elif _WINDOWS_CLIP_EXE.exists():
-        options.append(str(_WINDOWS_CLIP_EXE))
-    return [
+    native = [t for t in ("wl-copy", "xclip", "xsel") if shutil.which(t)]
+    binfmt_ok = Path("/proc/sys/fs/binfmt_misc/WSLInterop").exists()
+    if native:
+        detail = ", ".join(native)
+    elif binfmt_ok:
+        detail = "só clip.exe via interop (fallback incerto)"
+    else:
+        detail = "nenhum (clip.exe falha sem o binfmt WSLInterop)"
+    results = [
         CheckResult(
-            "Clipboard (escrita)",
-            bool(options),
-            ", ".join(options) or "nenhum mecanismo encontrado",
-            fix=("Habilite o interop em /etc/wsl.conf ([interop] enabled=true) ou: sudo apt install -y wl-clipboard"),
+            "Clipboard nativo (WSLg)",
+            bool(native),
+            detail,
+            fix="sudo apt install -y wl-clipboard   # wl-copy funciona via WSLg e sincroniza com o Windows",
         )
     ]
+    # Interop do Windows: quando o WSLInterop não está registrado (systemd limpa o
+    # binfmt), o clip.exe não roda — então o ÚNICO caminho de clipboard é o wl-copy
+    # (pela ponte do WSLg, que pode ficar instável em sessões longas). Restaurar o
+    # interop dá um caminho DIRETO ao clipboard do Windows, independente da ponte.
+    results.append(
+        CheckResult(
+            "Interop Windows (clip.exe direto)",
+            binfmt_ok,
+            "registrado" if binfmt_ok else "WSLInterop ausente — clip.exe não roda",
+            fix=(
+                "wsl --update (no Windows) resolve na maioria; ou registre: "
+                "sudo sh -c 'echo :WSLInterop:M::MZ::/init:PF > /proc/sys/fs/binfmt_misc/register'"
+            ),
+        )
+    )
+    return results
 
 
 def _check_sounddevice() -> list[CheckResult]:

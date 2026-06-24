@@ -10,7 +10,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from app.core.config import TTSConfig
-from app.features.tts.audio_player import AudioPlayer
+from app.features.tts.audio_player import AudioSink, create_audio_player
 from app.i18n import _
 
 _AUTO_SEED_WAV_FILENAME = "voice_seed.wav"
@@ -34,7 +34,7 @@ class VoxCPMSpeaker:
 
     def __init__(self, config: TTSConfig) -> None:
         self._config = config
-        self._player = AudioPlayer()
+        self._player: AudioSink = create_audio_player()
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
         self._closed = False

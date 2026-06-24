@@ -29,7 +29,7 @@ from numpy.typing import NDArray
 
 from app.core.config import TTSConfig
 from app.core.rocm_env import configure_rocm_env
-from app.features.tts.audio_player import AudioPlayer
+from app.features.tts.audio_player import AudioSink, create_audio_player
 
 # Nomes específicos do OmniVoice p/ não colidir com o seed do VoxCPM (16 kHz) —
 # o OmniVoice opera a 24 kHz e usa outro modelo de referência.
@@ -58,7 +58,7 @@ class OmniVoiceSpeaker:
 
     def __init__(self, config: TTSConfig) -> None:
         self._config = config
-        self._player = AudioPlayer()
+        self._player: AudioSink = create_audio_player()
         self._stop_event = threading.Event()
         self._load_lock = threading.Lock()  # serializa o load (warmup vs 1ª fala)
         self._closed = False

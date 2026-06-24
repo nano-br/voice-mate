@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from app.core.audio_feedback import AudioFeedback
 from app.core.config import ClaudeChatConfig, Config, FlowConfig, TTSConfig
@@ -24,6 +25,9 @@ from app.features import tts as tts_feature
 from app.features import whispercpp as whispercpp_feature
 from app.features.tts.base import NullSpeaker, TextToSpeech
 from app.platform.clipboard import ClipboardWriter, create_clipboard_writer
+
+if TYPE_CHECKING:
+    from app.core.session_status import SessionStatus, ToggleOutcome
 from app.platform.detect import default_trigger, detect_platform
 from app.platform.kinds import TriggerKind
 from app.platform.listeners import (
@@ -168,7 +172,8 @@ def build_transcriber(config: Config) -> TranscriptionBackend:
 def build_speaker(config: TTSConfig) -> TextToSpeech:
     if not config.enabled or config.engine == "none":
         return NullSpeaker()
-    extra = "voxcpm" if config.engine == "voxcpm" else "tts"
+    # Nome do extra do poetry por engine (p/ a dica de instalação no aviso).
+    extra = {"voxcpm": "voxcpm", "kokoro": "kokoro"}.get(config.engine, "tts")
     if not tts_feature.is_available(config.engine):
         print(
             f"[VoiceMate] ⚠ TTS desativado: pacotes do engine '{config.engine}' não instalados.",
@@ -276,6 +281,21 @@ class _HotkeyCallback:
         self._session.toggle(self._handler_id)
 
 
+class _SocketTriggerCallback:
+    """Binding do socket: recebe o client_id (quem disparou) e devolve a operação.
+
+    Diferente do `_HotkeyCallback` (hotkey local, fire-and-forget), o gatilho via
+    socket precisa saber O QUE o toggle fez para responder ao consumidor.
+    """
+
+    def __init__(self, session: RecordingSession, handler_id: str) -> None:
+        self._session = session
+        self._handler_id = handler_id
+
+    def __call__(self, client_id: str | None) -> ToggleOutcome | None:
+        return self._session.toggle(self._handler_id, client_id=client_id)
+
+
 def resolve_trigger(config: Config) -> TriggerKind:
     """Gatilho efetivo: explícito no config, senão o default da plataforma."""
     if config.trigger is not None:
@@ -287,6 +307,7 @@ def build_listener(
     config: Config,
     flows: list[FlowConfig],
     session: RecordingSession,
+    status: SessionStatus | None = None,
 ) -> InputListener:
     trigger = resolve_trigger(config)
 
@@ -305,10 +326,12 @@ def build_listener(
     if trigger == "socket":
         # Bindings por NOME do flow (o request diz {"flow": ...}); "stop decide
         # o destino" é preservado: cada request equivale ao hotkey daquele flow.
-        flow_bindings: dict[str, Callable[[], None]] = {
-            flow.name: _HotkeyCallback(session, flow.name) for flow in flows
+        flow_bindings: dict[str, Callable[[str | None], ToggleOutcome | None]] = {
+            flow.name: _SocketTriggerCallback(session, flow.name) for flow in flows
         }
-        return SocketTriggerListener(flow_bindings, port=config.daemon_port)  # type: ignore[return-value]
+        return SocketTriggerListener(  # type: ignore[return-value]
+            flow_bindings, port=config.daemon_port, status=status
+        )
 
     bindings: dict[str, _HotkeyCallback] = {}
     for flow in flows:

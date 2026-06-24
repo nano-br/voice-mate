@@ -217,11 +217,20 @@ def _add_tts_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--tts-engine",
-        default="omnivoice",
-        choices=["omnivoice", "voxcpm", "none"],
+        default=None,  # None = usar o engine salvo no setup, ou "omnivoice"
+        choices=["omnivoice", "kokoro", "voxcpm", "none"],
         help=(
-            "Engine de TTS. 'omnivoice' (padrão): leve/rápido, 24 kHz. "
+            "Engine de TTS. 'omnivoice' (padrão): difusão, clona voz, mas pesado. "
+            "'kokoro': leve/realtime, GPU baixa, vozes fixas (sem clonagem). "
             "'voxcpm': alternativo (mais pesado). 'none': desliga."
+        ),
+    )
+    parser.add_argument(
+        "--tts-kokoro-voice",
+        default="pf_dora",
+        help=(
+            "Voz fixa do Kokoro (só com --tts-engine=kokoro). PT-BR: pf_dora "
+            "(feminina), pm_alex / pm_santa (masculinas)."
         ),
     )
     parser.add_argument(

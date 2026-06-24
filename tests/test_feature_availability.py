@@ -42,6 +42,14 @@ def test_tts_voxcpm_engine_checks_voxcpm_package(monkeypatch: pytest.MonkeyPatch
     assert tts_feature.is_available("voxcpm") is False
 
 
+def test_tts_kokoro_engine_checks_kokoro_package(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(sys.modules, "soundfile", _fake_module("soundfile"))
+    monkeypatch.setitem(sys.modules, "kokoro", _fake_module("kokoro"))
+    assert tts_feature.is_available("kokoro") is True
+    monkeypatch.setitem(sys.modules, "kokoro", None)
+    assert tts_feature.is_available("kokoro") is False
+
+
 def test_tts_is_unavailable_when_soundfile_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "soundfile", None)
     assert tts_feature.is_available("omnivoice") is False
