@@ -1,4 +1,4 @@
-"""Resolução de vendor/backend/flow no build_config (precedência CLI > salvo > default)."""
+"""Vendor/backend/flow resolution in build_config (precedence CLI > saved > default)."""
 
 from __future__ import annotations
 

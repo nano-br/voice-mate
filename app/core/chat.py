@@ -17,10 +17,10 @@ class ChatBackend(Protocol):
     def send_and_collect(self, prompt: str, timeout: float | None = None) -> str: ...
 
     def stream(self, prompt: str, timeout: float | None = None) -> Iterator[str]:
-        """Envia um turno e produz os deltas de texto da resposta conforme chegam.
+        """Send a turn and yield the response's text deltas as they arrive.
 
-        Permite ao handler falar frase a frase (realtime) em vez de esperar a
-        resposta completa. `send_and_collect` continua disponível como fallback.
+        Lets the handler speak sentence by sentence (realtime) instead of waiting
+        for the full response. `send_and_collect` remains available as a fallback.
         """
         ...
 

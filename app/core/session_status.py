@@ -1,35 +1,35 @@
-"""Hub de eventos da sessão: estado vivo + último resultado, por consumidor.
+"""Session event hub: live state + last result, per consumer.
 
-No WSL2 o gatilho vem de fora (o script de hotkeys do Windows faz HTTP no
-daemon). O protocolo antigo era *fire-and-forget* e *toggle*: o `/trigger`
-respondia sem dizer o que fez, e qualquer evento perdido/duplicado dessincroniza
-os dois lados em silêncio (o usuário aperta querendo gravar e o WSL para). Este
-hub conserta isso na raiz — ele carrega ESTADO:
+On WSL2 the trigger comes from outside (the Windows hotkey script hits the daemon
+over HTTP). The old protocol was *fire-and-forget* and *toggle*: `/trigger`
+responded without saying what it did, and any lost/duplicated event silently
+desynchronizes the two sides (the user presses meaning to record and WSL stops).
+This hub fixes that at the root — it carries STATE:
 
-  - registro de consumidores (`register()` → `client_id` gerado no WSL);
-  - a operação CORRENTE (idle/recording/processing) com o `op_seq` e quem a
-    iniciou;
-  - o ÚLTIMO resultado (texto + `seq` crescente) correlacionado à operação.
+  - consumer registration (`register()` → `client_id` generated on WSL);
+  - the CURRENT operation (idle/recording/processing) with its `op_seq` and who
+    started it;
+  - the LAST result (text + increasing `seq`) correlated to the operation.
 
-Duas modalidades de consulta, ambas disponíveis desde já:
-  - `scope="all"`  — o estado/resultado GLOBAL (default do Windows hoje: todos os
-    consumidores ouvem tudo). O `seq`/`op_seq` é monotônico, então o consumidor
-    sabe se o que recebeu é MAIS NOVO que o último que guardou.
-  - `scope="mine"` — só o que ESTE `client_id` iniciou (o Ctrl+C "só meu").
+Two query modes, both available from the start:
+  - `scope="all"`  — the GLOBAL state/result (the Windows default today: every
+    consumer hears everything). The `seq`/`op_seq` is monotonic, so the consumer
+    knows whether what it received is NEWER than the last one it kept.
+  - `scope="mine"` — only what THIS `client_id` started (the "mine only" Ctrl+C).
 
-Hoje há uma única fonte de áudio (um microfone), então a operação corrente é
-global; o `client_id` apenas etiqueta quem a iniciou. A rota individual já existe
-como fundação para, no futuro, múltiplos consumidores gravarem em paralelo.
+Today there is a single audio source (one microphone), so the current operation is
+global; the `client_id` just tags who started it. The per-client route already
+exists as a foundation for multiple consumers recording in parallel in the future.
 
-Alimentado por dois lados: a `RecordingSession` reporta as transições de estado;
-o `ClipboardWriter` publica o texto final (`record_result`).
+Fed from two sides: the `RecordingSession` reports the state transitions; the
+`ClipboardWriter` publishes the final text (`record_result`).
 
-Os resultados ficam num BUFFER circular (não só o último): o produtor (WSL) pode
-gerar mais rápido do que o consumidor (Windows) faz polling — em testes em
-sequência, dois resultados terminam perto um do outro e, com slot único, o
-primeiro era sobrescrito antes de ser lido (perdia ~metade). Com o buffer, o
-consumidor pede `result(..., since=<seq>)` e DRENA em ordem o próximo não-visto,
-sem perder os intermediários.
+Results live in a circular BUFFER (not just the last one): the producer (WSL) can
+generate faster than the consumer (Windows) polls — in back-to-back tests, two
+results finish close together and, with a single slot, the first was overwritten
+before being read (losing ~half of them). With the buffer, the consumer asks
+`result(..., since=<seq>)` and DRAINS the next unseen one in order, without losing
+the intermediate ones.
 """
 
 from __future__ import annotations
@@ -40,9 +40,9 @@ from collections import deque
 from dataclasses import dataclass, replace
 from typing import Literal
 
-# Quantos resultados recentes manter por buffer (global e por cliente). Folgado:
-# o consumidor polla a cada 150-300ms, então só "atrasa" alguns; 64 cobre rajadas
-# bem maiores que qualquer teste em sequência realista.
+# How many recent results to keep per buffer (global and per client). Generous:
+# the consumer polls every 150-300ms, so it only "lags" by a few; 64 covers bursts
+# far larger than any realistic back-to-back test.
 _RESULT_BUFFER = 64
 
 SessionState = Literal["idle", "recording", "processing"]
@@ -52,10 +52,10 @@ ToggleAction = Literal["started", "stopped", "restarted"]
 
 @dataclass(frozen=True)
 class ToggleOutcome:
-    """O que um `toggle()` fez — devolvido na hora ao gatilho (sem esperar STT).
+    """What a `toggle()` did — returned to the trigger immediately (without waiting for STT).
 
-    `started` = idle→recording · `stopped` = recording→processing (transcrevendo)
-    · `restarted` = processing→recording (cancelou e recomeçou).
+    `started` = idle→recording · `stopped` = recording→processing (transcribing)
+    · `restarted` = processing→recording (cancelled and restarted).
     """
 
     action: ToggleAction
@@ -66,7 +66,7 @@ class ToggleOutcome:
 
 @dataclass(frozen=True)
 class Operation:
-    """Snapshot da operação corrente (ou da última de um consumidor)."""
+    """Snapshot of the current operation (or of a consumer's last one)."""
 
     op_seq: int
     state: SessionState
@@ -76,7 +76,7 @@ class Operation:
 
 @dataclass(frozen=True)
 class Result:
-    """Último texto produzido, correlacionado à operação que o gerou."""
+    """Last text produced, correlated to the operation that generated it."""
 
     seq: int
     text: str
@@ -89,11 +89,11 @@ _EMPTY = Result(seq=0, text="", op_seq=0, client_id=None)
 
 
 class SessionStatus:
-    """Estado vivo + último resultado da sessão, consultável por consumidor.
+    """Live state + last session result, queryable per consumer.
 
-    Thread-safe. A `RecordingSession` é a autoridade do `op_seq` (passa nas
-    chamadas `set_operation`); o store apenas guarda snapshots e correlaciona o
-    resultado com a operação corrente.
+    Thread-safe. The `RecordingSession` is the authority for `op_seq` (passes it
+    in the `set_operation` calls); the store just keeps snapshots and correlates
+    the result with the current operation.
     """
 
     def __init__(self) -> None:
@@ -102,18 +102,18 @@ class SessionStatus:
         self._result_seq = 0
         self._current = _IDLE
         self._last_result = _EMPTY
-        # Buffer circular dos resultados recentes (global), para o consumidor
-        # drenar em ordem via `result(since=...)` sem perder os intermediários.
+        # Circular buffer of recent results (global), so the consumer can
+        # drain them in order via `result(since=...)` without losing intermediate ones.
         self._results: deque[Result] = deque(maxlen=_RESULT_BUFFER)
-        # Por consumidor: a última operação que ELE iniciou e o buffer dos
-        # resultados dele (modalidade scope="mine").
+        # Per consumer: the last operation IT started and the buffer of its
+        # results (the scope="mine" mode).
         self._client_op: dict[str, Operation] = {}
         self._client_result: dict[str, Result] = {}
         self._client_results: dict[str, deque[Result]] = {}
 
-    # -- registro de consumidores ------------------------------------------
+    # -- consumer registration ---------------------------------------------
     def register(self) -> str:
-        """Gera e registra um `client_id` novo (uuid curto, gerado no WSL)."""
+        """Generate and register a new `client_id` (short uuid, generated on WSL)."""
         client_id = secrets.token_hex(8)
         with self._lock:
             self._clients.add(client_id)
@@ -123,9 +123,9 @@ class SessionStatus:
         with self._lock:
             return client_id in self._clients
 
-    # -- transições de estado (chamadas pela RecordingSession) -------------
+    # -- state transitions (called by RecordingSession) --------------------
     def set_operation(self, op_seq: int, state: SessionState, flow: str | None, client_id: str | None) -> None:
-        """Atualiza a operação corrente. `op_seq` novo (start) ou o mesmo (stop)."""
+        """Update the current operation. `op_seq` new (start) or the same (stop)."""
         op = Operation(op_seq=op_seq, state=state, flow=flow, client_id=client_id)
         with self._lock:
             self._current = op
@@ -133,7 +133,7 @@ class SessionStatus:
                 self._client_op[client_id] = op
 
     def mark_idle(self, op_seq: int) -> None:
-        """Volta a corrente a idle se ainda for a operação `op_seq` (sem corrida)."""
+        """Return the current operation to idle if it is still `op_seq` (race-free)."""
         with self._lock:
             if self._current.op_seq == op_seq:
                 self._current = replace(self._current, state="idle")
@@ -141,9 +141,9 @@ class SessionStatus:
                 if cid is not None and cid in self._client_op:
                     self._client_op[cid] = replace(self._client_op[cid], state="idle")
 
-    # -- resultado (chamado pelo ClipboardWriter ao copiar) ----------------
+    # -- result (called by ClipboardWriter on copy) ------------------------
     def record_result(self, text: str) -> None:
-        """Publica o texto final, correlacionando-o à operação CORRENTE."""
+        """Publish the final text, correlating it to the CURRENT operation."""
         with self._lock:
             self._result_seq += 1
             op = self._current
@@ -154,7 +154,7 @@ class SessionStatus:
                 self._client_result[op.client_id] = result
                 self._client_results.setdefault(op.client_id, deque(maxlen=_RESULT_BUFFER)).append(result)
 
-    # -- consultas ---------------------------------------------------------
+    # -- queries -----------------------------------------------------------
     def status(self, client_id: str | None, scope: Scope) -> dict[str, object]:
         with self._lock:
             op = self._client_op.get(client_id, _IDLE) if scope == "mine" and client_id else self._current
@@ -169,11 +169,11 @@ class SessionStatus:
             }
 
     def result(self, client_id: str | None, scope: Scope, since: int | None = None) -> dict[str, object]:
-        """Último resultado — ou, com `since`, o PRÓXIMO não-visto (seq > since).
+        """Last result — or, with `since`, the NEXT unseen one (seq > since).
 
-        O consumidor drena em ordem: pede `since=<último seq que tratei>` e recebe
-        o resultado de menor seq ainda não visto. Quando não há mais nada novo,
-        devolve o último (cujo seq é <= since), então o consumidor para de drenar.
+        The consumer drains in order: it asks `since=<last seq I handled>` and gets
+        the result with the smallest seq not yet seen. When there is nothing new
+        left, it returns the last one (whose seq is <= since), so the consumer stops draining.
         """
         with self._lock:
             if scope == "mine" and client_id:
@@ -193,7 +193,7 @@ class SessionStatus:
                 "scope": scope,
             }
 
-    # -- compat: a API antiga (seq, text) global ---------------------------
+    # -- compat: the old global (seq, text) API ----------------------------
     def get(self) -> tuple[int, str]:
         with self._lock:
             return self._last_result.seq, self._last_result.text

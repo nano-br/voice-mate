@@ -1,10 +1,10 @@
-"""Parsers puros do doctor (sem subprocess real)."""
+"""Pure doctor parsers (no real subprocess)."""
 
 from __future__ import annotations
 
 from app.setup.doctor import _parse_vulkan_devices
 
-# Saída real do `vulkaninfo --summary` dentro do WSL2 (só llvmpipe = CPU).
+# Real output of `vulkaninfo --summary` inside WSL2 (only llvmpipe = CPU).
 _WSL2_SUMMARY = """
 Devices:
 ========

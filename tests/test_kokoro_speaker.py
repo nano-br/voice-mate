@@ -1,7 +1,7 @@
-"""KokoroSpeaker: lazy load, streaming por chunk no player, map de idioma.
+"""KokoroSpeaker: lazy load, per-chunk streaming into the player, language map.
 
-Não carrega o KPipeline real — injeta um fake pipeline (gerador de chunks) e um
-fake AudioPlayer que registra os feeds.
+Does not load the real KPipeline — injects a fake pipeline (chunk generator) and a
+fake AudioPlayer that records the feeds.
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ class FakePlayer:
 
 
 class FakePipeline:
-    """Imita o KPipeline: chamável que devolve um gerador de (gs, ps, audio)."""
+    """Mimics the KPipeline: a callable that returns a generator of (gs, ps, audio)."""
 
     def __init__(self, chunks: list[NDArray[np.float32]]) -> None:
         self.chunks = chunks
@@ -68,7 +68,7 @@ def test_lang_code_map_pt_is_p() -> None:
 
 
 def test_auto_device_prefers_cpu() -> None:
-    # "auto" → CPU: Kokoro é realtime na CPU e não disputa a GPU (mata o chiado).
+    # "auto" → CPU: Kokoro is realtime on the CPU and does not compete for the GPU (kills the crackle).
     speaker = KokoroSpeaker(TTSConfig(device="auto"))
     assert speaker._resolve_device() == "cpu"
 
@@ -105,14 +105,14 @@ def test_stop_aborts_the_player() -> None:
 
 
 def test_speak_breaks_when_stopped_midstream() -> None:
-    # stop() concorrente no meio da fala: o 1º trecho toca, o 2º não.
+    # Concurrent stop() mid-speech: the 1st chunk plays, the 2nd does not.
     speaker, player = _speaker(TTSConfig())
     chunks = [np.ones(10, dtype=np.float32) for _ in range(4)]
 
     def _gen(text: str, voice: str) -> Iterator[tuple[int, str, NDArray[np.float32]]]:
         for i, chunk in enumerate(chunks):
             if i == 1:
-                speaker._stop_event.set()  # simula stop() vindo de outra thread
+                speaker._stop_event.set()  # simulates stop() coming from another thread
             yield (0, "ps", chunk)
 
     class _StoppingPipeline:
@@ -154,6 +154,6 @@ def test_warmup_consumes_generator_without_feeding(monkeypatch: pytest.MonkeyPat
     pipeline = FakePipeline([np.ones(10, dtype=np.float32)])
     speaker, player = _speaker(TTSConfig(), pipeline)
     speaker.warmup()
-    # warmup sintetiza "Olá." mas NÃO alimenta o player (não toca)
+    # warmup synthesizes "Olá." but does NOT feed the player (no playback)
     assert pipeline.calls == [("Olá.", "pf_dora")]
     assert player.fed == []

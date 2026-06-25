@@ -1,5 +1,5 @@
-"""SocketTriggerListener: request HTTP real em porta efêmera dispara o callback
-certo e devolve a operação; endpoints de registro/status/result expõem o estado."""
+"""SocketTriggerListener: a real HTTP request on an ephemeral port dispatches the right
+callback and returns the operation; the register/status/result endpoints expose the state."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from app.platform.listeners.socket_trigger_listener import SocketTriggerListener
 
 
 class _Recorder:
-    """Binding fake: registra os client_ids recebidos e devolve um ToggleOutcome."""
+    """Fake binding: records the received client_ids and returns a ToggleOutcome."""
 
     def __init__(self, flow: str = "clipboard", action: str = "started") -> None:
         self.event = threading.Event()
@@ -46,7 +46,7 @@ def _serve(instance: SocketTriggerListener) -> threading.Thread:
 @pytest.fixture
 def listener() -> Iterator[tuple[SocketTriggerListener, dict[str, _Recorder]]]:
     callbacks = {"clipboard": _Recorder("clipboard"), "claude_chat": _Recorder("claude_chat")}
-    instance = SocketTriggerListener(dict(callbacks), port=0)  # porta efêmera, sem status
+    instance = SocketTriggerListener(dict(callbacks), port=0)  # ephemeral port, no status
     thread = _serve(instance)
     try:
         yield instance, callbacks
@@ -98,7 +98,7 @@ def test_post_trigger_without_body_uses_default_flow(
     instance, callbacks = listener
     status, body = _post(instance.port, "/trigger", None)
     assert status == 200
-    assert body["flow"] == "clipboard"  # primeiro binding
+    assert body["flow"] == "clipboard"  # first binding
     assert callbacks["clipboard"].event.wait(timeout=5.0)
 
 
@@ -111,7 +111,7 @@ def test_get_trigger_with_query_flow_and_client_id(
     assert body["flow"] == "claude_chat"
     assert body["client_id"] == "abc123"
     assert callbacks["claude_chat"].event.wait(timeout=5.0)
-    assert callbacks["claude_chat"].client_ids == ["abc123"]  # o client_id chega ao binding
+    assert callbacks["claude_chat"].client_ids == ["abc123"]  # the client_id reaches the binding
 
 
 def test_unknown_flow_is_404(listener: tuple[SocketTriggerListener, dict[str, _Recorder]]) -> None:
@@ -138,13 +138,13 @@ def test_unknown_route_is_404(listener: tuple[SocketTriggerListener, dict[str, _
 
 
 def test_empty_bindings_raise() -> None:
-    with pytest.raises(ValueError, match="ao menos um binding"):
+    with pytest.raises(ValueError, match="requires at least one binding"):
         SocketTriggerListener({}, port=0)
 
 
 def test_register_status_and_result_roundtrip() -> None:
-    """Fluxo completo: registra → dispara → /trigger devolve a ação → o hub publica
-    o resultado → /result (default scope=all) entrega o texto p/ o Windows."""
+    """Full flow: register → trigger → /trigger returns the action → the hub publishes
+    the result → /result (default scope=all) delivers the text to Windows."""
     store = SessionStatus()
 
     def _binding(client_id: str | None) -> ToggleOutcome:
@@ -186,7 +186,7 @@ def test_register_status_and_result_roundtrip() -> None:
 
 
 def test_trigger_without_client_id_auto_registers() -> None:
-    """Disparar sem client_id emite um e o devolve, para o consumidor passar a usá-lo."""
+    """Triggering without a client_id emits one and returns it, so the consumer starts using it."""
     store = SessionStatus()
     seen: list[str | None] = []
 
@@ -200,8 +200,8 @@ def test_trigger_without_client_id_auto_registers() -> None:
         status, body = _post(instance.port, "/trigger", {"flow": "clipboard"})
         assert status == 200
         emitted = body["client_id"]
-        assert emitted  # um id foi emitido
-        assert seen == [emitted]  # e repassado ao binding
+        assert emitted  # an id was emitted
+        assert seen == [emitted]  # and forwarded to the binding
         assert store.is_registered(str(emitted))
     finally:
         instance.stop()
@@ -211,7 +211,7 @@ def test_trigger_without_client_id_auto_registers() -> None:
 def test_status_and_result_404_without_store(
     listener: tuple[SocketTriggerListener, dict[str, _Recorder]],
 ) -> None:
-    instance, _callbacks = listener  # fixture cria sem status
+    instance, _callbacks = listener  # fixture creates it without status
     assert _get(instance.port, "/status")[0] == 404
     assert _get(instance.port, "/result")[0] == 404
     assert _post(instance.port, "/register", None)[0] == 404
@@ -231,14 +231,14 @@ def test_result_scope_mine_filters_by_client() -> None:
         _, mine = _get(instance.port, f"/result?client_id={alice}&scope=mine")
         assert mine["text"] == "da alice"
         _, glob = _get(instance.port, f"/result?client_id={alice}&scope=all")
-        assert glob["text"] == "do bob"  # global = último de todos
+        assert glob["text"] == "do bob"  # global = latest across all
     finally:
         instance.stop()
         thread.join(timeout=5.0)
 
 
 def test_binding_exception_returns_500_and_keeps_serving() -> None:
-    """Exceção no binding não pode derrubar o servidor; o request responde 500."""
+    """An exception in the binding must not take down the server; the request responds 500."""
 
     def boom(_client_id: str | None) -> ToggleOutcome:
         raise RuntimeError("toggle explodiu")
@@ -249,7 +249,7 @@ def test_binding_exception_returns_500_and_keeps_serving() -> None:
         status, body = _post(instance.port, "/trigger", {"flow": "clipboard"})
         assert status == 500
         assert body["ok"] is False
-        # Servidor continua vivo e atendendo.
+        # Server stays alive and serving.
         assert _get(instance.port, "/health")[0] == 200
     finally:
         instance.stop()

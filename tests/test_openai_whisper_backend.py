@@ -1,4 +1,4 @@
-"""OpenAIWhisperBackend.warmup — sem carregar o modelo real."""
+"""OpenAIWhisperBackend.warmup — without loading the real model."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from app.features.openai_whisper.backend import OpenAIWhisperBackend
 
 
 def _make_backend() -> OpenAIWhisperBackend:
-    # Evita o __init__ pesado (import whisper + load_model).
+    # Avoids the heavy __init__ (import whisper + load_model).
     return OpenAIWhisperBackend.__new__(OpenAIWhisperBackend)
 
 
@@ -20,7 +20,7 @@ def test_warmup_calls_transcribe_once() -> None:
     backend.transcribe = calls.append  # type: ignore[method-assign,assignment]
     backend.warmup()
     assert len(calls) == 1
-    assert calls[0].shape == (16000,)  # 1s de silêncio @ 16kHz
+    assert calls[0].shape == (16000,)  # 1s of silence @ 16kHz
 
 
 def test_warmup_swallows_exception(capsys: pytest.CaptureFixture[str]) -> None:
@@ -30,8 +30,8 @@ def test_warmup_swallows_exception(capsys: pytest.CaptureFixture[str]) -> None:
         raise RuntimeError("miopen explodiu")
 
     backend.transcribe = _boom  # type: ignore[method-assign,assignment]
-    backend.warmup()  # não pode levantar
-    assert "warmup do openai-whisper falhou" in capsys.readouterr().err
+    backend.warmup()  # must not raise
+    assert "openai-whisper warmup failed" in capsys.readouterr().err
 
 
 class _FakeModel:
@@ -51,8 +51,8 @@ def _configure(backend: OpenAIWhisperBackend, model: _FakeModel) -> None:
 
 
 def test_transcribe_uses_fast_decoding_params() -> None:
-    """temperature=0.0 (sem re-decodificar) + condition_on_previous_text=False
-    (sem contexto crescente) — os levers de velocidade em áudio longo/ruidoso."""
+    """temperature=0.0 (no re-decoding) + condition_on_previous_text=False
+    (no growing context) — the speed levers for long/noisy audio."""
     backend = _make_backend()
     model = _FakeModel()
     _configure(backend, model)
@@ -82,7 +82,7 @@ def test_short_audio_skips_vad(monkeypatch: pytest.MonkeyPatch) -> None:
     backend = _make_backend()
     _configure(backend, _FakeModel())
     backend.transcribe(np.zeros(5 * 16000, dtype=np.float32))  # 5s < 20s
-    assert calls == []  # VAD não rodou em áudio curto
+    assert calls == []  # VAD did not run on short audio
 
 
 def test_long_audio_runs_vad(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -91,4 +91,4 @@ def test_long_audio_runs_vad(monkeypatch: pytest.MonkeyPatch) -> None:
     backend = _make_backend()
     _configure(backend, _FakeModel())
     backend.transcribe(np.zeros(30 * 16000, dtype=np.float32))  # 30s > 20s
-    assert calls == [30 * 16000]  # VAD rodou em áudio longo
+    assert calls == [30 * 16000]  # VAD ran on long audio

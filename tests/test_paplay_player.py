@@ -1,4 +1,4 @@
-"""PaplayPlayer: escreve PCM no paplay via thread, sem deadlock (timeouts)."""
+"""PaplayPlayer: writes PCM to paplay via a thread, without deadlock (timeouts)."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ class FakeProc:
         return self.returncode
 
     def wait(self, timeout: float | None = None) -> int:
-        # "drena" quando o stdin é fechado (writer terminou); senão espera o sinal.
+        # "drains" when stdin is closed (writer finished); otherwise waits for the signal.
         deadline = time.monotonic() + (timeout or 5.0)
         while time.monotonic() < deadline:
             if self.stdin.closed or self._terminated:
@@ -92,7 +92,7 @@ def test_ensure_started_reuses_same_rate() -> None:
     player.ensure_started(24000)
     first = player._proc
     player.ensure_started(24000)
-    assert player._proc is first  # mesmo rate → não reabre
+    assert player._proc is first  # same rate → does not reopen
     player.close()
 
 
@@ -103,7 +103,7 @@ def test_abort_kills_process_and_is_idempotent() -> None:
     player.abort()
     assert proc._terminated is True
     assert player._proc is None
-    player.abort()  # idempotente, não levanta
+    player.abort()  # idempotent, does not raise
 
 
 def test_drain_without_start_returns_true() -> None:

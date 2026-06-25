@@ -1,13 +1,13 @@
-"""Hotkeys globais via evdev (/dev/input) — funciona em X11 E Wayland.
+"""Global hotkeys via evdev (/dev/input) — works on X11 AND Wayland.
 
-Lê os eventos de teclado direto do kernel, antes do display server, então o
-compositor Wayland não consegue escondê-los. Requer que o usuário esteja no
-grupo `input` (sem sudo):
+Reads keyboard events straight from the kernel, before the display server, so
+the Wayland compositor can't hide them. Requires the user to be in the `input`
+group (no sudo):
 
     sudo usermod -aG input $USER && newgrp input
 
-Não funciona no WSL2 (não há /dev/input mapeado para o teclado do Windows) —
-lá o gatilho é o SocketTriggerListener + script do lado Windows.
+Does not work on WSL2 (there's no /dev/input mapped to the Windows keyboard) —
+there the trigger is the SocketTriggerListener + Windows-side script.
 """
 
 from __future__ import annotations
@@ -18,9 +18,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-_GROUP_HINT = "sudo usermod -aG input $USER  # e re-logue (ou rode `newgrp input`)"
+_GROUP_HINT = "sudo usermod -aG input $USER  # then log back in (or run `newgrp input`)"
 
-# Modificador lógico → keycodes evdev que o satisfazem.
+# Logical modifier → evdev keycodes that satisfy it.
 _MODIFIER_CODES = {
     "ctrl": ("KEY_LEFTCTRL", "KEY_RIGHTCTRL"),
     "alt": ("KEY_LEFTALT", "KEY_RIGHTALT"),
@@ -34,28 +34,28 @@ _MODIFIER_CODES = {
 
 @dataclass(frozen=True)
 class _ParsedHotkey:
-    modifiers: frozenset[str]  # nomes lógicos: "ctrl", "alt", ...
-    key_code: str  # ex.: "KEY_V"
+    modifiers: frozenset[str]  # logical names: "ctrl", "alt", ...
+    key_code: str  # e.g. "KEY_V"
     callback: Callable[[], None]
 
 
 def parse_hotkey(hotkey: str, callback: Callable[[], None]) -> _ParsedHotkey:
     parts = [part.strip().lower() for part in hotkey.split("+") if part.strip()]
     if not parts:
-        raise ValueError(f"Hotkey vazio: {hotkey!r}")
+        raise ValueError(f"Empty hotkey: {hotkey!r}")
     modifiers = frozenset(part for part in parts[:-1] if part in _MODIFIER_CODES)
     if len(modifiers) != len(parts) - 1:
         unknown = [p for p in parts[:-1] if p not in _MODIFIER_CODES]
-        raise ValueError(f"Modificador desconhecido em {hotkey!r}: {unknown}")
+        raise ValueError(f"Unknown modifier in {hotkey!r}: {unknown}")
     return _ParsedHotkey(modifiers=modifiers, key_code=f"KEY_{parts[-1].upper()}", callback=callback)
 
 
 class EvdevHotkeyListener:
-    """Escuta chords de teclado em todos os teclados de /dev/input."""
+    """Listens for keyboard chords across all keyboards in /dev/input."""
 
     def __init__(self, bindings: dict[str, Callable[[], None]]) -> None:
         if not bindings:
-            raise ValueError("EvdevHotkeyListener exige ao menos um binding")
+            raise ValueError("EvdevHotkeyListener requires at least one binding")
         self._hotkeys = [parse_hotkey(hk, cb) for hk, cb in bindings.items()]
         self._stop_event = threading.Event()
 
@@ -64,14 +64,14 @@ class EvdevHotkeyListener:
             import evdev
         except ImportError as exc:
             raise RuntimeError(
-                "Pacote 'evdev' não instalado (necessário p/ hotkeys em Wayland). "
-                "Instale com: poetry install --extras linux"
+                "'evdev' package not installed (required for hotkeys on Wayland). "
+                "Install with: poetry install --extras linux"
             ) from exc
 
         keyboards = self._open_keyboards(evdev)
         if not keyboards:
             raise RuntimeError(
-                "Nenhum teclado legível em /dev/input. Adicione seu usuário ao grupo input:\n  " + _GROUP_HINT
+                "No readable keyboard in /dev/input. Add your user to the input group:\n  " + _GROUP_HINT
             )
 
         selector = selectors.DefaultSelector()
@@ -96,16 +96,16 @@ class EvdevHotkeyListener:
                     pass
 
     def reinstall(self) -> None:
-        """No-op: hooks removidos sob carga são um problema exclusivo do Windows."""
+        """No-op: hooks dropped under load are a Windows-only problem."""
         return None
 
     def stop(self) -> None:
         self._stop_event.set()
 
-    # ─── internos ────────────────────────────────────────────────────────────
+    # ─── internals ───────────────────────────────────────────────────────────
 
     @staticmethod
-    def _open_keyboards(evdev: Any) -> list[Any]:  # noqa: ANN401 — módulo importado em runtime
+    def _open_keyboards(evdev: Any) -> list[Any]:  # noqa: ANN401 — module imported at runtime
         keyboards: list[Any] = []
         permission_errors = 0
         for path in evdev.list_devices():
@@ -118,15 +118,15 @@ class EvdevHotkeyListener:
                 continue
             capabilities = device.capabilities()
             key_codes = set(capabilities.get(evdev.ecodes.EV_KEY, ()))
-            # Heurística de "é teclado": tem letras (KEY_A) e modificadores.
+            # "Is a keyboard" heuristic: has letters (KEY_A) and modifiers.
             if evdev.ecodes.KEY_A in key_codes and evdev.ecodes.KEY_LEFTCTRL in key_codes:
                 keyboards.append(device)
             else:
                 device.close()
         if not keyboards and permission_errors:
             raise RuntimeError(
-                f"Sem permissão de leitura em {permission_errors} device(s) de /dev/input. "
-                "Adicione seu usuário ao grupo input:\n  " + _GROUP_HINT
+                f"No read permission on {permission_errors} device(s) in /dev/input. "
+                "Add your user to the input group:\n  " + _GROUP_HINT
             )
         return keyboards
 
@@ -137,7 +137,7 @@ class EvdevHotkeyListener:
             pressed.discard(code)
             return
         if key_event.keystate != key_event.key_down:
-            return  # ignora key_hold (auto-repeat)
+            return  # ignore key_hold (auto-repeat)
         pressed.add(code)
         for hotkey in self._hotkeys:
             if code != hotkey.key_code:

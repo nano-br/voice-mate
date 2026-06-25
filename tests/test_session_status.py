@@ -37,12 +37,12 @@ def test_operation_lifecycle_and_result_correlation() -> None:
     res = s.result(cid, "all")
     assert res["seq"] == 1
     assert res["text"] == "olá mundo"
-    assert res["op_seq"] == 1  # resultado correlacionado à operação que o gerou
+    assert res["op_seq"] == 1  # result correlated with the operation that produced it
     assert res["client_id"] == cid
 
 
 def test_result_seq_is_monotonic() -> None:
-    """O consumidor compara o seq para saber se o status é mais novo que o guardado."""
+    """The consumer compares seq to know whether the status is newer than the one it stored."""
     s = SessionStatus()
     s.record_result("a")
     s.record_result("b")
@@ -51,32 +51,32 @@ def test_result_seq_is_monotonic() -> None:
 
 
 def test_result_since_drains_next_unseen_in_order() -> None:
-    """Com `since`, devolve o PRÓXIMO não-visto — o consumidor drena sem perder."""
+    """With `since`, returns the NEXT unseen one — the consumer drains without losing any."""
     s = SessionStatus()
     s.record_result("a")  # seq 1
     s.record_result("b")  # seq 2
     s.record_result("c")  # seq 3
 
-    # Consumidor começou em 0: drena 1 → 2 → 3, em ordem.
+    # Consumer started at 0: drains 1 → 2 → 3, in order.
     assert s.result(None, "all", since=0)["text"] == "a"
     assert s.result(None, "all", since=1)["text"] == "b"
     assert s.result(None, "all", since=2)["text"] == "c"
 
 
 def test_result_since_returns_latest_when_drained() -> None:
-    """Sem nada novo (since >= último seq), devolve o último (seq <= since) e o
-    consumidor para de drenar."""
+    """With nothing new (since >= last seq), returns the last one (seq <= since) and the
+    consumer stops draining."""
     s = SessionStatus()
     s.record_result("a")  # seq 1
     s.record_result("b")  # seq 2
 
     res = s.result(None, "all", since=2)
-    assert res["seq"] == 2  # não avança: nada > 2
+    assert res["seq"] == 2  # does not advance: nothing > 2
     assert res["text"] == "b"
 
 
 def test_result_without_since_is_backward_compatible() -> None:
-    """Sem `since`, o comportamento antigo (último resultado) é preservado."""
+    """Without `since`, the old behavior (last result) is preserved."""
     s = SessionStatus()
     s.record_result("a")
     s.record_result("b")
@@ -84,7 +84,7 @@ def test_result_without_since_is_backward_compatible() -> None:
 
 
 def test_result_since_drains_per_client_in_mine_scope() -> None:
-    """O buffer também é por cliente: scope='mine' drena só o que ELE iniciou."""
+    """The buffer is also per client: scope='mine' drains only what THAT client started."""
     s = SessionStatus()
     alice, bob = s.register(), s.register()
 
@@ -95,9 +95,9 @@ def test_result_since_drains_per_client_in_mine_scope() -> None:
     s.set_operation(3, "processing", "clipboard", alice)
     s.record_result("alice-2")  # global seq 3
 
-    # Alice drena só os dela, na ordem, ignorando o resultado do bob no meio.
+    # Alice drains only hers, in order, ignoring bob's result in between.
     assert s.result(alice, "mine", since=0)["text"] == "alice-1"
-    assert s.result(alice, "mine", since=1)["text"] == "alice-2"  # pula o seq 2 (bob)
+    assert s.result(alice, "mine", since=1)["text"] == "alice-2"  # skips seq 2 (bob)
 
 
 def test_scope_mine_isolates_per_client() -> None:
@@ -109,11 +109,11 @@ def test_scope_mine_isolates_per_client() -> None:
     s.set_operation(2, "processing", "clipboard", bob)
     s.record_result("do bob")
 
-    # scope=all → o global (último de todos)
+    # scope=all → the global one (latest across all)
     assert s.result(alice, "all")["text"] == "do bob"
-    assert s.status(alice, "all")["is_yours"] is False  # a op corrente é do bob
+    assert s.status(alice, "all")["is_yours"] is False  # the current op is bob's
 
-    # scope=mine → só o que CADA um iniciou
+    # scope=mine → only what EACH one started
     assert s.result(alice, "mine")["text"] == "da alice"
     assert s.result(bob, "mine")["text"] == "do bob"
     assert s.status(alice, "mine")["op_seq"] == 1
@@ -128,10 +128,10 @@ def test_scope_mine_unknown_client_is_idle_empty() -> None:
 
 
 def test_mark_idle_ignores_superseded_operation() -> None:
-    """Se uma nova operação abriu por cima, o mark_idle da anterior é ignorado."""
+    """If a new operation opened on top, the mark_idle of the previous one is ignored."""
     s = SessionStatus()
     s.set_operation(1, "processing", "clipboard", None)
-    s.set_operation(2, "recording", "clipboard", None)  # nova gravação por cima
-    s.mark_idle(1)  # finalização tardia da op 1
+    s.set_operation(2, "recording", "clipboard", None)  # new recording on top
+    s.mark_idle(1)  # late finalization of op 1
     assert s.status(None, "all")["state"] == "recording"
     assert s.status(None, "all")["op_seq"] == 2

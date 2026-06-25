@@ -1,4 +1,4 @@
-"""trim_to_speech: degrada com segurança e concatena trechos de fala."""
+"""trim_to_speech: degrades safely and concatenates speech segments."""
 
 from __future__ import annotations
 
@@ -18,11 +18,11 @@ def _reset() -> None:
 
 def test_returns_original_when_silero_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     _reset()
-    monkeypatch.setitem(sys.modules, "silero_vad", None)  # import falha
+    monkeypatch.setitem(sys.modules, "silero_vad", None)  # import fails
     audio = np.ones(16000, dtype=np.float32)
     out = vad_mod.trim_to_speech(audio)
     assert out is audio
-    assert vad_mod._unavailable is True  # marcado p/ não re-tentar
+    assert vad_mod._unavailable is True  # flagged so it does not retry
 
 
 def test_concatenates_speech_timestamps(monkeypatch: pytest.MonkeyPatch) -> None:

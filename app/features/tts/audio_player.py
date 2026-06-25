@@ -13,7 +13,7 @@ from app.platform.detect import detect_platform
 
 
 class AudioSink(Protocol):
-    """Interface comum dos players de áudio (sounddevice e paplay)."""
+    """Common interface for the audio players (sounddevice and paplay)."""
 
     def ensure_started(self, sample_rate: int) -> None: ...
 
@@ -29,10 +29,10 @@ class AudioSink(Protocol):
 
 
 def create_audio_player() -> AudioSink:
-    """Escolhe o player por plataforma.
+    """Pick the player per platform.
 
-    Linux/WSL2 com `paplay`: PulseAudio nativo (robusto no WSLg, sem o deadlock
-    do PortAudio sobre RDP que pendurava o app). Windows (WASAPI): sounddevice.
+    Linux/WSL2 with `paplay`: native PulseAudio (robust on WSLg, without the
+    PortAudio-over-RDP deadlock that hung the app). Windows (WASAPI): sounddevice.
     """
     if detect_platform() in ("wsl2", "linux-x11", "linux-wayland"):
         from app.features.tts.paplay_player import PaplayPlayer, paplay_available
@@ -42,28 +42,28 @@ def create_audio_player() -> AudioSink:
     return AudioPlayer()
 
 
-# Buffer de saída por plataforma. No WSLg o áudio sai por PulseAudio sobre RDP,
-# que tem jitter alto: blocos minúsculos (blocksize=0, ~34 ms) esvaziam o buffer
-# no meio da fala → underrun → chiado. blocksize=4096 @ 24 kHz (~170 ms) +
-# latency=0.2 dão ~340 ms efetivos (medido), folga suficiente p/ o RDP.
-# Windows/WASAPI já funciona com o default — não mexer.
+# Output buffer per platform. On WSLg, audio goes out over PulseAudio-over-RDP,
+# which has high jitter: tiny blocks (blocksize=0, ~34 ms) drain the buffer
+# mid-speech → underrun → crackle. blocksize=4096 @ 24 kHz (~170 ms) +
+# latency=0.2 give ~340 ms effective (measured), enough slack for RDP.
+# Windows/WASAPI already works with the default — don't touch it.
 _WSL_LINUX_BLOCKSIZE = 4096
 _WSL_LINUX_LATENCY = 0.2
 
 
 def _default_audio_params() -> tuple[int, float | str | None]:
-    """(blocksize, latency) conforme a plataforma. WSL2/Linux → buffer maior."""
+    """(blocksize, latency) per platform. WSL2/Linux → larger buffer."""
     if detect_platform() in ("wsl2", "linux-x11", "linux-wayland"):
         return _WSL_LINUX_BLOCKSIZE, _WSL_LINUX_LATENCY
-    return 0, None  # Windows/macOS: default do PortAudio
+    return 0, None  # Windows/macOS: PortAudio default
 
 
 class AudioPlayer:
-    """Player de áudio com fila para chunks float32 mono.
+    """Queue-based audio player for mono float32 chunks.
 
-    Reproduz em tempo real chunks enviados via `feed()`. `drain()` bloqueia
-    até a fila esvaziar; `abort()` interrompe imediatamente (descarta a fila
-    e aborta o buffer do driver).
+    Plays in real time the chunks sent via `feed()`. `drain()` blocks until the
+    queue empties; `abort()` interrupts immediately (discards the queue and
+    aborts the driver buffer).
     """
 
     def __init__(self, blocksize: int | None = None, latency: float | str | None = None) -> None:
@@ -81,11 +81,12 @@ class AudioPlayer:
         self._underflow_logged = False
 
     def ensure_started(self, sample_rate: int) -> None:
-        """Garante um stream aberto e compatível — abre só se necessário.
+        """Ensure an open, compatible stream — opens only if needed.
 
-        Diferente de `start()`, **não reabre** se já há um stream ativo com o
-        mesmo sample_rate. Isso mantém UM stream persistente entre frases/turnos,
-        eliminando os cliques de abrir/fechar a cada fala e os buracos entre falas.
+        Unlike `start()`, it **doesn't reopen** if there's already an active
+        stream with the same sample_rate. This keeps ONE persistent stream across
+        sentences/turns, eliminating the open/close clicks on every utterance and
+        the gaps between utterances.
         """
         with self._lock:
             ready = self._stream is not None and not self._aborted.is_set() and self._sample_rate == sample_rate
@@ -94,12 +95,12 @@ class AudioPlayer:
         self.start(sample_rate)
 
     def start(self, sample_rate: int) -> None:
-        """Cria um novo OutputStream — fecha o antigo se existir.
+        """Create a new OutputStream — close the old one if it exists.
 
-        Cada chamada gera um stream fresco, evitando degradação após muitos
-        usos ou após `abort()`. Limpa flags internos para que `feed()` volte
-        a aceitar chunks normalmente. Prefira `ensure_started()` no caminho
-        normal de fala; use `start()` para forçar um stream novo.
+        Each call spins up a fresh stream, avoiding degradation after heavy use
+        or after `abort()`. Clears internal flags so `feed()` accepts chunks
+        normally again. Prefer `ensure_started()` on the normal speech path; use
+        `start()` to force a new stream.
         """
         with self._lock:
             old = self._stream
@@ -134,18 +135,18 @@ class AudioPlayer:
         self._queue.put(chunk)
 
     def drain(self, timeout: float | None = 60.0) -> bool:
-        """Bloqueia até a fila esvaziar (ou `abort()`). Retorna True se idle.
+        """Block until the queue empties (or `abort()`). Returns True if idle.
 
-        Default 60s para evitar travamento eterno caso o callback do
-        sounddevice pare de rodar por algum motivo (driver, etc).
+        Default 60s to avoid hanging forever if the sounddevice callback stops
+        running for some reason (driver, etc).
         """
         return self._idle.wait(timeout=timeout)
 
     def abort(self) -> None:
-        """Interrompe imediatamente, fechando o stream e limpando o estado.
+        """Interrupt immediately, closing the stream and clearing state.
 
-        Após `abort()`, o player volta ao estado inicial — uma chamada a
-        `start()` cria um stream novo e `feed()` volta a funcionar.
+        After `abort()`, the player returns to its initial state — a call to
+        `start()` creates a new stream and `feed()` works again.
         """
         self._aborted.set()
         self._drain_queue()
@@ -158,7 +159,7 @@ class AudioPlayer:
             try:
                 stream.abort()
             except Exception as exc:  # noqa: BLE001
-                print(f"[AudioPlayer] abort falhou: {exc}", file=sys.stderr)
+                print(f"[AudioPlayer] abort failed: {exc}", file=sys.stderr)
             self._close_stream_safely(stream)
         self._idle.set()
 
@@ -184,7 +185,7 @@ class AudioPlayer:
             stream.stop()
             stream.close()
         except Exception as exc:  # noqa: BLE001
-            print(f"[AudioPlayer] close falhou: {exc}", file=sys.stderr)
+            print(f"[AudioPlayer] close failed: {exc}", file=sys.stderr)
 
     def _callback(
         self,
@@ -194,8 +195,9 @@ class AudioPlayer:
         status: sd.CallbackFlags,
     ) -> None:
         if status and not self._underflow_logged:
-            # Loga só a 1ª ocorrência por stream — antes floodava o console a cada
-            # callback. Um underflow isolado no início (fila ainda enchendo) é normal.
+            # Log only the 1st occurrence per stream — before, it flooded the
+            # console on every callback. An isolated underflow at the start
+            # (queue still filling) is normal.
             print(f"[AudioPlayer] {status}", file=sys.stderr)
             self._underflow_logged = True
         if self._aborted.is_set():

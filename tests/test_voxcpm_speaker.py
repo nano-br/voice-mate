@@ -22,7 +22,7 @@ class FakeTTSModel:
 
 
 class FakeVoxCPMInstance:
-    def __init__(self, **kwargs: Any) -> None:  # noqa: ANN401 — kwargs livres do SDK
+    def __init__(self, **kwargs: Any) -> None:  # noqa: ANN401 — free-form SDK kwargs
         self.kwargs = kwargs
         self.tts_model = FakeTTSModel()
         _fake_state["last_instance"] = self
@@ -82,7 +82,7 @@ class FakePlayer:
 @pytest.fixture
 def fake_voxcpm_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, Any]:
     _fake_state.clear()
-    # garante que o auto-seed não escolha o cache real do usuário
+    # ensures auto-seed does not pick the user's real cache
     _fake_state["default_cache_dir"] = str(tmp_path / "voxcpm_cache")
     module = types.ModuleType("voxcpm")
     module.VoxCPM = FakeVoxCPM  # type: ignore[attr-defined]
@@ -107,7 +107,7 @@ def _make_speaker(**overrides: Any) -> tuple[Any, FakePlayer]:  # noqa: ANN401
         "cache_dir": None,
         "normalize": True,
         "denoise": False,
-        # default off para não interferir com testes que não focam em seed
+        # default off so it does not interfere with tests that are not focused on seed
         "voice_seed_mode": "off",
         "voice_seed_cache_dir": _fake_state.get("default_cache_dir"),
     }
@@ -119,11 +119,11 @@ def _make_speaker(**overrides: Any) -> tuple[Any, FakePlayer]:  # noqa: ANN401
 
 def test_lazy_load_defers_model_until_first_speak(fake_voxcpm_env: dict[str, Any]) -> None:
     speaker, _ = _make_speaker()
-    # Lazy: a construção NÃO carrega o modelo (sem custo de VRAM até falar).
+    # Lazy: construction does NOT load the model (no VRAM cost until it speaks).
     assert "last_instance" not in fake_voxcpm_env
     assert speaker.is_active() is True
 
-    # A primeira fala carrega o modelo com os kwargs corretos.
+    # The first speak loads the model with the correct kwargs.
     speaker.speak("olá")
     instance = fake_voxcpm_env["last_instance"]
     assert fake_voxcpm_env["model_id"] == "openbmb/VoxCPM2"
@@ -259,13 +259,13 @@ def test_voice_seed_auto_first_call_has_no_seed_and_persists(
     kwargs = fake_voxcpm_env["last_kwargs"]
     assert "prompt_wav_path" not in kwargs
     assert "prompt_text" not in kwargs
-    # Sem seed → modo voice design: descrição entra entre parênteses
+    # No seed → voice design mode: the description goes in parentheses
     assert kwargs["text"] == "(Mulher jovem) primeira fala"
-    # auto-seed deve ter sido salvo (wav + txt)
+    # auto-seed should have been saved (wav + txt)
     assert any(p[0].endswith("voice_seed.wav") for p in written)
     seed_text_path = cache_dir / "voice_seed.txt"
     assert seed_text_path.exists()
-    # txt persistido é a fala pura, sem a descrição
+    # the persisted txt is the pure speech, without the description
     assert seed_text_path.read_text(encoding="utf-8") == "primeira fala"
 
 
@@ -291,8 +291,8 @@ def test_voice_seed_auto_second_call_uses_persisted_seed(
     kwargs = fake_voxcpm_env["last_kwargs"]
     assert kwargs["prompt_wav_path"].endswith("voice_seed.wav")
     assert kwargs["prompt_text"] == "primeira fala"
-    # Em modo cloning, o texto a sintetizar NÃO pode conter a descrição entre
-    # parênteses — senão o modelo lê a descrição em voz alta.
+    # In cloning mode, the text to synthesize must NOT contain the description in
+    # parentheses — otherwise the model reads the description out loud.
     assert kwargs["text"] == "segunda fala"
     assert "Mulher jovem" not in kwargs["text"]
 
@@ -317,7 +317,7 @@ def test_voice_seed_fixed_passes_user_provided_wav(
     kwargs = fake_voxcpm_env["last_kwargs"]
     assert kwargs["prompt_wav_path"] == str(seed_wav)
     assert kwargs["prompt_text"] == "amostra minha"
-    # Em fixed/cloning, a descrição não vai pro texto
+    # In fixed/cloning, the description does not go into the text
     assert kwargs["text"] == "olá"
     assert "Voz qualquer" not in kwargs["text"]
 
@@ -335,5 +335,5 @@ def test_voice_seed_off_never_passes_seed(fake_voxcpm_env: dict[str, Any]) -> No
 
 
 def test_voice_seed_fixed_requires_path_and_text(fake_voxcpm_env: dict[str, Any]) -> None:
-    with pytest.raises(ValueError, match="voice_seed_path e voice_seed_text"):
+    with pytest.raises(ValueError, match="voice_seed_path and voice_seed_text"):
         _make_speaker(voice_seed_mode="fixed", voice_seed_path=None, voice_seed_text=None)

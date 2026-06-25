@@ -12,20 +12,21 @@ from app.core.recorder import Recorder
 from app.core.session_status import SessionState, SessionStatus, ToggleAction, ToggleOutcome
 from app.core.transcription_backend import TranscriptionBackend
 from app.core.transcription_handler import TranscriptionHandler
+from app.i18n import _
 
 
 class RecordingSession:
-    """Gerencia o ciclo gravação → transcrição → handler com máquina de estado.
+    """Manage the recording → transcription → handler cycle with a state machine.
 
-    Estados: idle → recording → processing → idle. Trigger em `processing`
-    cancela o handler ativo e inicia uma nova gravação imediatamente.
-    O `handler_id` passado em `toggle()` é usado apenas quando o trigger
-    PARA a gravação (decide o destino do texto).
+    States: idle → recording → processing → idle. A trigger in `processing`
+    cancels the active handler and starts a new recording immediately.
+    The `handler_id` passed to `toggle()` is only used when the trigger
+    STOPS the recording (it decides the text's destination).
 
-    `toggle()` devolve um `ToggleOutcome` na hora (a decisão start/stop é
-    síncrona sob lock — só a transcrição é assíncrona), para o gatilho saber o
-    que aconteceu. Se um `SessionStatus` for injetado, as transições de estado
-    são publicadas nele (estado vivo consultável pelos consumidores).
+    `toggle()` returns a `ToggleOutcome` immediately (the start/stop decision is
+    synchronous under the lock — only the transcription is asynchronous), so the
+    trigger knows what happened. If a `SessionStatus` is injected, the state
+    transitions are published to it (live state queryable by the consumers).
     """
 
     def __init__(
@@ -39,9 +40,9 @@ class RecordingSession:
         status: SessionStatus | None = None,
     ) -> None:
         if not handlers:
-            raise ValueError("RecordingSession precisa de ao menos um handler")
+            raise ValueError("RecordingSession needs at least one handler")
         if default_handler_id not in handlers:
-            raise ValueError(f"default_handler_id '{default_handler_id}' não está em handlers")
+            raise ValueError(f"default_handler_id '{default_handler_id}' is not in handlers")
         self._recorder = recorder
         self._transcriber = transcriber
         self._audio = audio
@@ -58,8 +59,8 @@ class RecordingSession:
         self._stop_handler_id: str | None = None
         self._active_handler_id: str | None = None
         self._slow_warning_shown = False
-        # op_seq: a sessão é a autoridade. Cada gravação que COMEÇA abre uma
-        # operação nova; o STOP continua a mesma (vai a processing).
+        # op_seq: the session is the authority. Each recording that STARTS opens a
+        # new operation; the STOP continues the same one (it goes to processing).
         self._op_counter = 0
         self._op_seq = 0
         self._op_flow: str | None = None
@@ -67,7 +68,7 @@ class RecordingSession:
 
     def toggle(self, handler_id: str, client_id: str | None = None) -> ToggleOutcome | None:
         if handler_id not in self._handlers:
-            print(f"[VoiceMate] ⚠ Handler desconhecido: {handler_id}")
+            print(_("[VoiceMate] ⚠ Unknown handler: {handler_id}").format(handler_id=handler_id))
             return None
         handler_to_cancel: TranscriptionHandler | None = None
         outcome: ToggleOutcome | None = None
@@ -89,8 +90,8 @@ class RecordingSession:
                     handler_to_cancel = self._handlers[active]
                 self._active_handler_id = None
         if state == "processing":
-            # Solta o lock antes de chamar cancel_in_flight (que pode bloquear
-            # brevemente em I/O) e antes de iniciar o recorder.
+            # Release the lock before calling cancel_in_flight (which may block
+            # briefly on I/O) and before starting the recorder.
             if handler_to_cancel is not None:
                 handler_to_cancel.cancel_in_flight()
             with self._lock:
@@ -124,7 +125,7 @@ class RecordingSession:
         self._op_client_id = client_id
         self._publish_state_locked("recording")
         self._audio.recording_started()
-        print("[VoiceMate] 🎙  Gravando... (pressione para parar)")
+        print(_("[VoiceMate] 🎙  Recording... (press to stop)"))
         self._schedule_timers_locked()
 
     def _schedule_timers_locked(self) -> None:
@@ -146,11 +147,11 @@ class RecordingSession:
 
     def _on_warning(self) -> None:
         remaining = self._max_seconds * (1 - self._warning_percent)
-        print(f"[VoiceMate] ⚠ Gravação será encerrada em {remaining:.0f}s")
+        print(_("[VoiceMate] ⚠ Recording will end in {remaining:.0f}s").format(remaining=remaining))
         self._audio.timeout_warning()
 
     def _on_timeout(self) -> None:
-        print("[VoiceMate] ⏰ Tempo máximo atingido. Encerrando gravação...")
+        print(_("[VoiceMate] ⏰ Maximum time reached. Ending recording..."))
         with self._lock:
             if self._state != "recording":
                 return
@@ -161,11 +162,11 @@ class RecordingSession:
         self._stop_and_dispatch()
 
     def _stop_and_dispatch(self) -> None:
-        """Para a gravação, transcreve e despacha — roda em thread própria.
+        """Stop the recording, transcribe and dispatch — runs in its own thread.
 
-        Qualquer exceção aqui é logada (traceback) e o estado SEMPRE volta a
-        idle: uma thread daemon que morre calada deixaria a sessão presa em
-        `processing` e o toggle "morto" sem nenhuma pista no log.
+        Any exception here is logged (traceback) and the state ALWAYS returns to
+        idle: a daemon thread that dies silently would leave the session stuck in
+        `processing` and the toggle "dead" with no clue in the log.
         """
         stop_id: str | None = None
         try:
@@ -174,7 +175,7 @@ class RecordingSession:
                 stop_id = self._stop_handler_id
                 self._stop_handler_id = None
                 if self._state != "processing":
-                    # Usuário cancelou e iniciou nova gravação; abortamos silenciosamente.
+                    # User cancelled and started a new recording; we abort silently.
                     return
                 if stop_id is None:
                     self._state = "idle"
@@ -182,45 +183,47 @@ class RecordingSession:
                 self._active_handler_id = stop_id
 
             if result is None:
-                print("[VoiceMate] Nenhum áudio capturado.")
+                print(_("[VoiceMate] No audio captured."))
                 return
 
             duration = len(result) / self._sample_rate
-            print(f"[VoiceMate] ⏳ Transcrevendo {duration:.1f}s de áudio...")
+            print(_("[VoiceMate] ⏳ Transcribing {duration:.1f}s of audio...").format(duration=duration))
             started_at = time.perf_counter()
             text = self._transcriber.transcribe(result)
             self._warn_if_slow(duration, time.perf_counter() - started_at)
             if not text:
-                print("[VoiceMate] Nenhuma fala detectada.")
+                print(_("[VoiceMate] No speech detected."))
                 return
 
             self._handlers[stop_id].handle(text)
-        except Exception:  # noqa: BLE001 — fronteira de thread: logar + se recuperar
-            print("[VoiceMate] ❌ Erro ao processar a gravação:", file=sys.stderr)
+        except Exception:  # noqa: BLE001 — thread boundary: log + recover
+            print(_("[VoiceMate] ❌ Error processing the recording:"), file=sys.stderr)
             traceback.print_exc()
             try:
                 self._audio.error()
-            except Exception:  # noqa: BLE001, S110 — beep é best-effort
+            except Exception:  # noqa: BLE001, S110 — beep is best-effort
                 pass
         finally:
             if stop_id is not None:
                 self._finish_processing_locked(stop_id)
 
     def _warn_if_slow(self, audio_seconds: float, elapsed: float) -> None:
-        """Detecta backend sem GPU (fallback silencioso p/ CPU/software).
+        """Detect a GPU-less backend (silent fallback to CPU/software).
 
-        Transcrição saudável na GPU roda bem abaixo do tempo real; 3× o tempo
-        do áudio (com piso de 5s p/ absorver warmup) indica que o backend está
-        rodando em CPU/Vulkan-software. Avisa uma vez por sessão.
+        Healthy GPU transcription runs well below real time; 3× the audio
+        duration (with a 5s floor to absorb warmup) indicates the backend is
+        running on CPU/Vulkan-software. Warns once per session.
         """
         if self._slow_warning_shown or elapsed <= max(5.0, 3.0 * audio_seconds):
             return
         self._slow_warning_shown = True
         ratio = elapsed / audio_seconds if audio_seconds > 0 else float("inf")
         print(
-            f"[VoiceMate] ⚠ Transcrição {ratio:.0f}× mais lenta que o áudio "
-            f"({elapsed:.0f}s p/ {audio_seconds:.0f}s) — o backend provavelmente está SEM GPU. "
-            "Rode `make doctor` para diagnóstico.",
+            _(
+                "[VoiceMate] ⚠ Transcription {ratio:.0f}× slower than the audio "
+                "({elapsed:.0f}s for {audio_seconds:.0f}s) — the backend is probably running WITHOUT GPU. "
+                "Run `make doctor` for diagnosis."
+            ).format(ratio=ratio, elapsed=elapsed, audio_seconds=audio_seconds),
             file=sys.stderr,
         )
 
@@ -231,8 +234,8 @@ class RecordingSession:
                 self._state = "idle"
                 self._active_handler_id = None
                 op_seq = self._op_seq
-        # Publica idle FORA do lock da sessão (o hub tem o próprio lock) e só se
-        # esta finalização foi quem realmente voltou a idle — mark_idle ignora se
-        # uma nova operação já abriu por cima (sem corrida).
+        # Publish idle OUTSIDE the session lock (the hub has its own lock) and only
+        # if this finalization is the one that actually returned to idle — mark_idle
+        # ignores it if a new operation already opened on top (race-free).
         if op_seq is not None and self._status is not None:
             self._status.mark_idle(op_seq)

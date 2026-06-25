@@ -23,13 +23,13 @@ def test_pyperclip_writer_delegates(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_wsl_prefers_wl_copy(monkeypatch: pytest.MonkeyPatch) -> None:
-    """wl-copy (nativo do WSLg) vem antes de tudo quando presente."""
+    """wl-copy (native to WSLg) comes before everything else when present."""
     monkeypatch.setattr(cb.shutil, "which", lambda n: "/usr/bin/wl-copy" if n == "wl-copy" else None)
     runs: list[tuple[Any, Any]] = []
     monkeypatch.setattr(cb.subprocess, "run", lambda cmd, **kw: runs.append((cmd, kw.get("input"))))
     WslClipboardWriter().copy("ação")
     assert runs[0][0] == ["wl-copy"]
-    assert runs[0][1] == "ação".encode()  # UTF-8 para wl-copy
+    assert runs[0][1] == "ação".encode()  # UTF-8 for wl-copy
 
 
 def test_wsl_falls_back_to_pyperclip_when_no_native(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -50,7 +50,7 @@ def test_wsl_clip_exe_is_last_resort_utf16(monkeypatch: pytest.MonkeyPatch, tmp_
     fake.write_bytes(b"")
     monkeypatch.setattr(cb.shutil, "which", lambda n: None)
     monkeypatch.setattr(cb, "_WINDOWS_CLIP_EXE", fake)
-    monkeypatch.setattr(cb, "_interop_works", lambda: True)  # interop funcional → clip.exe é candidato
+    monkeypatch.setattr(cb, "_interop_works", lambda: True)  # working interop → clip.exe is a candidate
 
     def _boom(_t: str) -> None:
         raise RuntimeError("sem display")
@@ -65,7 +65,7 @@ def test_wsl_clip_exe_is_last_resort_utf16(monkeypatch: pytest.MonkeyPatch, tmp_
 
 
 def test_wsl_clip_exe_exec_format_error_raises_with_hint(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """clip.exe presente mas com Exec format error (binfmt ausente) → erro instrutivo."""
+    """clip.exe present but with Exec format error (binfmt missing) → instructive error."""
     import pyperclip
 
     fake = tmp_path / "clip.exe"
@@ -99,13 +99,13 @@ def test_wsl_caches_working_writer(monkeypatch: pytest.MonkeyPatch) -> None:
     writer = WslClipboardWriter()
     writer.copy("a")
     after_first = calls["which"]
-    writer.copy("b")  # 2ª escrita usa o writer cacheado — não re-escaneia
+    writer.copy("b")  # 2nd write uses the cached writer — does not re-scan
     assert calls["which"] == after_first
 
 
 def test_wsl_self_heals_when_cached_writer_fails(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Se o mecanismo cacheado (wl-copy) começa a falhar numa sessão longa, o
-    writer re-resolve e cai para outro — não fica preso no que quebrou."""
+    """If the cached mechanism (wl-copy) starts failing during a long session, the
+    writer re-resolves and falls back to another — it does not stay stuck on what broke."""
     import pyperclip
 
     state = {"wl_ok": True}
@@ -120,21 +120,21 @@ def test_wsl_self_heals_when_cached_writer_fails(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(pyperclip, "copy", copied.append)
 
     writer = WslClipboardWriter()
-    writer.copy("primeiro")  # wl-copy funciona e é cacheado
+    writer.copy("primeiro")  # wl-copy works and is cached
     assert writer._writer_name == "wl-copy"
 
-    state["wl_ok"] = False  # ponte do WSLg cai
-    writer.copy("segundo")  # cacheado falha → re-resolve → cai no pyperclip
+    state["wl_ok"] = False  # the WSLg bridge goes down
+    writer.copy("segundo")  # cached one fails → re-resolves → falls back to pyperclip
     assert copied == ["segundo"]
     assert writer._writer_name == "pyperclip"
 
 
 def test_clip_exe_not_offered_when_interop_broken(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Sem o WSLInterop, o clip.exe 'sucede' via /bin/sh sem copiar nada (falso
-    positivo). Não pode ser candidato — senão o app acha que copiou e não copiou."""
+    """Without WSLInterop, clip.exe 'succeeds' via /bin/sh without copying anything (false
+    positive). It cannot be a candidate — otherwise the app thinks it copied when it did not."""
     fake_clip = tmp_path / "clip.exe"
     fake_clip.write_bytes(b"")
-    monkeypatch.setattr(cb.shutil, "which", lambda n: None)  # sem wl-copy/xclip/clip.exe no PATH
+    monkeypatch.setattr(cb.shutil, "which", lambda n: None)  # no wl-copy/xclip/clip.exe on PATH
     monkeypatch.setattr(cb, "_WINDOWS_CLIP_EXE", fake_clip)
     monkeypatch.setattr(cb, "_interop_works", lambda: False)
     names = [name for name, _ in WslClipboardWriter()._candidates()]
@@ -146,8 +146,8 @@ def test_clip_exe_not_offered_when_interop_broken(monkeypatch: pytest.MonkeyPatc
 
 
 def test_wsl_writer_records_to_session_status(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O texto vai para o SessionStatus (p/ o Windows setar o clipboard via /result),
-    mesmo que o mecanismo local (wl-copy) funcione ou não."""
+    """The text goes to the SessionStatus (so Windows can set the clipboard via /result),
+    regardless of whether the local mechanism (wl-copy) works or not."""
     from app.core.session_status import SessionStatus
 
     status = SessionStatus()

@@ -8,8 +8,9 @@ Invoked by ``make setup`` (first run) and ``make configure`` (re-pick):
                                                  [--yes] [--extras "..."]
 
 Only stdlib + the light `app.setup` modules are imported here — never
-`torch`/`voxcpm` (they may not be installed yet when this runs). Mensagens em
-PT-BR cru, como o resto do código operacional (wiring/config_builder).
+`torch`/`voxcpm` (they may not be installed yet when this runs). User-facing
+messages go through gettext, like the rest of the operational code
+(wiring/config_builder).
 """
 
 from __future__ import annotations
@@ -27,33 +28,34 @@ from typing import cast
 
 from app.core.config import FlowKind, GpuVendor, TTSEngine, WhisperBackend
 from app.core.console import force_utf8_stdio
+from app.i18n import _
 from app.platform.detect import default_trigger, detect_platform
 from app.platform.kinds import PlatformKind
 from app.setup.gpu_detect import GpuInfo, amd_driver_warning, detect_gpu
 from app.setup.persisted_config import PersistedConfig, load_persisted, save_persisted
 
-# ── Releases ROCm (uma constante por trilha; as trilhas têm versões PRÓPRIAS) ──
-# Windows (ROCm-on-Windows): wheels em https://repo.radeon.com/rocm/windows/.
+# ── ROCm releases (one constant per track; the tracks have THEIR OWN versions) ──
+# Windows (ROCm-on-Windows): wheels at https://repo.radeon.com/rocm/windows/.
 _ROCM_WIN_VER = "7.2.1"
-# Linux/WSL2: a LINHA é "7.2" (pacote WSL 7.2.70200) e os wheels manylinux são
-# "+rocm7.2.0" — em https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2/.
-# (Não confundir com a trilha "7.2.4", que é Linux nativo e não tem usecase wsl.)
+# Linux/WSL2: the LINE is "7.2" (WSL package 7.2.70200) and the manylinux wheels
+# are "+rocm7.2.0" — at https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2/.
+# (Not to be confused with the "7.2.4" track, which is native Linux and has no wsl usecase.)
 _ROCM_LINUX_LINE = "7.2"
 
-# Wheels ROCm-on-Windows oficiais da AMD (não estão no PyPI). Verificar/atualizar
-# para a última release em https://repo.radeon.com/rocm/windows/ ao manter.
+# Official AMD ROCm-on-Windows wheels (not on PyPI). Check/update to the latest
+# release at https://repo.radeon.com/rocm/windows/ when maintaining.
 _ROCM_REL = f"rocm-rel-{_ROCM_WIN_VER}"
 _ROCM_BASE = f"https://repo.radeon.com/rocm/windows/{_ROCM_REL}"
-# Passo 1: runtime ROCm SDK. O torch ROCm DEPENDE dele só para importar — sem
-# ele, `import torch` quebra com ModuleNotFoundError: rocm_sdk. (Comando oficial
-# da AMD; torchvision é omitido de propósito — o projeto não usa.)
+# Step 1: ROCm SDK runtime. ROCm torch DEPENDS on it just to import — without
+# it, `import torch` breaks with ModuleNotFoundError: rocm_sdk. (Official AMD
+# command; torchvision is omitted on purpose — the project doesn't use it.)
 _ROCM_SDK_WHEELS = [
     f"{_ROCM_BASE}/rocm_sdk_core-{_ROCM_WIN_VER}-py3-none-win_amd64.whl",
     f"{_ROCM_BASE}/rocm_sdk_devel-{_ROCM_WIN_VER}-py3-none-win_amd64.whl",
     f"{_ROCM_BASE}/rocm_sdk_libraries_custom-{_ROCM_WIN_VER}-py3-none-win_amd64.whl",
     f"{_ROCM_BASE}/rocm-{_ROCM_WIN_VER}.tar.gz",
 ]
-# Passo 2: torch + torchaudio ROCm.
+# Step 2: torch + torchaudio ROCm.
 _ROCM_WHEELS = [
     f"{_ROCM_BASE}/torch-2.9.1+rocm{_ROCM_WIN_VER}-cp312-cp312-win_amd64.whl",
     f"{_ROCM_BASE}/torchaudio-2.9.1+rocm{_ROCM_WIN_VER}-cp312-cp312-win_amd64.whl",
@@ -62,10 +64,10 @@ _TORCH_INDEX: dict[str, str] = {
     "nvidia": "https://download.pytorch.org/whl/cu128",
     "cpu": "https://download.pytorch.org/whl/cpu",
 }
-# Linux/WSL2 + AMD: wheels manylinux que a AMD publica e TESTA para WSL
-# (torch+torchvision+torchaudio+triton casados com o ROCm da linha). Preferidos
-# ao índice do pytorch.org porque são a combinação validada pela AMD — e o
-# triton (TunableOp/flash-attn) só vem por aqui. Exigem numpy < 2.0 e cp312.
+# Linux/WSL2 + AMD: manylinux wheels that AMD publishes and TESTS for WSL
+# (torch+torchvision+torchaudio+triton matched to the line's ROCm). Preferred
+# over the pytorch.org index because they are the combination validated by AMD —
+# and triton (TunableOp/flash-attn) only ships here. They require numpy < 2.0 and cp312.
 _ROCM_LINUX_BASE = f"https://repo.radeon.com/rocm/manylinux/rocm-rel-{_ROCM_LINUX_LINE}"
 _ROCM_LINUX_NUMPY_PIN = "numpy==1.26.4"
 _ROCM_LINUX_WHEELS = [
@@ -75,9 +77,9 @@ _ROCM_LINUX_WHEELS = [
     f"{_ROCM_LINUX_BASE}/triton-3.5.1%2Brocm7.2.0.gita272dfa8-cp312-cp312-linux_x86_64.whl",
 ]
 
-# whisper.cpp + Vulkan (backend de transcrição preferido na AMD). Binário nativo
-# (não-pip) + modelo GGUF, baixados com SHA-256 fixado p/ integridade. O modelo
-# default é o turbo fp16 (qualidade de referência, ~1,6 GB de VRAM).
+# whisper.cpp + Vulkan (preferred transcription backend on AMD). Native binary
+# (non-pip) + GGUF model, downloaded with a pinned SHA-256 for integrity. The
+# default model is turbo fp16 (reference quality, ~1.6 GB of VRAM).
 _WHISPERCPP_DIR = Path.home() / ".cache" / "voicemate" / "whispercpp"
 _WCPP_BIN_URL = (
     "https://github.com/jerryshell/whisper.cpp-windows-vulkan-bin/"
@@ -87,28 +89,28 @@ _WCPP_BIN_SHA256 = "a5d408c72e460433b39875f74a0b6e27e60a3724301d478fe9873db7ff40
 _WCPP_MODEL_NAME = "ggml-large-v3-turbo.bin"
 _WCPP_MODEL_URL = f"https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{_WCPP_MODEL_NAME}?download=true"
 _WCPP_MODEL_SHA256 = "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69"
-# Do zip só guardamos o necessário: os CLIs + as DLLs (Vulkan/ggml/whisper).
+# From the zip we keep only what's needed: the CLIs + the DLLs (Vulkan/ggml/whisper).
 _WCPP_KEEP_EXACT = ("whisper-cli.exe", "whisper-server.exe")
 
-# Linux: build from source (binário oficial Linux+Vulkan não é distribuído).
-# Tag pinada p/ reprodutibilidade; binários estáticos (BUILD_SHARED_LIBS=OFF).
+# Linux: build from source (no official Linux+Vulkan binary is distributed).
+# Pinned tag for reproducibility; static binaries (BUILD_SHARED_LIBS=OFF).
 _WCPP_LINUX_REPO = "https://github.com/ggml-org/whisper.cpp"
 _WCPP_LINUX_TAG = "v1.8.6"
-# Nota: spirv-headers/spirv-tools/glslang-tools são necessários p/ compilar os
-# shaders Vulkan (sem eles o cmake falha em SPIRV-Headers/glslangValidator).
-# `libglslang-dev` NÃO existe com esse nome no Ubuntu 24.04 — não sugerir.
+# Note: spirv-headers/spirv-tools/glslang-tools are required to compile the
+# Vulkan shaders (without them cmake fails on SPIRV-Headers/glslangValidator).
+# `libglslang-dev` does NOT exist under that name on Ubuntu 24.04 — don't suggest it.
 _WCPP_LINUX_APT_HINT = (
     "sudo apt install -y git cmake build-essential libvulkan-dev glslc vulkan-tools "
     "spirv-headers spirv-tools glslang-tools"
 )
 
-# Modelo Q8_0 (near-lossless, ~0,9 GB vs ~1,6 GB do fp16) — opção p/ VRAM curta.
+# Q8_0 model (near-lossless, ~0.9 GB vs ~1.6 GB for fp16) — option for tight VRAM.
 _WCPP_MODEL_Q8_NAME = "ggml-large-v3-turbo-q8_0.bin"
 _WCPP_MODEL_Q8_URL = f"https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{_WCPP_MODEL_Q8_NAME}?download=true"
 _WCPP_MODEL_Q8_SHA256 = "317eb69c11673c9de1e1f0d459b253999804ec71ac4c23c17ecf5fbe24e259a1"
 
-# silero-VAD em GGML (corte por silêncio — evita cortar palavras no meio).
-# Só baixado no Linux: o binário pinado do Windows é antigo e não tem --vad.
+# silero-VAD in GGML (silence-based trimming — avoids cutting words mid-way).
+# Only downloaded on Linux: the pinned Windows binary is old and lacks --vad.
 _WCPP_VAD_NAME = "ggml-silero-v5.1.2.bin"
 _WCPP_VAD_URL = f"https://huggingface.co/ggml-org/whisper-vad/resolve/main/{_WCPP_VAD_NAME}?download=true"
 _WCPP_VAD_SHA256 = "29940d98d42b91fbd05ce489f3ecf7c72f0a42f027e4875919a28fb4c04ea2cf"
@@ -122,11 +124,11 @@ def main(argv: list[str] | None = None) -> int:
     saved = load_persisted()
     platform = detect_platform()
     trigger = default_trigger(platform)
-    print(f"[setup] Plataforma: {platform} (gatilho default: {trigger})")
+    print(_("[setup] Platform: {platform} (default trigger: {trigger})").format(platform=platform, trigger=trigger))
     info = detect_gpu()
     name = f" — {info.device_name}" if info.device_name else ""
     gfx = f" [{info.gfx_target}]" if info.gfx_target else ""
-    print(f"[setup] GPU detectada: {info.vendor.upper()}{name}{gfx}")
+    print(_("[setup] GPU detected: {vendor}{name}{gfx}").format(vendor=info.vendor.upper(), name=name, gfx=gfx))
     warning = amd_driver_warning(info)
     if warning:
         print(warning, file=sys.stderr)
@@ -142,7 +144,7 @@ def main(argv: list[str] | None = None) -> int:
     tts_engine: TTSEngine = saved.tts_engine or "kokoro"
     if flow == "claude_chat":
         default_tts = saved.tts_enabled if saved.tts_enabled is not None else True
-        tts_enabled = _prompt_yes_no("Habilitar TTS (resposta falada do Claude)?", default_tts, interactive)
+        tts_enabled = _prompt_yes_no(_("Enable TTS (spoken Claude response)?"), default_tts, interactive)
         if tts_enabled:
             tts_engine = _prompt_tts_engine(saved.tts_engine or "kokoro", interactive)
     else:
@@ -155,14 +157,23 @@ def main(argv: list[str] | None = None) -> int:
         else _compute_extras(flow, tts_enabled, vendor, platform, tts_engine)
     )
 
-    # Linux nativo: hotkeys precisam de pynput/evdev (extra linux). WSL2 usa o
-    # daemon HTTP (sem dependência extra).
+    # Native Linux: hotkeys need pynput/evdev (linux extra). WSL2 uses the
+    # HTTP daemon (no extra dependency).
     if platform in ("linux-x11", "linux-wayland"):
         extras.add("linux")
 
     print(
-        f"\n[setup] Plano: plataforma={platform}, vendor={vendor}, transcrição={backend}, "
-        f"fluxo={flow}, tts={tts_enabled}, extras=[{' '.join(sorted(extras)) or '—'}]"
+        _(
+            "\n[setup] Plan: platform={platform}, vendor={vendor}, transcription={backend}, "
+            "flow={flow}, tts={tts}, extras=[{extras}]"
+        ).format(
+            platform=platform,
+            vendor=vendor,
+            backend=backend,
+            flow=flow,
+            tts=tts_enabled,
+            extras=" ".join(sorted(extras)) or "—",
+        )
     )
 
     _poetry_install_extras(extras)
@@ -170,8 +181,10 @@ def main(argv: list[str] | None = None) -> int:
     _verify_torch(vendor)
     if not torch_ok and vendor != "cpu":
         print(
-            "[setup] ⚠ A instalação do torch da GPU falhou (veja o erro acima). "
-            "Sem ela o app cai para CPU. Corrija e rode `make configure`.",
+            _(
+                "[setup] ⚠ The GPU torch install failed (see the error above). "
+                "Without it the app falls back to CPU. Fix it and run `make configure`."
+            ),
             file=sys.stderr,
         )
     if backend == "whispercpp":
@@ -180,13 +193,13 @@ def main(argv: list[str] | None = None) -> int:
         else:
             _install_whispercpp_linux(interactive)
 
-    # CTranslate2-ROCm (faster-whisper na GPU AMD — qualidade idêntica à main).
-    # Build pesado e opt-in; falha NÃO aborta (cadeia cai p/ whisper.cpp).
+    # CTranslate2-ROCm (faster-whisper on the AMD GPU — quality identical to mainline).
+    # Heavy, opt-in build; failure does NOT abort (the chain falls back to whisper.cpp).
     ct2_rocm_ok: bool | None = saved.ct2_rocm_ok
     if vendor == "amd" and platform != "windows":
         ct2_rocm_ok = _maybe_install_ct2_rocm(info, saved, interactive)
 
-    if _prompt_yes_no("\nSalvar essas escolhas para a próxima execução?", True, interactive):
+    if _prompt_yes_no(_("\nSave these choices for the next run?"), True, interactive):
         save_persisted(
             PersistedConfig(
                 gpu_vendor=vendor,
@@ -201,27 +214,27 @@ def main(argv: list[str] | None = None) -> int:
                 daemon_port=saved.daemon_port,
             )
         )
-        print("[setup] ✓ Escolhas salvas em ~/.config/voicemate/config.toml")
+        print(_("[setup] ✓ Choices saved to ~/.config/voicemate/config.toml"))
     else:
-        print("[setup] Escolhas não salvas (valem só para esta instalação).")
+        print(_("[setup] Choices not saved (apply to this install only)."))
 
     if platform == "wsl2":
         _maybe_install_systemd_unit(interactive)
 
-    print("\n[setup] Pronto! Rode:  make run")
-    print("[setup] Diagnóstico do ambiente (áudio/mic/hotkeys):  make doctor")
+    print(_("\n[setup] Done! Run:  make run"))
+    print(_("[setup] Environment diagnostics (audio/mic/hotkeys):  make doctor"))
     if platform == "wsl2":
-        print("[setup] WSL2: registre as hotkeys do lado Windows — veja docs/wsl2.md.")
+        print(_("[setup] WSL2: register the hotkeys on the Windows side — see docs/wsl2.md."))
     return 0
 
 
 def _maybe_install_systemd_unit(interactive: bool) -> None:
-    """Instala o user service do systemd (autostart do daemon no WSL2). Opt-in."""
+    """Install the systemd user service (daemon autostart on WSL2). Opt-in."""
     template = Path(__file__).resolve().parents[2] / "scripts" / "systemd" / "voicemate.service"
     if not template.exists():
         return
-    if not _prompt_yes_no("\nInstalar o serviço systemd (daemon inicia junto com o WSL)?", False, interactive):
-        print("[setup] Serviço systemd não instalado (instruções em docs/wsl2.md).")
+    if not _prompt_yes_no(_("\nInstall the systemd service (daemon starts with WSL)?"), False, interactive):
+        print(_("[setup] systemd service not installed (instructions in docs/wsl2.md)."))
         return
     unit_dir = Path.home() / ".config" / "systemd" / "user"
     unit_dir.mkdir(parents=True, exist_ok=True)
@@ -230,34 +243,38 @@ def _maybe_install_systemd_unit(interactive: bool) -> None:
         "WorkingDirectory=%h/voice-mate", f"WorkingDirectory={repo_root}"
     )
     (unit_dir / "voicemate.service").write_text(content, encoding="utf-8")
-    ok = _run(["systemctl", "--user", "daemon-reload"], "Recarregando units do systemd (user)...")
+    ok = _run(["systemctl", "--user", "daemon-reload"], _("Reloading systemd units (user)..."))
     if ok:
-        _run(["systemctl", "--user", "enable", "--now", "voicemate"], "Habilitando o serviço voicemate...")
-        print("[setup] ✓ Serviço instalado. Logs: journalctl --user -u voicemate -f")
-        print("[setup]   Para sobreviver sem sessão aberta: loginctl enable-linger $USER")
+        _run(["systemctl", "--user", "enable", "--now", "voicemate"], _("Enabling the voicemate service..."))
+        print(_("[setup] ✓ Service installed. Logs: journalctl --user -u voicemate -f"))
+        print(_("[setup]   To survive without an open session: loginctl enable-linger $USER"))
 
 
 def _maybe_install_ct2_rocm(info: GpuInfo, saved: PersistedConfig, interactive: bool) -> bool | None:
     from app.setup import ct2_rocm
 
     if saved.ct2_rocm_ok is True and ct2_rocm.is_installed():
-        print("[setup] CTranslate2-ROCm já instalado e validado (reusando).")
+        print(_("[setup] CTranslate2-ROCm already installed and validated (reusing)."))
         return True
-    default_try = saved.ct2_rocm_ok is not False  # já falhou antes → default Não
+    default_try = saved.ct2_rocm_ok is not False  # already failed before → default No
     wants = _prompt_yes_no(
-        "\nInstalar o CTranslate2-ROCm? (faster-whisper na GPU AMD — qualidade máxima;\n"
-        "build from source DEMORADO. Se pular ou falhar, o whisper.cpp assume.)",
+        _(
+            "\nInstall CTranslate2-ROCm? (faster-whisper on the AMD GPU — maximum quality;\n"
+            "SLOW build from source. If you skip it or it fails, whisper.cpp takes over.)"
+        ),
         default_try,
         interactive,
     )
     if not wants:
-        print("[setup] CT2-ROCm pulado (whisper.cpp será o backend de transcrição).")
+        print(_("[setup] CT2-ROCm skipped (whisper.cpp will be the transcription backend)."))
         return saved.ct2_rocm_ok
     ok = ct2_rocm.install(info.gfx_target)
     if not ok:
         print(
-            "[setup] ⚠ CT2-ROCm falhou — seguindo com whisper.cpp (sem abortar). "
-            "Corrija os pré-requisitos e rode `make configure` para re-tentar.",
+            _(
+                "[setup] ⚠ CT2-ROCm failed — continuing with whisper.cpp (without aborting). "
+                "Fix the prerequisites and run `make configure` to retry."
+            ),
             file=sys.stderr,
         )
     return ok
@@ -266,14 +283,12 @@ def _maybe_install_ct2_rocm(info: GpuInfo, saved: PersistedConfig, interactive: 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="gpu_bootstrap",
-        description="Detecta a GPU, instala o torch certo (CUDA/ROCm/CPU) e lembra a escolha.",
+        description=_("Detect the GPU, install the right torch (CUDA/ROCm/CPU) and remember the choice."),
     )
-    parser.add_argument("--vendor", choices=["nvidia", "amd", "cpu"], default=None, help="Pula a detecção/pergunta.")
-    parser.add_argument("--yes", action="store_true", help="Não interativo: aceita os defaults (detectado/salvo).")
-    parser.add_argument(
-        "--reconfigure", action="store_true", help="Re-pergunta as escolhas (usado por make configure)."
-    )
-    parser.add_argument("--extras", default=None, help='Sobrescreve os extras do poetry (ex.: "all").')
+    parser.add_argument("--vendor", choices=["nvidia", "amd", "cpu"], default=None, help=_("Skip detection/prompt."))
+    parser.add_argument("--yes", action="store_true", help=_("Non-interactive: accept the defaults (detected/saved)."))
+    parser.add_argument("--reconfigure", action="store_true", help=_("Re-ask the choices (used by make configure)."))
+    parser.add_argument("--extras", default=None, help=_('Override the poetry extras (e.g. "all").'))
     return parser.parse_args(argv)
 
 
@@ -284,12 +299,12 @@ def _compute_extras(
     if flow == "claude_chat":
         extras.add("claude")
         if tts_enabled:
-            # Cada engine tem seu extra do poetry (kokoro=leve/CPU, tts=omnivoice,
-            # voxcpm=alternativo). "tts" é o default p/ engines sem extra próprio.
+            # Each engine has its own poetry extra (kokoro=light/CPU, tts=omnivoice,
+            # voxcpm=alternative). "tts" is the default for engines without their own extra.
             extras.add({"kokoro": "kokoro", "voxcpm": "voxcpm"}.get(tts_engine, "tts"))
-    # AMD em Linux/WSL2: openai-whisper (sobre o torch ROCm) é o backend GPU
-    # de transcrição confiável — no WSL2 o Vulkan do whisper.cpp só enxerga
-    # llvmpipe (CPU por software), então a cadeia precisa dele instalado.
+    # AMD on Linux/WSL2: openai-whisper (on top of ROCm torch) is the reliable GPU
+    # transcription backend — on WSL2 whisper.cpp's Vulkan only sees llvmpipe
+    # (software CPU), so the chain needs it installed.
     if vendor == "amd" and platform != "windows":
         extras.add("whisper-gpu")
     return extras
@@ -299,16 +314,16 @@ def _prompt_vendor(default: GpuVendor, interactive: bool) -> GpuVendor:
     if not interactive:
         return default
     labels: dict[GpuVendor, str] = {
-        "nvidia": "NVIDIA (CUDA — faster-whisper na GPU)",
-        "amd": "AMD (ROCm — VoxCPM na GPU + openai-whisper)",
-        "cpu": "CPU (sem GPU)",
+        "nvidia": _("NVIDIA (CUDA — faster-whisper on the GPU)"),
+        "amd": _("AMD (ROCm — VoxCPM on the GPU + openai-whisper)"),
+        "cpu": _("CPU (no GPU)"),
     }
     order: list[GpuVendor] = ["nvidia", "amd", "cpu"]
-    print("\nQual configuração instalar?")
+    print(_("\nWhich configuration to install?"))
     for i, vendor in enumerate(order, 1):
-        mark = "  (detectada/sugerida)" if vendor == default else ""
+        mark = _("  (detected/suggested)") if vendor == default else ""
         print(f"  {i}) {labels[vendor]}{mark}")
-    raw = _ask(f"Escolha [1-3] (Enter = {default}): ").lower()
+    raw = _ask(_("Choose [1-3] (Enter = {default}): ").format(default=default)).lower()
     mapping: dict[str, GpuVendor] = {
         "1": "nvidia",
         "2": "amd",
@@ -323,10 +338,10 @@ def _prompt_vendor(default: GpuVendor, interactive: bool) -> GpuVendor:
 def _prompt_tts_engine(default: TTSEngine, interactive: bool) -> TTSEngine:
     if not interactive:
         return default
-    print("\nQual engine de TTS (voz da resposta do Claude)?")
-    print("  1) kokoro — leve, roda na CPU, realtime, NÃO satura a GPU (sem chiado). Vozes fixas.")
-    print("  2) omnivoice — clona voz, qualidade alta, mas pesado na GPU (pode chiar no WSL2).")
-    raw = _ask(f"Escolha [1-2] (Enter = {default}): ").lower()
+    print(_("\nWhich TTS engine (voice of Claude's response)?"))
+    print(_("  1) kokoro — light, runs on the CPU, realtime, does NOT saturate the GPU (no crackle). Fixed voices."))
+    print(_("  2) omnivoice — clones a voice, high quality, but heavy on the GPU (may crackle on WSL2)."))
+    raw = _ask(_("Choose [1-2] (Enter = {default}): ").format(default=default)).lower()
     mapping: dict[str, TTSEngine] = {"1": "kokoro", "2": "omnivoice", "kokoro": "kokoro", "omnivoice": "omnivoice"}
     return mapping.get(raw, default)
 
@@ -334,10 +349,10 @@ def _prompt_tts_engine(default: TTSEngine, interactive: bool) -> TTSEngine:
 def _prompt_flow(interactive: bool, default: FlowKind) -> FlowKind:
     if not interactive:
         return default
-    print("\nQual fluxo principal?")
-    print("  1) clipboard — voz vira texto no clipboard (só transcrição)")
-    print("  2) claude_chat — voz → Claude → resposta falada (+ clipboard)")
-    raw = _ask(f"Escolha [1-2] (Enter = {default}): ").lower()
+    print(_("\nWhich main flow?"))
+    print(_("  1) clipboard — voice becomes text on the clipboard (transcription only)"))
+    print(_("  2) claude_chat — voice → Claude → spoken response (+ clipboard)"))
+    raw = _ask(_("Choose [1-2] (Enter = {default}): ").format(default=default)).lower()
     mapping: dict[str, FlowKind] = {
         "1": "clipboard",
         "2": "claude_chat",
@@ -350,7 +365,7 @@ def _prompt_flow(interactive: bool, default: FlowKind) -> FlowKind:
 def _prompt_yes_no(question: str, default_yes: bool, interactive: bool) -> bool:
     if not interactive:
         return default_yes
-    suffix = "[S/n]" if default_yes else "[s/N]"
+    suffix = _("[Y/n]") if default_yes else _("[y/N]")
     raw = _ask(f"{question} {suffix} ").lower()
     if not raw:
         return default_yes
@@ -366,10 +381,10 @@ def _ask(prompt: str) -> str:
 
 
 def _linux_rocm_torch_already_ok() -> bool:
-    """True se o venv já tem um torch +rocm acelerando — não sobrescrever.
+    """True if the venv already has a +rocm torch accelerating — don't overwrite.
 
-    Protege uma instalação validada manualmente (ex.: wheels do repo.radeon.com)
-    de um --force-reinstall que trocaria uma build testada por outra.
+    Protects a manually validated install (e.g. wheels from repo.radeon.com)
+    from a --force-reinstall that would swap one tested build for another.
     """
     code = "import torch; print(torch.__version__); print(torch.cuda.is_available())"
     try:
@@ -384,11 +399,11 @@ def _linux_rocm_torch_already_ok() -> bool:
 
 
 def _cleanup_libhsa() -> None:
-    """Remove a libhsa-runtime64 embutida no torch (passo oficial AMD p/ WSL).
+    """Remove the libhsa-runtime64 bundled inside torch (official AMD step for WSL).
 
-    No WSL o runtime HSA correto vem do sistema (usecase wsl); a cópia dentro do
-    wheel pode sombreá-lo. Em releases recentes o arquivo nem existe — ausência
-    é OK, o passo é mantido por segurança para outras versões.
+    On WSL the correct HSA runtime comes from the system (wsl usecase); the copy
+    inside the wheel can shadow it. In recent releases the file doesn't even
+    exist — absence is OK, the step is kept as a safeguard for other versions.
     """
     code = "import torch, pathlib; print(pathlib.Path(torch.__file__).parent / 'lib')"
     try:
@@ -401,7 +416,7 @@ def _cleanup_libhsa() -> None:
     for lib in lib_dir.glob("libhsa-runtime64.so*"):
         try:
             lib.unlink()
-            print(f"[setup] Removido {lib.name} do torch (o runtime HSA do WSL é o do sistema).")
+            print(_("[setup] Removed {name} from torch (the WSL HSA runtime is the system's).").format(name=lib.name))
         except OSError:
             pass
 
@@ -409,50 +424,54 @@ def _cleanup_libhsa() -> None:
 def _install_torch(vendor: GpuVendor, platform: PlatformKind) -> bool:
     pip = [sys.executable, "-m", "pip", "install"]
     if vendor == "amd" and platform != "windows":
-        # Linux/WSL2: wheels manylinux do repo.radeon.com (a combinação que a
-        # AMD testa p/ WSL: torch+torchvision+torchaudio+triton + numpy<2).
+        # Linux/WSL2: manylinux wheels from repo.radeon.com (the combination that
+        # AMD tests for WSL: torch+torchvision+torchaudio+triton + numpy<2).
         if sys.version_info[:2] != (3, 12):
             ver = f"{sys.version_info.major}.{sys.version_info.minor}"
             print(
-                f"[setup] ⚠ Os wheels ROCm Linux são cp312 (este Python é {ver}). "
-                "Recrie o ambiente com 3.12 (`poetry env use 3.12`) e rode `make configure`.",
+                _(
+                    "[setup] ⚠ The ROCm Linux wheels are cp312 (this Python is {ver}). "
+                    "Recreate the environment with 3.12 (`poetry env use 3.12`) and run `make configure`."
+                ).format(ver=ver),
                 file=sys.stderr,
             )
             return False
         if _linux_rocm_torch_already_ok():
-            print("[setup] ✓ torch ROCm já presente e acelerando — mantendo a instalação validada.")
-            print("[setup]   (para forçar reinstalação: pip uninstall torch e rode `make configure`)")
+            print(_("[setup] ✓ ROCm torch already present and accelerating — keeping the validated install."))
+            print(_("[setup]   (to force a reinstall: pip uninstall torch and run `make configure`)"))
             return True
         ok = _run(
             pip + ["--force-reinstall", _ROCM_LINUX_NUMPY_PIN, *_ROCM_LINUX_WHEELS],
-            "Instalando torch ROCm (wheels oficiais da AMD p/ Linux/WSL2)...",
+            _("Installing ROCm torch (official AMD wheels for Linux/WSL2)..."),
         )
         if ok:
             _cleanup_libhsa()
         return ok
     if vendor == "amd":
-        # Os wheels ROCm da AMD são cp312-only — num Python diferente o pip
-        # rejeita ("not a supported wheel on this platform") e sobraria o torch
-        # CPU. Falha cedo e claro em vez de instalar GPU pela metade.
+        # AMD's ROCm wheels are cp312-only — on a different Python pip rejects
+        # them ("not a supported wheel on this platform") and only the CPU torch
+        # would remain. Fail early and clearly instead of a half-installed GPU.
         if sys.version_info[:2] != (3, 12):
             ver = f"{sys.version_info.major}.{sys.version_info.minor}"
             print(
-                f"[setup] ⚠ As wheels ROCm exigem Python 3.12 (este é {ver}). "
-                "Recrie o ambiente com 3.12 (`poetry env use 3.12`) e rode `make configure`.",
+                _(
+                    "[setup] ⚠ The ROCm wheels require Python 3.12 (this is {ver}). "
+                    "Recreate the environment with 3.12 (`poetry env use 3.12`) and run `make configure`."
+                ).format(ver=ver),
                 file=sys.stderr,
             )
             return False
-        # 1) runtime ROCm SDK (sem ele o torch ROCm nem importa).
-        ok_sdk = _run(pip + ["--no-cache-dir", *_ROCM_SDK_WHEELS], "Instalando ROCm SDK (runtime AMD)...")
-        # 2) torch+torchaudio ROCm: --force-reinstall vence o torch CPU que o
-        #    poetry puxou; --no-deps evita que o pip o troque por um CPU do PyPI.
+        # 1) ROCm SDK runtime (without it ROCm torch won't even import).
+        ok_sdk = _run(pip + ["--no-cache-dir", *_ROCM_SDK_WHEELS], _("Installing ROCm SDK (AMD runtime)..."))
+        # 2) torch+torchaudio ROCm: --force-reinstall beats the CPU torch that
+        #    poetry pulled in; --no-deps stops pip from swapping it for a PyPI CPU one.
         ok_torch = _run(
             pip + ["--no-cache-dir", "--force-reinstall", "--no-deps", *_ROCM_WHEELS],
-            "Instalando torch ROCm (AMD)...",
+            _("Installing ROCm torch (AMD)..."),
         )
         return ok_sdk and ok_torch
     index = _TORCH_INDEX[vendor]
-    label = "Instalando torch CUDA (NVIDIA)..." if vendor == "nvidia" else "Instalando torch CPU..."
+    label = _("Installing CUDA torch (NVIDIA)...") if vendor == "nvidia" else _("Installing CPU torch...")
     return _run(pip + ["--force-reinstall", "--index-url", index, "torch", "torchaudio"], label)
 
 
@@ -460,7 +479,7 @@ def _poetry_install_extras(extras: set[str]) -> bool:
     cmd = ["poetry", "install"]
     if extras:
         cmd += ["--extras", " ".join(sorted(extras))]
-    return _run(cmd, "Instalando dependências (poetry)...")
+    return _run(cmd, _("Installing dependencies (poetry)..."))
 
 
 def _verify_torch(vendor: GpuVendor) -> None:
@@ -468,32 +487,34 @@ def _verify_torch(vendor: GpuVendor) -> None:
     try:
         proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=120)
     except (OSError, subprocess.SubprocessError) as exc:
-        print(f"[setup] ⚠ Não foi possível verificar o torch: {exc}", file=sys.stderr)
+        print(_("[setup] ⚠ Could not verify torch: {exc}").format(exc=exc), file=sys.stderr)
         return
     out = (proc.stdout or "").strip()
     if out:
-        print("[setup] Verificação do torch:")
+        print(_("[setup] torch check:"))
         print("  " + out.replace("\n", "\n  "))
     accelerated = "cuda true" in out.lower()
     if vendor in ("nvidia", "amd") and not accelerated:
         print(
-            "[setup] ⚠ A GPU não foi reconhecida pelo torch — o app cairá para CPU. "
-            "Verifique o driver e rode `make configure`.",
+            _(
+                "[setup] ⚠ The GPU was not recognized by torch — the app will fall back to CPU. "
+                "Check the driver and run `make configure`."
+            ),
             file=sys.stderr,
         )
     elif accelerated:
-        print("[setup] ✓ GPU pronta para o torch.")
+        print(_("[setup] ✓ GPU ready for torch."))
 
 
 def _install_whispercpp() -> bool:
-    """Baixa o whisper.cpp + Vulkan (binário) e o modelo GGUF, com SHA-256 fixado."""
+    """Download whisper.cpp + Vulkan (binary) and the GGUF model, with a pinned SHA-256."""
     _WHISPERCPP_DIR.mkdir(parents=True, exist_ok=True)
     exe = _WHISPERCPP_DIR / "whisper-cli.exe"
     model = _WHISPERCPP_DIR / _WCPP_MODEL_NAME
     if exe.exists() and model.exists():
-        print(f"[setup] whisper.cpp já presente em {_WHISPERCPP_DIR}.")
+        print(_("[setup] whisper.cpp already present in {dir}.").format(dir=_WHISPERCPP_DIR))
         return True
-    print("[setup] Instalando whisper.cpp + Vulkan (binário ~17 MB + modelo turbo fp16 ~1,5 GB)...")
+    print(_("[setup] Installing whisper.cpp + Vulkan (binary ~17 MB + turbo fp16 model ~1.5 GB)..."))
     if not exe.exists():
         zip_path = _WHISPERCPP_DIR / "_whispercpp.zip"
         if not _download_verified(_WCPP_BIN_URL, zip_path, _WCPP_BIN_SHA256):
@@ -502,16 +523,16 @@ def _install_whispercpp() -> bool:
         zip_path.unlink(missing_ok=True)
     if not model.exists() and not _download_verified(_WCPP_MODEL_URL, model, _WCPP_MODEL_SHA256):
         return False
-    print(f"[setup] ✓ whisper.cpp pronto em {_WHISPERCPP_DIR}")
+    print(_("[setup] ✓ whisper.cpp ready in {dir}").format(dir=_WHISPERCPP_DIR))
     return True
 
 
 def _install_whispercpp_linux(interactive: bool) -> bool:
-    """Builda o whisper.cpp (Vulkan, binário estático) e baixa modelo + VAD.
+    """Build whisper.cpp (Vulkan, static binary) and download the model + VAD.
 
-    Vulkan é o backend default no Linux/WSL2 hoje: o HIP p/ gfx120X ainda está
-    em PR no whisper.cpp (ggml-org/whisper.cpp#3757). Quando mergear, dá para
-    trocar o flag do cmake por -DGGML_HIP=ON.
+    Vulkan is the default backend on Linux/WSL2 today: HIP for gfx120X is still
+    in a PR on whisper.cpp (ggml-org/whisper.cpp#3757). Once it merges, the cmake
+    flag can be switched to -DGGML_HIP=ON.
     """
     _WHISPERCPP_DIR.mkdir(parents=True, exist_ok=True)
     cli = _WHISPERCPP_DIR / "whisper-cli"
@@ -524,10 +545,10 @@ def _install_whispercpp_linux(interactive: bool) -> bool:
         missing = [tool for tool in ("git", "cmake", "g++", "glslc", "glslangValidator") if shutil.which(tool) is None]
         if missing:
             print(
-                f"[setup] ⚠ Ferramentas ausentes p/ compilar o whisper.cpp: {', '.join(missing)}",
+                _("[setup] ⚠ Missing tools to compile whisper.cpp: {tools}").format(tools=", ".join(missing)),
                 file=sys.stderr,
             )
-            print(f"[setup]   Instale com: {_WCPP_LINUX_APT_HINT}", file=sys.stderr)
+            print(_("[setup]   Install with: {hint}").format(hint=_WCPP_LINUX_APT_HINT), file=sys.stderr)
             return False
         binaries_ok = _build_whispercpp_linux()
         if not binaries_ok:
@@ -535,13 +556,13 @@ def _install_whispercpp_linux(interactive: bool) -> bool:
 
     ok = True
     if not model.exists():
-        # fp16 turbo (qualidade de referência). Q8_0 fica disponível p/ quem
-        # quiser economizar VRAM (baixa manualmente; find_model pega qualquer ggml-*).
+        # fp16 turbo (reference quality). Q8_0 stays available for anyone who
+        # wants to save VRAM (download manually; find_model picks up any ggml-*).
         ok = _download_verified(_WCPP_MODEL_URL, model, _WCPP_MODEL_SHA256) and ok
     if not vad.exists():
         ok = _download_verified(_WCPP_VAD_URL, vad, _WCPP_VAD_SHA256) and ok
     if ok:
-        print(f"[setup] ✓ whisper.cpp (Linux/Vulkan) pronto em {_WHISPERCPP_DIR}")
+        print(_("[setup] ✓ whisper.cpp (Linux/Vulkan) ready in {dir}").format(dir=_WHISPERCPP_DIR))
     return ok
 
 
@@ -551,7 +572,7 @@ def _build_whispercpp_linux() -> bool:
     if not (src / ".git").exists():
         if not _run(
             ["git", "clone", "--depth", "1", "--branch", _WCPP_LINUX_TAG, _WCPP_LINUX_REPO, str(src)],
-            f"Clonando whisper.cpp {_WCPP_LINUX_TAG}...",
+            _("Cloning whisper.cpp {tag}...").format(tag=_WCPP_LINUX_TAG),
         ):
             return False
     if not _run(
@@ -566,13 +587,13 @@ def _build_whispercpp_linux() -> bool:
             "-DBUILD_SHARED_LIBS=OFF",
             "-DWHISPER_BUILD_TESTS=OFF",
         ],
-        "Configurando build do whisper.cpp (cmake + Vulkan)...",
+        _("Configuring the whisper.cpp build (cmake + Vulkan)..."),
     ):
         return False
     jobs = str(max(1, (os.cpu_count() or 4) - 1))
     if not _run(
         ["cmake", "--build", str(build), "--parallel", jobs],
-        "Compilando whisper.cpp (alguns minutos)...",
+        _("Compiling whisper.cpp (a few minutes)..."),
     ):
         return False
     copied = 0
@@ -584,12 +605,12 @@ def _build_whispercpp_linux() -> bool:
             target.chmod(0o755)
             copied += 1
         else:
-            print(f"[setup] ⚠ Binário não encontrado após o build: {built}", file=sys.stderr)
+            print(_("[setup] ⚠ Binary not found after the build: {path}").format(path=built), file=sys.stderr)
     return copied == 2
 
 
 def _extract_whispercpp(zip_path: Path) -> None:
-    """Extrai só os CLIs + DLLs (basename apenas → sem path traversal)."""
+    """Extract only the CLIs + DLLs (basename only → no path traversal)."""
     with zipfile.ZipFile(zip_path) as archive:
         for info in archive.infolist():
             name = Path(info.filename).name
@@ -598,16 +619,19 @@ def _extract_whispercpp(zip_path: Path) -> None:
 
 
 def _download_verified(url: str, dest: Path, expected_sha256: str) -> bool:
-    print(f"[setup] baixando {url}")
+    print(_("[setup] downloading {url}").format(url=url))
     try:
         urllib.request.urlretrieve(url, dest, reporthook=_progress)
         print()
     except OSError as exc:
-        print(f"[setup] ⚠ falha no download: {exc}", file=sys.stderr)
+        print(_("[setup] ⚠ download failed: {exc}").format(exc=exc), file=sys.stderr)
         return False
     digest = _sha256_file(dest)
     if digest.lower() != expected_sha256.lower():
-        print(f"[setup] ⚠ SHA-256 não confere para {dest.name} (obtido {digest}); removendo.", file=sys.stderr)
+        print(
+            _("[setup] ⚠ SHA-256 mismatch for {name} (got {digest}); removing.").format(name=dest.name, digest=digest),
+            file=sys.stderr,
+        )
         dest.unlink(missing_ok=True)
         return False
     return True
@@ -622,7 +646,7 @@ def _sha256_file(path: Path) -> str:
 
 
 def _progress(block_num: int, block_size: int, total_size: int) -> None:
-    if total_size <= 0 or block_num % 256 != 0:  # imprime ~a cada 2 MB
+    if total_size <= 0 or block_num % 256 != 0:  # print ~every 2 MB
         return
     done_mb = block_num * block_size // (1024 * 1024)
     total_mb = total_size // (1024 * 1024)
@@ -635,10 +659,10 @@ def _run(cmd: list[str], desc: str) -> bool:
     try:
         proc = subprocess.run(cmd)
     except OSError as exc:
-        print(f"[setup] ⚠ Falha ao executar: {exc}", file=sys.stderr)
+        print(_("[setup] ⚠ Failed to execute: {exc}").format(exc=exc), file=sys.stderr)
         return False
     if proc.returncode != 0:
-        print(f"[setup] ⚠ Comando retornou código {proc.returncode}.", file=sys.stderr)
+        print(_("[setup] ⚠ Command returned code {code}.").format(code=proc.returncode), file=sys.stderr)
         return False
     return True
 

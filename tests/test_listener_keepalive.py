@@ -7,7 +7,7 @@ from app.core.listener_keepalive import ListenerKeepalive
 
 
 class FakeListener:
-    """Stub estrutural compatível com InputListener Protocol."""
+    """Structural stub compatible with the InputListener Protocol."""
 
     def __init__(self) -> None:
         self.reinstall_calls = 0
@@ -51,7 +51,7 @@ def test_keepalive_stop_prevents_further_calls() -> None:
     keepalive.stop()
     snapshot = listener.reinstall_calls
     time.sleep(0.25)
-    # tolerância: uma chamada podia estar em vôo quando stop foi chamado
+    # tolerance: one call may have been in flight when stop was called
     assert listener.reinstall_calls <= snapshot + 1
 
 
@@ -71,5 +71,5 @@ def test_keepalive_survives_reinstall_exception() -> None:
 def test_keepalive_stop_is_safe_before_start() -> None:
     listener = FakeListener()
     keepalive = ListenerKeepalive(listener, interval_seconds=1.0)
-    keepalive.stop()  # não deve levantar
+    keepalive.stop()  # must not raise
     assert listener.reinstall_calls == 0

@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-# Variáveis globais do fake — manipuladas pelos testes
+# Fake global state — manipulated by the tests
 _fake_state: dict[str, Any] = {}
 
 
@@ -57,7 +57,7 @@ class FakeClaudeSDKClient:
 
 
 class FakeClaudeAgentOptions:
-    def __init__(self, **kwargs: Any) -> None:  # noqa: ANN401 — kwargs livres do SDK
+    def __init__(self, **kwargs: Any) -> None:  # noqa: ANN401 — free-form SDK kwargs
         self.kwargs = kwargs
         self.system_prompt = kwargs.get("system_prompt")
         self.max_turns = kwargs.get("max_turns")
@@ -120,7 +120,7 @@ def test_runtime_interrupt_is_fire_and_forget(fake_sdk: types.ModuleType) -> Non
     try:
         runtime.send_and_collect("oi")
         runtime.interrupt()
-        # interrupt é async — damos uma janela curta para o loop processar
+        # interrupt is async — give the loop a short window to process it
         import time
 
         deadline = time.monotonic() + 1.0
@@ -136,7 +136,7 @@ def test_runtime_send_before_start_raises(fake_sdk: types.ModuleType) -> None:
     from app.features.claude.runtime import ClaudeRuntime
 
     runtime = ClaudeRuntime(system_prompt=None, max_turns=None)
-    with pytest.raises(RuntimeError, match="não iniciado"):
+    with pytest.raises(RuntimeError, match="not started"):
         runtime.send_and_collect("x")
 
 
@@ -146,7 +146,7 @@ def test_runtime_stop_is_idempotent(fake_sdk: types.ModuleType) -> None:
     runtime = ClaudeRuntime(system_prompt=None, max_turns=None)
     runtime.start()
     runtime.stop()
-    runtime.stop()  # não deve levantar
+    runtime.stop()  # must not raise
 
 
 def test_runtime_passes_model_effort_and_disables_thinking_by_default(
@@ -187,7 +187,7 @@ def test_runtime_thinking_enabled_omits_thinking_kwarg(fake_sdk: types.ModuleTyp
     runtime.start()
     try:
         opts = _fake_state["last_client"].options
-        assert opts.thinking is None  # campo não foi adicionado a kwargs
+        assert opts.thinking is None  # field was not added to kwargs
         assert "thinking" not in opts.kwargs
     finally:
         runtime.stop()
@@ -200,7 +200,7 @@ def test_runtime_omits_optional_fields_when_none(fake_sdk: types.ModuleType) -> 
     runtime.start()
     try:
         opts = _fake_state["last_client"].options
-        # nenhum dos optional fields foi setado
+        # none of the optional fields were set
         assert "system_prompt" not in opts.kwargs
         assert "max_turns" not in opts.kwargs
         assert "model" not in opts.kwargs
@@ -222,7 +222,7 @@ def test_claude_chat_config_default_leaves_system_prompt_none() -> None:
 
 
 def test_runtime_omits_effort_for_haiku(fake_sdk: types.ModuleType) -> None:
-    """Haiku 4.5 retorna 400 se receber effort — o runtime deve omiti-lo."""
+    """Haiku 4.5 returns 400 if it receives effort — the runtime must omit it."""
     from app.features.claude.runtime import ClaudeRuntime
 
     runtime = ClaudeRuntime(

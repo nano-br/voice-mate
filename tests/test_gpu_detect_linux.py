@@ -1,4 +1,4 @@
-"""Parsers puros da detecção de GPU em Linux (rocm-smi/amd-smi/lspci/rocminfo)."""
+"""Pure parsers for Linux GPU detection (rocm-smi/amd-smi/lspci/rocminfo)."""
 
 from __future__ import annotations
 
@@ -78,9 +78,9 @@ def test_parse_gfx_target_absent() -> None:
     assert _parse_gfx_target("Name: AMD Ryzen CPU\n") is None
 
 
-# rocminfo real lista o agente CPU primeiro, com Marketing Name próprio — o
-# parser tem que pular o Ryzen e devolver o nome da placa (WSL2: rocminfo é a
-# única ferramenta que funciona; rocm-smi/amd-smi não operam lá).
+# Real rocminfo lists the CPU agent first, with its own Marketing Name — the
+# parser must skip the Ryzen and return the card name (WSL2: rocminfo is the
+# only tool that works; rocm-smi/amd-smi don't operate there).
 _ROCMINFO_WITH_CPU_NAME = """
 Agent 1
   Name:                    AMD Ryzen 7 9800X3D

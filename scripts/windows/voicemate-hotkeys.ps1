@@ -1,23 +1,24 @@
-﻿# VoiceMate - hotkeys globais do Windows + clipboard nativo -> daemon no WSL2.
+﻿# VoiceMate - global Windows hotkeys + native clipboard -> daemon in WSL2.
 #
-# Uso:   powershell -ExecutionPolicy Bypass -File voicemate-hotkeys.ps1
-# Dica:  para rodar oculto no login, crie um atalho em shell:startup com
-#        powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File <caminho>\voicemate-hotkeys.ps1
+# Usage: powershell -ExecutionPolicy Bypass -File voicemate-hotkeys.ps1
+# Tip:   to run hidden at login, create a shortcut in shell:startup with
+#        powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File <path>\voicemate-hotkeys.ps1
 #
-# Faz TRES coisas:
-#  1) Registra-se no daemon (POST /register) e recebe um client_id. Assim este
-#     consumidor se identifica - varios ouvintes podem coexistir.
-#  2) Registra Ctrl+Alt+V (clipboard) e Ctrl+Alt+A (Claude) via RegisterHotKey
-#     Win32 e dispara POST /trigger. A resposta diz a ACAO (started/stopped/
-#     restarted) - feedback imediato de que o atalho foi recebido e o que fez.
-#  3) Faz polling de GET /result e seta o clipboard do Windows com Set-Clipboard.
-#     No WSL2 a ponte de clipboard do WSLg/interop e instavel, entao quem escreve
-#     o clipboard de verdade e o Windows (nativo, confiavel). Apos um "stopped"
-#     (transcrevendo), faz double-check ativo e busca o resultado com retry,
-#     porque o fetch do clipboard pode falhar.
+# Does THREE things:
+#  1) Registers with the daemon (POST /register) and gets a client_id. This is how
+#     this consumer identifies itself - multiple listeners can coexist.
+#  2) Registers Ctrl+Alt+V (clipboard) and Ctrl+Alt+A (Claude) via the Win32
+#     RegisterHotKey API and fires POST /trigger. The response reports the ACTION
+#     (started/stopped/restarted) - immediate feedback that the hotkey was received
+#     and what it did.
+#  3) Polls GET /result and sets the Windows clipboard with Set-Clipboard. In WSL2
+#     the WSLg/interop clipboard bridge is unstable, so the actual clipboard writer
+#     is Windows (native, reliable). After a "stopped" (transcribing), it runs an
+#     active double-check and fetches the result with retries, because the clipboard
+#     fetch can fail.
 #
-# -Scope "all" (default): ouve o resultado de QUALQUER consumidor (config mais
-#   generica). -Scope "mine": ouve so o que ESTE client_id iniciou.
+# -Scope "all" (default): listens to the result of ANY consumer (the more general
+#   setting). -Scope "mine": listens only to what THIS client_id started.
 
 param(
     [string]$DaemonUrl = "http://127.0.0.1:47821",
@@ -46,16 +47,16 @@ $PM_REMOVE = 0x1
 
 function Compare-ClipText([string]$A, [string]$B) {
     if ($null -eq $A -or $null -eq $B) { return $false }
-    # Tolerante a um \r\n sobrando que o clipboard as vezes normaliza.
+    # Tolerant of a stray \r\n that the clipboard sometimes normalizes.
     return ($A -ceq $B) -or ($A.TrimEnd("`r", "`n") -ceq $B.TrimEnd("`r", "`n"))
 }
 
 function Set-ClipboardReliable([string]$Text) {
-    # Entrega confiavel em DUAS etapas. Devolve $true se o texto ficou no clipboard.
+    # Reliable delivery in TWO steps. Returns $true if the text made it to the clipboard.
     #
-    # 1) GARANTE o clipboard atual: o Set-Clipboard as vezes "sucede" sem aplicar
-    #    (clipboard travado por outro processo por um instante). So confiamos no
-    #    READ-BACK; repetimos com backoff curto ate confirmar.
+    # 1) ENSURE the current clipboard: Set-Clipboard sometimes "succeeds" without
+    #    applying (clipboard locked by another process for an instant). We only trust
+    #    the READ-BACK; we retry with a short backoff until confirmed.
     $confirmed = $false
     for ($i = 1; $i -le 5; $i++) {
         try { Set-Clipboard -Value $Text } catch {}
@@ -66,13 +67,13 @@ function Set-ClipboardReliable([string]$Text) {
     }
     if (-not $confirmed) { return $false }
 
-    # 2) HISTORICO (Win+V): o servico coalesce mudancas rapidas, entao um set unico
-    #    as vezes passa de raspao e NAO vira entrada (era a intermitencia). Damos um
-    #    respiro pro valor estabilizar e RE-ASSERTAMOS — uma segunda escrita do
-    #    mesmo valor e nova chance de captura (o "setar duas vezes"). Idempotente:
-    #    o Win+V deduplica entradas consecutivas iguais, entao nao polui.
-    #    So re-assertamos se o clipboard AINDA for o nosso: se o usuario copiou algo
-    #    no respiro, respeitamos e nao sobrescrevemos.
+    # 2) HISTORY (Win+V): the service coalesces rapid changes, so a single set
+    #    sometimes slips by and does NOT become an entry (that was the flakiness). We
+    #    give the value a moment to settle and RE-ASSERT it - a second write of the
+    #    same value is another chance to be captured (the "set it twice"). Idempotent:
+    #    Win+V dedupes identical consecutive entries, so it doesn't pollute.
+    #    We only re-assert if the clipboard is STILL ours: if the user copied something
+    #    during the pause, we respect it and don't overwrite.
     Start-Sleep -Milliseconds 250
     try { $cur = Get-Clipboard -Raw } catch { $cur = "" }
     if (Compare-ClipText $cur $Text) {
@@ -82,13 +83,13 @@ function Set-ClipboardReliable([string]$Text) {
     return $true
 }
 
-# --- Registro do consumidor (client_id). Se o daemon for antigo (404), seguimos
-# --- sem id (comportamento legado: scope=all global).
+# --- Consumer registration (client_id). If the daemon is old (404), we proceed
+# --- without an id (legacy behavior: scope=all global).
 $ClientId = $null
 try {
     $ClientId = (Invoke-RestMethod -Method Post -Uri "$DaemonUrl/register" -TimeoutSec 2).client_id
 } catch {}
-$idLabel = if ($ClientId) { $ClientId } else { "(sem registro)" }
+$idLabel = if ($ClientId) { $ClientId } else { "(unregistered)" }
 
 function Get-Query {
     $q = "scope=$Scope"
@@ -102,58 +103,59 @@ function Send-Trigger([string]$Flow) {
         $r = Invoke-RestMethod -Method Post -Uri "$DaemonUrl/trigger" -ContentType "application/json" `
             -Body $body -TimeoutSec 2
         switch ($r.action) {
-            "started"   { Write-Host "[VoiceMate] > gravando... (op $($r.op_seq))" }
-            "stopped"   { Write-Host "[VoiceMate] # transcrevendo... (op $($r.op_seq))" }
-            "restarted" { Write-Host "[VoiceMate] ~ reiniciado (op $($r.op_seq))" }
-            default     { Write-Host "[VoiceMate] trigger '$Flow' recebido." }
+            "started"   { Write-Host "[VoiceMate] > recording... (op $($r.op_seq))" }
+            "stopped"   { Write-Host "[VoiceMate] # transcribing... (op $($r.op_seq))" }
+            "restarted" { Write-Host "[VoiceMate] ~ restarted (op $($r.op_seq))" }
+            default     { Write-Host "[VoiceMate] trigger '$Flow' received." }
         }
         return $r.action
     } catch {
-        Write-Warning "[VoiceMate] Daemon offline em $DaemonUrl (rode 'make run' no WSL)."
+        Write-Warning "[VoiceMate] Daemon offline at $DaemonUrl (run 'make run' in WSL)."
         return $null
     }
 }
 
 function Get-Result($Since = $null) {
-    # Com $Since, o daemon devolve o PROXIMO resultado nao-visto (seq > since),
-    # para drenarmos em ordem sem perder os intermediarios.
+    # With $Since, the daemon returns the NEXT unseen result (seq > since),
+    # so we can drain in order without missing the intermediate ones.
     $uri = "$DaemonUrl/result?$(Get-Query)"
     if ($null -ne $Since) { $uri = "$uri&since=$Since" }
     try { return Invoke-RestMethod -Uri $uri -TimeoutSec 2 } catch { return $null }
 }
 
 function Get-Snippet([string]$Text, [int]$Max = 60) {
-    # Trecho de uma linha para auditoria no log (normaliza espacos/quebras).
+    # Single-line snippet for log auditing (normalizes whitespace/line breaks).
     if ([string]::IsNullOrEmpty($Text)) { return "" }
     $flat = ($Text -replace '\s+', ' ').Trim()
     if ($flat.Length -gt $Max) { return $flat.Substring(0, $Max) + [char]0x2026 }
     return $flat
 }
 
-Write-Host "[VoiceMate] Hotkeys ativas: Ctrl+Alt+V (clipboard) / Ctrl+Alt+A (Claude) -> $DaemonUrl"
-Write-Host "[VoiceMate] Consumidor $idLabel | scope=$Scope. Clipboard setado pelo Windows. Deixe esta janela aberta."
+Write-Host "[VoiceMate] Hotkeys active: Ctrl+Alt+V (clipboard) / Ctrl+Alt+A (Claude) -> $DaemonUrl"
+Write-Host "[VoiceMate] Consumer $idLabel | scope=$Scope. Clipboard set by Windows. Leave this window open."
 
 if (-not [VoiceMateHotkeys]::RegisterHotKey([IntPtr]::Zero, 1, $MOD_CONTROL -bor $MOD_ALT, [uint32][char]'V')) {
-    Write-Warning "Ctrl+Alt+V ja esta registrado por outro app."
+    Write-Warning "Ctrl+Alt+V is already registered by another app."
 }
 if (-not [VoiceMateHotkeys]::RegisterHotKey([IntPtr]::Zero, 2, $MOD_CONTROL -bor $MOD_ALT, [uint32][char]'A')) {
-    Write-Warning "Ctrl+Alt+A ja esta registrado por outro app."
+    Write-Warning "Ctrl+Alt+A is already registered by another app."
 }
 
-# Nao cola o que ja estava no hub no momento em que o script subiu.
+# Don't paste whatever was already in the hub at the moment the script started.
 $lastSeq = -1
 $r0 = Get-Result
 if ($r0) { $lastSeq = $r0.seq }
 
-# Quando vemos "stopped"/"restarted", o daemon vai transcrever: por alguns
-# segundos pollamos mais rapido (double-check ativo) ate o resultado chegar.
+# When we see "stopped"/"restarted", the daemon is about to transcribe: for a few
+# seconds we poll faster (active double-check) until the result arrives.
 $fastUntil = [DateTime]::MinValue
 
 function Poll-Result {
-    # Drena em ORDEM: cada volta pega o proximo resultado nao-visto (seq > lastSeq)
-    # e o seta no clipboard. Assim, gravacoes em sequencia entram TODAS no historico
-    # (Win+V), na ordem certa — em vez de so a ultima (o produtor no WSL pode gerar
-    # mais rapido do que pollamos, e o slot unico antigo perdia os intermediarios).
+    # Drains in ORDER: each pass takes the next unseen result (seq > lastSeq) and
+    # sets it on the clipboard. This way, recordings made in sequence ALL land in the
+    # history (Win+V), in the right order - instead of just the last one (the producer
+    # in WSL can emit faster than we poll, and the old single slot lost the intermediate
+    # ones).
     $any = $false
     while ($true) {
         $r = Get-Result $script:lastSeq
@@ -163,9 +165,9 @@ function Poll-Result {
         if ($r.text) {
             $snip = Get-Snippet $r.text
             if (Set-ClipboardReliable $r.text) {
-                Write-Host "[VoiceMate] clipboard confirmado (seq $($r.seq), op $($r.op_seq)): `"$snip`""
+                Write-Host "[VoiceMate] clipboard confirmed (seq $($r.seq), op $($r.op_seq)): `"$snip`""
             } else {
-                Write-Warning "[VoiceMate] nao confirmei o clipboard (seq $($r.seq)): `"$snip`" apos varias tentativas."
+                Write-Warning "[VoiceMate] could not confirm the clipboard (seq $($r.seq)): `"$snip`" after several attempts."
             }
         }
     }
@@ -175,7 +177,7 @@ function Poll-Result {
 $msg = New-Object VoiceMateHotkeys+MSG
 try {
     while ($true) {
-        # 1) processa hotkeys pendentes (nao-bloqueante)
+        # 1) process pending hotkeys (non-blocking)
         while ([VoiceMateHotkeys]::PeekMessage([ref]$msg, [IntPtr]::Zero, 0, 0, $PM_REMOVE)) {
             if ($msg.message -eq $WM_HOTKEY) {
                 $action = switch ([int]$msg.wParam) {
@@ -183,13 +185,13 @@ try {
                     2 { Send-Trigger "claude_chat" }
                 }
                 if ($action -eq "stopped" -or $action -eq "restarted") {
-                    $fastUntil = (Get-Date).AddSeconds(20)  # transcrevendo: double-check ativo
+                    $fastUntil = (Get-Date).AddSeconds(20)  # transcribing: active double-check
                 }
             }
         }
-        # 2) ha transcricao/resposta nova? seta o clipboard do Windows.
+        # 2) is there a new transcription/response? set the Windows clipboard.
         [void](Poll-Result)
-        # Poll rapido enquanto esperamos um resultado recem-disparado; senao, calmo.
+        # Poll fast while waiting for a just-triggered result; otherwise, take it easy.
         if ((Get-Date) -lt $fastUntil) { Start-Sleep -Milliseconds 150 }
         else { Start-Sleep -Milliseconds 300 }
     }

@@ -1,11 +1,11 @@
 """GPU Whisper via openai-whisper (opt-in extra: `voice-mate[whisper-gpu]`).
 
-Existe para a AMD: o faster-whisper (CTranslate2) não acelera em ROCm, mas o
-openai-whisper roda sobre o MESMO torch+ROCm que o VoxCPM usa — na placa AMD o
-torch reporta device "cuda" (HIP). Também funciona em NVIDIA, embora lá o
-faster-whisper seja preferido por ser mais rápido/leve.
+Exists for AMD: faster-whisper (CTranslate2) doesn't accelerate on ROCm, but
+openai-whisper runs on the SAME torch+ROCm that VoxCPM uses — on the AMD card
+torch reports device "cuda" (HIP). It also works on NVIDIA, although there
+faster-whisper is preferred for being faster/lighter.
 
-Requer o pacote `openai-whisper`. Chame `is_available()` antes de instanciar.
+Requires the `openai-whisper` package. Call `is_available()` before instantiating.
 """
 
 from __future__ import annotations
@@ -19,14 +19,14 @@ __all__ = ["build_backend", "is_available"]
 def is_available() -> bool:
     """Return True if the `openai-whisper` extra is installed."""
     try:
-        import whisper  # noqa: F401 — pacote openai-whisper, importa como `whisper`
+        import whisper  # noqa: F401 — openai-whisper package, imported as `whisper`
     except ImportError:
         return False
     return True
 
 
 def build_backend(config: Config) -> TranscriptionBackend:
-    """Instancia o backend openai-whisper (import preguiçoso do pacote pesado)."""
+    """Instantiate the openai-whisper backend (lazy import of the heavy package)."""
     from app.features.openai_whisper.backend import OpenAIWhisperBackend
 
     return OpenAIWhisperBackend(config)

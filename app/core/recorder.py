@@ -8,7 +8,7 @@ from numpy.typing import NDArray
 
 
 class Recorder:
-    """Captura áudio do microfone em modo toggle (start/stop)."""
+    """Capture microphone audio in toggle mode (start/stop)."""
 
     def __init__(self, sample_rate: int) -> None:
         self._sample_rate = sample_rate
@@ -22,7 +22,7 @@ class Recorder:
         return self._recording
 
     def start(self) -> bool:
-        """Inicia a gravação. Retorna False se já estava gravando."""
+        """Start recording. Returns False if already recording."""
         with self._lock:
             if self._recording:
                 return False
@@ -38,7 +38,7 @@ class Recorder:
         return True
 
     def stop(self) -> NDArray[np.float32] | None:
-        """Para a gravação e retorna o áudio capturado, ou None se vazio."""
+        """Stop recording and return the captured audio, or None if empty."""
         with self._lock:
             if not self._recording:
                 return None
@@ -46,10 +46,10 @@ class Recorder:
             stream = self._stream
             self._stream = None
 
-        # stream.stop() FORA do lock: o PortAudio bloqueia até o callback em
-        # voo retornar, e o _callback precisa do mesmo lock para appendar o
-        # chunk — segurá-lo aqui deadlockava o toggle (visível no WSLg, onde
-        # os callbacks do PulseAudio-RDP são lentos/frequentes).
+        # stream.stop() OUTSIDE the lock: PortAudio blocks until the in-flight
+        # callback returns, and _callback needs the same lock to append the
+        # chunk — holding it here deadlocked the toggle (visible on WSLg, where
+        # the PulseAudio-RDP callbacks are slow/frequent).
         if stream is not None:
             stream.stop()
             stream.close()
@@ -70,7 +70,7 @@ class Recorder:
         time_info: Any,  # noqa: ANN401
         status: sd.CallbackFlags,
     ) -> None:
-        """Callback do sounddevice — chamado automaticamente a cada chunk."""
+        """sounddevice callback — invoked automatically for each chunk."""
         if status:
             print(f"[recorder] {status}", file=sys.stderr)
         with self._lock:

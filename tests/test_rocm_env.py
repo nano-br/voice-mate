@@ -41,4 +41,4 @@ def test_noop_for_non_amd(tmp_path: Path) -> None:
 def test_respects_user_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MIOPEN_FIND_MODE", "NORMAL")
     configure_rocm_env("amd", cache_dir=tmp_path)
-    assert os.environ["MIOPEN_FIND_MODE"] == "NORMAL"  # setdefault não sobrescreve
+    assert os.environ["MIOPEN_FIND_MODE"] == "NORMAL"  # setdefault does not overwrite

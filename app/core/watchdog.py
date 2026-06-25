@@ -5,7 +5,7 @@ import time
 
 
 class Watchdog:
-    """Monitora a saúde da aplicação e reinicia se detectar travamento."""
+    """Monitor application health and restart if a hang is detected."""
 
     def __init__(self, timeout_seconds: int = 120) -> None:
         self._timeout = timeout_seconds
@@ -16,32 +16,32 @@ class Watchdog:
         self._heartbeat_timer: threading.Timer | None = None
 
     def heartbeat(self) -> None:
-        """Atualiza o timestamp do último heartbeat."""
+        """Update the timestamp of the last heartbeat."""
         with self._lock:
             self._last_heartbeat = time.monotonic()
 
     def start(self) -> None:
-        """Inicia o monitoramento em background."""
+        """Start monitoring in the background."""
         self._running = True
         self._last_heartbeat = time.monotonic()
 
-        # Thread de monitoramento
+        # Monitoring thread
         self._monitor_thread = threading.Thread(target=self._monitor, daemon=True)
         self._monitor_thread.start()
 
-        # Heartbeat periódico (prova que a app está viva mesmo ociosa)
+        # Periodic heartbeat (proves the app is alive even when idle)
         self._schedule_periodic_heartbeat()
 
-        print(f"[Watchdog] Ativo. Timeout: {self._timeout}s")
+        print(f"[Watchdog] Active. Timeout: {self._timeout}s")
 
     def stop(self) -> None:
-        """Para o monitoramento."""
+        """Stop monitoring."""
         self._running = False
         if self._heartbeat_timer is not None:
             self._heartbeat_timer.cancel()
 
     def _schedule_periodic_heartbeat(self) -> None:
-        """Agenda heartbeat automático a cada 30s."""
+        """Schedule an automatic heartbeat every 30s."""
         if not self._running:
             return
         self.heartbeat()
@@ -50,18 +50,18 @@ class Watchdog:
         self._heartbeat_timer.start()
 
     def _monitor(self) -> None:
-        """Loop de monitoramento — verifica se heartbeat está atualizado."""
+        """Monitoring loop — checks whether the heartbeat is up to date."""
         check_interval = self._timeout / 2
         while self._running:
             time.sleep(check_interval)
             with self._lock:
                 elapsed = time.monotonic() - self._last_heartbeat
             if elapsed > self._timeout:
-                print(f"[Watchdog] ⚠ Sem heartbeat há {elapsed:.0f}s. Reiniciando...", file=sys.stderr)
+                print(f"[Watchdog] ⚠ No heartbeat for {elapsed:.0f}s. Restarting...", file=sys.stderr)
                 self._restart()
                 return
 
     @staticmethod
     def _restart() -> None:
-        """Reinicia o processo atual."""
+        """Restart the current process."""
         os.execv(sys.executable, [sys.executable] + sys.argv)

@@ -24,7 +24,7 @@ def test_claude_is_unavailable_when_sdk_missing(monkeypatch: pytest.MonkeyPatch)
 
 
 def test_tts_available_for_engine_when_packages_present(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Determinístico: injeta os pacotes como presentes, independe do que está instalado.
+    # Deterministic: inject the packages as present, regardless of what is installed.
     monkeypatch.setitem(sys.modules, "soundfile", _fake_module("soundfile"))
     monkeypatch.setitem(sys.modules, "omnivoice", _fake_module("omnivoice"))
     assert tts_feature.is_available("omnivoice") is True

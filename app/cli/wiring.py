@@ -24,6 +24,7 @@ from app.features import openai_whisper as openai_whisper_feature
 from app.features import tts as tts_feature
 from app.features import whispercpp as whispercpp_feature
 from app.features.tts.base import NullSpeaker, TextToSpeech
+from app.i18n import _
 from app.platform.clipboard import ClipboardWriter, create_clipboard_writer
 
 if TYPE_CHECKING:
@@ -38,7 +39,7 @@ from app.platform.listeners import (
 
 
 def _whisper_language(config: Config) -> str | None:
-    """Idioma fixado p/ o faster-whisper ("auto" → None = detectar)."""
+    """Pinned language for faster-whisper ("auto" → None = detect)."""
     return None if config.transcription_language == "auto" else config.transcription_language
 
 
@@ -57,68 +58,71 @@ def _try_openai_whisper(config: Config) -> TranscriptionBackend | None:
     try:
         return openai_whisper_feature.build_backend(config)
     except Exception as exc:  # noqa: BLE001
-        print(f"[VoiceMate] ⚠ Falha no openai-whisper: {exc}", file=sys.stderr)
+        print(_("[VoiceMate] ⚠ openai-whisper failed: {exc}").format(exc=exc), file=sys.stderr)
         return None
 
 
 def _try_whispercpp(config: Config) -> TranscriptionBackend | None:
     if not whispercpp_feature.is_available(config):
         print(
-            "[VoiceMate] ⚠ whisper.cpp não encontrado (rode `make configure`); tentando fallback.",
+            _("[VoiceMate] ⚠ whisper.cpp not found (run `make configure`); trying fallback."),
             file=sys.stderr,
         )
         return None
     try:
         return whispercpp_feature.build_backend(config)
     except Exception as exc:  # noqa: BLE001
-        print(f"[VoiceMate] ⚠ Falha no whisper.cpp; caindo para fallback: {exc}", file=sys.stderr)
+        print(_("[VoiceMate] ⚠ whisper.cpp failed; falling back: {exc}").format(exc=exc), file=sys.stderr)
         return None
 
 
 def _try_faster_whisper_rocm(config: Config) -> TranscriptionBackend | None:
-    """faster-whisper na GPU AMD via fork ROCm do CTranslate2 (HIP reporta "cuda").
+    """faster-whisper on the AMD GPU via the ROCm fork of CTranslate2 (HIP reports "cuda").
 
-    Falha aqui é persistida (`ct2_rocm_ok = false`) para a cadeia não pagar o
-    custo de re-tentar a cada boot — `make configure` re-valida e re-arma.
+    A failure here is persisted (`ct2_rocm_ok = false`) so the chain doesn't pay
+    the cost of retrying on every boot — `make configure` re-validates and re-arms.
     """
     import os
 
-    # Workaround validado p/ gfx1201 (RX 9070 XT): o allocator default do CT2
-    # causa "Memory access fault" — cub_caching evita. setdefault: respeita
-    # quem já exportou outro valor no ambiente.
+    # Validated workaround for gfx1201 (RX 9070 XT): CT2's default allocator
+    # causes a "Memory access fault" — cub_caching avoids it. setdefault: respects
+    # anyone who already exported a different value in the environment.
     os.environ.setdefault("CT2_CUDA_ALLOCATOR", "cub_caching")
     try:
         return _faster_whisper(config, use_cpu=False)
     except Exception as exc:  # noqa: BLE001
         print(
-            f"[VoiceMate] ⚠ faster-whisper (CT2-ROCm) falhou na GPU AMD: {exc}",
+            _("[VoiceMate] ⚠ faster-whisper (CT2-ROCm) failed on the AMD GPU: {exc}").format(exc=exc),
             file=sys.stderr,
         )
-        print("[VoiceMate]   Desabilitando até o próximo `make configure`.", file=sys.stderr)
+        print(_("[VoiceMate]   Disabling until the next `make configure`."), file=sys.stderr)
         try:
             from app.setup.persisted_config import update_persisted
 
             update_persisted(ct2_rocm_ok=False)
         except Exception as persist_exc:  # noqa: BLE001
-            print(f"[VoiceMate] ⚠ Falha ao persistir ct2_rocm_ok: {persist_exc}", file=sys.stderr)
+            print(
+                _("[VoiceMate] ⚠ Failed to persist ct2_rocm_ok: {persist_exc}").format(persist_exc=persist_exc),
+                file=sys.stderr,
+            )
         return None
 
 
 def _build_amd_transcriber(config: Config) -> TranscriptionBackend:
-    """Cadeia AMD: faster-whisper-rocm → (GPU intermediários por plataforma) → CPU.
+    """AMD chain: faster-whisper-rocm → (per-platform intermediate GPU backends) → CPU.
 
-    A estratégia explícita (--stt-strategy/persisted) entra no topo da cadeia;
-    com "auto", o CT2-ROCm só é tentado se o setup o validou (ct2_rocm_ok).
+    The explicit strategy (--stt-strategy/persisted) goes at the top of the chain;
+    with "auto", CT2-ROCm is only tried if setup validated it (ct2_rocm_ok).
 
-    A ordem dos intermediários depende da plataforma: no WSL2 o Vulkan só
-    enxerga llvmpipe (implementação por software, CPU) — a GPU real só é
-    alcançável via ROCm —, então o openai-whisper (torch ROCm) vem ANTES do
-    whisper.cpp. No Linux nativo (RADV) e Windows, whisper.cpp+Vulkan acelera
-    de verdade e segue na frente.
+    The order of the intermediates depends on the platform: on WSL2 Vulkan only
+    sees llvmpipe (a software, CPU implementation) — the real GPU is only
+    reachable via ROCm — so openai-whisper (torch ROCm) comes BEFORE whisper.cpp.
+    On native Linux (RADV) and Windows, whisper.cpp+Vulkan genuinely accelerates
+    and stays ahead.
     """
     strategy = config.stt_strategy
     if strategy == "auto" and config.whisper_backend == "openai-whisper":
-        strategy = "openai-whisper"  # --whisper-backend explícito continua respeitado
+        strategy = "openai-whisper"  # an explicit --whisper-backend is still respected
     platform = config.platform or detect_platform()
 
     try_rocm = strategy == "faster-whisper-rocm" or (strategy == "auto" and config.ct2_rocm_ok is True)
@@ -139,17 +143,17 @@ def _build_amd_transcriber(config: Config) -> TranscriptionBackend:
         backend = factory(config)
         if backend is not None:
             return backend
-    print("[VoiceMate] ⚠ Nenhum backend GPU disponível na AMD; usando faster-whisper em CPU.", file=sys.stderr)
+    print(_("[VoiceMate] ⚠ No GPU backend available on AMD; using faster-whisper on CPU."), file=sys.stderr)
     return _faster_whisper(config, use_cpu=True)
 
 
 def build_transcriber(config: Config) -> TranscriptionBackend:
-    """Escolhe o motor de transcrição a partir de vendor/estratégia.
+    """Pick the transcription engine based on vendor/strategy.
 
-    `--cpu` → faster-whisper CPU. AMD → cadeia `_build_amd_transcriber` (meta:
-    qualidade ≥ faster-whisper CUDA da main). NVIDIA → faster-whisper CUDA
-    (comportamento da main), com whispercpp/openai-whisper opt-in via
-    --whisper-backend. Sem GPU → faster-whisper CPU.
+    `--cpu` → faster-whisper CPU. AMD → the `_build_amd_transcriber` chain (goal:
+    quality ≥ main's faster-whisper CUDA). NVIDIA → faster-whisper CUDA (main's
+    behavior), with whispercpp/openai-whisper opt-in via --whisper-backend.
+    No GPU → faster-whisper CPU.
     """
     if config.use_cpu:
         return _faster_whisper(config, use_cpu=True)
@@ -172,15 +176,17 @@ def build_transcriber(config: Config) -> TranscriptionBackend:
 def build_speaker(config: TTSConfig) -> TextToSpeech:
     if not config.enabled or config.engine == "none":
         return NullSpeaker()
-    # Nome do extra do poetry por engine (p/ a dica de instalação no aviso).
+    # Poetry extra name per engine (for the install hint in the warning).
     extra = {"voxcpm": "voxcpm", "kokoro": "kokoro"}.get(config.engine, "tts")
     if not tts_feature.is_available(config.engine):
         print(
-            f"[VoiceMate] ⚠ TTS desativado: pacotes do engine '{config.engine}' não instalados.",
+            _("[VoiceMate] ⚠ TTS disabled: engine '{engine}' packages not installed.").format(engine=config.engine),
             file=sys.stderr,
         )
         print(
-            f"[VoiceMate]   Instale com: poetry install --extras {extra} (ou rode com --no-tts).",
+            _("[VoiceMate]   Install with: poetry install --extras {extra} (or run with --no-tts).").format(
+                extra=extra
+            ),
             file=sys.stderr,
         )
         return NullSpeaker()
@@ -188,11 +194,15 @@ def build_speaker(config: TTSConfig) -> TextToSpeech:
         return tts_feature.build_default_speaker(config)
     except Exception as exc:  # noqa: BLE001
         print(
-            f"[VoiceMate] ⚠ TTS desativado (falha ao iniciar engine '{config.engine}'): {exc}",
+            _("[VoiceMate] ⚠ TTS disabled (failed to start engine '{engine}'): {exc}").format(
+                engine=config.engine, exc=exc
+            ),
             file=sys.stderr,
         )
         print(
-            f"[VoiceMate]   Verifique `poetry install --extras {extra}`, GPU disponível, ou rode com `--no-tts`.",
+            _(
+                "[VoiceMate]   Check `poetry install --extras {extra}`, GPU availability, or run with `--no-tts`."
+            ).format(extra=extra),
             file=sys.stderr,
         )
         return NullSpeaker()
@@ -231,11 +241,11 @@ def build_handlers(
         elif flow.kind == "claude_chat":
             if not claude_feature.is_available():
                 print(
-                    "[VoiceMate] ⚠ Fluxo Claude desabilitado: extra 'claude' não instalado.",
+                    _("[VoiceMate] ⚠ Claude flow disabled: extra 'claude' not installed."),
                     file=sys.stderr,
                 )
                 print(
-                    "[VoiceMate]   Instale com: poetry install --extras claude",
+                    _("[VoiceMate]   Install with: poetry install --extras claude"),
                     file=sys.stderr,
                 )
                 continue
@@ -251,7 +261,7 @@ def build_handlers(
                 runtime.start()
             except Exception as exc:  # noqa: BLE001
                 print(
-                    f"[VoiceMate] ⚠ Falha ao iniciar Claude (rode `claude login`): {exc}",
+                    _("[VoiceMate] ⚠ Failed to start Claude (run `claude login`): {exc}").format(exc=exc),
                     file=sys.stderr,
                 )
                 continue
@@ -263,7 +273,7 @@ def build_handlers(
                 clipboard=clipboard,
             )
         else:
-            print(f"[VoiceMate] ⚠ Fluxo desconhecido ignorado: {flow.kind}", file=sys.stderr)
+            print(_("[VoiceMate] ⚠ Unknown flow ignored: {kind}").format(kind=flow.kind), file=sys.stderr)
             continue
         handlers[flow.name] = handler
         owned.append(handler)
@@ -282,10 +292,10 @@ class _HotkeyCallback:
 
 
 class _SocketTriggerCallback:
-    """Binding do socket: recebe o client_id (quem disparou) e devolve a operação.
+    """Socket binding: receives the client_id (who fired it) and returns the operation.
 
-    Diferente do `_HotkeyCallback` (hotkey local, fire-and-forget), o gatilho via
-    socket precisa saber O QUE o toggle fez para responder ao consumidor.
+    Unlike `_HotkeyCallback` (local hotkey, fire-and-forget), the socket trigger
+    needs to know WHAT the toggle did in order to answer the consumer.
     """
 
     def __init__(self, session: RecordingSession, handler_id: str) -> None:
@@ -297,7 +307,7 @@ class _SocketTriggerCallback:
 
 
 def resolve_trigger(config: Config) -> TriggerKind:
-    """Gatilho efetivo: explícito no config, senão o default da plataforma."""
+    """Effective trigger: explicit in the config, otherwise the platform default."""
     if config.trigger is not None:
         return config.trigger
     return default_trigger(config.platform or detect_platform())
@@ -314,8 +324,10 @@ def build_listener(
     if config.input_method == "mouse":
         if trigger != "keyboard-hooks":
             print(
-                f"[VoiceMate] ⚠ --input-method mouse só é suportado no Windows (trigger={trigger}); "
-                "usando hotkeys de teclado.",
+                _(
+                    "[VoiceMate] ⚠ --input-method mouse is only supported on Windows (trigger={trigger}); "
+                    "using keyboard hotkeys."
+                ).format(trigger=trigger),
                 file=sys.stderr,
             )
         else:
@@ -324,8 +336,8 @@ def build_listener(
             return MouseButtonListener(button=config.mouse_button, on_toggle=callback)  # type: ignore[return-value]
 
     if trigger == "socket":
-        # Bindings por NOME do flow (o request diz {"flow": ...}); "stop decide
-        # o destino" é preservado: cada request equivale ao hotkey daquele flow.
+        # Bindings keyed by flow NAME (the request says {"flow": ...}); "stop
+        # decides the destination" is preserved: each request equals that flow's hotkey.
         flow_bindings: dict[str, Callable[[str | None], ToggleOutcome | None]] = {
             flow.name: _SocketTriggerCallback(session, flow.name) for flow in flows
         }

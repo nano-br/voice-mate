@@ -1,16 +1,16 @@
-"""Build + instalação do fork ROCm do CTranslate2 (faster-whisper na GPU AMD).
+"""Build + install the ROCm fork of CTranslate2 (faster-whisper on the AMD GPU).
 
-O CTranslate2 oficial não tem backend ROCm (e trava na gfx1201); o fork
-`arlo-phoenix/CTranslate2-rocm` compila o backend "CUDA" via HIP, e o
-faster-whisper passa a acelerar na AMD com `device="cuda"` — qualidade
-idêntica à da main em NVIDIA.
+The official CTranslate2 has no ROCm backend (and hangs on gfx1201); the
+`arlo-phoenix/CTranslate2-rocm` fork compiles the "CUDA" backend via HIP, so
+faster-whisper gets GPU acceleration on AMD with `device="cuda"` — quality
+identical to mainline on NVIDIA.
 
-Build from source (demora bastante — dezenas de minutos a horas). Tudo aqui é
-best-effort: qualquer falha imprime o motivo + a correção e retorna False, e o
-chamador (gpu_bootstrap) persiste `ct2_rocm_ok=false` e segue para o
-whisper.cpp SEM abortar o setup. `make configure` re-tenta.
+Build from source (takes a while — tens of minutes to hours). Everything here
+is best-effort: any failure prints the reason + the fix and returns False, and
+the caller (gpu_bootstrap) persists `ct2_rocm_ok=false` and continues to
+whisper.cpp WITHOUT aborting the setup. `make configure` retries.
 
-Só stdlib — roda em install time.
+Stdlib only — runs at install time.
 """
 
 from __future__ import annotations
@@ -21,6 +21,8 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+from app.i18n import _
 
 _REPO_URL = "https://github.com/arlo-phoenix/CTranslate2-rocm"
 _CACHE_DIR = Path.home() / ".cache" / "voicemate" / "ct2-rocm"
@@ -37,15 +39,15 @@ def is_installed() -> bool:
 
 
 def install(gfx_target: str | None, interactive_log: bool = True) -> bool:
-    """Clona, builda, instala o wrapper python e valida. False em qualquer falha."""
+    """Clone, build, install the python wrapper and validate. False on any failure."""
     missing = _missing_tools()
     if missing:
-        _log(f"⚠ Ferramentas ausentes p/ o build do CT2-ROCm: {', '.join(missing)}")
-        _log(f"  Instale com: {_APT_HINT}")
-        _log("  (no WSL2, instale também o ROCm: https://rocm.docs.amd.com)")
+        _log(_("⚠ Missing tools for the CT2-ROCm build: {tools}").format(tools=", ".join(missing)))
+        _log(_("  Install with: {hint}").format(hint=_APT_HINT))
+        _log(_("  (on WSL2, also install ROCm: https://rocm.docs.amd.com)"))
         return False
     if gfx_target is None:
-        _log("⚠ gfx target da GPU não detectado (rocminfo); usando lista default do fork.")
+        _log(_("⚠ GPU gfx target not detected (rocminfo); using the fork's default list."))
 
     _CACHE_DIR.mkdir(parents=True, exist_ok=True)
     if not _clone():
@@ -55,19 +57,19 @@ def install(gfx_target: str | None, interactive_log: bool = True) -> bool:
     if not _pip_install_wrapper():
         return False
     if not verify():
-        _log("⚠ Build concluiu mas a validação falhou (import/GPU). Veja mensagens acima.")
+        _log(_("⚠ Build completed but validation failed (import/GPU). See messages above."))
         return False
 
     _MARKER_PATH.write_text(
         json.dumps({"gfx_target": gfx_target, "prefix": str(_PREFIX_DIR)}, indent=2) + "\n",
         encoding="utf-8",
     )
-    _log("✓ CTranslate2-ROCm instalado e validado (faster-whisper acelera na GPU AMD).")
+    _log(_("✓ CTranslate2-ROCm installed and validated (faster-whisper accelerates on the AMD GPU)."))
     return True
 
 
 def verify() -> bool:
-    """Valida em subprocess: import + ao menos 1 device 'cuda' (HIP) visível."""
+    """Validate in a subprocess: import + at least 1 visible 'cuda' (HIP) device."""
     code = (
         "import ctranslate2, sys; "
         "n = ctranslate2.get_cuda_device_count(); "
@@ -83,7 +85,7 @@ def verify() -> bool:
             env=runtime_env(),
         )
     except (OSError, subprocess.SubprocessError) as exc:
-        _log(f"⚠ Validação do CT2-ROCm não rodou: {exc}")
+        _log(_("⚠ CT2-ROCm validation did not run: {exc}").format(exc=exc))
         return False
     out = (proc.stdout or "").strip()
     if out:
@@ -97,14 +99,14 @@ def verify() -> bool:
 
 
 def runtime_env() -> dict[str, str]:
-    """Env com LD_LIBRARY_PATH apontando p/ a libctranslate2 instalada no prefix."""
+    """Env with LD_LIBRARY_PATH pointing to the libctranslate2 installed in the prefix."""
     env = dict(os.environ)
     lib_dir = str(_PREFIX_DIR / "lib")
     current = env.get("LD_LIBRARY_PATH", "")
     if lib_dir not in current.split(":"):
         env["LD_LIBRARY_PATH"] = f"{lib_dir}:{current}" if current else lib_dir
-    # Mesmo workaround do runtime (wiring): allocator default do CT2 dá
-    # "Memory access fault" em gfx1201 — validar já com o allocator certo.
+    # Same workaround as the runtime (wiring): CT2's default allocator gives a
+    # "Memory access fault" on gfx1201 — validate with the right allocator already.
     env.setdefault("CT2_CUDA_ALLOCATOR", "cub_caching")
     return env
 
@@ -120,19 +122,19 @@ def _missing_tools() -> list[str]:
 
 def _clone() -> bool:
     if (_SRC_DIR / ".git").exists():
-        _log(f"Fonte já clonado em {_SRC_DIR} (reusando).")
+        _log(_("Source already cloned at {path} (reusing).").format(path=_SRC_DIR))
         return True
     return _run(
         ["git", "clone", "--recursive", "--depth", "1", _REPO_URL, str(_SRC_DIR)],
-        "Clonando CTranslate2-rocm (com submódulos)...",
+        _("Cloning CTranslate2-rocm (with submodules)..."),
     )
 
 
 def _build(gfx_target: str | None) -> bool:
     env = dict(os.environ)
     if gfx_target:
-        # O build HIP usa GPU_TARGETS/CMAKE_HIP_ARCHITECTURES p/ compilar kernels
-        # só para a arquitetura local (build mais rápido e menor).
+        # The HIP build uses GPU_TARGETS/CMAKE_HIP_ARCHITECTURES to compile kernels
+        # only for the local architecture (faster, smaller build).
         env.setdefault("GPU_TARGETS", gfx_target)
         env.setdefault("PYTORCH_ROCM_ARCH", gfx_target)
     configure = [
@@ -148,23 +150,23 @@ def _build(gfx_target: str | None) -> bool:
         "-DBUILD_TESTS=OFF",
         "-DOPENMP_RUNTIME=COMP",
         f"-DCMAKE_INSTALL_PREFIX={_PREFIX_DIR}",
-        # rpath embutido: o wrapper python acha a lib sem LD_LIBRARY_PATH global.
+        # Embedded rpath: the python wrapper finds the lib without a global LD_LIBRARY_PATH.
         f"-DCMAKE_INSTALL_RPATH={_PREFIX_DIR / 'lib'}",
     ]
     if gfx_target:
         configure.append(f"-DCMAKE_HIP_ARCHITECTURES={gfx_target}")
-    if not _run(configure, "Configurando build (cmake)...", env=env):
+    if not _run(configure, _("Configuring build (cmake)..."), env=env):
         return False
     jobs = str(max(1, (os.cpu_count() or 4) - 1))
     if not _run(
         ["cmake", "--build", str(_BUILD_DIR), "--parallel", jobs],
-        f"Compilando (paralelo={jobs}; pode demorar MUITO — café ☕)...",
+        _("Compiling (parallel={jobs}; this can take a LONG time — grab a coffee ☕)...").format(jobs=jobs),
         env=env,
     ):
         return False
     return _run(
         ["cmake", "--install", str(_BUILD_DIR)],
-        f"Instalando em {_PREFIX_DIR}...",
+        _("Installing into {path}...").format(path=_PREFIX_DIR),
         env=env,
     )
 
@@ -172,11 +174,11 @@ def _build(gfx_target: str | None) -> bool:
 def _pip_install_wrapper() -> bool:
     env = dict(os.environ)
     env["CTRANSLATE2_ROOT"] = str(_PREFIX_DIR)
-    # rpath no módulo nativo do wrapper → import funciona sem LD_LIBRARY_PATH.
+    # rpath in the wrapper's native module → import works without LD_LIBRARY_PATH.
     env["LDFLAGS"] = f"-Wl,-rpath,{_PREFIX_DIR / 'lib'} " + env.get("LDFLAGS", "")
     return _run(
         [sys.executable, "-m", "pip", "install", "--force-reinstall", str(_SRC_DIR / "python")],
-        "Instalando o wrapper python do CTranslate2-ROCm no venv...",
+        _("Installing the CTranslate2-ROCm python wrapper into the venv..."),
         env=env,
     )
 
@@ -187,10 +189,10 @@ def _run(cmd: list[str], desc: str, env: dict[str, str] | None = None) -> bool:
     try:
         proc = subprocess.run(cmd, env=env)
     except OSError as exc:
-        _log(f"⚠ Falha ao executar: {exc}")
+        _log(_("⚠ Failed to execute: {exc}").format(exc=exc))
         return False
     if proc.returncode != 0:
-        _log(f"⚠ Comando retornou código {proc.returncode}.")
+        _log(_("⚠ Command returned code {code}.").format(code=proc.returncode))
         return False
     return True
 

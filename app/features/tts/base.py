@@ -4,53 +4,53 @@ from typing import Protocol
 
 
 class TextToSpeech(Protocol):
-    """Orquestrador de Text-to-Speech.
+    """Text-to-Speech orchestrator.
 
-    Implementações concretas (VoxCPM, Edge-TTS, pyttsx3, etc.) ficam isoladas
-    em módulos próprios e podem ser trocadas sem mexer no fluxo de chamada.
+    Concrete implementations (VoxCPM, Edge-TTS, pyttsx3, etc.) stay isolated in
+    their own modules and can be swapped without touching the call flow.
     """
 
     def is_active(self) -> bool:
-        """Indica se o speaker está pronto para falar.
+        """Indicates whether the speaker is ready to speak.
 
-        O handler usa esse sinal para decidir se chama `speak` ou cai no
-        feedback sonoro alternativo (beep). `False` em NullSpeaker e em
-        speakers cujo bootstrap falhou.
+        The handler uses this signal to decide whether to call `speak` or fall
+        back to the alternative audio feedback (beep). `False` for NullSpeaker
+        and for speakers whose bootstrap failed.
         """
         ...
 
     def speak(self, text: str) -> None:
-        """Sintetiza e reproduz o texto. Bloqueia até o fim ou até `stop()`."""
+        """Synthesize and play the text. Blocks until done or until `stop()`."""
         ...
 
     def warmup(self) -> None:
-        """Pré-aquece o speaker (carrega modelo/tuna kernels) fora do 1º turno.
+        """Pre-warm the speaker (load model/tune kernels) outside the 1st turn.
 
-        Chamado em background no startup para a 1ª frase já sair realtime.
-        Idempotente. No-op em NullSpeaker e em speakers desligados.
+        Called in the background at startup so the 1st sentence comes out realtime.
+        Idempotent. No-op for NullSpeaker and for disabled speakers.
         """
         ...
 
     def wait_done(self, timeout: float | None = None) -> bool:
-        """Espera o áudio enfileirado terminar de tocar (fim do turno).
+        """Wait for the queued audio to finish playing (end of turn).
 
-        Para speakers com pipeline (`speak()` enfileira e retorna), o handler
-        chama isto ao final para aguardar a reprodução. Speakers que já bloqueiam
-        em `speak()` podem retornar True imediatamente.
+        For pipelined speakers (`speak()` enqueues and returns), the handler
+        calls this at the end to wait for playback. Speakers that already block
+        in `speak()` can return True immediately.
         """
         ...
 
     def stop(self) -> None:
-        """Interrompe imediatamente a reprodução em andamento."""
+        """Immediately interrupt the playback in progress."""
         ...
 
     def close(self) -> None:
-        """Libera recursos (modelo, streams)."""
+        """Release resources (model, streams)."""
         ...
 
 
 class NullSpeaker:
-    """Speaker no-op — usado quando TTS está desligado ou falhou ao iniciar."""
+    """No-op speaker — used when TTS is disabled or failed to start."""
 
     def is_active(self) -> bool:
         return False

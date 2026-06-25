@@ -1,8 +1,8 @@
-"""Garante stdout/stderr em UTF-8 (o app imprime emoji/→/acentos o tempo todo).
+"""Ensure stdout/stderr use UTF-8 (the app prints emoji/→/accents all the time).
 
-Em consoles Windows legados (cp1252) imprimir esses caracteres levanta
-UnicodeEncodeError. Reconfigurar para UTF-8 com errors='replace' evita o crash
-sem afetar terminais que já são UTF-8 (no-op nesse caso).
+On legacy Windows consoles (cp1252), printing these characters raises
+UnicodeEncodeError. Reconfiguring to UTF-8 with errors='replace' avoids the crash
+without affecting terminals that are already UTF-8 (a no-op in that case).
 """
 
 from __future__ import annotations
@@ -12,14 +12,14 @@ from typing import TextIO
 
 
 def force_utf8_stdio() -> None:
-    """Reconfigura stdout/stderr para UTF-8. Idempotente e à prova de falha."""
+    """Reconfigure stdout/stderr to UTF-8. Idempotent and failure-proof."""
     _reconfigure(sys.stdout)
     _reconfigure(sys.stderr)
 
 
 def _reconfigure(stream: TextIO | None) -> None:
     reconfigure = getattr(stream, "reconfigure", None)
-    if reconfigure is None:  # streams sem reconfigure (ex.: captura de teste)
+    if reconfigure is None:  # streams without reconfigure (e.g. test capture)
         return
     try:
         reconfigure(encoding="utf-8", errors="replace")

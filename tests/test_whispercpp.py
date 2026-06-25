@@ -60,7 +60,7 @@ def test_find_vad_model(tmp_path: Path) -> None:
 
 
 def test_is_available_with_linux_binaries(tmp_path: Path) -> None:
-    # Linux: binários sem .exe
+    # Linux: binaries without .exe
     (tmp_path / "whisper-server").write_bytes(b"x")
     (tmp_path / "ggml-large-v3-turbo-q8_0.bin").write_bytes(b"x")
     cfg = Config(whispercpp_dir=str(tmp_path), whispercpp_mode="server")

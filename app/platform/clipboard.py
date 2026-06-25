@@ -1,17 +1,18 @@
-"""Escrita no clipboard por plataforma, atrás de um Protocol injetável.
+"""Per-platform clipboard writing, behind an injectable Protocol.
 
-`pyperclip` cobre Windows, X11 (xclip/xsel) e Wayland (wl-copy). No WSL2 o caso
-é mais delicado: o WSLg roda Wayland, então **wl-copy** é o caminho nativo mais
-confiável (e sincroniza com o clipboard do Windows). O `clip.exe` via interop é
-o último recurso — com `appendWindowsPath=false` ele some do PATH e, se o
-binfmt do WSLInterop não estiver registrado (comum com systemd), nem executa
-(`Exec format error`). Por isso, no WSL, tentamos os utilitários nativos antes.
+`pyperclip` covers Windows, X11 (xclip/xsel) and Wayland (wl-copy). On WSL2 the
+case is trickier: WSLg runs Wayland, so **wl-copy** is the most reliable native
+path (and it syncs with the Windows clipboard). `clip.exe` via interop is the
+last resort — with `appendWindowsPath=false` it drops off the PATH, and if the
+WSLInterop binfmt is not registered (common with systemd) it won't even run
+(`Exec format error`). That's why, on WSL, we try the native utilities first.
 
-`WslClipboardWriter` é AUTO-RECUPERÁVEL: cacheia o mecanismo que funcionou, mas
-se ele FALHAR depois (a ponte Wayland do WSLg fica instável em sessões longas),
-limpa o cache e re-resolve do zero, caindo para outro mecanismo em vez de ficar
-preso no que quebrou. (O caminho mais robusto é o clip.exe — direto ao Windows,
-sem a ponte do WSLg —, mas ele exige o interop do WSLInterop registrado.)
+`WslClipboardWriter` is SELF-HEALING: it caches the mechanism that worked, but
+if that one later FAILS (the WSLg Wayland bridge gets flaky over long sessions),
+it clears the cache and re-resolves from scratch, falling back to another
+mechanism instead of staying stuck on the broken one. (The most robust path is
+clip.exe — straight to Windows, without the WSLg bridge — but it requires the
+WSLInterop interop to be registered.)
 """
 
 from __future__ import annotations
@@ -24,20 +25,21 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
+from app.i18n import _
 from app.platform.kinds import PlatformKind
 
 if TYPE_CHECKING:
     from app.core.session_status import SessionStatus
 
-# Caminho padrão do clip.exe via interop (quando appendWindowsPath=false tira do PATH).
+# Default clip.exe path via interop (for when appendWindowsPath=false drops it from PATH).
 _WINDOWS_CLIP_EXE = Path("/mnt/c/Windows/System32/clip.exe")
-# Timeout dos utilitários de clipboard: o wl-copy retorna na hora (forka um
-# daemon), mas se a ponte Wayland do WSLg travar, sem timeout o app penduraria.
+# Clipboard-utility timeout: wl-copy returns immediately (forks a daemon), but if
+# the WSLg Wayland bridge hangs, without a timeout the app would hang too.
 _CLIP_TIMEOUT = 5.0
 
 
 class ClipboardWriter(Protocol):
-    """Escreve texto no clipboard do ambiente do usuário."""
+    """Writes text to the user's environment clipboard."""
 
     def copy(self, text: str) -> None: ...
 
@@ -68,12 +70,12 @@ def _pyperclip_copy(text: str) -> None:
 
 
 def _interop_works() -> bool:
-    """True se o WSLInterop está registrado E habilitado (clip.exe pode executar).
+    """True if WSLInterop is registered AND enabled (clip.exe can execute).
 
-    Sem isso, o execve do .exe falha (ENOEXEC) e o `subprocess` do Python cai no
-    fallback para `/bin/sh`, que "tem sucesso" (rc=0) SEM copiar nada — um falso
-    positivo que faz o app achar que copiou quando não copiou. Por isso o clip.exe
-    só é oferecido quando o interop está de fato funcional.
+    Without it, the .exe's execve fails (ENOEXEC) and Python's `subprocess` falls
+    back to `/bin/sh`, which "succeeds" (rc=0) WITHOUT copying anything — a false
+    positive that makes the app think it copied when it didn't. That's why
+    clip.exe is only offered when interop is actually functional.
     """
     try:
         return Path("/proc/sys/fs/binfmt_misc/WSLInterop").read_text(encoding="utf-8").startswith("enabled")
@@ -82,10 +84,10 @@ def _interop_works() -> bool:
 
 
 class WslClipboardWriter:
-    """Clipboard no WSL2: wl-copy/xclip (nativos, via WSLg) → pyperclip → clip.exe.
+    """Clipboard on WSL2: wl-copy/xclip (native, via WSLg) → pyperclip → clip.exe.
 
-    Tenta as estratégias em ordem, fica com a primeira que funcionar (cacheada).
-    O clip.exe lê UTF-16LE com BOM; os demais, UTF-8.
+    Tries the strategies in order, keeping the first one that works (cached).
+    clip.exe reads UTF-16LE with a BOM; the others, UTF-8.
     """
 
     def __init__(self, status: SessionStatus | None = None) -> None:
@@ -94,22 +96,23 @@ class WslClipboardWriter:
         self._status = status
 
     def copy(self, text: str) -> None:
-        # Publica no hub para o Windows buscar via /result e setar o clipboard
-        # nativo (Set-Clipboard) — o caminho confiável no WSL2, onde a ponte do
-        # WSLg/interop falha. O wl-copy abaixo é best-effort (clipboard local do WSL).
+        # Publish to the hub so Windows can fetch it via /result and set the
+        # native clipboard (Set-Clipboard) — the reliable path on WSL2, where the
+        # WSLg/interop bridge fails. The wl-copy below is best-effort (WSL-local clipboard).
         if self._status is not None:
             self._status.record_result(text)
-        # Caminho rápido: usa o mecanismo já validado. Se ele FALHAR (a ponte
-        # Wayland do WSLg fica instável em sessões longas), NÃO desiste — limpa o
-        # cache e re-resolve do zero, caindo para outro mecanismo (auto-recupera).
+        # Fast path: use the already-validated mechanism. If it FAILS (the WSLg
+        # Wayland bridge gets flaky over long sessions), DON'T give up — clear the
+        # cache and re-resolve from scratch, falling back to another mechanism (self-heals).
         if self._writer is not None:
             try:
                 self._writer(text)
                 return
-            except Exception as exc:  # noqa: BLE001 — re-resolve abaixo
+            except Exception as exc:  # noqa: BLE001 — re-resolve below
                 print(
-                    f"[VoiceMate] ⚠ clipboard '{self._writer_name}' falhou ({exc}); "
-                    "re-tentando os outros mecanismos...",
+                    _(
+                        "[VoiceMate] ⚠ clipboard '{writer_name}' failed ({exc}); retrying the other mechanisms..."
+                    ).format(writer_name=self._writer_name, exc=exc),
                     file=sys.stderr,
                 )
                 self._writer = None
@@ -121,13 +124,13 @@ class WslClipboardWriter:
                 self._writer = writer
                 self._writer_name = name
                 return
-            except Exception as exc:  # noqa: BLE001 — tenta a próxima estratégia
+            except Exception as exc:  # noqa: BLE001 — try the next strategy
                 errors.append(f"{name}: {exc}")
         joined = "\n  ".join(errors)
         raise RuntimeError(
-            "Nenhum mecanismo de clipboard funcionou no WSL:\n  "
+            "No clipboard mechanism worked on WSL:\n  "
             f"{joined}\n"
-            "Instale o utilitário nativo do WSLg: sudo apt install -y wl-clipboard"
+            "Install the native WSLg utility: sudo apt install -y wl-clipboard"
         )
 
     def _candidates(self) -> list[tuple[str, Callable[[str], None]]]:
@@ -137,7 +140,7 @@ class WslClipboardWriter:
         if shutil.which("xclip"):
             out.append(("xclip", _xclip))
         out.append(("pyperclip", _pyperclip_copy))
-        # clip.exe SÓ quando o interop está funcional (senão "sucede" sem copiar).
+        # clip.exe ONLY when interop is functional (otherwise it "succeeds" without copying).
         if _interop_works():
             clip = shutil.which("clip.exe") or (str(_WINDOWS_CLIP_EXE) if _WINDOWS_CLIP_EXE.exists() else None)
             if clip is not None:

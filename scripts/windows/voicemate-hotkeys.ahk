@@ -1,11 +1,12 @@
-; VoiceMate — hotkeys globais do Windows → daemon no WSL2.
+; VoiceMate - global Windows hotkeys -> daemon in WSL2.
 ;
-; Requer AutoHotkey v2 (https://www.autohotkey.com). Dê dois cliques para ativar;
-; para iniciar com o Windows, coloque um atalho deste arquivo em shell:startup.
+; Requires AutoHotkey v2 (https://www.autohotkey.com). Double-click to activate;
+; to start with Windows, place a shortcut to this file in shell:startup.
 ;
-; O daemon (rodando dentro do WSL com `make run`, trigger=socket) escuta em
-; 127.0.0.1:47821 — o localhostForwarding do WSL2 expõe a porta ao Windows.
-; Cada hotkey equivale a apertar o atalho daquele fluxo: "stop decide o destino".
+; The daemon (running inside WSL with `make run`, trigger=socket) listens on
+; 127.0.0.1:47821 - WSL2's localhostForwarding exposes the port to Windows.
+; Each hotkey is equivalent to pressing the shortcut for that flow: "stop decides
+; the destination".
 
 #Requires AutoHotkey v2.0
 #SingleInstance Force
@@ -21,9 +22,9 @@ Trigger(flow) {
         req.SetTimeouts(500, 500, 500, 2000)
         req.Send('{"flow": "' . flow . '"}')
     } catch {
-        TrayTip("VoiceMate", "Daemon offline em " . DaemonUrl . " — rode 'make run' no WSL.", 2)
+        TrayTip("VoiceMate", "Daemon offline at " . DaemonUrl . " - run 'make run' in WSL.", 2)
     }
 }
 
-^!v:: Trigger("clipboard")    ; Ctrl+Alt+V — voz → clipboard
-^!a:: Trigger("claude_chat")  ; Ctrl+Alt+A — voz → Claude → TTS
+^!v:: Trigger("clipboard")    ; Ctrl+Alt+V - voice -> clipboard
+^!a:: Trigger("claude_chat")  ; Ctrl+Alt+A - voice -> Claude -> TTS

@@ -1,16 +1,16 @@
-"""Player de áudio via `paplay` (PulseAudio) — robusto no WSLg.
+"""Audio player via `paplay` (PulseAudio) — robust on WSLg.
 
-Por que não o sounddevice/PortAudio aqui: no WSL2 a saída de áudio é PulseAudio
-sobre RDP (WSLg), e o stream de callback do PortAudio é frágil nesse transporte —
-os underruns desestabilizam o stream e uma operação de stop/close pode TRAVAR
-(`paTimedOut`), pendurando o app inteiro (nem Ctrl+C mata). O `paplay` lê PCM cru
-do stdin e deixa o próprio PulseAudio cuidar do buffer (nativo, sem callback),
-então não há deadlock e o processo é sempre matável.
+Why not sounddevice/PortAudio here: on WSL2 the audio output is PulseAudio over
+RDP (WSLg), and PortAudio's callback stream is fragile on that transport —
+underruns destabilize the stream and a stop/close operation can HANG
+(`paTimedOut`), freezing the whole app (not even Ctrl+C kills it). `paplay` reads
+raw PCM from stdin and lets PulseAudio itself handle the buffer (native, no
+callback), so there's no deadlock and the process is always killable.
 
-Mesma interface do `AudioPlayer` (ensure_started/feed/drain/abort/close). Uma
-thread escritora consome a fila e escreve no stdin do `paplay` — assim `feed()`
-não bloqueia (mantém o pipeline: sintetizar a próxima frase enquanto a atual
-toca). Todos os waits têm timeout: o app nunca pendura no encerramento.
+Same interface as `AudioPlayer` (ensure_started/feed/drain/abort/close). A writer
+thread consumes the queue and writes to `paplay`'s stdin — so `feed()` doesn't
+block (keeps the pipeline: synthesize the next sentence while the current one
+plays). All waits have a timeout: the app never hangs on shutdown.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ def paplay_available() -> bool:
 
 
 class PaplayPlayer:
-    """Reproduz chunks float32 mono enviando PCM cru para o `paplay`."""
+    """Play mono float32 chunks by sending raw PCM to `paplay`."""
 
     def __init__(self) -> None:
         self._queue: queue.Queue[NDArray[np.float32] | None] = queue.Queue()
@@ -71,7 +71,7 @@ class PaplayPlayer:
             self._sample_rate = None
         if proc is None:
             return True
-        self._queue.put(_SENTINEL)  # writer fecha o stdin após esvaziar a fila
+        self._queue.put(_SENTINEL)  # writer closes stdin after draining the queue
         try:
             proc.wait(timeout=timeout)
             return True
@@ -85,7 +85,7 @@ class PaplayPlayer:
     def close(self) -> None:
         self._stop_process()
 
-    # ── internos ──────────────────────────────────────────────────────────────
+    # ── internals ─────────────────────────────────────────────────────────────
 
     def _write_loop(self, proc: subprocess.Popen[bytes]) -> None:
         stdin = proc.stdin
@@ -99,9 +99,9 @@ class PaplayPlayer:
                 stdin.write(chunk.tobytes())
                 stdin.flush()
             except (BrokenPipeError, ValueError, OSError):
-                return  # processo morto (abort) — para de escrever
+                return  # process dead (abort) — stop writing
         try:
-            stdin.close()  # EOF → paplay drena e sai
+            stdin.close()  # EOF → paplay drains and exits
         except OSError:
             pass
 
@@ -111,7 +111,7 @@ class PaplayPlayer:
             self._proc = None
             self._sample_rate = None
             self._drain_queue()
-        self._queue.put(_SENTINEL)  # destrava o writer se estiver bloqueado no get
+        self._queue.put(_SENTINEL)  # unblocks the writer if it's stuck on get
         if proc is None:
             return
         self._kill(proc)
@@ -132,7 +132,7 @@ class PaplayPlayer:
             except OSError:
                 pass
         except OSError as exc:
-            print(f"[PaplayPlayer] falha ao encerrar paplay: {exc}", file=sys.stderr)
+            print(f"[PaplayPlayer] failed to terminate paplay: {exc}", file=sys.stderr)
 
     def _drain_queue(self) -> None:
         while True:

@@ -1,17 +1,17 @@
-"""Speaker baseado em Kokoro (hexgrad, Apache-2.0) — TTS leve, 24 kHz.
+"""Kokoro-based speaker (hexgrad, Apache-2.0) — lightweight TTS, 24 kHz.
 
-Kokoro é um modelo pequeno (~82M, NÃO-difusão): usa pouquíssima GPU e roda em
-realtime (40-90×), o que evita saturar a GPU na síntese — diferente do OmniVoice
-(difusão, compute-bound). Em troca, NÃO clona voz: usa vozes fixas (ex.: PT-BR
-`pf_dora` feminina, `pm_alex`/`pm_santa` masculinas).
+Kokoro is a small model (~82M, NON-diffusion): uses very little GPU and runs
+realtime (40-90×), which avoids saturating the GPU during synthesis — unlike
+OmniVoice (diffusion, compute-bound). In exchange, it does NOT clone voices: it
+uses fixed voices (e.g. PT-BR `pf_dora` female, `pm_alex`/`pm_santa` male).
 
-API: `KPipeline(lang_code='p')` (p = português-BR) e `pipeline(text, voice=...)`
-que é um GERADOR — produz `(gs, ps, audio)` por trecho. Aproveitamos esse
-streaming nativo alimentando cada `audio` (24 kHz float32) direto no `AudioPlayer`
-(fila persistente, mesmos params anti-underrun do WSLg).
+API: `KPipeline(lang_code='p')` (p = Brazilian Portuguese) and
+`pipeline(text, voice=...)` which is a GENERATOR — yields `(gs, ps, audio)` per
+chunk. We leverage this native streaming by feeding each `audio` (24 kHz float32)
+straight into the `AudioPlayer` (persistent queue, same WSLg anti-underrun params).
 
-Requisito de sistema: `espeak-ng` (G2P do PT-BR). Sem ele, o load falha e o
-speaker degrada para inativo (o handler cai no beep).
+System requirement: `espeak-ng` (PT-BR G2P). Without it, the load fails and the
+speaker degrades to inactive (the handler falls back to the beep).
 """
 
 from __future__ import annotations
@@ -26,14 +26,15 @@ from numpy.typing import NDArray
 from app.core.config import TTSConfig
 from app.core.rocm_env import configure_rocm_env
 from app.features.tts.audio_player import AudioSink, create_audio_player
+from app.i18n import _
 
 _SAMPLE_RATE = 24000
 
-# Código do config (output_lang derivado) → lang_code do Kokoro.
-# "auto"/desconhecido → 'a' (inglês americano, default seguro do Kokoro).
+# Config code (derived output_lang) → Kokoro lang_code.
+# "auto"/unknown → 'a' (American English, Kokoro's safe default).
 _KOKORO_LANG_CODES = {
-    "pt": "p",  # português (Brasil)
-    "en": "a",  # inglês americano
+    "pt": "p",  # Portuguese (Brazil)
+    "en": "a",  # American English
     "es": "e",
     "fr": "f",
     "it": "i",
@@ -43,18 +44,18 @@ _KOKORO_LANG_CODES = {
 
 
 class KokoroSpeaker:
-    """Speaker Kokoro — lazy load, streaming nativo por trecho via AudioPlayer."""
+    """Kokoro speaker — lazy load, native per-chunk streaming via AudioPlayer."""
 
     def __init__(self, config: TTSConfig) -> None:
         self._config = config
         self._player: AudioSink = create_audio_player()
         self._stop_event = threading.Event()
-        self._load_lock = threading.Lock()  # serializa o load (warmup vs 1ª fala)
+        self._load_lock = threading.Lock()  # serializes the load (warmup vs 1st utterance)
         self._closed = False
         self._load_failed = False
-        # Env de ROCm (MIOpen FAST + TunableOp) antes de o torch importar.
+        # ROCm env (MIOpen FAST + TunableOp) before torch imports.
         configure_rocm_env(self._config.gpu_vendor)
-        # Lazy load: o pipeline só carrega na PRIMEIRA fala (ou no warmup).
+        # Lazy load: the pipeline only loads on the FIRST utterance (or on warmup).
         self._pipeline: Any = None
         self._sample_rate = _SAMPLE_RATE
 
@@ -62,7 +63,7 @@ class KokoroSpeaker:
         return not self._closed and not self._load_failed
 
     def speak(self, text: str) -> None:
-        """Sintetiza o texto e enfileira cada trecho no player (não bloqueia até o fim)."""
+        """Synthesize the text and enqueue each chunk on the player (doesn't block to the end)."""
         if self._closed or not text.strip():
             return
         if not self._ensure_pipeline():
@@ -76,33 +77,34 @@ class KokoroSpeaker:
                 if chunk.size > 0:
                     self._player.feed(chunk)
         except Exception as exc:  # noqa: BLE001
-            print(f"[KokoroSpeaker] erro ao falar: {exc}", file=sys.stderr)
+            print(_("[KokoroSpeaker] error while speaking: {exc}").format(exc=exc), file=sys.stderr)
             self._player.abort()
 
     def wait_done(self, timeout: float | None = None) -> bool:
-        """Espera a fila de áudio esvaziar (fim do turno) sem fechar o stream."""
+        """Wait for the audio queue to empty (end of turn) without closing the stream."""
         limit = timeout if timeout is not None else self._config.drain_timeout_seconds
         ok = self._player.drain(timeout=limit)
         if not ok:
             print(
-                "[KokoroSpeaker] ⚠ drain do AudioPlayer estourou — áudio pode ter ficado incompleto.", file=sys.stderr
+                _("[KokoroSpeaker] ⚠ AudioPlayer drain timed out — audio may have been left incomplete."),
+                file=sys.stderr,
             )
             self._player.abort()
         return ok
 
     def warmup(self) -> None:
-        """Carrega o pipeline e sintetiza uma frase curta fora do 1º turno real."""
+        """Load the pipeline and synthesize a short sentence outside the 1st real turn."""
         if self._closed or self._load_failed:
             return
         if not self._ensure_pipeline():
             return
         try:
-            print("[KokoroSpeaker] Warmup...")
-            for _chunk in self._synthesize("Olá."):  # consome o gerador (sem tocar)
+            print(_("[KokoroSpeaker] Warmup..."))
+            for _chunk in self._synthesize("Olá."):  # consume the generator (without playing)
                 pass
-            print("[KokoroSpeaker] Warmup concluído — síntese pronta.")
-        except Exception as exc:  # noqa: BLE001 — warmup é otimização, nunca quebra a fala
-            print(f"[KokoroSpeaker] ⚠ warmup falhou (seguindo): {exc}", file=sys.stderr)
+            print(_("[KokoroSpeaker] Warmup done — synthesis ready."))
+        except Exception as exc:  # noqa: BLE001 — warmup is an optimization, never breaks speech
+            print(_("[KokoroSpeaker] ⚠ warmup failed (continuing): {exc}").format(exc=exc), file=sys.stderr)
 
     def stop(self) -> None:
         self._stop_event.set()
@@ -115,12 +117,12 @@ class KokoroSpeaker:
         self._stop_event.set()
         self._player.close()
 
-    # ── modelo ────────────────────────────────────────────────────────────────
+    # ── model ─────────────────────────────────────────────────────────────────
 
     def _ensure_pipeline(self) -> bool:
         if self._pipeline is not None:
             return True
-        with self._load_lock:  # warmup (background) e a 1ª fala podem competir
+        with self._load_lock:  # warmup (background) and the 1st utterance can compete
             if self._pipeline is not None:
                 return True
             if self._load_failed:
@@ -130,21 +132,27 @@ class KokoroSpeaker:
                 return True
             except Exception as exc:  # noqa: BLE001
                 print(
-                    f"[KokoroSpeaker] ⚠ Falha ao carregar Kokoro: {exc}\n"
-                    "[KokoroSpeaker]   PT-BR precisa do espeak-ng: sudo apt install -y espeak-ng",
+                    _(
+                        "[KokoroSpeaker] ⚠ Failed to load Kokoro: {exc}\n"
+                        "[KokoroSpeaker]   PT-BR needs espeak-ng: sudo apt install -y espeak-ng"
+                    ).format(exc=exc),
                     file=sys.stderr,
                 )
                 self._load_failed = True
                 return False
 
-    def _load_pipeline(self) -> Any:  # noqa: ANN401 — KPipeline é dinâmico
+    def _load_pipeline(self) -> Any:  # noqa: ANN401 — KPipeline is dynamic
         from kokoro import KPipeline
 
         device = self._resolve_device()
         lang_code = _KOKORO_LANG_CODES.get(self._config.language, "a")
-        print(f"[KokoroSpeaker] Carregando Kokoro (lang={lang_code}, {device}, 1ª execução baixa pesos)...")
+        print(
+            _("[KokoroSpeaker] Loading Kokoro (lang={lang_code}, {device}, first run downloads weights)...").format(
+                lang_code=lang_code, device=device
+            )
+        )
         pipeline = KPipeline(lang_code=lang_code, device=device)
-        print("[KokoroSpeaker] Modelo pronto.")
+        print(_("[KokoroSpeaker] Model ready."))
         return pipeline
 
     def _resolve_device(self) -> str:
@@ -153,22 +161,22 @@ class KokoroSpeaker:
             return "cpu"
         if configured in ("cuda", "mps"):
             return "cuda:0" if configured == "cuda" else "mps"
-        # "auto" → CPU DE PROPÓSITO. Kokoro é realtime na CPU (RTF ~0.24 medido na
-        # RX 9070 XT) e assim NÃO disputa a GPU com a transcrição — a causa do
-        # chiado por contenção. Bônus: na AMD/ROCm os kernels do Kokoro são lentos
-        # (RTF ~1.8 na GPU), então CPU é melhor nos dois sentidos. Force com
-        # --tts-device cuda se quiser a GPU.
+        # "auto" → CPU ON PURPOSE. Kokoro is realtime on CPU (RTF ~0.24 measured on
+        # the RX 9070 XT) and so does NOT contend for the GPU with transcription —
+        # the cause of the contention crackle. Bonus: on AMD/ROCm Kokoro's kernels
+        # are slow (RTF ~1.8 on GPU), so CPU is better both ways. Force it with
+        # --tts-device cuda if you want the GPU.
         return "cpu"
 
-    def _synthesize(self, text: str) -> Any:  # noqa: ANN401 — gerador de chunks
-        """Itera o gerador do Kokoro, devolvendo cada trecho como float32 mono."""
+    def _synthesize(self, text: str) -> Any:  # noqa: ANN401 — generator of chunks
+        """Iterate Kokoro's generator, yielding each chunk as mono float32."""
         for result in self._pipeline(text, voice=self._config.kokoro_voice):
             audio = result[2] if isinstance(result, (list, tuple)) else getattr(result, "audio", result)
             yield self._coerce(audio)
 
     @staticmethod
     def _coerce(a: Any) -> NDArray[np.float32]:  # noqa: ANN401
-        if hasattr(a, "detach"):  # tensor torch → numpy
+        if hasattr(a, "detach"):  # torch tensor → numpy
             a = a.detach().to("cpu").numpy()
         arr = np.asarray(a, dtype=np.float32)
         return arr.reshape(-1) if arr.ndim > 1 else arr

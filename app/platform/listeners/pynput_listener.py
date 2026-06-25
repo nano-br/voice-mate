@@ -1,7 +1,7 @@
-"""Hotkeys globais via pynput (Linux X11; também funciona em macOS/Windows).
+"""Global hotkeys via pynput (Linux X11; also works on macOS/Windows).
 
-Não funciona em Wayland puro (o compositor não entrega eventos globais a
-clientes X) — lá o gatilho default é o `EvdevHotkeyListener`.
+Does not work on pure Wayland (the compositor doesn't deliver global events to
+X clients) — there the default trigger is the `EvdevHotkeyListener`.
 """
 
 from __future__ import annotations
@@ -15,10 +15,10 @@ _MODIFIER_ALIASES = {"win": "cmd", "super": "cmd", "meta": "cmd"}
 
 
 def to_pynput_combo(hotkey: str) -> str:
-    """Converte a sintaxe da lib `keyboard` ("ctrl+alt+v") para a do pynput ("<ctrl>+<alt>+v")."""
+    """Convert the `keyboard` lib syntax ("ctrl+alt+v") to pynput's ("<ctrl>+<alt>+v")."""
     parts = [part.strip().lower() for part in hotkey.split("+") if part.strip()]
     if not parts:
-        raise ValueError(f"Hotkey vazio: {hotkey!r}")
+        raise ValueError(f"Empty hotkey: {hotkey!r}")
     converted: list[str] = []
     for part in parts:
         if part in _MODIFIERS:
@@ -26,17 +26,17 @@ def to_pynput_combo(hotkey: str) -> str:
         elif len(part) == 1:
             converted.append(part)
         else:
-            # Teclas nomeadas (f1..f24, space, esc, ...) usam <nome> no pynput.
+            # Named keys (f1..f24, space, esc, ...) use <name> in pynput.
             converted.append(f"<{part}>")
     return "+".join(converted)
 
 
 class PynputHotkeyListener:
-    """Registra múltiplos hotkeys globais via pynput.keyboard.GlobalHotKeys."""
+    """Registers multiple global hotkeys via pynput.keyboard.GlobalHotKeys."""
 
     def __init__(self, bindings: dict[str, Callable[[], None]]) -> None:
         if not bindings:
-            raise ValueError("PynputHotkeyListener exige ao menos um binding")
+            raise ValueError("PynputHotkeyListener requires at least one binding")
         self._bindings = dict(bindings)
         self._hotkeys: Any | None = None
         self._lock = threading.Lock()
@@ -51,7 +51,7 @@ class PynputHotkeyListener:
         self._hotkeys.join()
 
     def reinstall(self) -> None:
-        """No-op: o hook de hooks silenciosamente removidos é exclusivo do Windows."""
+        """No-op: silently-dropped hooks are a Windows-only problem."""
         return None
 
     def stop(self) -> None:

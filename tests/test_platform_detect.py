@@ -24,7 +24,7 @@ def test_windows(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_wsl2(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(sys, "platform", "linux")
     _fake_proc_version(monkeypatch, tmp_path, "Linux version 6.6.87.2-microsoft-standard-WSL2 ...")
-    # WSLg exporta WAYLAND_DISPLAY — WSL deve vencer a checagem de Wayland.
+    # WSLg exports WAYLAND_DISPLAY — WSL must win over the Wayland check.
     monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
     assert detect_platform() == "wsl2"
 
@@ -55,7 +55,7 @@ def test_linux_x11_fallback(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> 
 
 def test_missing_proc_version_is_not_wsl(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(sys, "platform", "linux")
-    _fake_proc_version(monkeypatch, tmp_path, None)  # arquivo inexistente
+    _fake_proc_version(monkeypatch, tmp_path, None)  # nonexistent file
     monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
     monkeypatch.delenv("XDG_SESSION_TYPE", raising=False)
     assert detect_platform() == "linux-x11"

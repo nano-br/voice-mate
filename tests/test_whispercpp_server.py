@@ -1,7 +1,8 @@
-"""WhisperCppServerBackend: helpers puros + caminho HTTP contra um server local.
+"""WhisperCppServerBackend: pure helpers + HTTP path against a local server.
 
-Não sobe o whisper-server real — constrói a instância via object.__new__ e
-aponta o _base_url para um http.server de teste, exercitando multipart + parsing.
+Does not spin up the real whisper-server — it builds the instance via
+object.__new__ and points _base_url at a test http.server, exercising multipart
++ parsing.
 """
 
 from __future__ import annotations
@@ -26,7 +27,7 @@ def test_vulkan_warning_on_llvmpipe() -> None:
     log = "ggml_vulkan: Found 1 Vulkan devices:\nggml_vulkan: 0 = llvmpipe (LLVM 20.1.2, 256 bits) (CPU)\n"
     warning = _vulkan_device_warning(log)
     assert warning is not None
-    assert "MUITO lenta" in warning
+    assert "VERY slow" in warning
     assert "make configure" in warning
 
 
@@ -44,19 +45,19 @@ def test_parse_response_json_text_field() -> None:
 
 
 def test_parse_response_preserves_inner_whitespace_verbatim() -> None:
-    # Regressão: o re-join por linha transformava "pa\nlavra" em "pa lavra".
-    # O campo text do JSON deve ser repassado fielmente, sem re-segmentação.
+    # Regression: the per-line re-join turned "pa\nlavra" into "pa lavra".
+    # The JSON text field must be passed through faithfully, with no re-segmentation.
     assert _parse_response('{"text": "uma palavra inteira"}') == "uma palavra inteira"
     assert _parse_response('{"text": " com  espaços   internos "}') == " com  espaços   internos "
 
 
 def test_parse_response_non_json_raises() -> None:
-    with pytest.raises(RuntimeError, match="não-JSON"):
+    with pytest.raises(RuntimeError, match="non-JSON"):
         _parse_response("texto puro do server antigo")
 
 
 def test_parse_response_json_without_text_raises() -> None:
-    with pytest.raises(RuntimeError, match="sem campo 'text'"):
+    with pytest.raises(RuntimeError, match="missing 'text' field"):
         _parse_response('{"other": 1}')
 
 
@@ -85,7 +86,7 @@ class _EchoHandler(BaseHTTPRequestHandler):
     response_body = '{"text": "olá do server"}'
     last_request_body: bytes = b""
 
-    def do_POST(self) -> None:  # noqa: N802 — assinatura do BaseHTTPRequestHandler
+    def do_POST(self) -> None:  # noqa: N802 — BaseHTTPRequestHandler signature
         length = int(self.headers.get("Content-Length", "0"))
         type(self).last_request_body = self.rfile.read(length)
         payload = self.response_body.encode("utf-8")
@@ -95,7 +96,7 @@ class _EchoHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
-    def log_message(self, *args: object) -> None:  # silencia logs do server de teste
+    def log_message(self, *args: object) -> None:  # silences the test server logs
         return
 
 
@@ -135,8 +136,8 @@ def test_transcribe_requests_json_format(local_server: str) -> None:
 
 
 def test_transcribe_does_not_split_words(local_server: str) -> None:
-    # Regressão: server emitindo o texto com quebras internas não pode gerar
-    # espaço dentro de palavra — o texto do JSON é usado verbatim (só strip nas pontas).
+    # Regression: a server emitting the text with internal line breaks must not
+    # produce a space inside a word — the JSON text is used verbatim (only the ends are stripped).
     _EchoHandler.response_body = '{"text": " transcrição com palavras inteiras "}'
     try:
         backend = _make_backend(local_server)

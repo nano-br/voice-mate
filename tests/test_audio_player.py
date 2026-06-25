@@ -13,7 +13,7 @@ from app.features.tts.audio_player import AudioPlayer
 
 
 class FakeOutputStream:
-    """Fake da sounddevice.OutputStream para os testes do AudioPlayer."""
+    """Fake of sounddevice.OutputStream for the AudioPlayer tests."""
 
     def __init__(
         self,
@@ -48,7 +48,7 @@ class FakeOutputStream:
 def fake_sd(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     captured: dict[str, Any] = {}
 
-    def factory(**kwargs: Any) -> FakeOutputStream:  # noqa: ANN401 — kwargs do sounddevice
+    def factory(**kwargs: Any) -> FakeOutputStream:  # noqa: ANN401 — sounddevice kwargs
         stream = FakeOutputStream(
             samplerate=kwargs["samplerate"],
             channels=kwargs["channels"],
@@ -108,19 +108,19 @@ def test_underflow_logged_once_per_stream(fake_sd: dict[str, Any], capsys: pytes
     player = AudioPlayer()
     player.start(24000)
     stream = fake_sd["stream"]
-    # Vários callbacks com status truthy (underflow) seguidos.
+    # Several consecutive callbacks with a truthy status (underflow).
     for _ in range(5):
         outdata: NDArray[np.float32] = np.zeros((512, 1), dtype=np.float32)
         stream.callback(outdata, 512, None, 1)  # status truthy = underflow
     err = capsys.readouterr().err
-    assert err.count("[AudioPlayer]") == 1  # logado só 1× apesar dos 5 underflows
+    assert err.count("[AudioPlayer]") == 1  # logged only once despite the 5 underflows
 
 
 def test_ensure_started_opens_once_and_reuses(fake_sd: dict[str, Any]) -> None:
     player = AudioPlayer()
     player.ensure_started(24000)
     first = fake_sd["stream"]
-    player.ensure_started(24000)  # mesmo rate → NÃO reabre (stream persistente)
+    player.ensure_started(24000)  # same rate → does NOT reopen (persistent stream)
     assert fake_sd["stream"] is first
     assert first.stopped is False
     assert first.closed is False
@@ -130,7 +130,7 @@ def test_ensure_started_reopens_on_rate_change(fake_sd: dict[str, Any]) -> None:
     player = AudioPlayer()
     player.ensure_started(24000)
     first = fake_sd["stream"]
-    player.ensure_started(48000)  # rate diferente → reabre
+    player.ensure_started(48000)  # different rate → reopens
     assert fake_sd["stream"] is not first
     assert fake_sd["stream"].samplerate == 48000
     assert first.stopped is True
@@ -141,7 +141,7 @@ def test_ensure_started_reopens_after_abort(fake_sd: dict[str, Any]) -> None:
     player.ensure_started(24000)
     first = fake_sd["stream"]
     player.abort()
-    player.ensure_started(24000)  # após abort, precisa de stream novo
+    player.ensure_started(24000)  # after abort, needs a fresh stream
     assert fake_sd["stream"] is not first
 
 
@@ -155,7 +155,7 @@ def test_feed_and_callback_drains_queue(fake_sd: dict[str, Any]) -> None:
 
     out = _drive_callback(stream, 4)
     assert np.allclose(out[:, 0], [0.5, 0.5, 0.5, 0.5])
-    # após consumir, callback subsequente sinaliza idle e preenche silêncio
+    # after consuming, the next callback signals idle and fills silence
     out2 = _drive_callback(stream, 4)
     assert np.allclose(out2[:, 0], 0.0)
     assert player.drain(timeout=0.5) is True
@@ -172,7 +172,7 @@ def test_callback_splits_chunk_across_calls(fake_sd: dict[str, Any]) -> None:
     out1 = _drive_callback(stream, 4)
     assert np.allclose(out1[:, 0], [0.0, 1.0, 2.0, 3.0])
     out2 = _drive_callback(stream, 4)
-    # restante do chunk + silêncio
+    # remainder of the chunk + silence
     assert np.allclose(out2[:2, 0], [4.0, 5.0])
     assert np.allclose(out2[2:, 0], 0.0)
 
@@ -190,7 +190,7 @@ def test_abort_drains_queue_and_signals(fake_sd: dict[str, Any]) -> None:
     assert stream.aborted is True
     assert player.drain(timeout=0.5) is True
 
-    # callback após abort produz silêncio
+    # callback after abort produces silence
     out = _drive_callback(stream, 4)
     assert np.allclose(out[:, 0], 0.0)
 
@@ -208,11 +208,11 @@ def test_drain_blocks_until_callback_marks_idle(fake_sd: dict[str, Any]) -> None
             drained.set()
 
     threading.Thread(target=waiter, daemon=True).start()
-    # antes do callback consumir, drain ainda não deve ter retornado
+    # before the callback consumes, drain must not have returned yet
     time.sleep(0.05)
     assert drained.is_set() is False
 
-    # consumir tudo
+    # consume everything
     _drive_callback(stream, 4)
     _drive_callback(stream, 4)
 
@@ -235,7 +235,7 @@ def test_feed_after_abort_is_ignored(fake_sd: dict[str, Any]) -> None:
     player.start(48000)
     stream = fake_sd["stream"]
     player.abort()
-    # após abort, esse stream específico está fechado — feed não toca nada
+    # after abort, this specific stream is closed — feed plays nothing
     assert stream.closed is True
     player.feed(np.ones(4, dtype=np.float32))
 
@@ -252,20 +252,20 @@ def test_abort_closes_stream_zeros_reference(fake_sd: dict[str, Any]) -> None:
 def test_start_after_abort_creates_fresh_stream_and_clears_aborted(
     fake_sd: dict[str, Any],
 ) -> None:
-    """Regressão do bug em que start() era noop após abort(), descartando feeds futuros."""
+    """Regression for the bug where start() was a no-op after abort(), dropping future feeds."""
     player = AudioPlayer()
     player.start(48000)
     first_stream = fake_sd["stream"]
     player.abort()
     assert first_stream.closed is True
 
-    # novo start deve criar um stream completamente novo
+    # a new start must create a completely fresh stream
     player.start(48000)
     second_stream = fake_sd["stream"]
     assert second_stream is not first_stream
     assert second_stream.started is True
 
-    # feed após start novo deve voltar a funcionar
+    # feed after a fresh start must work again
     player.feed(np.array([1.0, 0.5, 0.25, 0.125], dtype=np.float32))
     out = _drive_callback(second_stream, 4)
     assert np.allclose(out[:, 0], [1.0, 0.5, 0.25, 0.125])
@@ -285,5 +285,5 @@ def test_start_replaces_existing_stream(fake_sd: dict[str, Any]) -> None:
 def test_drain_default_timeout_returns_quickly_when_idle(fake_sd: dict[str, Any]) -> None:
     player = AudioPlayer()
     player.start(48000)
-    # nada na fila → drain retorna True imediatamente com default
+    # nothing queued → drain returns True immediately with the default
     assert player.drain() is True

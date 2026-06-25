@@ -1,4 +1,4 @@
-"""Resolução das novas opções realtime no build_config."""
+"""Resolution of the new realtime options in build_config."""
 
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ def test_platform_defaults_come_from_persisted() -> None:
 
 def test_platform_unset_stays_none_for_auto_detect() -> None:
     config = build_config(parse_args([]), PersistedConfig())
-    assert config.platform is None  # main.py resolve via detect_platform()
+    assert config.platform is None  # main.py resolves via detect_platform()
     assert config.trigger is None
     assert config.daemon_port == 47821
     assert config.stt_strategy == "auto"
@@ -99,14 +99,14 @@ def test_tts_engine_uses_persisted_when_no_flag() -> None:
     from app.setup.persisted_config import PersistedConfig
 
     config = build_config(parse_args([]), PersistedConfig(tts_engine="kokoro"))
-    assert config.tts.engine == "kokoro"  # escolha do setup vale sem flag
+    assert config.tts.engine == "kokoro"  # setup choice applies when there is no flag
 
 
 def test_tts_engine_flag_overrides_persisted() -> None:
     from app.setup.persisted_config import PersistedConfig
 
     config = build_config(parse_args(["--tts-engine", "omnivoice"]), PersistedConfig(tts_engine="kokoro"))
-    assert config.tts.engine == "omnivoice"  # flag explícita vence o persistido
+    assert config.tts.engine == "omnivoice"  # explicit flag beats the persisted value
 
 
 def test_claude_model_defaults_to_haiku() -> None:

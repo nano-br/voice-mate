@@ -1,31 +1,31 @@
-"""Gatilho via daemon HTTP local — o caminho do WSL2 (e de automações).
+"""Trigger via local HTTP daemon — the WSL2 path (and the automation path).
 
-O app roda como daemon dentro do WSL e escuta em 127.0.0.1:<porta>. O gatilho
-vem de fora: o script do lado Windows (scripts/windows/voicemate-hotkeys.ahk
-ou .ps1) registra os hotkeys globais e faz `POST /trigger {"flow": ...}`.
-O `localhostForwarding` do WSL2 expõe a porta ao Windows automaticamente.
+The app runs as a daemon inside WSL and listens on 127.0.0.1:<port>. The trigger
+comes from outside: the Windows-side script (scripts/windows/voicemate-hotkeys.ahk
+or .ps1) registers the global hotkeys and does `POST /trigger {"flow": ...}`.
+WSL2's `localhostForwarding` exposes the port to Windows automatically.
 
-O protocolo carrega ESTADO (conserta o desync silencioso do toggle): o `/trigger`
-devolve O QUE FEZ (`action` started/stopped/restarted + `op_seq`), e há um hub de
-estado (`SessionStatus`) que os consumidores consultam. Cada consumidor se
-registra (`/register` → `client_id`) e escolhe a modalidade via `?scope=`:
-  - `all`  (default) — o estado/resultado GLOBAL; o `seq`/`op_seq` monotônico
-    diz se é mais novo que o último guardado;
-  - `mine` — só o que ESTE `client_id` iniciou.
+The protocol carries STATE (fixes the silent toggle desync): `/trigger` returns
+WHAT IT DID (`action` started/stopped/restarted + `op_seq`), and there is a state
+hub (`SessionStatus`) that consumers poll. Each consumer registers
+(`/register` → `client_id`) and picks the mode via `?scope=`:
+  - `all`  (default) — the GLOBAL state/result; the monotonic `seq`/`op_seq`
+    tells whether it's newer than the last one kept;
+  - `mine` — only what THIS `client_id` started.
 
 Endpoints:
   - POST /register                       → 200 {"client_id": "..."}
-  - POST /trigger  {"flow"?, "client_id"?}  (ou GET /trigger?flow=&client_id=)
+  - POST /trigger  {"flow"?, "client_id"?}  (or GET /trigger?flow=&client_id=)
                    → 200 {"ok", "flow", "client_id", "action", "op_seq", "state"}
   - GET  /status?client_id=&scope=       → 200 {"state", "op_seq", "flow",
                    "client_id", "is_yours", "result_seq", "scope"}
   - GET  /result?client_id=&scope=       → 200 {"seq", "text", "op_seq",
-                   "client_id", "scope"}  — p/ o Windows setar o clipboard nativo
+                   "client_id", "scope"}  — for Windows to set the native clipboard
   - GET  /health                         → 200 {"status": "ok", "flows": [...]}
 
-Mantém o desenho "stop decide o destino": cada request equivale a apertar o
-hotkey daquele flow — o callback é o mesmo `session.toggle(flow)` dos outros
-listeners, agora devolvendo a operação.
+Keeps the "stop decides the destination" design: each request is equivalent to
+pressing that flow's hotkey — the callback is the same `session.toggle(flow)` as
+the other listeners, now returning the operation.
 """
 
 from __future__ import annotations
@@ -39,14 +39,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlparse
 
+from app.i18n import _
+
 if TYPE_CHECKING:
     from app.core.session_status import Scope, SessionStatus, ToggleOutcome
 
 DEFAULT_DAEMON_PORT = 47821
 
-# Binding por flow: recebe o client_id (quem disparou) e devolve o que o toggle
-# fez. A decisão start/stop é síncrona — só a transcrição é assíncrona —, então
-# o request já responde a operação sem esperar o STT.
+# Per-flow binding: receives the client_id (who fired it) and returns what the
+# toggle did. The start/stop decision is synchronous — only transcription is
+# async — so the request can answer the operation without waiting for the STT.
 TriggerBinding = Callable[[str | None], "ToggleOutcome | None"]
 
 
@@ -55,7 +57,7 @@ def _scope_of(value: str | None) -> Scope:
 
 
 class SocketTriggerListener:
-    """Servidor HTTP local que mapeia requests de gatilho para callbacks por flow."""
+    """Local HTTP server that maps trigger requests to per-flow callbacks."""
 
     def __init__(
         self,
@@ -65,7 +67,7 @@ class SocketTriggerListener:
         status: SessionStatus | None = None,
     ) -> None:
         if not bindings:
-            raise ValueError("SocketTriggerListener exige ao menos um binding")
+            raise ValueError("SocketTriggerListener requires at least one binding")
         self._bindings = dict(bindings)
         self._default_flow = next(iter(bindings))
         self._host = host
@@ -86,12 +88,12 @@ class SocketTriggerListener:
         handler_cls = _build_handler(self._bindings, self._default_flow, self._status)
         with self._lock:
             self._server = ThreadingHTTPServer((self._host, self._port), handler_cls)
-            # Porta efêmera (0) → expõe a porta real escolhida pelo SO.
+            # Ephemeral port (0) → expose the real port chosen by the OS.
             self._port = self._server.server_address[1]
         self._server.serve_forever(poll_interval=0.5)
 
     def reinstall(self) -> None:
-        """No-op: não há hook de SO para reinstalar."""
+        """No-op: there's no OS hook to reinstall."""
         return None
 
     def stop(self) -> None:
@@ -109,17 +111,17 @@ def _build_handler(
     status: SessionStatus | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     class _TriggerHandler(BaseHTTPRequestHandler):
-        def do_POST(self) -> None:  # noqa: N802 — assinatura do BaseHTTPRequestHandler
+        def do_POST(self) -> None:  # noqa: N802 — BaseHTTPRequestHandler signature
             parsed = urlparse(self.path)
             if parsed.path == "/register":
                 self._handle_register()
                 return
             if parsed.path != "/trigger":
-                self._respond(404, {"error": f"rota desconhecida: {self.path}"})
+                self._respond(404, {"error": f"unknown route: {self.path}"})
                 return
             payload = self._read_json_body()
             if payload is None:
-                return  # _read_json_body já respondeu o erro
+                return  # _read_json_body already answered the error
             flow = str(payload.get("flow", default_flow))
             client_id = payload.get("client_id")
             self._dispatch(flow, str(client_id) if client_id is not None else None)
@@ -134,17 +136,17 @@ def _build_handler(
                 return
             if parsed.path == "/status":
                 if status is None:
-                    self._respond(404, {"error": "status indisponível"})
+                    self._respond(404, {"error": "status unavailable"})
                     return
                 self._respond(200, status.status(client_id, scope))
                 return
             if parsed.path == "/result":
-                # Última transcrição/resposta, p/ o Windows setar o clipboard
-                # nativo (Set-Clipboard) — robusto onde o WSL falha. Com `since`,
-                # devolve o PRÓXIMO não-visto (drena em ordem, sem perder os
-                # intermediários quando o produtor vai mais rápido que o polling).
+                # Latest transcription/response, for Windows to set the native
+                # clipboard (Set-Clipboard) — robust where WSL fails. With `since`,
+                # returns the NEXT unseen one (drains in order, without losing
+                # intermediate ones when the producer runs faster than the polling).
                 if status is None:
-                    self._respond(404, {"error": "status indisponível"})
+                    self._respond(404, {"error": "status unavailable"})
                     return
                 since_raw = query.get("since", [None])[0]
                 since = int(since_raw) if since_raw is not None and since_raw.lstrip("-").isdigit() else None
@@ -154,7 +156,7 @@ def _build_handler(
                 flow = query.get("flow", [default_flow])[0]
                 self._dispatch(flow, client_id)
                 return
-            self._respond(404, {"error": f"rota desconhecida: {parsed.path}"})
+            self._respond(404, {"error": f"unknown route: {parsed.path}"})
 
         def _read_json_body(self) -> dict[str, object] | None:
             length = int(self.headers.get("Content-Length", "0"))
@@ -164,31 +166,31 @@ def _build_handler(
             try:
                 parsed = json.loads(raw)
             except json.JSONDecodeError:
-                self._respond(400, {"error": "body inválido (esperado JSON)"})
+                self._respond(400, {"error": "invalid body (expected JSON)"})
                 return None
             return parsed if isinstance(parsed, dict) else {}
 
         def _handle_register(self) -> None:
             if status is None:
-                self._respond(404, {"error": "registro indisponível"})
+                self._respond(404, {"error": "registration unavailable"})
                 return
             self._respond(200, {"client_id": status.register()})
 
         def _dispatch(self, flow: str, client_id: str | None) -> None:
             binding = bindings.get(flow)
             if binding is None:
-                self._respond(404, {"error": f"flow desconhecido: {flow}", "flows": list(bindings)})
+                self._respond(404, {"error": f"unknown flow: {flow}", "flows": list(bindings)})
                 return
-            # Auto-registro: um consumidor pode disparar sem registrar antes; nesse
-            # caso emitimos um client_id e o devolvemos, para ele passar a usá-lo.
+            # Auto-registration: a consumer may fire without registering first; in
+            # that case we mint a client_id and return it so it can start using it.
             if client_id is None and status is not None:
                 client_id = status.register()
             try:
                 outcome = binding(client_id)
-            except Exception:  # noqa: BLE001 — fronteira de request: logar + responder erro
-                print(f"[VoiceMate] ❌ Erro no trigger do flow '{flow}':", file=sys.stderr)
+            except Exception:  # noqa: BLE001 — request boundary: log + respond with error
+                print(_("[VoiceMate] ❌ Error in trigger for flow '{flow}':").format(flow=flow), file=sys.stderr)
                 traceback.print_exc()
-                self._respond(500, {"ok": False, "flow": flow, "error": "erro ao processar o trigger"})
+                self._respond(500, {"ok": False, "flow": flow, "error": "error processing the trigger"})
                 return
             body: dict[str, object] = {"ok": True, "flow": flow, "client_id": client_id}
             if outcome is not None:
@@ -203,7 +205,7 @@ def _build_handler(
             self.end_headers()
             self.wfile.write(body)
 
-        def log_message(self, *args: object) -> None:  # silencia o log default por request
+        def log_message(self, *args: object) -> None:  # silence the default per-request log
             return
 
     return _TriggerHandler

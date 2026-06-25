@@ -1,13 +1,13 @@
-"""Whisper via whisper.cpp + Vulkan (binário nativo, vendor-agnóstico).
+"""Whisper via whisper.cpp + Vulkan (native binary, vendor-agnostic).
 
-É o backend de transcrição preferido na AMD: roda o large-v3-turbo quantizado
-(GGUF) na GPU via Vulkan com ~0,64 GB de VRAM (vs ~4,8 GB do openai-whisper) e
-velocidade equivalente — sem depender do torch ROCm nem do CTranslate2 (que não
-tem ROCm e trava na gfx1201).
+It's the preferred transcription backend on AMD: runs the quantized large-v3-turbo
+(GGUF) on the GPU via Vulkan with ~0.64 GB of VRAM (vs ~4.8 GB for openai-whisper)
+and equivalent speed — without depending on torch ROCm or CTranslate2 (which has
+no ROCm and hangs on gfx1201).
 
-Não é um pacote pip: usa o `whisper-cli.exe` + DLLs Vulkan + um modelo GGUF que
-o `make setup` baixa para `~/.cache/voicemate/whispercpp/`. Por isso o
-`is_available()` recebe o config (precisa checar arquivos no disco, não imports).
+It's not a pip package: it uses `whisper-cli.exe` + Vulkan DLLs + a GGUF model
+that `make setup` downloads to `~/.cache/voicemate/whispercpp/`. That's why
+`is_available()` takes the config (it must check files on disk, not imports).
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from pathlib import Path
 
 from app.core.config import Config
 from app.core.transcription_backend import TranscriptionBackend
+from app.i18n import _
 
 __all__ = ["build_backend", "default_dir", "find_vad_model", "is_available", "resolve_dir"]
 
@@ -50,7 +51,7 @@ def find_server_exe(directory: Path) -> Path | None:
 
 
 def find_model(directory: Path) -> Path | None:
-    """Modelo de transcrição (exclui o modelo de VAD, que também é ggml-*.bin)."""
+    """Transcription model (excludes the VAD model, which is also ggml-*.bin)."""
     models = sorted(
         path for path in directory.glob("ggml-*.bin") if "silero" not in path.name and "vad" not in path.name
     )
@@ -58,18 +59,18 @@ def find_model(directory: Path) -> Path | None:
 
 
 def find_vad_model(directory: Path) -> Path | None:
-    """Modelo silero-VAD (corte por silêncio — evita cortar no meio de palavras)."""
+    """silero-VAD model (silence-based trimming — avoids cutting mid-word)."""
     models = sorted(path for path in directory.glob("ggml-*.bin") if "silero" in path.name or "vad" in path.name)
     return models[0] if models else None
 
 
 def is_available(config: Config) -> bool:
-    """True se há um modelo GGUF e ao menos um binário (server p/ modo server, cli senão)."""
+    """True if there's a GGUF model and at least one binary (server for server mode, cli otherwise)."""
     directory = resolve_dir(config)
     if find_model(directory) is None:
         return False
     if config.whispercpp_mode == "server":
-        # server cai p/ cli se o whisper-server.exe não existir, então qualquer um serve.
+        # server falls back to cli if whisper-server.exe doesn't exist, so either works.
         return find_server_exe(directory) is not None or find_exe(directory) is not None
     return find_exe(directory) is not None
 
@@ -77,7 +78,7 @@ def is_available(config: Config) -> bool:
 def _build_cli_backend(config: Config, directory: Path, model: Path) -> TranscriptionBackend:
     exe = find_exe(directory)
     if exe is None:
-        raise FileNotFoundError(f"whisper-cli não encontrado em {directory} (rode `make configure`).")
+        raise FileNotFoundError(f"whisper-cli not found in {directory} (run `make configure`).")
     from app.features.whispercpp.backend import WhisperCppBackend
 
     return WhisperCppBackend(config, exe, model)
@@ -87,7 +88,7 @@ def build_backend(config: Config) -> TranscriptionBackend:
     directory = resolve_dir(config)
     model = find_model(directory)
     if model is None:
-        raise FileNotFoundError(f"Modelo GGUF do whisper.cpp não encontrado em {directory} (rode `make configure`).")
+        raise FileNotFoundError(f"whisper.cpp GGUF model not found in {directory} (run `make configure`).")
 
     if config.whispercpp_mode == "server":
         server_exe = find_server_exe(directory)
@@ -96,14 +97,16 @@ def build_backend(config: Config) -> TranscriptionBackend:
 
             try:
                 return WhisperCppServerBackend(config, server_exe, model)
-            except Exception as exc:  # noqa: BLE001 — qualquer falha de subida cai p/ cli
+            except Exception as exc:  # noqa: BLE001 — any startup failure falls back to cli
                 print(
-                    f"[VoiceMate] ⚠ whisper-server falhou ao subir ({exc}); caindo para whisper-cli.",
+                    _("[VoiceMate] ⚠ whisper-server failed to start ({exc}); falling back to whisper-cli.").format(
+                        exc=exc
+                    ),
                     file=sys.stderr,
                 )
         else:
             print(
-                "[VoiceMate] ⚠ whisper-server.exe não encontrado; usando whisper-cli (modo cli).",
+                _("[VoiceMate] ⚠ whisper-server.exe not found; using whisper-cli (cli mode)."),
                 file=sys.stderr,
             )
 

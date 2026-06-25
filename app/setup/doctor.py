@@ -1,8 +1,8 @@
-"""Diagnóstico do ambiente (``make doctor``) — verifica, explica, nunca aborta.
+"""Environment diagnostics (``make doctor``) — check, explain, never abort.
 
-Cada checagem imprime ✓/✗ e, em caso de falha, o comando exato de correção.
-Pensado principalmente para o WSL2 (mic/áudio via PulseAudio RDP) e Linux
-nativo (grupo input p/ evdev), mas roda em qualquer plataforma.
+Each check prints ✓/✗ and, on failure, the exact fix command. Designed mainly
+for WSL2 (mic/audio via PulseAudio RDP) and native Linux (input group for
+evdev), but runs on any platform.
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.core.console import force_utf8_stdio
+from app.i18n import _
 from app.platform.detect import default_trigger, detect_platform
 from app.platform.kinds import PlatformKind, TriggerKind
 from app.setup.persisted_config import load_persisted
@@ -25,7 +26,7 @@ _WSLG_PULSE_SOCKET = Path("/mnt/wslg/PulseServer")
 @dataclass
 class CheckResult:
     label: str
-    ok: bool | None  # None = não aplicável/pulado
+    ok: bool | None  # None = not applicable/skipped
     detail: str = ""
     fix: str = ""
 
@@ -34,7 +35,13 @@ def run_checks() -> list[CheckResult]:
     persisted = load_persisted()
     platform = persisted.platform or detect_platform()
     trigger: TriggerKind = persisted.trigger or default_trigger(platform)
-    results: list[CheckResult] = [CheckResult("Plataforma detectada", True, f"{platform} (gatilho: {trigger})")]
+    results: list[CheckResult] = [
+        CheckResult(
+            _("Platform detected"),
+            True,
+            _("{platform} (trigger: {trigger})").format(platform=platform, trigger=trigger),
+        )
+    ]
     if platform == "wsl2":
         results += _check_wslg_audio()
         results += _check_wsl_clipboard()
@@ -50,11 +57,11 @@ def run_checks() -> list[CheckResult]:
 
 
 def _check_kokoro_espeak() -> list[CheckResult]:
-    """Kokoro precisa do espeak-ng (G2P do PT-BR).
+    """Kokoro needs espeak-ng (PT-BR G2P).
 
-    Heurística: só checa se o pacote `kokoro` estiver instalado (o engine é
-    escolha de runtime via --tts-engine, não persistida — instalar o extra
-    sinaliza intenção de usar). Sem espeak-ng, o load do Kokoro falha no PT-BR.
+    Heuristic: only checks if the `kokoro` package is installed (the engine is a
+    runtime choice via --tts-engine, not persisted — installing the extra
+    signals intent to use it). Without espeak-ng, the Kokoro load fails on PT-BR.
     """
     from app.features import tts as tts_feature
 
@@ -63,15 +70,15 @@ def _check_kokoro_espeak() -> list[CheckResult]:
     has_espeak = shutil.which("espeak-ng") is not None
     return [
         CheckResult(
-            "espeak-ng (Kokoro PT-BR)",
+            _("espeak-ng (Kokoro PT-BR)"),
             has_espeak,
-            "encontrado" if has_espeak else "ausente — Kokoro PT-BR falha sem ele",
+            _("found") if has_espeak else _("missing — Kokoro PT-BR fails without it"),
             fix="sudo apt install -y espeak-ng",
         )
     ]
 
 
-# ─── Checagens ───────────────────────────────────────────────────────────────
+# ─── Checks ──────────────────────────────────────────────────────────────────
 
 
 def _check_wslg_audio() -> list[CheckResult]:
@@ -80,17 +87,17 @@ def _check_wslg_audio() -> list[CheckResult]:
     socket_ok = _WSLG_PULSE_SOCKET.exists()
     results.append(
         CheckResult(
-            "WSLg PulseServer (socket)",
+            _("WSLg PulseServer (socket)"),
             socket_ok,
-            str(_WSLG_PULSE_SOCKET) if socket_ok else "socket não existe",
-            fix="Atualize o WSL (`wsl --update` no Windows) e confira guiApplications no .wslconfig.",
+            str(_WSLG_PULSE_SOCKET) if socket_ok else _("socket does not exist"),
+            fix=_("Update WSL (`wsl --update` on Windows) and check guiApplications in .wslconfig."),
         )
     )
     results.append(
         CheckResult(
-            "PULSE_SERVER no ambiente",
+            _("PULSE_SERVER in the environment"),
             bool(pulse) or socket_ok,
-            pulse or "(vazio — o shim ALSA pode resolver, mas é recomendado exportar)",
+            pulse or _("(empty — the ALSA shim may handle it, but exporting is recommended)"),
             fix="echo 'export PULSE_SERVER=unix:/mnt/wslg/PulseServer' >> ~/.bashrc && source ~/.bashrc",
         )
     )
@@ -103,7 +110,7 @@ def _check_wslg_audio() -> list[CheckResult]:
     )
     results.append(
         CheckResult(
-            "Plugin ALSA→Pulse (p/ PortAudio)",
+            _("ALSA→Pulse plugin (for PortAudio)"),
             libasound_pulse,
             fix="sudo apt install -y libportaudio2 libasound2-plugins pulseaudio-utils",
         )
@@ -112,39 +119,39 @@ def _check_wslg_audio() -> list[CheckResult]:
 
 
 def _check_wsl_clipboard() -> list[CheckResult]:
-    """Escrita no clipboard no WSL2.
+    """Clipboard writes on WSL2.
 
-    Só os utilitários NATIVOS (wl-copy/xclip) são confiáveis no WSLg. O clip.exe
-    via interop falha quando o binfmt do WSLInterop não está registrado (comum
-    com systemd) com "Exec format error" — por isso não conta como ✓ sozinho.
+    Only the NATIVE utilities (wl-copy/xclip) are reliable on WSLg. clip.exe via
+    interop fails when the WSLInterop binfmt is not registered (common with
+    systemd) with "Exec format error" — that's why it doesn't count as ✓ alone.
     """
     native = [t for t in ("wl-copy", "xclip", "xsel") if shutil.which(t)]
     binfmt_ok = Path("/proc/sys/fs/binfmt_misc/WSLInterop").exists()
     if native:
         detail = ", ".join(native)
     elif binfmt_ok:
-        detail = "só clip.exe via interop (fallback incerto)"
+        detail = _("only clip.exe via interop (uncertain fallback)")
     else:
-        detail = "nenhum (clip.exe falha sem o binfmt WSLInterop)"
+        detail = _("none (clip.exe fails without the WSLInterop binfmt)")
     results = [
         CheckResult(
-            "Clipboard nativo (WSLg)",
+            _("Native clipboard (WSLg)"),
             bool(native),
             detail,
-            fix="sudo apt install -y wl-clipboard   # wl-copy funciona via WSLg e sincroniza com o Windows",
+            fix=_("sudo apt install -y wl-clipboard   # wl-copy works via WSLg and syncs with Windows"),
         )
     ]
-    # Interop do Windows: quando o WSLInterop não está registrado (systemd limpa o
-    # binfmt), o clip.exe não roda — então o ÚNICO caminho de clipboard é o wl-copy
-    # (pela ponte do WSLg, que pode ficar instável em sessões longas). Restaurar o
-    # interop dá um caminho DIRETO ao clipboard do Windows, independente da ponte.
+    # Windows interop: when WSLInterop is not registered (systemd clears the
+    # binfmt), clip.exe won't run — so the ONLY clipboard path is wl-copy (via the
+    # WSLg bridge, which can become unstable over long sessions). Restoring interop
+    # gives a DIRECT path to the Windows clipboard, independent of the bridge.
     results.append(
         CheckResult(
-            "Interop Windows (clip.exe direto)",
+            _("Windows interop (clip.exe direct)"),
             binfmt_ok,
-            "registrado" if binfmt_ok else "WSLInterop ausente — clip.exe não roda",
-            fix=(
-                "wsl --update (no Windows) resolve na maioria; ou registre: "
+            _("registered") if binfmt_ok else _("WSLInterop missing — clip.exe won't run"),
+            fix=_(
+                "wsl --update (on Windows) fixes it in most cases; or register: "
                 "sudo sh -c 'echo :WSLInterop:M::MZ::/init:PF > /proc/sys/fs/binfmt_misc/register'"
             ),
         )
@@ -153,8 +160,8 @@ def _check_wsl_clipboard() -> list[CheckResult]:
 
 
 def _check_sounddevice() -> list[CheckResult]:
-    """Mic (input) e playback (output) visíveis ao PortAudio — em subprocess
-    para não poluir/derrubar o doctor se a lib nativa explodir."""
+    """Mic (input) and playback (output) visible to PortAudio — in a subprocess
+    so the doctor isn't polluted/crashed if the native lib blows up."""
     code = (
         "import sounddevice as sd, json; devs = sd.query_devices(); "
         "ins = [d['name'] for d in devs if d['max_input_channels'] > 0]; "
@@ -164,12 +171,12 @@ def _check_sounddevice() -> list[CheckResult]:
     try:
         proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=30)
     except (OSError, subprocess.SubprocessError) as exc:
-        return [CheckResult("Áudio (sounddevice)", False, str(exc), fix="poetry install (dependências core)")]
+        return [CheckResult(_("Audio (sounddevice)"), False, str(exc), fix=_("poetry install (core dependencies)"))]
     if proc.returncode != 0:
         tail = (proc.stderr or "").strip()[-200:]
         return [
             CheckResult(
-                "Áudio (sounddevice)",
+                _("Audio (sounddevice)"),
                 False,
                 tail,
                 fix="sudo apt install -y libportaudio2 libasound2-plugins pulseaudio-utils",
@@ -182,19 +189,19 @@ def _check_sounddevice() -> list[CheckResult]:
     has_out = bool(data.get("out"))
     return [
         CheckResult(
-            "Microfone (input device)",
+            _("Microphone (input device)"),
             has_in,
-            ", ".join(data.get("in", [])) or "nenhum device de entrada",
-            fix=(
-                "WSL2: habilite o mic do WSLg (wsl --update; `pactl list sources short` deve mostrar RDPSource). "
-                "Linux: confira o PulseAudio/PipeWire."
+            ", ".join(data.get("in", [])) or _("no input device"),
+            fix=_(
+                "WSL2: enable the WSLg mic (wsl --update; `pactl list sources short` should show RDPSource). "
+                "Linux: check PulseAudio/PipeWire."
             ),
         ),
         CheckResult(
-            "Saída de áudio (output device)",
+            _("Audio output (output device)"),
             has_out,
-            ", ".join(data.get("out", [])) or "nenhum device de saída",
-            fix="WSL2: `pactl list sinks short` deve mostrar RDPSink (wsl --update se não).",
+            ", ".join(data.get("out", [])) or _("no output device"),
+            fix=_("WSL2: `pactl list sinks short` should show RDPSink (wsl --update if not)."),
         ),
     ]
 
@@ -206,35 +213,35 @@ def _check_trigger(platform: PlatformKind, trigger: TriggerKind) -> list[CheckRe
         readable = any(os.access(event, os.R_OK) for event in events)
         return [
             CheckResult(
-                "Acesso a /dev/input (evdev)",
+                _("Access to /dev/input (evdev)"),
                 readable,
-                f"{len(events)} device(s)" if events else "sem devices event*",
-                fix="sudo usermod -aG input $USER  # e re-logue (ou `newgrp input`)",
+                _("{count} device(s)").format(count=len(events)) if events else _("no event* devices"),
+                fix=_("sudo usermod -aG input $USER  # then re-login (or `newgrp input`)"),
             )
         ]
     if trigger == "socket":
         return [
             CheckResult(
-                "Gatilho via daemon HTTP",
+                _("Trigger via HTTP daemon"),
                 True,
-                "registre as hotkeys no Windows: scripts/windows/voicemate-hotkeys.ahk (ou .ps1)",
+                _("register the hotkeys on Windows: scripts/windows/voicemate-hotkeys.ahk (or .ps1)"),
             )
         ]
     if trigger == "pynput":
         has_display = bool(os.environ.get("DISPLAY"))
         return [
             CheckResult(
-                "Sessão X11 (DISPLAY) p/ pynput",
+                _("X11 session (DISPLAY) for pynput"),
                 has_display,
                 os.environ.get("DISPLAY", ""),
-                fix="Sem X11? Use --trigger evdev (Wayland) — requer grupo input.",
+                fix=_("No X11? Use --trigger evdev (Wayland) — requires the input group."),
             )
         ]
-    return [CheckResult("Gatilho (hooks do Windows)", True, "libs keyboard/mouse")]
+    return [CheckResult(_("Trigger (Windows hooks)"), True, _("keyboard/mouse libs"))]
 
 
 def _parse_vulkan_devices(summary: str) -> list[tuple[str, str]]:
-    """Pares (deviceName, deviceType) da saída do `vulkaninfo --summary`."""
+    """(deviceName, deviceType) pairs from `vulkaninfo --summary` output."""
     devices: list[tuple[str, str]] = []
     name: str | None = None
     dtype: str | None = None
@@ -251,30 +258,32 @@ def _parse_vulkan_devices(summary: str) -> list[tuple[str, str]]:
 
 
 def _check_vulkan_gpu(platform: PlatformKind) -> list[CheckResult]:
-    """O Vulkan enxerga uma GPU real? (relevante p/ o backend whisper.cpp).
+    """Does Vulkan see a real GPU? (relevant for the whisper.cpp backend).
 
-    No WSL2 o Mesa só expõe llvmpipe (CPU por software) — whisper.cpp "Vulkan"
-    ali roda em software e leva minutos por fala. A GPU real no WSL2 só é
-    alcançável via ROCm (openai-whisper / CT2-ROCm).
+    On WSL2 Mesa only exposes llvmpipe (software CPU) — whisper.cpp "Vulkan"
+    there runs in software and takes minutes per utterance. The real GPU on WSL2
+    is only reachable via ROCm (openai-whisper / CT2-ROCm).
     """
     if shutil.which("vulkaninfo") is None:
-        return [CheckResult("Vulkan (GPU p/ whisper.cpp)", None, "vulkaninfo ausente (vulkan-tools)")]
+        return [CheckResult(_("Vulkan (GPU for whisper.cpp)"), None, _("vulkaninfo missing (vulkan-tools)"))]
     out = ""
     try:
         proc = subprocess.run(["vulkaninfo", "--summary"], capture_output=True, text=True, timeout=20)
         out = proc.stdout or ""
     except (OSError, subprocess.SubprocessError) as exc:
-        return [CheckResult("Vulkan (GPU p/ whisper.cpp)", None, f"não verificado: {exc}")]
+        return [CheckResult(_("Vulkan (GPU for whisper.cpp)"), None, _("not verified: {exc}").format(exc=exc))]
     devices = _parse_vulkan_devices(out)
     real_gpus = [name for name, dtype in devices if "CPU" not in dtype.upper() and "llvmpipe" not in name.lower()]
-    detail = ", ".join(f"{name} [{dtype}]" for name, dtype in devices) or "nenhum device"
+    detail = ", ".join(f"{name} [{dtype}]" for name, dtype in devices) or _("no devices")
     fix = (
-        "No WSL2 isso é esperado: Vulkan não alcança a GPU — use openai-whisper/CT2-ROCm "
-        "(make configure). Em Linux nativo: instale o driver Vulkan da GPU (mesa-vulkan-drivers)."
+        _(
+            "On WSL2 this is expected: Vulkan can't reach the GPU — use openai-whisper/CT2-ROCm "
+            "(make configure). On native Linux: install the GPU's Vulkan driver (mesa-vulkan-drivers)."
+        )
         if platform == "wsl2"
-        else "Instale o driver Vulkan da GPU (mesa-vulkan-drivers) ou use openai-whisper."
+        else _("Install the GPU's Vulkan driver (mesa-vulkan-drivers) or use openai-whisper.")
     )
-    return [CheckResult("Vulkan (GPU p/ whisper.cpp)", bool(real_gpus), detail, fix=fix)]
+    return [CheckResult(_("Vulkan (GPU for whisper.cpp)"), bool(real_gpus), detail, fix=fix)]
 
 
 def _check_whispercpp() -> list[CheckResult]:
@@ -287,19 +296,21 @@ def _check_whispercpp() -> list[CheckResult]:
     vad = whispercpp.find_vad_model(directory)
     results = [
         CheckResult(
-            "whisper.cpp (binário + modelo)",
+            _("whisper.cpp (binary + model)"),
             exe is not None and model is not None,
-            f"{exe.name if exe else '—'} / {model.name if model else '—'} em {directory}",
-            fix="make configure  # baixa/builda o whisper.cpp e o modelo",
+            _("{exe} / {model} in {dir}").format(
+                exe=exe.name if exe else "—", model=model.name if model else "—", dir=directory
+            ),
+            fix=_("make configure  # downloads/builds whisper.cpp and the model"),
         )
     ]
     if exe is not None and model is not None:
         results.append(
             CheckResult(
-                "VAD (silero) p/ whisper.cpp",
+                _("VAD (silero) for whisper.cpp"),
                 vad is not None or sys.platform == "win32",
-                vad.name if vad else "sem modelo de VAD (ok no Windows; recomendado no Linux)",
-                fix="make configure  # baixa o ggml-silero (corte por silêncio)",
+                vad.name if vad else _("no VAD model (ok on Windows; recommended on Linux)"),
+                fix=_("make configure  # downloads ggml-silero (silence-based trimming)"),
             )
         )
     return results
@@ -313,10 +324,10 @@ def _check_claude() -> list[CheckResult]:
     claude = shutil.which("claude")
     return [
         CheckResult(
-            "Claude CLI (fluxo claude_chat)",
+            _("Claude CLI (claude_chat flow)"),
             claude is not None and node is not None,
             f"node={'ok' if node else '—'} claude={'ok' if claude else '—'}",
-            fix="npm install -g @anthropic-ai/claude-code && claude  # login interativo",
+            fix=_("npm install -g @anthropic-ai/claude-code && claude  # interactive login"),
         )
     ]
 
@@ -326,34 +337,34 @@ def _check_torch_gpu() -> list[CheckResult]:
     try:
         proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=120)
     except (OSError, subprocess.SubprocessError) as exc:
-        return [CheckResult("PyTorch (TTS)", None, f"não verificado: {exc}")]
+        return [CheckResult(_("PyTorch (TTS)"), None, _("not verified: {exc}").format(exc=exc))]
     if proc.returncode != 0:
         return [
             CheckResult(
-                "PyTorch (TTS)",
+                _("PyTorch (TTS)"),
                 None,
-                "torch não instalado (ok se TTS desabilitado)",
-                fix="make configure  # instala o torch da sua GPU",
+                _("torch not installed (ok if TTS is disabled)"),
+                fix=_("make configure  # installs the torch for your GPU"),
             )
         ]
     out = proc.stdout.strip()
     accelerated = out.lower().endswith("true")
     return [
         CheckResult(
-            "PyTorch com GPU (TTS realtime)",
+            _("PyTorch with GPU (realtime TTS)"),
             accelerated,
             out,
-            fix="make configure  # reinstala o torch CUDA/ROCm; confira o driver",
+            fix=_("make configure  # reinstalls the CUDA/ROCm torch; check the driver"),
         )
     ]
 
 
-# ─── Saída ───────────────────────────────────────────────────────────────────
+# ─── Output ──────────────────────────────────────────────────────────────────
 
 
 def main() -> int:
     force_utf8_stdio()
-    print("[doctor] Diagnóstico do ambiente VoiceMate\n")
+    print(_("[doctor] VoiceMate environment diagnostics\n"))
     failures = 0
     for result in run_checks():
         if result.ok is None:
@@ -366,12 +377,12 @@ def main() -> int:
         detail = f"  ({result.detail})" if result.detail else ""
         print(f"  {mark} {result.label}{detail}")
         if result.ok is False and result.fix:
-            print(f"      ↳ correção: {result.fix}")
+            print(_("      ↳ fix: {fix}").format(fix=result.fix))
     print()
     if failures:
-        print(f"[doctor] {failures} problema(s) encontrados — correções sugeridas acima.")
+        print(_("[doctor] {count} problem(s) found — suggested fixes above.").format(count=failures))
     else:
-        print("[doctor] Tudo certo! Rode: make run")
+        print(_("[doctor] All good! Run: make run"))
     return 0
 
 

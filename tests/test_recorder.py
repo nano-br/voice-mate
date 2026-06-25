@@ -1,10 +1,10 @@
-"""Recorder: regressão do deadlock stop()×callback e contratos básicos.
+"""Recorder: stop()×callback deadlock regression and basic contracts.
 
-O fake de InputStream simula o comportamento real do PortAudio: `stream.stop()`
-bloqueia até o callback em voo retornar — aqui, invocando o callback de forma
-síncrona dentro do stop(). Com o código antigo (stream.stop() segurando
-`self._lock`), isso deadlockava: o callback esperava o lock e o stop esperava o
-callback (visível no WSLg, onde os callbacks do PulseAudio-RDP são lentos).
+The InputStream fake mimics PortAudio's real behavior: `stream.stop()` blocks
+until the in-flight callback returns — here, by invoking the callback
+synchronously inside stop(). With the old code (stream.stop() holding
+`self._lock`), this deadlocked: the callback waited on the lock and stop waited
+on the callback (visible under WSLg, where the PulseAudio-RDP callbacks are slow).
 """
 
 from __future__ import annotations
@@ -24,11 +24,11 @@ class _FalsyStatus:
 
 
 class _FakeInputStream:
-    """Captura o callback e o re-invoca dentro de stop() (como o PortAudio faz)."""
+    """Captures the callback and re-invokes it inside stop() (as PortAudio does)."""
 
     last_instance: _FakeInputStream | None = None
 
-    def __init__(self, **kwargs: Any) -> None:  # noqa: ANN401 — espelha a API do sounddevice
+    def __init__(self, **kwargs: Any) -> None:  # noqa: ANN401 — mirrors the sounddevice API
         self.callback = kwargs["callback"]
         self.started = False
         self.stopped = False
@@ -39,7 +39,7 @@ class _FakeInputStream:
         self.started = True
 
     def stop(self) -> None:
-        # PortAudio espera o callback em voo concluir antes de retornar.
+        # PortAudio waits for the in-flight callback to complete before returning.
         chunk = np.ones((160, 1), dtype=np.float32)
         self.callback(chunk, 160, None, _FalsyStatus())
         self.stopped = True
@@ -59,7 +59,7 @@ def test_stop_does_not_deadlock_with_inflight_callback() -> None:
     assert recorder.start() is True
     stream = _FakeInputStream.last_instance
     assert stream is not None
-    # Um chunk "normal" durante a gravação.
+    # A "normal" chunk during recording.
     stream.callback(np.ones((160, 1), dtype=np.float32), 160, None, _FalsyStatus())
 
     result: dict[str, Any] = {}
@@ -70,7 +70,7 @@ def test_stop_does_not_deadlock_with_inflight_callback() -> None:
     assert not worker.is_alive(), "Recorder.stop() deadlockou com callback em voo"
     audio = result["audio"]
     assert audio is not None
-    # 1 chunk durante a gravação + 1 entregue pelo callback em voo no stop().
+    # 1 chunk during recording + 1 delivered by the in-flight callback in stop().
     assert len(audio) == 320
     assert stream.stopped and stream.closed
 
@@ -88,7 +88,7 @@ def test_start_twice_returns_false() -> None:
 
 def test_stop_with_no_chunks_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
     class _SilentStream(_FakeInputStream):
-        def stop(self) -> None:  # sem callback em voo, sem áudio
+        def stop(self) -> None:  # no in-flight callback, no audio
             self.stopped = True
 
     monkeypatch.setattr("app.core.recorder.sd.InputStream", _SilentStream)

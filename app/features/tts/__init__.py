@@ -1,9 +1,9 @@
 """Text-to-speech feature (opt-in extra: `voice-mate[tts]`).
 
 `base.py` (Protocol + NullSpeaker) is always importable. Concrete engines
-require their own packages — `omnivoice_speaker.py` precisa de `omnivoice` +
-`soundfile` (engine padrão), `voxcpm_speaker.py` de `voxcpm` + `soundfile`
-(alternativo) — importados sob demanda em `build_default_speaker()`.
+require their own packages — `omnivoice_speaker.py` needs `omnivoice` +
+`soundfile` (default engine), `voxcpm_speaker.py` needs `voxcpm` + `soundfile`
+(alternative) — imported on demand in `build_default_speaker()`.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ __all__ = ["NullSpeaker", "TextToSpeech", "build_default_speaker", "is_available
 
 
 def is_available(engine: TTSEngine = "omnivoice") -> bool:
-    """True se os pacotes do engine ativo (engine + `soundfile`) estão instalados."""
+    """True if the active engine's packages (engine + `soundfile`) are installed."""
     try:
         import soundfile  # noqa: F401
     except ImportError:

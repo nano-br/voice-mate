@@ -58,8 +58,8 @@ def test_invalid_tts_engine_is_dropped(tmp_path: Path) -> None:
 
 
 def test_whispercpp_backend_roundtrips(tmp_path: Path) -> None:
-    # Regressão: "whispercpp" não estava em _BACKENDS e a escolha AMD
-    # persistida era descartada silenciosamente a cada boot.
+    # Regression: "whispercpp" was not in _BACKENDS and the persisted AMD
+    # choice was silently discarded on every boot.
     path = tmp_path / "config.toml"
     save_persisted(PersistedConfig(whisper_backend="whispercpp"), path)
     assert load_persisted(path).whisper_backend == "whispercpp"
@@ -118,6 +118,6 @@ def test_update_persisted_merges_single_field(tmp_path: Path) -> None:
     save_persisted(PersistedConfig(gpu_vendor="amd", whisper_backend="whispercpp"), path)
     update_persisted(path, ct2_rocm_ok=False)
     loaded = load_persisted(path)
-    assert loaded.gpu_vendor == "amd"  # campos existentes preservados
+    assert loaded.gpu_vendor == "amd"  # existing fields preserved
     assert loaded.whisper_backend == "whispercpp"
     assert loaded.ct2_rocm_ok is False

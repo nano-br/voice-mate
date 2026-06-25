@@ -25,19 +25,19 @@ def test_setup_locale_pt_br_translates_known_string(monkeypatch: pytest.MonkeyPa
 def test_env_var_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("VOICEMATE_LANG", "pt-BR")
     setup_locale("en")
-    # Mesmo passando "en" como default, env var "pt-BR" deve prevalecer.
+    # Even passing "en" as the default, the env var "pt-BR" must take precedence.
     assert _("[VoiceMate] 🤖 Calling Claude...") == "[VoiceMate] 🤖 Chamando Claude..."
 
 
 def test_missing_translation_falls_back_to_msgid(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("VOICEMATE_LANG", raising=False)
     setup_locale("pt-BR")
-    # Uma string que não está no catálogo retorna ela mesma (msgid).
+    # A string that is not in the catalog returns itself (the msgid).
     assert _("a string that is not in the catalog") == "a string that is not in the catalog"
 
 
 def test_setup_locale_with_unknown_lang_does_not_raise(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("VOICEMATE_LANG", raising=False)
-    # Idioma sem catálogo cai no NullTranslations sem levantar.
+    # A language with no catalog falls back to NullTranslations without raising.
     setup_locale("xx-YY")
     assert _("anything") == "anything"

@@ -7,13 +7,13 @@ from numpy.typing import NDArray
 
 
 class TranscriptionBackend(Protocol):
-    """Motor de transcrição plugável.
+    """Pluggable transcription engine.
 
-    Implementações concretas (faster-whisper para NVIDIA/CPU, openai-whisper
-    sobre torch+ROCm para AMD, etc.) ficam isoladas e são trocadas pela factory
-    `cli.wiring.build_transcriber` sem mexer no fluxo de gravação.
+    Concrete implementations (faster-whisper for NVIDIA/CPU, openai-whisper
+    over torch+ROCm for AMD, etc.) stay isolated and are swapped by the factory
+    `cli.wiring.build_transcriber` without touching the recording flow.
     """
 
     def transcribe(self, audio: NDArray[np.float32]) -> str:
-        """Retorna o texto transcrito, ou string vazia se nada foi detectado."""
+        """Return the transcribed text, or an empty string if nothing was detected."""
         ...

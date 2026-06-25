@@ -1,7 +1,7 @@
 """Detect the GPU vendor (NVIDIA / AMD / CPU) without heavy dependencies.
 
-Cobre Windows (WMI via PowerShell) e Linux/WSL2 (rocm-smi → amd-smi → lspci).
-Degrada graciosamente em qualquer SO: every external call is wrapped so a
+Covers Windows (WMI via PowerShell) and Linux/WSL2 (rocm-smi → amd-smi → lspci).
+Degrades gracefully on any OS: every external call is wrapped so a
 missing tool / timeout / error just falls through to the next check, ending at
 the always-safe "cpu" default.
 
@@ -20,9 +20,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.core.config import GpuVendor
+from app.i18n import _
 
-# Versão mínima do driver Adrenalin para o ROCm (Windows e WSL2).
-# Só usada em mensagem de aviso — a checagem real é frágil (ver detect_amd).
+# Minimum Adrenalin driver version for ROCm (Windows and WSL2).
+# Only used in a warning message — the real check is fragile (see detect_amd).
 REQUIRED_AMD_DRIVER = "26.2.2"
 
 _AMD_DRIVER_URL = "https://www.amd.com/en/support"
@@ -34,21 +35,21 @@ _GFX_RE = re.compile(r"\bgfx[0-9a-f]{3,}\b")
 
 @dataclass
 class GpuInfo:
-    """Resultado da detecção de GPU."""
+    """Result of GPU detection."""
 
     vendor: GpuVendor
     device_name: str | None = None
     driver_version: str | None = None
-    # True quando há tooling HIP/ROCm utilizável; None/False = não dá p/ afirmar,
-    # então apenas avisamos (nunca bloqueamos a instalação por isso).
+    # True when usable HIP/ROCm tooling is present; None/False = can't tell,
+    # so we only warn (we never block the install over it).
     rocm_driver_ok: bool = False
-    # Arquitetura da GPU AMD (ex.: "gfx1201" na RX 9070 XT) via rocminfo —
-    # usada como GPU_TARGETS no build do CTranslate2-ROCm.
+    # AMD GPU architecture (e.g. "gfx1201" on the RX 9070 XT) via rocminfo —
+    # used as GPU_TARGETS in the CTranslate2-ROCm build.
     gfx_target: str | None = None
 
 
 def _run(cmd: list[str]) -> str | None:
-    """Roda um comando e devolve stdout (strip), ou None em qualquer falha."""
+    """Run a command and return stdout (stripped), or None on any failure."""
     try:
         proc = subprocess.run(
             cmd,
@@ -65,28 +66,28 @@ def _run(cmd: list[str]) -> str | None:
 
 
 def detect_nvidia() -> str | None:
-    """Retorna o nome da GPU NVIDIA via `nvidia-smi`, ou None."""
+    """Return the NVIDIA GPU name via `nvidia-smi`, or None."""
     if shutil.which("nvidia-smi") is None:
         return None
     out = _run(["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"])
     if not out:
         return None
-    # Primeira linha = primeira GPU.
+    # First line = first GPU.
     return out.splitlines()[0].strip()
 
 
 def detect_amd() -> tuple[str | None, str | None]:
-    """Retorna (nome, driver_version) da GPU AMD, ou (None, None)."""
+    """Return (name, driver_version) of the AMD GPU, or (None, None)."""
     if sys.platform == "win32":
         return _detect_amd_windows()
     return _detect_amd_linux()
 
 
 def _detect_amd_windows() -> tuple[str | None, str | None]:
-    """AMD no Windows via WMI/PowerShell.
+    """AMD on Windows via WMI/PowerShell.
 
-    ATENÇÃO: `DriverVersion` do WMI é a versão do .inf (ex. 32.0.x), NÃO a
-    versão Adrenalin (ex. 26.2.2). Serve só para exibição.
+    WARNING: WMI's `DriverVersion` is the .inf version (e.g. 32.0.x), NOT the
+    Adrenalin version (e.g. 26.2.2). It is for display only.
     """
     if shutil.which("powershell") is None:
         return (None, None)
@@ -113,12 +114,12 @@ def _detect_amd_windows() -> tuple[str | None, str | None]:
 
 
 def _detect_amd_linux() -> tuple[str | None, str | None]:
-    """AMD no Linux/WSL2: rocminfo → rocm-smi → amd-smi → lspci.
+    """AMD on Linux/WSL2: rocminfo → rocm-smi → amd-smi → lspci.
 
-    O rocminfo vem primeiro de propósito: é a única das ferramentas que funciona
-    TAMBÉM no WSL2 (rocm-smi/amd-smi não operam lá por limitação de arquitetura),
-    e o "Marketing Name" dele traz o nome comercial exato (ex.: "AMD Radeon
-    RX 9070 XT") — o lspci, último fallback, mostra só o nome do chip.
+    rocminfo comes first on purpose: it is the only tool that ALSO works on
+    WSL2 (rocm-smi/amd-smi don't operate there due to an architecture limitation),
+    and its "Marketing Name" carries the exact commercial name (e.g. "AMD Radeon
+    RX 9070 XT") — lspci, the last fallback, shows only the chip name.
     """
     if shutil.which("rocminfo") is not None:
         name = _parse_rocminfo_marketing_name(_run(["rocminfo"]) or "")
@@ -140,11 +141,11 @@ def _detect_amd_linux() -> tuple[str | None, str | None]:
 
 
 def _parse_rocminfo_marketing_name(out: str) -> str | None:
-    """Nome comercial da GPU na saída do `rocminfo`.
+    """The GPU's commercial name in the `rocminfo` output.
 
-    O rocminfo lista agentes CPU e GPU, ambos com "Marketing Name"; filtramos
-    pelo que parece placa de vídeo (Radeon/Instinct/Graphics) para não devolver
-    o nome do Ryzen.
+    rocminfo lists CPU and GPU agents, both with a "Marketing Name"; we filter
+    for what looks like a video card (Radeon/Instinct/Graphics) so we don't return
+    the Ryzen's name.
     """
     for line in out.splitlines():
         if "marketing name" not in line.lower():
@@ -157,7 +158,7 @@ def _parse_rocminfo_marketing_name(out: str) -> str | None:
 
 
 def _parse_rocm_smi_product(out: str) -> str | None:
-    """Extrai o nome do card da saída do `rocm-smi --showproductname`."""
+    """Extract the card name from `rocm-smi --showproductname` output."""
     for line in out.splitlines():
         if "card series" in line.lower() or "card model" in line.lower():
             value = line.split(":")[-1].strip()
@@ -167,7 +168,7 @@ def _parse_rocm_smi_product(out: str) -> str | None:
 
 
 def _parse_amd_smi_asic(out: str) -> str | None:
-    """Extrai MARKET_NAME da saída do `amd-smi static --asic`."""
+    """Extract MARKET_NAME from `amd-smi static --asic` output."""
     for line in out.splitlines():
         if "market_name" in line.lower():
             value = line.split(":")[-1].strip()
@@ -180,15 +181,15 @@ _LSPCI_AMD_RE = re.compile(r"\b(amd|ati|radeon)\b", re.IGNORECASE)
 
 
 def _parse_lspci_amd(out: str) -> str | None:
-    """Acha a linha VGA/Display da AMD no `lspci` e devolve a descrição.
+    """Find the AMD VGA/Display line in `lspci` and return its description.
 
-    Word boundary obrigatório: "Corporation" contém "ati" — sem \\b a NVIDIA
-    passaria no filtro.
+    Word boundary required: "Corporation" contains "ati" — without \\b NVIDIA
+    would pass the filter.
     """
     for line in out.splitlines():
         low = line.lower()
         if ("vga" in low or "display" in low or "3d controller" in low) and _LSPCI_AMD_RE.search(line):
-            # Formato: "03:00.0 VGA compatible controller: <descrição>"
+            # Format: "03:00.0 VGA compatible controller: <description>"
             return line.split(":", 2)[-1].strip()
     return None
 
@@ -201,7 +202,7 @@ def _amdgpu_kernel_version() -> str | None:
 
 
 def detect_gfx_target() -> str | None:
-    """Arquitetura gfx da GPU AMD via `rocminfo` (ex.: gfx1201). None se indisponível."""
+    """AMD GPU gfx architecture via `rocminfo` (e.g. gfx1201). None if unavailable."""
     if shutil.which("rocminfo") is None:
         return None
     out = _run(["rocminfo"])
@@ -211,7 +212,7 @@ def detect_gfx_target() -> str | None:
 
 
 def _parse_gfx_target(out: str) -> str | None:
-    """Primeiro alvo gfx* da saída do rocminfo (a GPU; CPUs não têm gfx)."""
+    """First gfx* target in the rocminfo output (the GPU; CPUs have no gfx)."""
     match = _GFX_RE.search(out)
     return match.group(0) if match else None
 
@@ -228,7 +229,7 @@ def _looks_amd(name: str) -> bool:
 
 
 def detect_gpu() -> GpuInfo:
-    """Detecta o vendor da GPU. Ordem: NVIDIA → AMD → CPU (fallback seguro)."""
+    """Detect the GPU vendor. Order: NVIDIA → AMD → CPU (safe fallback)."""
     nvidia_name = detect_nvidia()
     if nvidia_name:
         return GpuInfo(vendor="nvidia", device_name=nvidia_name, rocm_driver_ok=False)
@@ -247,15 +248,15 @@ def detect_gpu() -> GpuInfo:
 
 
 def amd_driver_warning(info: GpuInfo) -> str | None:
-    """Aviso quando o driver AMD/ROCm não pôde ser confirmado.
+    """Warning when the AMD/ROCm driver could not be confirmed.
 
-    Retorna None p/ vendors não-AMD ou quando há tooling ROCm no PATH.
+    Returns None for non-AMD vendors or when ROCm tooling is on the PATH.
     """
     if info.vendor != "amd" or info.rocm_driver_ok:
         return None
-    return (
-        f"[VoiceMate] ⚠ Não foi possível confirmar o driver AMD/ROCm. Para a GPU "
-        f"acelerar, instale o driver Adrenalin >= {REQUIRED_AMD_DRIVER} ({_AMD_DRIVER_URL}) "
-        f"e, no Linux/WSL2, o ROCm (rocminfo deve listar a GPU). "
-        f"A instalação segue mesmo assim — se a GPU não for usada, o app cai para CPU."
-    )
+    return _(
+        "[VoiceMate] ⚠ Could not confirm the AMD/ROCm driver. For the GPU to "
+        "accelerate, install the Adrenalin driver >= {version} ({url}) "
+        "and, on Linux/WSL2, ROCm (rocminfo should list the GPU). "
+        "Installation continues regardless — if the GPU is not used, the app falls back to CPU."
+    ).format(version=REQUIRED_AMD_DRIVER, url=_AMD_DRIVER_URL)

@@ -1,4 +1,4 @@
-"""Listeners de gatilho por plataforma (todos satisfazem o Protocol InputListener)."""
+"""Per-platform trigger listeners (all satisfy the InputListener Protocol)."""
 
 from app.platform.listeners.evdev_listener import EvdevHotkeyListener
 from app.platform.listeners.pynput_listener import PynputHotkeyListener

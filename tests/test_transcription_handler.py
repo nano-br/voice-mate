@@ -43,5 +43,5 @@ def test_clipboard_handler_is_not_busy_and_cancel_is_noop() -> None:
     handler = ClipboardHandler(audio)  # type: ignore[arg-type]
 
     assert handler.is_busy() is False
-    handler.cancel_in_flight()  # não deve levantar
-    handler.close()  # não deve levantar
+    handler.cancel_in_flight()  # must not raise
+    handler.close()  # must not raise

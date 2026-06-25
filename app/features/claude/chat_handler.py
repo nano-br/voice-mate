@@ -18,10 +18,11 @@ _HEARTBEAT_INTERVAL = 3.0
 
 
 class _Heartbeat:
-    """Imprime 'ainda processando (Ns)' periodicamente até parar.
+    """Prints 'still processing (Ns)' periodically until stopped.
 
-    No caminho sem streaming (sem TTS) o Claude bloqueia até a resposta inteira
-    chegar; sem isso o usuário fica no "status indefinido" sem saber se travou.
+    On the non-streaming path (no TTS) Claude blocks until the whole response
+    arrives; without this the user is left in an "undefined status", unsure
+    whether it hung.
     """
 
     def __init__(self, interval: float = _HEARTBEAT_INTERVAL) -> None:
@@ -49,19 +50,19 @@ class _Heartbeat:
     def _run(self) -> None:
         while not self._stop.wait(self._interval):
             elapsed = time.monotonic() - self._start
-            print(f"[VoiceMate] ⏳ Claude processando... ({elapsed:.0f}s)")
+            print(_("[VoiceMate] ⏳ Claude processing... ({elapsed:.0f}s)").format(elapsed=elapsed))
 
 
 class ClaudeChatHandler:
-    """Envia o texto transcrito para o Claude e copia a resposta no clipboard.
+    """Sends the transcribed text to Claude and copies the response to the clipboard.
 
-    Depende de qualquer `ChatBackend` (Protocol). `ClaudeRuntime` é o
-    backend padrão hoje, mas outros (Codex, Antigravity, etc.) podem ser
-    injetados sem mudança aqui. Se um `TextToSpeech` ativo for injetado,
-    a resposta também é falada via TTS (e o beep tradicional é suprimido).
-    Suporta cancelamento do turno em andamento via `cancel_in_flight()` —
-    interrompe a chamada à IA e a reprodução do TTS simultaneamente.
-    `timeout_seconds` é defesa em profundidade contra travamento do backend.
+    Depends on any `ChatBackend` (Protocol). `ClaudeRuntime` is the default
+    backend today, but others (Codex, Antigravity, etc.) can be injected with
+    no change here. If an active `TextToSpeech` is injected, the response is
+    also spoken via TTS (and the traditional beep is suppressed). Supports
+    cancelling the in-flight turn via `cancel_in_flight()` — it interrupts the
+    AI call and the TTS playback simultaneously. `timeout_seconds` is
+    defense-in-depth against a backend hang.
     """
 
     def __init__(
@@ -92,9 +93,9 @@ class ClaudeChatHandler:
         try:
             print(_("[VoiceMate] 🤖 Calling Claude..."))
             started = time.monotonic()
-            # Com TTS ativo: streaming por frase (fala a 1ª frase antes de a resposta
-            # terminar). Sem TTS: coleta completa + heartbeat (para o usuário não
-            # ficar sem feedback enquanto o Claude pensa).
+            # With TTS active: sentence-by-sentence streaming (speaks the 1st
+            # sentence before the response finishes). Without TTS: full collect +
+            # heartbeat (so the user isn't left without feedback while Claude thinks).
             if self._speaker.is_active():
                 response = self._stream_and_speak(text)
             else:
@@ -108,22 +109,24 @@ class ClaudeChatHandler:
                 return
             response_preview = response[:200] + ("..." if len(response) > 200 else "")
             print(_("[VoiceMate] 💬 Claude: {preview}").format(preview=response_preview))
-            print(f"[VoiceMate] ⏱ Resposta completa em {time.monotonic() - started:.1f}s")
+            print(_("[VoiceMate] ⏱ Full response in {elapsed:.1f}s").format(elapsed=time.monotonic() - started))
             self._clipboard.copy(response)
             print(_("[VoiceMate] 📋 Claude response copied to clipboard."))
             if not self._speaker.is_active():
                 self._audio.ai_response_ready()
         except asyncio.CancelledError:
-            print("[VoiceMate] ✗ Chamada ao Claude cancelada.")
+            print(_("[VoiceMate] ✗ Claude call cancelled."))
         except (TimeoutError, concurrent.futures.TimeoutError):
             print(
-                f"[VoiceMate] ⏱ Claude excedeu timeout ({self._timeout_seconds:.0f}s), descartando turno.",
+                _("[VoiceMate] ⏱ Claude exceeded timeout ({timeout:.0f}s), discarding turn.").format(
+                    timeout=self._timeout_seconds
+                ),
                 file=sys.stderr,
             )
             self._runtime.interrupt()
             self._audio.error()
         except Exception as exc:  # noqa: BLE001
-            print(f"[VoiceMate] ❌ Erro ao falar com o Claude: {exc}", file=sys.stderr)
+            print(_("[VoiceMate] ❌ Error talking to Claude: {exc}").format(exc=exc), file=sys.stderr)
             self._audio.error()
         finally:
             with self._lock:
@@ -131,11 +134,12 @@ class ClaudeChatHandler:
                 self._cancelled = False
 
     def _stream_and_speak(self, text: str) -> str:
-        """Consome o stream do Claude, fala frase a frase e devolve o texto completo.
+        """Consume Claude's stream, speak sentence by sentence, and return the full text.
 
-        `speak()` enfileira cada frase no player persistente e retorna; o áudio toca
-        enquanto a próxima frase é gerada (pipeline, sem buracos). `wait_done()` ao
-        final aguarda a reprodução terminar. O texto completo é acumulado p/ o clipboard.
+        `speak()` enqueues each sentence on the persistent player and returns; the
+        audio plays while the next sentence is generated (pipeline, no gaps).
+        `wait_done()` at the end waits for playback to finish. The full text is
+        accumulated for the clipboard.
         """
         buffer = SentenceBuffer()
         parts: list[str] = []
@@ -144,9 +148,9 @@ class ClaudeChatHandler:
             if self._is_cancelled():
                 break
             if first_token and delta:
-                # Sinaliza que o Claude começou a responder (antes só aparecia
-                # a resposta final — o usuário ficava sem saber se travou).
-                print("[VoiceMate] 💬 Claude respondendo...")
+                # Signals that Claude started responding (before, only the final
+                # response showed up — the user was left unsure if it had hung).
+                print(_("[VoiceMate] 💬 Claude responding..."))
                 first_token = False
             parts.append(delta)
             if not self._speak_all(buffer.feed(delta)):
@@ -159,7 +163,7 @@ class ClaudeChatHandler:
         return "".join(parts)
 
     def _speak_all(self, sentences: list[str]) -> bool:
-        """Fala cada frase em ordem; retorna False se cancelado no meio."""
+        """Speak each sentence in order; returns False if cancelled midway."""
         for sentence in sentences:
             if self._is_cancelled():
                 return False

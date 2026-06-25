@@ -21,40 +21,41 @@ from app.core.config import (
     WhisperBackend,
     WhispercppMode,
 )
+from app.i18n import _
 from app.platform.kinds import PlatformKind, TriggerKind
 from app.setup.gpu_detect import detect_gpu
 from app.setup.persisted_config import PersistedConfig
 
 _DISABLED_SYSTEM_PROMPT = ""
 
-# Idiomas que o enum TranscriptionLanguage suporta (menos "auto") — usado para
-# derivar o idioma da transcrição a partir do output_lang (BCP-47).
+# Languages the TranscriptionLanguage enum supports (minus "auto") — used to
+# derive the transcription language from output_lang (BCP-47).
 _KNOWN_TRANSCRIPTION_LANGS = frozenset({"pt", "en", "es", "fr", "de", "it", "ja", "zh"})
 
 
 def _resolve_gpu_vendor(args: argparse.Namespace, persisted: PersistedConfig) -> GpuVendor:
-    """Precedência: --cpu > --gpu-backend > config salvo > auto-detecção."""
+    """Precedence: --cpu > --gpu-backend > saved config > auto-detection."""
     if args.cpu:
         return "cpu"
     if args.gpu_backend is not None:
         if args.gpu_backend == "auto":
             return detect_gpu().vendor
-        return cast(GpuVendor, args.gpu_backend)  # nvidia | amd | cpu (validado pelo argparse)
+        return cast(GpuVendor, args.gpu_backend)  # nvidia | amd | cpu (validated by argparse)
     if persisted.gpu_vendor is not None:
         return persisted.gpu_vendor
     return detect_gpu().vendor
 
 
 def _default_backend_for(vendor: GpuVendor) -> WhisperBackend:
-    # AMD não acelera no CTranslate2 (faster-whisper) → whisper.cpp + Vulkan
-    # (leve, estável, sem torch ROCm). openai-whisper fica como fallback opcional.
+    # AMD doesn't accelerate on CTranslate2 (faster-whisper) → whisper.cpp + Vulkan
+    # (light, stable, no torch ROCm). openai-whisper stays as an optional fallback.
     return "whispercpp" if vendor == "amd" else "faster-whisper"
 
 
 def _resolve_whisper_backend(args: argparse.Namespace, persisted: PersistedConfig, vendor: GpuVendor) -> WhisperBackend:
-    """Precedência: --cpu > --whisper-backend > config salvo > default do vendor."""
+    """Precedence: --cpu > --whisper-backend > saved config > vendor default."""
     if args.cpu:
-        return "faster-whisper"  # melhor engine em CPU
+        return "faster-whisper"  # best engine on CPU
     if args.whisper_backend is not None:
         return cast(WhisperBackend, args.whisper_backend)
     if persisted.whisper_backend is not None:
@@ -63,7 +64,7 @@ def _resolve_whisper_backend(args: argparse.Namespace, persisted: PersistedConfi
 
 
 def _derive_transcription_language(output_lang: str) -> TranscriptionLanguage:
-    """Deriva o idioma da transcrição do output_lang (BCP-47 → ISO 639-1)."""
+    """Derive the transcription language from output_lang (BCP-47 → ISO 639-1)."""
     code = output_lang.replace("_", "-").split("-")[0].lower()
     if code in _KNOWN_TRANSCRIPTION_LANGS:
         return cast(TranscriptionLanguage, code)
@@ -71,7 +72,7 @@ def _derive_transcription_language(output_lang: str) -> TranscriptionLanguage:
 
 
 def _resolve_transcription_language(args: argparse.Namespace, output_lang: str) -> TranscriptionLanguage:
-    """Precedência: --transcription-language explícito > derivado do output_lang."""
+    """Precedence: explicit --transcription-language > derived from output_lang."""
     if args.transcription_language is not None:
         return cast(TranscriptionLanguage, args.transcription_language)
     return _derive_transcription_language(output_lang)
@@ -86,8 +87,8 @@ def _resolve_tts_enabled(args: argparse.Namespace, persisted: PersistedConfig) -
 
 
 def _resolve_tts_engine(args: argparse.Namespace, persisted: PersistedConfig) -> TTSEngine:
-    """Precedência: --tts-engine explícito > engine salvo no setup > "omnivoice"."""
-    if args.tts_engine is not None:  # flag default = None (não informado)
+    """Precedence: explicit --tts-engine > engine saved during setup > "omnivoice"."""
+    if args.tts_engine is not None:  # flag default = None (not provided)
         return cast(TTSEngine, args.tts_engine)
     if persisted.tts_engine is not None:
         return persisted.tts_engine
@@ -95,7 +96,7 @@ def _resolve_tts_engine(args: argparse.Namespace, persisted: PersistedConfig) ->
 
 
 def _resolve_claude_enabled(args: argparse.Namespace, persisted: PersistedConfig) -> bool:
-    """CLI --no-claude-chat > fluxo salvo > default (ligado); exige keyboard."""
+    """CLI --no-claude-chat > saved flow > default (on); requires keyboard."""
     if args.no_claude_chat:
         enabled = False
     elif persisted.default_flow == "clipboard":
@@ -104,7 +105,7 @@ def _resolve_claude_enabled(args: argparse.Namespace, persisted: PersistedConfig
         enabled = True
     if enabled and args.input_method == "mouse":
         print(
-            "[VoiceMate] ⚠ Fluxo Claude requer input-method=keyboard. Desabilitando.",
+            _("[VoiceMate] ⚠ Claude flow requires input-method=keyboard. Disabling."),
             file=sys.stderr,
         )
         return False
@@ -122,8 +123,10 @@ def resolve_system_prompt(args: argparse.Namespace) -> str | None:
     if args.claude_no_system_prompt:
         if args.claude_system_prompt is not None:
             print(
-                "[VoiceMate] ⚠ --claude-no-system-prompt e --claude-system-prompt foram "
-                "passados juntos; usando --claude-no-system-prompt.",
+                _(
+                    "[VoiceMate] ⚠ --claude-no-system-prompt and --claude-system-prompt were "
+                    "passed together; using --claude-no-system-prompt."
+                ),
                 file=sys.stderr,
             )
         return _DISABLED_SYSTEM_PROMPT
@@ -133,7 +136,7 @@ def resolve_system_prompt(args: argparse.Namespace) -> str | None:
 
 
 def _resolve_stt_strategy(args: argparse.Namespace, persisted: PersistedConfig) -> SttStrategy:
-    """Precedência: --stt-strategy > config salvo > auto."""
+    """Precedence: --stt-strategy > saved config > auto."""
     flag = getattr(args, "stt_strategy", None)
     if flag is not None:
         return cast(SttStrategy, flag)
@@ -171,7 +174,7 @@ def build_config(args: argparse.Namespace, persisted: PersistedConfig | None = N
         whisper_backend=whisper_backend,
         stt_strategy=_resolve_stt_strategy(args, persisted),
         ct2_rocm_ok=persisted.ct2_rocm_ok,
-        # Precedência: flag > config salvo > auto-detect (resolvido em main.py).
+        # Precedence: flag > saved config > auto-detect (resolved in main.py).
         platform=cast(PlatformKind, args.platform) if getattr(args, "platform", None) else persisted.platform,
         trigger=cast(TriggerKind, args.trigger) if getattr(args, "trigger", None) else persisted.trigger,
         daemon_port=_resolve_daemon_port(args, persisted),
@@ -231,9 +234,9 @@ def delete_existing_auto_seed(config: TTSConfig) -> None:
         if path.exists():
             try:
                 path.unlink()
-                print(f"[VoiceMate] Auto-seed removido: {path}")
+                print(_("[VoiceMate] Auto-seed removed: {path}").format(path=path))
             except OSError as exc:
                 print(
-                    f"[VoiceMate] ⚠ Falha ao remover {path}: {exc}",
+                    _("[VoiceMate] ⚠ Failed to remove {path}: {exc}").format(path=path, exc=exc),
                     file=sys.stderr,
                 )

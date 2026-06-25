@@ -1,4 +1,4 @@
-"""Detecção do ambiente de execução. Só stdlib — usado também pelo setup."""
+"""Runtime environment detection. Stdlib only — also used by setup."""
 
 from __future__ import annotations
 
@@ -12,11 +12,11 @@ _PROC_VERSION = Path("/proc/version")
 
 
 def detect_platform() -> PlatformKind:
-    """Resolve o ambiente atual.
+    """Resolve the current environment.
 
-    A checagem de WSL vem antes da de Wayland de propósito: o WSLg exporta
-    WAYLAND_DISPLAY dentro do WSL2, mas o tratamento correto lá é o de WSL
-    (mic via PulseAudio RDP, gatilho via daemon), não o de Wayland nativo.
+    The WSL check comes before the Wayland one on purpose: WSLg exports
+    WAYLAND_DISPLAY inside WSL2, but the correct handling there is the WSL one
+    (mic via PulseAudio RDP, trigger via daemon), not native Wayland.
     """
     if sys.platform == "win32":
         return "windows"
@@ -29,7 +29,7 @@ def detect_platform() -> PlatformKind:
 
 
 def default_trigger(platform: PlatformKind) -> TriggerKind:
-    """Gatilho default por ambiente (sobrescritível via --trigger/persisted)."""
+    """Default trigger per environment (overridable via --trigger/persisted)."""
     if platform == "windows":
         return "keyboard-hooks"
     if platform == "linux-x11":

@@ -22,7 +22,7 @@ from app.setup.persisted_config import load_persisted
 
 
 def _start_warmup_thread(transcriber: object, speaker: TextToSpeech) -> None:
-    """Aquece STT e TTS em UMA thread, em sequência (evita disputa de GPU)."""
+    """Warm up STT and TTS in ONE thread, sequentially (avoids GPU contention)."""
 
     def _warmup_all() -> None:
         stt_warmup = getattr(transcriber, "warmup", None)
@@ -35,11 +35,11 @@ def _start_warmup_thread(transcriber: object, speaker: TextToSpeech) -> None:
 
 
 def _configure_audio_env(platform: PlatformKind) -> None:
-    """No WSLg/Linux, dá ao PulseAudio um buffer maior (evita o chiado de underrun).
+    """On WSLg/Linux, give PulseAudio a larger buffer (avoids underrun crackle).
 
-    O `latency` do PortAudio é quase ignorado pelo host Pulse; quem controla o
-    buffer é a env var PULSE_LATENCY_MSEC. Setada cedo, antes de qualquer uso de
-    sounddevice (TTS, beeps, mic). Respeita override do usuário.
+    PortAudio's `latency` is mostly ignored by the Pulse host; what controls the
+    buffer is the PULSE_LATENCY_MSEC env var. Set early, before any use of
+    sounddevice (TTS, beeps, mic). Respects a user override.
     """
     if platform in ("wsl2", "linux-x11", "linux-wayland"):
         os.environ.setdefault("PULSE_LATENCY_MSEC", "200")
@@ -51,12 +51,12 @@ def main() -> None:
     config = build_config(args, load_persisted())
     setup_locale(config.output_lang)
 
-    # Resolve plataforma/gatilho uma vez; downstream (wiring, keepalive) usa os valores resolvidos.
+    # Resolve platform/trigger once; downstream (wiring, keepalive) uses the resolved values.
     config.platform = config.platform or detect_platform()
     config.trigger = config.trigger or default_trigger(config.platform)
 
-    # Env cedo, ANTES de tocar em torch/sounddevice: MIOpen/TunableOp (STT + TTS
-    # herdam o FAST/cache) e o buffer maior do PulseAudio no WSLg.
+    # Env early, BEFORE touching torch/sounddevice: MIOpen/TunableOp (STT + TTS
+    # inherit the FAST/cache) and the larger PulseAudio buffer on WSLg.
     configure_rocm_env(config.gpu_vendor)
     _configure_audio_env(config.platform)
 
@@ -69,15 +69,15 @@ def main() -> None:
     if args.tts_reset_seed:
         delete_existing_auto_seed(config.tts)
     speaker: TextToSpeech = build_speaker(config.tts) if has_chat_flow else NullSpeaker()
-    # Warmup SERIALIZADO em background (STT depois TTS, nunca concorrente): ambos
-    # pagam o tuning de kernels ROCm no startup. Rodar os dois ao mesmo tempo
-    # trava a GPU — a 1ª transcrição chegou a levar 45s (vs ~3s isolada) e o
-    # thrash glitcha o áudio do WSLg. Em sequência cada um roda rápido.
+    # SERIALIZED warmup in the background (STT then TTS, never concurrent): both
+    # pay for ROCm kernel tuning at startup. Running them at the same time stalls
+    # the GPU — the 1st transcription once took 45s (vs ~3s in isolation) and the
+    # thrash glitches WSLg audio. In sequence each one runs fast.
     _start_warmup_thread(transcriber, speaker)
 
-    # Hub de estado da sessão: estado vivo + último resultado, consultável pelos
-    # consumidores (o script de hotkeys do Windows). No WSL2 o clipboard nativo é
-    # setado pelo lado Windows (via /result) — o hub guarda a última transcrição.
+    # Session state hub: live state + last result, pollable by consumers (the
+    # Windows hotkeys script). On WSL2 the native clipboard is set by the Windows
+    # side (via /result) — the hub keeps the last transcription.
     status = SessionStatus()
     clipboard = create_clipboard_writer(config.platform, status)
     handlers, owned_handlers = build_handlers(flows, audio_feedback, speaker, config.output_lang, clipboard=clipboard)
@@ -125,8 +125,8 @@ def main() -> None:
         watchdog = Watchdog(timeout_seconds=config.watchdog_timeout_seconds)
         watchdog.start()
 
-    # O keepalive contorna a remoção silenciosa de hooks WH_KEYBOARD_LL pelo
-    # Windows sob carga — não se aplica aos listeners de Linux/WSL2.
+    # The keepalive works around Windows silently dropping WH_KEYBOARD_LL hooks
+    # under load — it doesn't apply to the Linux/WSL2 listeners.
     keepalive: ListenerKeepalive | None = None
     if config.listener_refresh_enabled and config.platform == "windows":
         keepalive = ListenerKeepalive(
@@ -148,16 +148,16 @@ def main() -> None:
             try:
                 handler.close()
             except Exception as exc:  # noqa: BLE001
-                print(f"[VoiceMate] Falha ao fechar handler: {exc}", file=sys.stderr)
-        # Encerra recursos do transcriber (ex.: subprocess do whisper-server). close()
-        # é opcional no Protocol — só alguns backends (server) o implementam.
+                print(_("[VoiceMate] Failed to close handler: {exc}").format(exc=exc), file=sys.stderr)
+        # Shut down transcriber resources (e.g. the whisper-server subprocess). close()
+        # is optional in the Protocol — only some backends (server) implement it.
         transcriber_close = getattr(transcriber, "close", None)
         if callable(transcriber_close):
             try:
                 transcriber_close()
             except Exception as exc:  # noqa: BLE001
-                print(f"[VoiceMate] Falha ao fechar transcriber: {exc}", file=sys.stderr)
-        print("\n[VoiceMate] Encerrando.")
+                print(_("[VoiceMate] Failed to close transcriber: {exc}").format(exc=exc), file=sys.stderr)
+        print(_("\n[VoiceMate] Shutting down."))
 
 
 if __name__ == "__main__":

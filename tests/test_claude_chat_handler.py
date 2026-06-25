@@ -142,7 +142,7 @@ def test_handle_with_active_speaker_uses_tts_instead_of_beep() -> None:
 
 
 def test_streaming_announces_first_token(capsys: pytest.CaptureFixture[str]) -> None:
-    """Na 1ª delta do stream, avisa que o Claude começou a responder."""
+    """On the 1st stream delta, announces that Claude started responding."""
     runtime = FakeRuntime(response="resposta falada")
     speaker = FakeSpeaker(active=True)
     handler = _handler(runtime, FakeAudio(), speaker)
@@ -150,25 +150,25 @@ def test_streaming_announces_first_token(capsys: pytest.CaptureFixture[str]) -> 
     handler.handle("pergunta")
 
     out = capsys.readouterr().out
-    assert "Claude respondendo..." in out
+    assert "Claude responding..." in out
 
 
 def test_heartbeat_prints_while_processing(capsys: pytest.CaptureFixture[str]) -> None:
-    """O heartbeat (caminho sem TTS) imprime 'processando' enquanto o Claude pensa."""
+    """The heartbeat (non-TTS path) prints 'processando' while Claude thinks."""
     from app.features.claude.chat_handler import _Heartbeat
 
     with _Heartbeat(interval=0.05):
         time.sleep(0.16)
     out = capsys.readouterr().out
-    assert "Claude processando..." in out
+    assert "Claude processing..." in out
 
 
 def test_heartbeat_silent_when_fast(capsys: pytest.CaptureFixture[str]) -> None:
     from app.features.claude.chat_handler import _Heartbeat
 
     with _Heartbeat(interval=10.0):
-        pass  # sai antes do 1º tick
-    assert "processando" not in capsys.readouterr().out
+        pass  # exits before the 1st tick
+    assert "processing" not in capsys.readouterr().out
 
 
 def test_handle_copies_transcription_before_calling_runtime() -> None:
@@ -272,11 +272,11 @@ def test_handle_timeout_does_not_hang_and_marks_idle() -> None:
 
     handler.handle("pergunta")
 
-    assert clipboard.copied == ["pergunta"]  # transcrição preservada
+    assert clipboard.copied == ["pergunta"]  # transcription preserved
     assert audio.error_calls == 1
     assert audio.ai_response_ready_calls == 0
-    assert runtime.interrupt_calls == 1  # tentou interromper o runtime travado
-    assert handler.is_busy() is False  # voltou para idle
+    assert runtime.interrupt_calls == 1  # tried to interrupt the stuck runtime
+    assert handler.is_busy() is False  # returned to idle
 
 
 def test_handle_passes_configured_timeout_to_runtime() -> None:

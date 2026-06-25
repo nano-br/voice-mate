@@ -144,7 +144,7 @@ def test_toggle_recording_dispatches_to_handler_of_stop() -> None:
     session, recorder, _, _, _ = _make_session(handlers=handlers)
 
     session.toggle("clipboard")  # start
-    session.toggle("claude_chat")  # stop com handler diferente
+    session.toggle("claude_chat")  # stop with a different handler
     assert handlers["claude_chat"].handle_started.wait(timeout=2.0)
     assert handlers["claude_chat"].handle_done.wait(timeout=2.0)
 
@@ -166,7 +166,7 @@ def test_no_audio_skips_handler_call() -> None:
 
     session.toggle("clipboard")
     session.toggle("clipboard")
-    # Espera o stop thread completar
+    # Wait for the stop thread to complete
     deadline = time.monotonic() + 2.0
     while recorder.stop_calls == 0 and time.monotonic() < deadline:
         time.sleep(0.01)
@@ -196,24 +196,24 @@ def test_toggle_during_processing_cancels_and_restarts() -> None:
     session, recorder, _, _, _ = _make_session(handlers={"claude_chat": handler})
 
     session.toggle("claude_chat")  # start
-    session.toggle("claude_chat")  # stop → entra processing → handler.handle bloqueia em block
+    session.toggle("claude_chat")  # stop → enters processing → handler.handle blocks on block
     assert handler.handle_started.wait(timeout=2.0)
     assert handler.is_busy()
 
-    # terceiro toggle: cancela IA pendente e inicia nova gravação
+    # third toggle: cancels the pending AI call and starts a new recording
     session.toggle("claude_chat")
 
-    # cancel_in_flight foi chamado e o handler.handle retornou
+    # cancel_in_flight was called and handler.handle returned
     assert handler.cancel_calls == 1
     assert handler.handle_done.wait(timeout=2.0)
-    # recorder começou nova gravação
+    # recorder started a new recording
     assert recorder.start_calls == 2
     assert recorder.is_recording
 
 
 def test_transcriber_exception_recovers_to_idle() -> None:
-    """Exceção na transcrição não pode prender a sessão em `processing`:
-    o estado volta a idle, audio.error() toca e o próximo toggle grava normal."""
+    """An exception during transcription must not leave the session stuck in `processing`:
+    the state returns to idle, audio.error() plays, and the next toggle records normally."""
 
     class BoomTranscriber(FakeTranscriber):
         def transcribe(self, audio: NDArray[np.float32]) -> str:
@@ -223,7 +223,7 @@ def test_transcriber_exception_recovers_to_idle() -> None:
     session, recorder, _, audio, _ = _make_session(handlers={"clipboard": handler}, transcriber=BoomTranscriber())
 
     session.toggle("clipboard")  # start
-    session.toggle("clipboard")  # stop → transcribe levanta na thread
+    session.toggle("clipboard")  # stop → transcribe raises on the thread
     deadline = time.monotonic() + 2.0
     while audio.error_calls == 0 and time.monotonic() < deadline:
         time.sleep(0.01)
@@ -231,17 +231,17 @@ def test_transcriber_exception_recovers_to_idle() -> None:
     assert audio.error_calls == 1
     assert handler.handle_calls == []
 
-    # Sessão se recuperou: novo toggle inicia gravação de novo (estado idle).
+    # Session recovered: a new toggle starts recording again (idle state).
     session.toggle("clipboard")
     assert recorder.start_calls == 2
     assert recorder.is_recording
 
 
 def test_slow_transcription_warns_once(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
-    """Backend lento (sem GPU) → aviso de RTF impresso uma vez por sessão."""
+    """Slow backend (no GPU) → RTF warning printed once per session."""
     from app.core import recording_session as rs
 
-    # perf_counter retorna 0 antes e 30 depois de cada transcribe → 30s p/ áudio de 1s.
+    # perf_counter returns 0 before and 30 after each transcribe → 30s for 1s of audio.
     ticks = iter([0.0, 30.0] * 10)
     monkeypatch.setattr(rs.time, "perf_counter", lambda: next(ticks))
 
@@ -254,14 +254,14 @@ def test_slow_transcription_warns_once(capsys: pytest.CaptureFixture[str], monke
     assert handler.handle_done.wait(timeout=2.0)
 
     captured = capsys.readouterr()
-    assert "mais lenta que o áudio" in captured.err
-    assert captured.err.count("mais lenta que o áudio") == 1
+    assert "slower than the audio" in captured.err
+    assert captured.err.count("slower than the audio") == 1
 
 
 def test_fast_transcription_no_warning(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
     from app.core import recording_session as rs
 
-    ticks = iter([0.0, 0.3] * 10)  # 0.3s p/ áudio de 1s → saudável
+    ticks = iter([0.0, 0.3] * 10)  # 0.3s for 1s of audio → healthy
     monkeypatch.setattr(rs.time, "perf_counter", lambda: next(ticks))
 
     handler = FakeHandler()
@@ -277,7 +277,7 @@ def test_fast_transcription_no_warning(capsys: pytest.CaptureFixture[str], monke
 
 
 def test_toggle_returns_action_and_op_seq() -> None:
-    """toggle devolve a operação na hora — base do feedback ao gatilho."""
+    """toggle returns the operation immediately — the basis for trigger feedback."""
     handlers = {"clipboard": FakeHandler(), "claude_chat": FakeHandler()}
     session, _, _, _, _ = _make_session(handlers=handlers)
 
@@ -288,10 +288,10 @@ def test_toggle_returns_action_and_op_seq() -> None:
     assert started.state == "recording"
     assert started.flow == "clipboard"
 
-    stopped = session.toggle("claude_chat")  # stop decide o destino
+    stopped = session.toggle("claude_chat")  # stop decides the destination
     assert stopped is not None
     assert stopped.action == "stopped"
-    assert stopped.op_seq == 1  # mesma operação (vai a processing)
+    assert stopped.op_seq == 1  # same operation (goes to processing)
     assert stopped.state == "processing"
     assert handlers["claude_chat"].handle_done.wait(timeout=2.0)
 
@@ -330,15 +330,15 @@ def test_restart_during_processing_opens_new_op_seq() -> None:
     session.toggle("claude_chat")  # start (op 1)
     session.toggle("claude_chat")  # stop → processing
     assert handler.handle_started.wait(timeout=2.0)
-    restarted = session.toggle("claude_chat")  # cancela + nova gravação
+    restarted = session.toggle("claude_chat")  # cancel + new recording
     assert restarted is not None
     assert restarted.action == "restarted"
-    assert restarted.op_seq == 2  # operação nova
+    assert restarted.op_seq == 2  # new operation
     assert handler.handle_done.wait(timeout=2.0)
 
 
 def test_handler_close_not_called_by_session() -> None:
-    """RecordingSession não fecha handlers — fechamento é responsabilidade do main."""
+    """RecordingSession does not close handlers — closing is the responsibility of main."""
     handler = FakeHandler()
     session, _, _, _, _ = _make_session(handlers={"clipboard": handler})
     session.toggle("clipboard")

@@ -5,15 +5,15 @@ from collections.abc import Callable
 
 
 class MultiHotkeyListener:
-    """Listener que registra múltiplos hotkeys globais com callbacks distintos.
+    """Listener that registers multiple global hotkeys with distinct callbacks.
 
-    Compatível estruturalmente com `InputListener` Protocol (listen / reinstall
-    / stop), permitindo reusar `ListenerKeepalive` sem mudanças.
+    Structurally compatible with the `InputListener` Protocol (listen / reinstall
+    / stop), allowing `ListenerKeepalive` to be reused without changes.
     """
 
     def __init__(self, bindings: dict[str, Callable[[], None]]) -> None:
         if not bindings:
-            raise ValueError("MultiHotkeyListener exige ao menos um binding")
+            raise ValueError("MultiHotkeyListener requires at least one binding")
         self._bindings: dict[str, Callable[[], None]] = dict(bindings)
         self._lock = threading.Lock()
         self._installed = False
