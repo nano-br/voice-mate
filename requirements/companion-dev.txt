@@ -1,0 +1,9 @@
+# Companion development/build on Windows (Python 3.12+, 3.13 is fine):
+#   py -3 -m venv .venv-companion && .venv-companion\Scripts\python -m pip install -r requirements/companion-dev.txt
+-r companion.txt
+types-pywin32; sys_platform == "win32"
+babel
+pytest
+mypy
+ruff
+pyinstaller

@@ -217,3 +217,6 @@ samples/**/baseline.json
 
 # PyTorch TunableOp (ROCm) — cache de tuning gravado em runtime
 tunableop_results*.csv
+
+# Companion (tray app) dev environment on Windows
+.venv-companion/
