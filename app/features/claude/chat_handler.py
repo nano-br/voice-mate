@@ -116,7 +116,7 @@ class ClaudeChatHandler:
                 self._clipboard.copy(text)
                 print(_("[VoiceMate] 📋 Transcription copied to clipboard."))
             elif publication.published:
-                print(_("[VoiceMate] 📋 The companion copies it to the clipboard."))
+                print(_("[VoiceMate] 📋 The clipboard lease holder copies it to the clipboard."))
             if not proceed:
                 print(_("[VoiceMate] Claude not called: the operation was cancelled or a new recording took over."))
                 return
@@ -127,6 +127,8 @@ class ClaudeChatHandler:
                 self._cancelled = False
 
     def _ask(self, text: str, op: OperationHandle) -> None:
+        if not op.active():
+            return
         op.set_phase("thinking")
         try:
             print(_("[VoiceMate] 🤖 Calling Claude..."))
@@ -137,6 +139,7 @@ class ClaudeChatHandler:
             spoken = self._speaker.is_active()
             if spoken:
                 response = self._stream_and_speak(text, op)
+                spoken = spoken and self._speaker.is_active()  # the TTS may have died mid-answer
             else:
                 with _Heartbeat():
                     response = self._runtime.send_and_collect(text, timeout=self._timeout_seconds)
@@ -154,7 +157,7 @@ class ClaudeChatHandler:
                 self._clipboard.copy(response)
                 print(_("[VoiceMate] 📋 Claude response copied to clipboard."))
             elif publication.published:
-                print(_("[VoiceMate] 📋 The companion copies it to the clipboard."))
+                print(_("[VoiceMate] 📋 The clipboard lease holder copies it to the clipboard."))
             if publication.play_cue and not spoken:
                 self._audio.ai_response_ready()
         except asyncio.CancelledError:

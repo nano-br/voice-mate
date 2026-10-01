@@ -387,3 +387,23 @@ def test_superseded_operation_keeps_the_transcript_but_does_not_call_claude() ->
     assert clipboard.copied == ["pergunta"]
     (record,) = status.hub.results("recent", 10)["results"]
     assert (record["kind"], record["final"]) == ("transcript", True)
+
+
+def test_an_answer_the_tts_could_not_finish_is_not_marked_spoken() -> None:
+    """The TTS died while speaking: the answer gets the ai_ready cue and spoken=false."""
+
+    class DyingSpeaker(FakeSpeaker):
+        def wait_done(self, timeout: float | None = None) -> bool:
+            self._active = False  # e.g. the audio device vanished mid-answer
+            return False
+
+    status = SessionStatus()
+    reg = status.hub.register(name="companion")
+    audio = FakeAudio()
+    handler = _handler(FakeRuntime(response="resposta"), audio, DyingSpeaker(active=True))
+
+    handler.handle("pergunta", _processing(status))
+
+    answers = [e for e in _events(status, reg["client_id"], reg["cursor"]) if e.get("kind") == "ai_response"]
+    assert [(a["final"], a["spoken"]) for a in answers] == [(True, False)]
+    assert audio.ai_response_ready_calls == 1

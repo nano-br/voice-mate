@@ -46,7 +46,9 @@ class ClipboardHandler:
         if publication.write_clipboard:
             print(_("[VoiceMate] ✓ Copied: {preview}").format(preview=preview))
         else:
-            print(_("[VoiceMate] ✓ Transcribed (the companion copies it): {preview}").format(preview=preview))
+            print(
+                _("[VoiceMate] ✓ Transcribed (the clipboard lease holder copies it): {preview}").format(preview=preview)
+            )
 
     def is_busy(self) -> bool:
         return False

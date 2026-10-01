@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-01 19:07-0300\n"
+"POT-Creation-Date: 2026-10-01 19:51-0300\n"
 "PO-Revision-Date: 2026-10-01 16:49-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: es\n"
@@ -17,36 +17,36 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: app/main.py:89
+#: app/main.py:137
 #, python-brace-format
 msgid "[VoiceMate] ❌ Could not read or create the API token ({path}): {exc}"
 msgstr "[VoiceMate] ❌ No se pudo leer ni crear el token de la API ({path}): {exc}"
 
-#: app/main.py:96
+#: app/main.py:144
 #, python-brace-format
 msgid "[VoiceMate] API token required (taken from {env})."
 msgstr "[VoiceMate] Token de la API requerido (tomado de {env})."
 
-#: app/main.py:98
+#: app/main.py:146
 #, python-brace-format
 msgid "[VoiceMate] API token required (Bearer), stored in {path}."
 msgstr "[VoiceMate] Token de la API requerido (Bearer), guardado en {path}."
 
-#: app/main.py:117
+#: app/main.py:165
 #, python-brace-format
 msgid "[VoiceMate] ❌ Could not open the HTTP API on 127.0.0.1:{port}: {exc}"
 msgstr "[VoiceMate] ❌ No se pudo abrir la API HTTP en 127.0.0.1:{port}: {exc}"
 
-#: app/main.py:123
+#: app/main.py:171
 #, python-brace-format
 msgid "[VoiceMate] HTTP API on http://127.0.0.1:{port}; loading the engine..."
 msgstr "[VoiceMate] API HTTP en http://127.0.0.1:{port}; cargando el motor..."
 
-#: app/main.py:147
+#: app/main.py:195
 msgid "[VoiceMate] No handler available; exiting."
 msgstr "[VoiceMate] No hay ningún handler disponible; saliendo."
 
-#: app/main.py:166
+#: app/main.py:216
 #, python-brace-format
 msgid ""
 "\n"
@@ -55,17 +55,17 @@ msgstr ""
 "\n"
 "[VoiceMate] Listo. Entrada: {input_method}"
 
-#: app/main.py:168
+#: app/main.py:218
 #, python-brace-format
 msgid "[VoiceMate] Platform: {platform} (trigger: {trigger})"
 msgstr "[VoiceMate] Plataforma: {platform} (disparador: {trigger})"
 
-#: app/main.py:173
+#: app/main.py:223
 #, python-brace-format
 msgid "[VoiceMate] Daemon listening on http://127.0.0.1:{port} (POST /trigger)."
 msgstr "[VoiceMate] Daemon escuchando en http://127.0.0.1:{port} (POST /trigger)."
 
-#: app/main.py:174
+#: app/main.py:224
 msgid ""
 "[VoiceMate] Register the Windows-side hotkeys with scripts/windows"
 "/voicemate-hotkeys.ahk (or .ps1)."
@@ -73,59 +73,59 @@ msgstr ""
 "[VoiceMate] Registra los atajos del lado de Windows con scripts/windows"
 "/voicemate-hotkeys.ahk (o .ps1)."
 
-#: app/main.py:177
+#: app/main.py:227
 msgid "clipboard"
 msgstr "portapapeles"
 
-#: app/main.py:177
+#: app/main.py:227
 msgid "Claude (multi-turn)"
 msgstr "Claude (multiturno)"
 
-#: app/main.py:178
+#: app/main.py:228
 #, python-brace-format
 msgid "[VoiceMate] Hotkey {hotkey}: → {label}"
 msgstr "[VoiceMate] Atajo {hotkey}: → {label}"
 
-#: app/main.py:180
+#: app/main.py:230
 #, python-brace-format
 msgid "[VoiceMate] HTTP API on http://127.0.0.1:{port}."
 msgstr "[VoiceMate] API HTTP en http://127.0.0.1:{port}."
 
-#: app/main.py:181
+#: app/main.py:231
 #, python-brace-format
 msgid "[VoiceMate] Max recording: {seconds}s"
 msgstr "[VoiceMate] Tiempo máximo de grabación: {seconds}s"
 
-#: app/main.py:182
+#: app/main.py:232
 msgid "[VoiceMate] Ctrl+C to exit.\n"
 msgstr "[VoiceMate] Ctrl+C para salir.\n"
 
-#: app/main.py:190
+#: app/main.py:240
 #, python-brace-format
 msgid "[VoiceMate] Failed to close handler: {exc}"
 msgstr "[VoiceMate] No se pudo cerrar el handler: {exc}"
 
-#: app/main.py:198
+#: app/main.py:248
 #, python-brace-format
 msgid "[VoiceMate] Failed to close transcriber: {exc}"
 msgstr "[VoiceMate] No se pudo cerrar el transcriptor: {exc}"
 
-#: app/main.py:231
+#: app/main.py:282
 msgid "[VoiceMate] Supervised: closing stdin shuts the engine down."
 msgstr "[VoiceMate] Modo supervisado: cerrar stdin apaga el motor."
 
-#: app/main.py:249
-#, python-brace-format
-msgid "[VoiceMate] ❌ The engine failed to start: {exc}"
-msgstr "[VoiceMate] ❌ El motor no pudo iniciarse: {exc}"
-
-#: app/main.py:295
+#: app/main.py:301 app/main.py:363
 msgid ""
 "\n"
 "[VoiceMate] Shutting down."
 msgstr ""
 "\n"
 "[VoiceMate] Finalizando."
+
+#: app/main.py:307
+#, python-brace-format
+msgid "[VoiceMate] ❌ The engine failed to start: {exc}"
+msgstr "[VoiceMate] ❌ El motor no pudo iniciarse: {exc}"
 
 #: app/cli/config_builder.py:108
 msgid "[VoiceMate] ⚠ Claude flow requires input-method=keyboard. Disabling."
@@ -270,31 +270,31 @@ msgstr "se agotó el tiempo de espera al abrir el micrófono tras {seconds:.0f}s
 msgid "[VoiceMate] ❌ Could not open the microphone ({reason})."
 msgstr "[VoiceMate] ❌ No se pudo abrir el micrófono ({reason})."
 
-#: app/core/recording_session.py:95
+#: app/core/recording_session.py:114
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Unknown handler: {handler_id}"
 msgstr "[VoiceMate] ⚠ Handler desconocido: {handler_id}"
 
-#: app/core/recording_session.py:142
+#: app/core/recording_session.py:161
 #, python-brace-format
 msgid "[VoiceMate] ✗ Operation {op_seq} cancelled."
 msgstr "[VoiceMate] ✗ Operación {op_seq} cancelada."
 
-#: app/core/recording_session.py:149
+#: app/core/recording_session.py:168
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Could not stop the microphone: {exc}"
 msgstr "[VoiceMate] ⚠ No se pudo detener el micrófono: {exc}"
 
-#: app/core/recording_session.py:198
+#: app/core/recording_session.py:217
 msgid "[VoiceMate] 🎙  Recording... (press to stop)"
 msgstr "[VoiceMate] 🎙  Grabando... (presiona para detener)"
 
-#: app/core/recording_session.py:229
+#: app/core/recording_session.py:248
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Could not play the start beep ({exc})."
 msgstr "[VoiceMate] ⚠ No se pudo reproducir el pitido de inicio ({exc})."
 
-#: app/core/recording_session.py:250
+#: app/core/recording_session.py:269
 #, python-brace-format
 msgid ""
 "[VoiceMate] 🎙 ✗ Microphone unavailable ({reason}). Check that a "
@@ -303,56 +303,56 @@ msgstr ""
 "[VoiceMate] 🎙 ✗ Micrófono no disponible ({reason}). Verifica que haya un "
 "micrófono conectado y activado y vuelve a presionar el atajo."
 
-#: app/core/recording_session.py:260
+#: app/core/recording_session.py:279
 #, python-brace-format
 msgid "Microphone unavailable: {reason}"
 msgstr "Micrófono no disponible: {reason}"
 
-#: app/core/recording_session.py:306
+#: app/core/recording_session.py:325
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Recording will end in {remaining:.0f}s"
 msgstr "[VoiceMate] ⚠ La grabación terminará en {remaining:.0f}s"
 
-#: app/core/recording_session.py:312
+#: app/core/recording_session.py:331
 #, python-brace-format
 msgid "Recording will end in {remaining:.0f}s."
 msgstr "La grabación terminará en {remaining:.0f}s."
 
-#: app/core/recording_session.py:322
+#: app/core/recording_session.py:341
 msgid "[VoiceMate] ⏰ Maximum time reached. Ending recording..."
 msgstr "[VoiceMate] ⏰ Tiempo máximo alcanzado. Finalizando la grabación..."
 
-#: app/core/recording_session.py:342
+#: app/core/recording_session.py:361
 msgid "[VoiceMate] No audio captured."
 msgstr "[VoiceMate] No se capturó audio."
 
-#: app/core/recording_session.py:343
+#: app/core/recording_session.py:362
 msgid "No audio captured."
 msgstr "No se capturó audio."
 
-#: app/core/recording_session.py:347
+#: app/core/recording_session.py:366
 #, python-brace-format
 msgid "[VoiceMate] ⏳ Transcribing {duration:.1f}s of audio..."
 msgstr "[VoiceMate] ⏳ Transcribiendo {duration:.1f}s de audio..."
 
-#: app/core/recording_session.py:354
+#: app/core/recording_session.py:379
 msgid "[VoiceMate] No speech detected."
 msgstr "[VoiceMate] No se detectó voz."
 
-#: app/core/recording_session.py:355
+#: app/core/recording_session.py:380
 msgid "No speech detected."
 msgstr "No se detectó voz."
 
-#: app/core/recording_session.py:360
+#: app/core/recording_session.py:385
 msgid "[VoiceMate] ❌ Error processing the recording:"
 msgstr "[VoiceMate] ❌ Error al procesar la grabación:"
 
-#: app/core/recording_session.py:365
+#: app/core/recording_session.py:390
 #, python-brace-format
 msgid "Transcription failed: {detail}"
 msgstr "La transcripción falló: {detail}"
 
-#: app/core/recording_session.py:396
+#: app/core/recording_session.py:421
 #, python-brace-format
 msgid ""
 "[VoiceMate] ⚠ Transcription {ratio:.0f}× slower than the audio "
@@ -363,7 +363,7 @@ msgstr ""
 "({elapsed:.0f}s para {audio_seconds:.0f}s): probablemente el backend se "
 "está ejecutando SIN GPU. Ejecuta `make doctor` para diagnosticarlo."
 
-#: app/core/recording_session.py:406
+#: app/core/recording_session.py:431
 msgid ""
 "Transcription is much slower than the audio: the backend is probably "
 "running without a GPU."
@@ -392,17 +392,21 @@ msgstr "[VoiceMate] Modelo listo."
 msgid "[VoiceMate] ✓ Copied: {preview}"
 msgstr "[VoiceMate] ✓ Copiado: {preview}"
 
-#: app/core/transcription_handler.py:49
+#: app/core/transcription_handler.py:50
 #, python-brace-format
-msgid "[VoiceMate] ✓ Transcribed (the companion copies it): {preview}"
-msgstr "[VoiceMate] ✓ Transcrito (la app companion lo copia): {preview}"
+msgid ""
+"[VoiceMate] ✓ Transcribed (the clipboard lease holder copies it): "
+"{preview}"
+msgstr ""
+"[VoiceMate] ✓ Transcrito (lo copia quien tiene la concesión del "
+"portapapeles): {preview}"
 
-#: app/daemon/hub.py:311
+#: app/daemon/hub.py:316
 #, python-brace-format
 msgid "[VoiceMate] Client {client} registered (leases: {leases})."
 msgstr "[VoiceMate] Cliente {client} registrado (concesiones: {leases})."
 
-#: app/daemon/hub.py:422
+#: app/daemon/hub.py:436
 #, python-brace-format
 msgid ""
 "[VoiceMate] ⚠ Lease '{lease}' of client {client} expired: the daemon "
@@ -411,7 +415,7 @@ msgstr ""
 "[VoiceMate] ⚠ La concesión '{lease}' del cliente {client} expiró: el "
 "daemon retoma esa tarea."
 
-#: app/daemon/hub.py:428
+#: app/daemon/hub.py:442
 #, python-brace-format
 msgid ""
 "[VoiceMate] Lease '{lease}' released by client {client}: the daemon takes"
@@ -420,25 +424,25 @@ msgstr ""
 "[VoiceMate] Concesión '{lease}' liberada por el cliente {client}: el "
 "daemon retoma esa tarea."
 
-#: app/daemon/lifecycle.py:75
+#: app/daemon/lifecycle.py:76
 msgid "[VoiceMate] Shutdown requested while the engine loads: exiting now."
 msgstr "[VoiceMate] Cierre solicitado mientras el motor carga: saliendo ahora."
 
-#: app/daemon/lifecycle.py:106
+#: app/daemon/lifecycle.py:113
 msgid "[VoiceMate] stdin closed: shutting down."
 msgstr "[VoiceMate] stdin cerrado: apagando."
 
-#: app/daemon/server.py:415
+#: app/daemon/server.py:429
 #, python-brace-format
 msgid "[VoiceMate] Client {client} unregistered."
 msgstr "[VoiceMate] Cliente {client} dado de baja."
 
-#: app/daemon/server.py:440
+#: app/daemon/server.py:458
 #, python-brace-format
 msgid "[VoiceMate] ❌ Error in trigger for flow '{flow}':"
 msgstr "[VoiceMate] ❌ Error en el disparador del flujo '{flow}':"
 
-#: app/daemon/server.py:495
+#: app/daemon/server.py:515
 msgid "[VoiceMate] Shutdown requested over HTTP."
 msgstr "[VoiceMate] Cierre solicitado por HTTP."
 
@@ -457,9 +461,11 @@ msgid "[VoiceMate] 📋 Transcription copied to clipboard."
 msgstr "[VoiceMate] 📋 Transcripción copiada al portapapeles."
 
 #: app/features/claude/chat_handler.py:119
-#: app/features/claude/chat_handler.py:157
-msgid "[VoiceMate] 📋 The companion copies it to the clipboard."
-msgstr "[VoiceMate] 📋 La app companion lo copia al portapapeles."
+#: app/features/claude/chat_handler.py:160
+msgid "[VoiceMate] 📋 The clipboard lease holder copies it to the clipboard."
+msgstr ""
+"[VoiceMate] 📋 Quien tiene la concesión del portapapeles lo copia al "
+"portapapeles."
 
 #: app/features/claude/chat_handler.py:121
 msgid ""
@@ -469,59 +475,59 @@ msgstr ""
 "[VoiceMate] Claude no fue llamado: la operación se canceló o una nueva "
 "grabación tomó el relevo."
 
-#: app/features/claude/chat_handler.py:132
+#: app/features/claude/chat_handler.py:134
 msgid "[VoiceMate] 🤖 Calling Claude..."
 msgstr "[VoiceMate] 🤖 Llamando a Claude..."
 
-#: app/features/claude/chat_handler.py:144
+#: app/features/claude/chat_handler.py:147
 msgid "[VoiceMate] ✗ Claude response discarded (cancelled)."
 msgstr "[VoiceMate] ✗ Respuesta de Claude descartada (cancelada)."
 
-#: app/features/claude/chat_handler.py:147
+#: app/features/claude/chat_handler.py:150
 msgid "[VoiceMate] Claude returned an empty response."
 msgstr "[VoiceMate] Claude devolvió una respuesta vacía."
 
-#: app/features/claude/chat_handler.py:150
+#: app/features/claude/chat_handler.py:153
 #, python-brace-format
 msgid "[VoiceMate] 💬 Claude: {preview}"
 msgstr "[VoiceMate] 💬 Claude: {preview}"
 
-#: app/features/claude/chat_handler.py:151
+#: app/features/claude/chat_handler.py:154
 #, python-brace-format
 msgid "[VoiceMate] ⏱ Full response in {elapsed:.1f}s"
 msgstr "[VoiceMate] ⏱ Respuesta completa en {elapsed:.1f}s"
 
-#: app/features/claude/chat_handler.py:155
+#: app/features/claude/chat_handler.py:158
 msgid "[VoiceMate] 📋 Claude response copied to clipboard."
 msgstr "[VoiceMate] 📋 Respuesta de Claude copiada al portapapeles."
 
-#: app/features/claude/chat_handler.py:161
+#: app/features/claude/chat_handler.py:164
 msgid "[VoiceMate] ✗ Claude call cancelled."
 msgstr "[VoiceMate] ✗ Llamada a Claude cancelada."
 
-#: app/features/claude/chat_handler.py:164
+#: app/features/claude/chat_handler.py:167
 #, python-brace-format
 msgid "[VoiceMate] ⏱ Claude exceeded timeout ({timeout:.0f}s), discarding turn."
 msgstr ""
 "[VoiceMate] ⏱ Claude superó el tiempo de espera ({timeout:.0f}s), "
 "descartando el turno."
 
-#: app/features/claude/chat_handler.py:173
+#: app/features/claude/chat_handler.py:176
 #, python-brace-format
 msgid "Claude did not answer within {timeout:.0f}s."
 msgstr "Claude no respondió en {timeout:.0f}s."
 
-#: app/features/claude/chat_handler.py:177
+#: app/features/claude/chat_handler.py:180
 #, python-brace-format
 msgid "[VoiceMate] ❌ Error talking to Claude: {exc}"
 msgstr "[VoiceMate] ❌ Error al comunicarse con Claude: {exc}"
 
-#: app/features/claude/chat_handler.py:181
+#: app/features/claude/chat_handler.py:184
 #, python-brace-format
 msgid "Error talking to Claude: {detail}"
 msgstr "Error al comunicarse con Claude: {detail}"
 
-#: app/features/claude/chat_handler.py:204
+#: app/features/claude/chat_handler.py:207
 msgid "[VoiceMate] 💬 Claude responding..."
 msgstr "[VoiceMate] 💬 Claude respondiendo..."
 
@@ -863,7 +869,7 @@ msgstr ""
 "[VoiceMate] Cargando Whisper '{model_stem}' (whisper.cpp + Vulkan, "
 "idioma={language})..."
 
-#: app/features/whispercpp/server_backend.py:168
+#: app/features/whispercpp/server_backend.py:191
 #, python-brace-format
 msgid ""
 "[VoiceMate] Starting whisper-server '{model_stem}' (whisper.cpp, "
@@ -872,21 +878,21 @@ msgstr ""
 "[VoiceMate] Iniciando whisper-server '{model_stem}' (whisper.cpp, "
 "idioma={language}, vad={vad})..."
 
-#: app/features/whispercpp/server_backend.py:191
+#: app/features/whispercpp/server_backend.py:216
 msgid "[VoiceMate] Model ready (warm)."
 msgstr "[VoiceMate] Modelo listo (precalentado)."
 
-#: app/features/whispercpp/server_backend.py:201
+#: app/features/whispercpp/server_backend.py:226
 #, python-brace-format
 msgid "[VoiceMate] {line}"
 msgstr "[VoiceMate] {line}"
 
-#: app/features/whispercpp/server_backend.py:205
+#: app/features/whispercpp/server_backend.py:230
 #, python-brace-format
 msgid "[VoiceMate] ⚠ {warning}"
 msgstr "[VoiceMate] ⚠ {warning}"
 
-#: app/features/whispercpp/server_backend.py:227
+#: app/features/whispercpp/server_backend.py:252
 #, python-brace-format
 msgid "[VoiceMate] ⚠ whisper-server warmup failed (continuing): {exc}"
 msgstr ""
@@ -998,52 +1004,52 @@ msgstr ""
 "que aún puede actuar sobre este atajo: revisa la consola de WSL antes de "
 "volver a presionarlo."
 
-#: app/i18n/windows_script_messages.py:47
+#: app/i18n/windows_script_messages.py:49
 msgid "daemon error"
 msgstr "error del daemon"
 
-#: app/i18n/windows_script_messages.py:48
+#: app/i18n/windows_script_messages.py:50
 #, python-brace-format
 msgid "{0}: daemon error ({1}). See the WSL console for details."
 msgstr "{0}: error del daemon ({1}). Revisa los detalles en la consola de WSL."
 
-#: app/i18n/windows_script_messages.py:49
+#: app/i18n/windows_script_messages.py:51
 msgid "trigger rejected"
 msgstr "disparador rechazado"
 
-#: app/i18n/windows_script_messages.py:50
+#: app/i18n/windows_script_messages.py:52
 #, python-brace-format
 msgid "{0}: the daemon rejected the trigger ({1})."
 msgstr "{0}: el daemon rechazó el disparador ({1})."
 
-#: app/i18n/windows_script_messages.py:51
+#: app/i18n/windows_script_messages.py:53
 msgid "trigger failed"
 msgstr "falló el disparador"
 
-#: app/i18n/windows_script_messages.py:52
+#: app/i18n/windows_script_messages.py:54
 #, python-brace-format
 msgid "{0}: unexpected error talking to the daemon at {1}: {2}"
 msgstr "{0}: error inesperado al comunicarse con el daemon en {1}: {2}"
 
-#: app/i18n/windows_script_messages.py:53
+#: app/i18n/windows_script_messages.py:55
 #, python-brace-format
 msgid "The daemon reported an error ({0})."
 msgstr "El daemon informó un error ({0})."
 
-#: app/i18n/windows_script_messages.py:54
+#: app/i18n/windows_script_messages.py:56
 #, python-brace-format
 msgid "[VoiceMate] {0} (seq {1}, op {2}, error '{3}'; clipboard untouched)"
 msgstr "[VoiceMate] {0} (seq {1}, op {2}, error '{3}'; portapapeles sin cambios)"
 
-#: app/i18n/windows_script_messages.py:55
+#: app/i18n/windows_script_messages.py:57
 msgid "error"
 msgstr "error"
 
-#: app/i18n/windows_script_messages.py:56
+#: app/i18n/windows_script_messages.py:58
 msgid "microphone unavailable"
 msgstr "micrófono no disponible"
 
-#: app/i18n/windows_script_messages.py:57
+#: app/i18n/windows_script_messages.py:59
 msgid ""
 "No microphone is connected to Windows. Connect one and press the hotkey "
 "again."
@@ -1051,7 +1057,7 @@ msgstr ""
 "No hay ningún micrófono conectado a Windows. Conecta uno y vuelve a "
 "presionar el atajo."
 
-#: app/i18n/windows_script_messages.py:59
+#: app/i18n/windows_script_messages.py:61
 msgid ""
 "Windows has an active microphone, but WSL cannot open it: the WSLg audio "
 "bridge is stuck. Run `wsl --shutdown`, then start the daemon again."
@@ -1060,7 +1066,7 @@ msgstr ""
 "de audio de WSLg está bloqueado. Ejecuta `wsl --shutdown` y vuelve a "
 "iniciar el daemon."
 
-#: app/i18n/windows_script_messages.py:62
+#: app/i18n/windows_script_messages.py:64
 msgid ""
 "Could not query the Windows audio devices. Check that a microphone is "
 "connected; if it is, run `wsl --shutdown` and start the daemon again."
@@ -1069,7 +1075,7 @@ msgstr ""
 "que haya un micrófono conectado; si lo hay, ejecuta `wsl --shutdown` y "
 "vuelve a iniciar el daemon."
 
-#: app/i18n/windows_script_messages.py:65
+#: app/i18n/windows_script_messages.py:67
 #, python-brace-format
 msgid ""
 "[VoiceMate] Transcription could not be copied to the clipboard (seq {0}, "
@@ -1078,44 +1084,44 @@ msgstr ""
 "[VoiceMate] No se pudo copiar la transcripción al portapapeles (seq {0}, "
 "op {1}) tras {2} intentos. Texto completo abajo, cópialo manualmente:"
 
-#: app/i18n/windows_script_messages.py:67
+#: app/i18n/windows_script_messages.py:69
 #, python-brace-format
 msgid "----- VoiceMate transcription (seq {0}) -----"
 msgstr "----- Transcripción de VoiceMate (seq {0}) -----"
 
-#: app/i18n/windows_script_messages.py:68
+#: app/i18n/windows_script_messages.py:70
 msgid "----- end -----"
 msgstr "----- fin -----"
 
-#: app/i18n/windows_script_messages.py:69
+#: app/i18n/windows_script_messages.py:71
 msgid "Transcription could not be copied to the clipboard"
 msgstr "No se pudo copiar la transcripción al portapapeles"
 
-#: app/i18n/windows_script_messages.py:70
+#: app/i18n/windows_script_messages.py:72
 #, python-brace-format
 msgid "\"{0}\" (the full text is in the VoiceMate console window)"
 msgstr "\"{0}\" (el texto completo está en la ventana de consola de VoiceMate)"
 
-#: app/i18n/windows_script_messages.py:71
+#: app/i18n/windows_script_messages.py:73
 #, python-brace-format
 msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}, retry {2}): \"{3}\""
 msgstr ""
 "[VoiceMate] portapapeles confirmado (seq {0}, op {1}, reintento {2}): "
 "\"{3}\""
 
-#: app/i18n/windows_script_messages.py:72
+#: app/i18n/windows_script_messages.py:74
 #, python-brace-format
 msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}): \"{2}\""
 msgstr "[VoiceMate] portapapeles confirmado (seq {0}, op {1}): \"{2}\""
 
-#: app/i18n/windows_script_messages.py:73
+#: app/i18n/windows_script_messages.py:75
 #, python-brace-format
 msgid "[VoiceMate] could not confirm the clipboard (seq {0}): \"{1}\"; retrying."
 msgstr ""
 "[VoiceMate] no se pudo confirmar el portapapeles (seq {0}): \"{1}\"; "
 "reintentando."
 
-#: app/i18n/windows_script_messages.py:75
+#: app/i18n/windows_script_messages.py:77
 msgid ""
 "WSL audio is stuck: the daemon cannot reach the WSLg PulseAudio server, "
 "so recording will fail. Run `wsl --shutdown`, then start the daemon "
@@ -1125,36 +1131,36 @@ msgstr ""
 "PulseAudio de WSLg, así que la grabación fallará. Ejecuta `wsl "
 "--shutdown` y vuelve a iniciar el daemon."
 
-#: app/i18n/windows_script_messages.py:77
+#: app/i18n/windows_script_messages.py:79
 msgid "Windows has no microphone connected either: connect one first."
 msgstr "Windows tampoco tiene ningún micrófono conectado: conecta uno primero."
 
-#: app/i18n/windows_script_messages.py:78
+#: app/i18n/windows_script_messages.py:80
 msgid "WSL audio is down"
 msgstr "audio de WSL caído"
 
-#: app/i18n/windows_script_messages.py:79
+#: app/i18n/windows_script_messages.py:81
 msgid "[VoiceMate] WSL audio is working again."
 msgstr "[VoiceMate] El audio de WSL volvió a funcionar."
 
-#: app/i18n/windows_script_messages.py:80
+#: app/i18n/windows_script_messages.py:82
 #, python-brace-format
 msgid "[VoiceMate] Unexpected error in the main loop (continuing): {0}"
 msgstr ""
 "[VoiceMate] Error inesperado en el bucle principal (continúa "
 "funcionando): {0}"
 
-#: app/i18n/windows_script_messages.py:81
+#: app/i18n/windows_script_messages.py:83
 #, python-brace-format
 msgid "[VoiceMate] Hotkeys active: {0} (clipboard) / {1} (Claude) -> {2}"
 msgstr "[VoiceMate] Atajos activos: {0} (portapapeles) / {1} (Claude) -> {2}"
 
-#: app/i18n/windows_script_messages.py:82
+#: app/i18n/windows_script_messages.py:84
 #, python-brace-format
 msgid "(unregistered, retrying every {0} s)"
 msgstr "(sin registrar, reintentando cada {0} s)"
 
-#: app/i18n/windows_script_messages.py:83
+#: app/i18n/windows_script_messages.py:85
 #, python-brace-format
 msgid ""
 "[VoiceMate] Consumer {0} | scope={1}. Clipboard set by Windows. Leave "
@@ -1163,7 +1169,7 @@ msgstr ""
 "[VoiceMate] Consumidor {0} | scope={1}. Windows escribe en el "
 "portapapeles. Deja esta ventana abierta."
 
-#: app/i18n/windows_script_messages.py:85
+#: app/i18n/windows_script_messages.py:87
 #, python-brace-format
 msgid ""
 "[VoiceMate] Daemon not reachable at {0} yet: start it in WSL (`make "
@@ -1174,7 +1180,7 @@ msgstr ""
 "(`make run`). Los atajos siguen activos y esta ventana se conecta en "
 "cuanto esté listo."
 
-#: app/i18n/windows_script_messages.py:87
+#: app/i18n/windows_script_messages.py:89
 msgid ""
 "[VoiceMate] Windows has no active microphone: recording will fail until "
 "you connect one."
@@ -1182,7 +1188,7 @@ msgstr ""
 "[VoiceMate] Windows no tiene ningún micrófono activo: la grabación "
 "fallará hasta que conectes uno."
 
-#: app/i18n/windows_script_messages.py:88
+#: app/i18n/windows_script_messages.py:90
 #, python-brace-format
 msgid "{0} is already registered by another app."
 msgstr "{0} ya está registrado por otra aplicación."
