@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-01 17:26-0300\n"
+"POT-Creation-Date: 2026-10-01 19:07-0300\n"
 "PO-Revision-Date: 2026-10-01 16:49-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: pt_BR\n"
@@ -17,11 +17,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: app/main.py:87
+#: app/main.py:147
 msgid "[VoiceMate] No handler available; exiting."
 msgstr "[VoiceMate] Nenhum handler disponível, encerrando."
 
-#: app/main.py:112
+#: app/main.py:166
 #, python-brace-format
 msgid ""
 "\n"
@@ -30,17 +30,17 @@ msgstr ""
 "\n"
 "[VoiceMate] Pronto. Input: {input_method}"
 
-#: app/main.py:114
+#: app/main.py:168
 #, python-brace-format
 msgid "[VoiceMate] Platform: {platform} (trigger: {trigger})"
 msgstr "[VoiceMate] Plataforma: {platform} (gatilho: {trigger})"
 
-#: app/main.py:120
+#: app/main.py:173
 #, python-brace-format
 msgid "[VoiceMate] Daemon listening on http://127.0.0.1:{port} (POST /trigger)."
 msgstr "[VoiceMate] Daemon escutando em http://127.0.0.1:{port} (POST /trigger)."
 
-#: app/main.py:124
+#: app/main.py:174
 msgid ""
 "[VoiceMate] Register the Windows-side hotkeys with scripts/windows"
 "/voicemate-hotkeys.ahk (or .ps1)."
@@ -48,39 +48,39 @@ msgstr ""
 "[VoiceMate] Registre as hotkeys do lado Windows com scripts/windows"
 "/voicemate-hotkeys.ahk (ou .ps1)."
 
-#: app/main.py:127
+#: app/main.py:177
 msgid "clipboard"
 msgstr "clipboard"
 
-#: app/main.py:127
+#: app/main.py:177
 msgid "Claude (multi-turn)"
 msgstr "Claude (multi-turn)"
 
-#: app/main.py:128
+#: app/main.py:178
 #, python-brace-format
 msgid "[VoiceMate] Hotkey {hotkey}: → {label}"
 msgstr "[VoiceMate] Atalho {hotkey}: → {label}"
 
-#: app/main.py:129
+#: app/main.py:181
 #, python-brace-format
 msgid "[VoiceMate] Max recording: {seconds}s"
 msgstr "[VoiceMate] Tempo máximo de gravação: {seconds}s"
 
-#: app/main.py:130
+#: app/main.py:182
 msgid "[VoiceMate] Ctrl+C to exit.\n"
 msgstr "[VoiceMate] Ctrl+C para sair.\n"
 
-#: app/main.py:162
+#: app/main.py:190
 #, python-brace-format
 msgid "[VoiceMate] Failed to close handler: {exc}"
 msgstr "[VoiceMate] Falha ao fechar o handler: {exc}"
 
-#: app/main.py:170
+#: app/main.py:198
 #, python-brace-format
 msgid "[VoiceMate] Failed to close transcriber: {exc}"
 msgstr "[VoiceMate] Falha ao fechar o transcriber: {exc}"
 
-#: app/main.py:171
+#: app/main.py:295
 msgid ""
 "\n"
 "[VoiceMate] Shutting down."
@@ -110,12 +110,12 @@ msgstr "[VoiceMate] Auto-seed removido: {path}"
 msgid "[VoiceMate] ⚠ Failed to remove {path}: {exc}"
 msgstr "[VoiceMate] ⚠ Falha ao remover {path}: {exc}"
 
-#: app/cli/wiring.py:62
+#: app/cli/wiring.py:60
 #, python-brace-format
 msgid "[VoiceMate] ⚠ openai-whisper failed: {exc}"
 msgstr "[VoiceMate] ⚠ Falha no openai-whisper: {exc}"
 
-#: app/cli/wiring.py:69
+#: app/cli/wiring.py:67
 msgid ""
 "[VoiceMate] ⚠ whisper.cpp not found (run `make configure`); trying "
 "fallback."
@@ -123,26 +123,26 @@ msgstr ""
 "[VoiceMate] ⚠ whisper.cpp não encontrado (rode `make configure`); "
 "tentando fallback."
 
-#: app/cli/wiring.py:76
+#: app/cli/wiring.py:74
 #, python-brace-format
 msgid "[VoiceMate] ⚠ whisper.cpp failed; falling back: {exc}"
 msgstr "[VoiceMate] ⚠ Falha no whisper.cpp; caindo para fallback: {exc}"
 
-#: app/cli/wiring.py:96
+#: app/cli/wiring.py:94
 #, python-brace-format
 msgid "[VoiceMate] ⚠ faster-whisper (CT2-ROCm) failed on the AMD GPU: {exc}"
 msgstr "[VoiceMate] ⚠ faster-whisper (CT2-ROCm) falhou na GPU AMD: {exc}"
 
-#: app/cli/wiring.py:99
+#: app/cli/wiring.py:97
 msgid "[VoiceMate]   Disabling until the next `make configure`."
 msgstr "[VoiceMate]   Desabilitando até o próximo `make configure`."
 
-#: app/cli/wiring.py:106
+#: app/cli/wiring.py:104
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Failed to persist ct2_rocm_ok: {persist_exc}"
 msgstr "[VoiceMate] ⚠ Falha ao persistir ct2_rocm_ok: {persist_exc}"
 
-#: app/cli/wiring.py:147
+#: app/cli/wiring.py:145
 msgid ""
 "[VoiceMate] ⚠ No GPU backend available on AMD; using faster-whisper on "
 "CPU."
@@ -150,12 +150,12 @@ msgstr ""
 "[VoiceMate] ⚠ Nenhum backend GPU disponível na AMD; usando faster-whisper"
 " em CPU."
 
-#: app/cli/wiring.py:184
+#: app/cli/wiring.py:182
 #, python-brace-format
 msgid "[VoiceMate] ⚠ TTS disabled: engine '{engine}' packages not installed."
 msgstr "[VoiceMate] ⚠ TTS desativado: pacotes do engine '{engine}' não instalados."
 
-#: app/cli/wiring.py:188
+#: app/cli/wiring.py:186
 #, python-brace-format
 msgid ""
 "[VoiceMate]   Install with: poetry install --extras {extra} (or run with "
@@ -164,12 +164,12 @@ msgstr ""
 "[VoiceMate]   Instale com: poetry install --extras {extra} (ou rode com "
 "--no-tts)."
 
-#: app/cli/wiring.py:198
+#: app/cli/wiring.py:196
 #, python-brace-format
 msgid "[VoiceMate] ⚠ TTS disabled (failed to start engine '{engine}'): {exc}"
 msgstr "[VoiceMate] ⚠ TTS desativado (falha ao iniciar engine '{engine}'): {exc}"
 
-#: app/cli/wiring.py:205
+#: app/cli/wiring.py:203
 #, python-brace-format
 msgid ""
 "[VoiceMate]   Check `poetry install --extras {extra}`, GPU availability, "
@@ -178,25 +178,25 @@ msgstr ""
 "[VoiceMate]   Verifique `poetry install --extras {extra}`, GPU "
 "disponível, ou rode com `--no-tts`."
 
-#: app/cli/wiring.py:245
+#: app/cli/wiring.py:243
 msgid "[VoiceMate] ⚠ Claude flow disabled: extra 'claude' not installed."
 msgstr "[VoiceMate] ⚠ Fluxo Claude desabilitado: extra 'claude' não instalado."
 
-#: app/cli/wiring.py:249
+#: app/cli/wiring.py:247
 msgid "[VoiceMate]   Install with: poetry install --extras claude"
 msgstr "[VoiceMate]   Instale com: poetry install --extras claude"
 
-#: app/cli/wiring.py:265
+#: app/cli/wiring.py:263
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Failed to start Claude (run `claude login`): {exc}"
 msgstr "[VoiceMate] ⚠ Falha ao iniciar Claude (rode `claude login`): {exc}"
 
-#: app/cli/wiring.py:277
+#: app/cli/wiring.py:275
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Unknown flow ignored: {kind}"
 msgstr "[VoiceMate] ⚠ Fluxo desconhecido ignorado: {kind}"
 
-#: app/cli/wiring.py:330
+#: app/cli/wiring.py:314
 #, python-brace-format
 msgid ""
 "[VoiceMate] ⚠ --input-method mouse is only supported on Windows "
@@ -223,21 +223,21 @@ msgstr "tempo esgotado ao abrir o microfone após {seconds:.0f}s"
 msgid "[VoiceMate] ❌ Could not open the microphone ({reason})."
 msgstr "[VoiceMate] ❌ Não foi possível abrir o microfone ({reason})."
 
-#: app/core/recording_session.py:74
+#: app/core/recording_session.py:95
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Unknown handler: {handler_id}"
 msgstr "[VoiceMate] ⚠ Handler desconhecido: {handler_id}"
 
-#: app/core/recording_session.py:137
+#: app/core/recording_session.py:198
 msgid "[VoiceMate] 🎙  Recording... (press to stop)"
 msgstr "[VoiceMate] 🎙  Gravando... (pressione para parar)"
 
-#: app/core/recording_session.py:144
+#: app/core/recording_session.py:229
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Could not play the start beep ({exc})."
 msgstr "[VoiceMate] ⚠ Não foi possível tocar o bipe de início ({exc})."
 
-#: app/core/recording_session.py:165
+#: app/core/recording_session.py:250
 #, python-brace-format
 msgid ""
 "[VoiceMate] 🎙 ✗ Microphone unavailable ({reason}). Check that a "
@@ -246,38 +246,38 @@ msgstr ""
 "[VoiceMate] 🎙 ✗ Microfone indisponível ({reason}). Verifique se há um "
 "microfone conectado e ativado e acione o atalho de novo."
 
-#: app/core/recording_session.py:173
+#: app/core/recording_session.py:260
 #, python-brace-format
 msgid "Microphone unavailable: {reason}"
 msgstr "Microfone indisponível: {reason}"
 
-#: app/core/recording_session.py:214
+#: app/core/recording_session.py:306
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Recording will end in {remaining:.0f}s"
 msgstr "[VoiceMate] ⚠ Gravação será encerrada em {remaining:.0f}s"
 
-#: app/core/recording_session.py:218
+#: app/core/recording_session.py:322
 msgid "[VoiceMate] ⏰ Maximum time reached. Ending recording..."
 msgstr "[VoiceMate] ⏰ Tempo máximo atingido. Encerrando gravação..."
 
-#: app/core/recording_session.py:250
+#: app/core/recording_session.py:342
 msgid "[VoiceMate] No audio captured."
 msgstr "[VoiceMate] Nenhum áudio capturado."
 
-#: app/core/recording_session.py:254
+#: app/core/recording_session.py:347
 #, python-brace-format
 msgid "[VoiceMate] ⏳ Transcribing {duration:.1f}s of audio..."
 msgstr "[VoiceMate] ⏳ Transcrevendo {duration:.1f}s de áudio..."
 
-#: app/core/recording_session.py:259
+#: app/core/recording_session.py:354
 msgid "[VoiceMate] No speech detected."
 msgstr "[VoiceMate] Nenhuma fala detectada."
 
-#: app/core/recording_session.py:264
+#: app/core/recording_session.py:360
 msgid "[VoiceMate] ❌ Error processing the recording:"
 msgstr "[VoiceMate] ❌ Erro ao processar a gravação:"
 
-#: app/core/recording_session.py:287
+#: app/core/recording_session.py:396
 #, python-brace-format
 msgid ""
 "[VoiceMate] ⚠ Transcription {ratio:.0f}× slower than the audio "
@@ -304,66 +304,108 @@ msgstr "[VoiceMate] (primeira execução baixa o modelo automaticamente)"
 msgid "[VoiceMate] Model ready."
 msgstr "[VoiceMate] Modelo pronto."
 
-#: app/core/transcription_handler.py:33
+#: app/core/transcription_handler.py:47
 #, python-brace-format
 msgid "[VoiceMate] ✓ Copied: {preview}"
 msgstr "[VoiceMate] ✓ Copiado: {preview}"
 
-#: app/features/claude/chat_handler.py:53
+#: app/daemon/hub.py:311
+#, python-brace-format
+msgid "[VoiceMate] Client {client} registered (leases: {leases})."
+msgstr "[VoiceMate] Cliente {client} registrado (concessões: {leases})."
+
+#: app/daemon/hub.py:422
+#, python-brace-format
+msgid ""
+"[VoiceMate] ⚠ Lease '{lease}' of client {client} expired: the daemon "
+"takes that job back."
+msgstr ""
+"[VoiceMate] ⚠ A concessão '{lease}' do cliente {client} expirou: o daemon"
+" reassume essa tarefa."
+
+#: app/daemon/hub.py:428
+#, python-brace-format
+msgid ""
+"[VoiceMate] Lease '{lease}' released by client {client}: the daemon takes"
+" that job back."
+msgstr ""
+"[VoiceMate] Concessão '{lease}' liberada pelo cliente {client}: o daemon "
+"reassume essa tarefa."
+
+#: app/daemon/lifecycle.py:75
+msgid "[VoiceMate] Shutdown requested while the engine loads: exiting now."
+msgstr ""
+"[VoiceMate] Encerramento solicitado enquanto o motor carrega: saindo "
+"agora."
+
+#: app/daemon/lifecycle.py:106
+msgid "[VoiceMate] stdin closed: shutting down."
+msgstr "[VoiceMate] stdin fechado: encerrando."
+
+#: app/daemon/server.py:440
+#, python-brace-format
+msgid "[VoiceMate] ❌ Error in trigger for flow '{flow}':"
+msgstr "[VoiceMate] ❌ Erro no trigger do flow '{flow}':"
+
+#: app/daemon/server.py:495
+msgid "[VoiceMate] Shutdown requested over HTTP."
+msgstr "[VoiceMate] Encerramento solicitado via HTTP."
+
+#: app/features/claude/chat_handler.py:56
 #, python-brace-format
 msgid "[VoiceMate] ⏳ Claude processing... ({elapsed:.0f}s)"
 msgstr "[VoiceMate] ⏳ Claude processando... ({elapsed:.0f}s)"
 
-#: app/features/claude/chat_handler.py:90
+#: app/features/claude/chat_handler.py:109
 #, python-brace-format
 msgid "[VoiceMate] ✓ Transcription: {preview}"
 msgstr "[VoiceMate] ✓ Transcrição: {preview}"
 
-#: app/features/claude/chat_handler.py:92
+#: app/features/claude/chat_handler.py:117
 msgid "[VoiceMate] 📋 Transcription copied to clipboard."
 msgstr "[VoiceMate] 📋 Transcrição copiada para o clipboard."
 
-#: app/features/claude/chat_handler.py:94
+#: app/features/claude/chat_handler.py:132
 msgid "[VoiceMate] 🤖 Calling Claude..."
 msgstr "[VoiceMate] 🤖 Chamando Claude..."
 
-#: app/features/claude/chat_handler.py:105
+#: app/features/claude/chat_handler.py:144
 msgid "[VoiceMate] ✗ Claude response discarded (cancelled)."
 msgstr "[VoiceMate] ✗ Resposta do Claude descartada (cancelada)."
 
-#: app/features/claude/chat_handler.py:108
+#: app/features/claude/chat_handler.py:147
 msgid "[VoiceMate] Claude returned an empty response."
 msgstr "[VoiceMate] Claude retornou resposta vazia."
 
-#: app/features/claude/chat_handler.py:111
+#: app/features/claude/chat_handler.py:150
 #, python-brace-format
 msgid "[VoiceMate] 💬 Claude: {preview}"
 msgstr "[VoiceMate] 💬 Claude: {preview}"
 
-#: app/features/claude/chat_handler.py:112
+#: app/features/claude/chat_handler.py:151
 #, python-brace-format
 msgid "[VoiceMate] ⏱ Full response in {elapsed:.1f}s"
 msgstr "[VoiceMate] ⏱ Resposta completa em {elapsed:.1f}s"
 
-#: app/features/claude/chat_handler.py:114
+#: app/features/claude/chat_handler.py:155
 msgid "[VoiceMate] 📋 Claude response copied to clipboard."
 msgstr "[VoiceMate] 📋 Resposta do Claude copiada para o clipboard."
 
-#: app/features/claude/chat_handler.py:118
+#: app/features/claude/chat_handler.py:161
 msgid "[VoiceMate] ✗ Claude call cancelled."
 msgstr "[VoiceMate] ✗ Chamada ao Claude cancelada."
 
-#: app/features/claude/chat_handler.py:121
+#: app/features/claude/chat_handler.py:164
 #, python-brace-format
 msgid "[VoiceMate] ⏱ Claude exceeded timeout ({timeout:.0f}s), discarding turn."
 msgstr "[VoiceMate] ⏱ Claude excedeu timeout ({timeout:.0f}s), descartando turno."
 
-#: app/features/claude/chat_handler.py:129
+#: app/features/claude/chat_handler.py:177
 #, python-brace-format
 msgid "[VoiceMate] ❌ Error talking to Claude: {exc}"
 msgstr "[VoiceMate] ❌ Erro ao falar com o Claude: {exc}"
 
-#: app/features/claude/chat_handler.py:153
+#: app/features/claude/chat_handler.py:204
 msgid "[VoiceMate] 💬 Claude responding..."
 msgstr "[VoiceMate] 💬 Claude respondendo..."
 
@@ -1017,7 +1059,7 @@ msgstr ""
 msgid "{0} is already registered by another app."
 msgstr "{0} já está registrado por outro app."
 
-#: app/platform/clipboard.py:114
+#: app/platform/clipboard.py:113
 #, python-brace-format
 msgid ""
 "[VoiceMate] ⚠ clipboard '{writer_name}' failed ({exc}); retrying the "
@@ -1025,15 +1067,6 @@ msgid ""
 msgstr ""
 "[VoiceMate] ⚠ clipboard '{writer_name}' falhou ({exc}); re-tentando os "
 "outros mecanismos..."
-
-#: app/platform/listeners/socket_trigger_listener.py:152
-msgid "[VoiceMate] Shutdown requested over HTTP."
-msgstr "[VoiceMate] Encerramento solicitado via HTTP."
-
-#: app/platform/listeners/socket_trigger_listener.py:260
-#, python-brace-format
-msgid "[VoiceMate] ❌ Error in trigger for flow '{flow}':"
-msgstr "[VoiceMate] ❌ Erro no trigger do flow '{flow}':"
 
 #: app/setup/ct2_rocm.py:45
 #, python-brace-format
