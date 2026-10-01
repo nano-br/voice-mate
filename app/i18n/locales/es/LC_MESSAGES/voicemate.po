@@ -17,6 +17,31 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
+#: app/main.py:89
+#, python-brace-format
+msgid "[VoiceMate] ❌ Could not read or create the API token ({path}): {exc}"
+msgstr "[VoiceMate] ❌ No se pudo leer ni crear el token de la API ({path}): {exc}"
+
+#: app/main.py:96
+#, python-brace-format
+msgid "[VoiceMate] API token required (taken from {env})."
+msgstr "[VoiceMate] Token de la API requerido (tomado de {env})."
+
+#: app/main.py:98
+#, python-brace-format
+msgid "[VoiceMate] API token required (Bearer), stored in {path}."
+msgstr "[VoiceMate] Token de la API requerido (Bearer), guardado en {path}."
+
+#: app/main.py:117
+#, python-brace-format
+msgid "[VoiceMate] ❌ Could not open the HTTP API on 127.0.0.1:{port}: {exc}"
+msgstr "[VoiceMate] ❌ No se pudo abrir la API HTTP en 127.0.0.1:{port}: {exc}"
+
+#: app/main.py:123
+#, python-brace-format
+msgid "[VoiceMate] HTTP API on http://127.0.0.1:{port}; loading the engine..."
+msgstr "[VoiceMate] API HTTP en http://127.0.0.1:{port}; cargando el motor..."
+
 #: app/main.py:147
 msgid "[VoiceMate] No handler available; exiting."
 msgstr "[VoiceMate] No hay ningún handler disponible; saliendo."
@@ -61,6 +86,11 @@ msgstr "Claude (multiturno)"
 msgid "[VoiceMate] Hotkey {hotkey}: → {label}"
 msgstr "[VoiceMate] Atajo {hotkey}: → {label}"
 
+#: app/main.py:180
+#, python-brace-format
+msgid "[VoiceMate] HTTP API on http://127.0.0.1:{port}."
+msgstr "[VoiceMate] API HTTP en http://127.0.0.1:{port}."
+
 #: app/main.py:181
 #, python-brace-format
 msgid "[VoiceMate] Max recording: {seconds}s"
@@ -79,6 +109,15 @@ msgstr "[VoiceMate] No se pudo cerrar el handler: {exc}"
 #, python-brace-format
 msgid "[VoiceMate] Failed to close transcriber: {exc}"
 msgstr "[VoiceMate] No se pudo cerrar el transcriptor: {exc}"
+
+#: app/main.py:231
+msgid "[VoiceMate] Supervised: closing stdin shuts the engine down."
+msgstr "[VoiceMate] Modo supervisado: cerrar stdin apaga el motor."
+
+#: app/main.py:249
+#, python-brace-format
+msgid "[VoiceMate] ❌ The engine failed to start: {exc}"
+msgstr "[VoiceMate] ❌ El motor no pudo iniciarse: {exc}"
 
 #: app/main.py:295
 msgid ""
@@ -388,6 +427,11 @@ msgstr "[VoiceMate] Cierre solicitado mientras el motor carga: saliendo ahora."
 #: app/daemon/lifecycle.py:106
 msgid "[VoiceMate] stdin closed: shutting down."
 msgstr "[VoiceMate] stdin cerrado: apagando."
+
+#: app/daemon/server.py:415
+#, python-brace-format
+msgid "[VoiceMate] Client {client} unregistered."
+msgstr "[VoiceMate] Cliente {client} dado de baja."
 
 #: app/daemon/server.py:440
 #, python-brace-format

@@ -18,6 +18,31 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
+#: app/main.py:89
+#, python-brace-format
+msgid "[VoiceMate] ❌ Could not read or create the API token ({path}): {exc}"
+msgstr ""
+
+#: app/main.py:96
+#, python-brace-format
+msgid "[VoiceMate] API token required (taken from {env})."
+msgstr ""
+
+#: app/main.py:98
+#, python-brace-format
+msgid "[VoiceMate] API token required (Bearer), stored in {path}."
+msgstr ""
+
+#: app/main.py:117
+#, python-brace-format
+msgid "[VoiceMate] ❌ Could not open the HTTP API on 127.0.0.1:{port}: {exc}"
+msgstr ""
+
+#: app/main.py:123
+#, python-brace-format
+msgid "[VoiceMate] HTTP API on http://127.0.0.1:{port}; loading the engine..."
+msgstr ""
+
 #: app/main.py:147
 msgid "[VoiceMate] No handler available; exiting."
 msgstr ""
@@ -58,6 +83,11 @@ msgstr ""
 msgid "[VoiceMate] Hotkey {hotkey}: → {label}"
 msgstr ""
 
+#: app/main.py:180
+#, python-brace-format
+msgid "[VoiceMate] HTTP API on http://127.0.0.1:{port}."
+msgstr ""
+
 #: app/main.py:181
 #, python-brace-format
 msgid "[VoiceMate] Max recording: {seconds}s"
@@ -75,6 +105,15 @@ msgstr ""
 #: app/main.py:198
 #, python-brace-format
 msgid "[VoiceMate] Failed to close transcriber: {exc}"
+msgstr ""
+
+#: app/main.py:231
+msgid "[VoiceMate] Supervised: closing stdin shuts the engine down."
+msgstr ""
+
+#: app/main.py:249
+#, python-brace-format
+msgid "[VoiceMate] ❌ The engine failed to start: {exc}"
 msgstr ""
 
 #: app/main.py:295
@@ -347,6 +386,11 @@ msgstr ""
 
 #: app/daemon/lifecycle.py:106
 msgid "[VoiceMate] stdin closed: shutting down."
+msgstr ""
+
+#: app/daemon/server.py:415
+#, python-brace-format
+msgid "[VoiceMate] Client {client} unregistered."
 msgstr ""
 
 #: app/daemon/server.py:440

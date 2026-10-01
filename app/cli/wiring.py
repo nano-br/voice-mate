@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from app.core.audio_feedback import AudioFeedback
@@ -25,11 +24,7 @@ from app.features import tts as tts_feature
 from app.features import whispercpp as whispercpp_feature
 from app.features.tts.base import NullSpeaker, TextToSpeech
 from app.i18n import _
-from app.platform.audio_probe import AudioHealth
 from app.platform.clipboard import ClipboardWriter, create_clipboard_writer
-
-if TYPE_CHECKING:
-    from app.core.session_status import SessionStatus, ToggleOutcome
 from app.platform.detect import default_trigger, detect_platform
 from app.platform.kinds import TriggerKind
 from app.platform.listeners import (
@@ -37,6 +32,9 @@ from app.platform.listeners import (
     PynputHotkeyListener,
     SocketTriggerListener,
 )
+
+if TYPE_CHECKING:
+    from app.daemon.server import ApiServer
 
 
 def _whisper_language(config: Config) -> str | None:
@@ -292,21 +290,6 @@ class _HotkeyCallback:
         self._session.toggle(self._handler_id)
 
 
-class _SocketTriggerCallback:
-    """Socket binding: receives the client_id (who fired it) and returns the operation.
-
-    Unlike `_HotkeyCallback` (local hotkey, fire-and-forget), the socket trigger
-    needs to know WHAT the toggle did in order to answer the consumer.
-    """
-
-    def __init__(self, session: RecordingSession, handler_id: str) -> None:
-        self._session = session
-        self._handler_id = handler_id
-
-    def __call__(self, client_id: str | None) -> ToggleOutcome | None:
-        return self._session.toggle(self._handler_id, client_id=client_id)
-
-
 def resolve_trigger(config: Config) -> TriggerKind:
     """Effective trigger: explicit in the config, otherwise the platform default."""
     if config.trigger is not None:
@@ -318,9 +301,10 @@ def build_listener(
     config: Config,
     flows: list[FlowConfig],
     session: RecordingSession,
-    status: SessionStatus | None = None,
-    audio_health: Callable[[], AudioHealth] | None = None,
+    api: ApiServer | None = None,
 ) -> InputListener:
+    """The trigger listener. With trigger=socket the HTTP API is the trigger, so `api` is
+    required (main binds it before the model loads and attaches the session to it)."""
     trigger = resolve_trigger(config)
 
     if config.input_method == "mouse":
@@ -338,14 +322,11 @@ def build_listener(
             return MouseButtonListener(button=config.mouse_button, on_toggle=callback)  # type: ignore[return-value]
 
     if trigger == "socket":
-        # Bindings keyed by flow NAME (the request says {"flow": ...}); "stop
-        # decides the destination" is preserved: each request equals that flow's hotkey.
-        flow_bindings: dict[str, Callable[[str | None], ToggleOutcome | None]] = {
-            flow.name: _SocketTriggerCallback(session, flow.name) for flow in flows
-        }
-        return SocketTriggerListener(  # type: ignore[return-value]
-            flow_bindings, port=config.daemon_port, status=status, audio_health=audio_health
-        )
+        # Flows are addressed by NAME (the request says {"flow": ...}); "stop decides
+        # the destination" is preserved: each request equals that flow's hotkey.
+        if api is None:
+            raise ValueError("trigger=socket needs the HTTP API server")
+        return SocketTriggerListener(api)  # type: ignore[return-value]
 
     bindings: dict[str, _HotkeyCallback] = {}
     for flow in flows:

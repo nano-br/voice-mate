@@ -99,6 +99,14 @@ stt-eval:
 run: $(MO_FILES)
 	poetry run voice-mate $(ARGS)
 
+# Engine for the companion app (docs/companion-app.md): stops when stdin closes, serves
+# the HTTP API v2 (next to the native hotkeys on Linux; on WSL2 the API is the trigger)
+# and requires the bearer token from ~/.config/voicemate/api-token. Port and the rest:
+#   make run-engine ARGS="--daemon-port 47821"
+.PHONY: run-engine
+run-engine: $(MO_FILES)
+	poetry run voice-mate --supervised --api --api-token $(ARGS)
+
 run-large: $(MO_FILES)
 	poetry run voice-mate --model large-v3 $(ARGS)
 
