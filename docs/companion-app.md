@@ -87,6 +87,19 @@ and every other endpoint except `/shutdown` and `/unregister` answers 503
 interrupted and there is nothing to clean up yet). When the build
 finishes, `ready` becomes true. A daemon that fails to build exits non-zero.
 
+Details settled by the implementation (`app/daemon/`):
+
+- Before `ready`, `flows`, `flow_info` and `tts` in `/health` come from the
+  configuration; read them again once `ready` turns true (a flow whose handler
+  failed to start, e.g. Claude without `claude login`, disappears then).
+- `ready` means "model loaded": the background warmup may still run. A trigger is
+  accepted at once; only the first transcription waits for the warmup (the
+  backends are not thread-safe).
+- Exit codes: 0 after `/shutdown` or stdin EOF (also during the build); 1 when the
+  build fails or the port is taken (the log then says "Address already in use").
+- The Python imports take a few seconds (about 3 s on WSL2) before the API binds;
+  until then connections are refused (`starting`, like a refused probe).
+
 ### Back-compat
 
 `/status`, `/result`, `/register` with an empty body and `POST /trigger` keep their
@@ -139,6 +152,10 @@ restart the engine. There is no fallback to v1 polling.
 - After a daemon restart the old `client_id` is unknown: `/events`, `/results/ack`
   and `/unregister` answer 410 and the client registers again. A `reset` caused by an instance change also means
   "register again".
+- An empty `/register` body still returns the whole `RegisterResponse` (`granted`
+  empty), a superset of v1's `{"client_id"}`.
+- A client blocked in an `/events` long poll counts as present: its leases do not
+  expire during the poll, whatever `lease_s` and `wait` are.
 
 ### `GET /events?client_id=&instance=&since=<cursor>&wait=<0..25>`
 
@@ -164,13 +181,32 @@ buffer of 512 events. Client HTTP timeout: `wait` + 5 s.
 - `warning` (`WarningData`): `time_limit_soon | no_speech | no_audio | slow_backend`.
 - `health` (`HealthData`) when the audio state changes.
 - `shutdown` (`ShutdownData`) before stopping; it wakes every pending long poll.
+  The daemon's own reasons: `supervisor` for stdin EOF, `user_quit` for Ctrl+C in
+  its console and for a `/shutdown` without a reason.
+
+Parameters: `client_id` is required (400 without it); `wait` defaults to 0 and is
+capped at 25; a missing `instance` or `since` is answered with a reset. While
+`idle`, `StateData.flow`, `flow_kind` and `phase` are null and `op_seq`/`client_id`
+are those of the last operation. Results, errors and warnings carry the `op_seq`
+they belong to:
+
+- A restart (`restarted`) supersedes the operation in processing: its pending AI
+  work is cancelled (Claude is not called, or its answer is discarded), but a
+  transcript already being produced is still published, as the operation's
+  `final` result when no AI response will follow. Warnings and errors of a
+  superseded operation are not published.
+- `/cancel` drops the operation: nothing more is published for its `op_seq`.
+- Error codes also reach the v1 `/result` stream (the scripts show any code).
 
 ### Delivery, ACK and reconciliation
 
 - Unacked = `delivery == "pending"`. `POST /results/ack` (`AckRequest` ->
   `AckResponse`; 409 on instance mismatch). `GET /results?state=unacked|recent&limit=10`
   (`ResultsResponse`; `age_s` is computed by the daemon: never compare `created_ts`
-  with the client clock, the WSL VM clock drifts after host sleep).
+  with the client clock, the WSL VM clock drifts after host sleep). `limit` is
+  1..100; `unacked` lists the oldest pending results, `recent` the newest results,
+  both in ascending `result_seq`. Optional `client_id` (410 when unknown, renews its
+  leases) and `instance` (409 on mismatch). The daemon keeps the last 200 results.
 - ONE delivery queue keyed by `(instance, result_seq)`: `/events` results and
   reconciliation only enqueue what is not already queued, in flight or ACKed, so a
   result is never set twice.

@@ -132,6 +132,8 @@ class StateData(TypedDict):
     op_seq: int
     # The flow that STARTED the recording while recording; the destination flow (the
     # one whose hotkey stopped it) while processing ("stop decides the destination").
+    # Null while idle (so are flow_kind and phase; op_seq/client_id stay those of the
+    # last operation).
     flow: str | None
     flow_kind: FlowKind | None
     client_id: str | None
@@ -254,7 +256,10 @@ Event = SnapshotEvent | StateEvent | ResultEvent | ErrorEvent | WarningEvent | H
 
 
 class EventsResponse(TypedDict):
-    """`GET /events?client_id=&instance=&since=&wait=` (410 = unknown client_id: register again)."""
+    """`GET /events?client_id=&instance=&since=&wait=` (410 = unknown client_id: register again).
+
+    `wait` defaults to 0 and is capped at 25; a missing `instance` or `since` gets a reset.
+    """
 
     instance: str
     cursor: int
@@ -285,7 +290,11 @@ class AckResponse(TypedDict):
 
 
 class ResultsResponse(TypedDict):
-    """`GET /results?state=unacked|recent&limit=`."""
+    """`GET /results?state=unacked|recent&limit=&client_id=&instance=`.
+
+    `unacked`: the oldest pending results; `recent`: the newest results; both in
+    ascending `result_seq`, at most `limit` (1..100, default 10).
+    """
 
     instance: str
     results: list[ResultRecord]
