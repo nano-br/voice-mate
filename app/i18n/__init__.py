@@ -81,7 +81,12 @@ def set_language(lang: UiLanguage) -> None:
 
 
 def _os_ui_language() -> str | None:
-    """The OS UI language as a POSIX-style name ("pt_BR", "es_MX"), or None if unknown."""
+    """The OS UI language as a POSIX-style name ("pt_BR", "es_MX"), or None if unknown.
+
+    POSIX: the first variable set among LANGUAGE, LC_ALL, LC_MESSAGES and LANG decides.
+    LANGUAGE is a priority list ("pt_BR:en"); the others hold one locale ("pt_BR.UTF-8").
+    The "C"/"POSIX" locale (also "C.UTF-8") means untranslated, so English (None).
+    """
     if sys.platform == "win32":
         import ctypes
 
@@ -89,10 +94,9 @@ def _os_ui_language() -> str | None:
         langid = ctypes.windll.kernel32.GetUserDefaultUILanguage()
         return locale.windows_locale.get(langid)
     for variable in ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"):
-        # LANGUAGE is a priority list ("pt_BR:en"); the others hold one locale ("pt_BR.UTF-8").
         value = os.environ.get(variable, "").split(":")[0].split(".")[0].split("@")[0]
-        if value and value not in ("C", "POSIX"):
-            return value
+        if value:
+            return None if value in ("C", "POSIX") else value
     return None
 
 

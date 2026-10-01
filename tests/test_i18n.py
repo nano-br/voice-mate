@@ -238,7 +238,11 @@ def test_os_ui_language_reads_the_posix_environment(monkeypatch: pytest.MonkeyPa
     monkeypatch.setenv("LANGUAGE", "pt_BR:en")
     assert i18n_module._os_ui_language() == "pt_BR"
     monkeypatch.setenv("LANGUAGE", "")
-    monkeypatch.setenv("LC_ALL", "C")
+    monkeypatch.setenv("LC_ALL", "C.UTF-8")
+    assert i18n_module._os_ui_language() is None  # the C locale is untranslated: English
+    monkeypatch.setenv("LC_ALL", "POSIX")
+    assert i18n_module._os_ui_language() is None
+    monkeypatch.delenv("LC_ALL")
     assert i18n_module._os_ui_language() == "es_MX"
 
 
