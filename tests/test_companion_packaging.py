@@ -9,7 +9,12 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-from app.companion.contract import APP_USER_MODEL_ID, INSTALLER_APP_MUTEX, SINGLE_INSTANCE_MUTEX
+from app.companion.contract import (
+    APP_USER_MODEL_ID,
+    AUTOSTART_RUN_VALUE,
+    INSTALLER_APP_MUTEX,
+    SINGLE_INSTANCE_MUTEX,
+)
 
 _ROOT = Path(__file__).resolve().parents[1]
 _REQUIREMENTS = _ROOT / "requirements"
@@ -84,11 +89,12 @@ def _iss_define(name: str) -> str:
 
 
 def test_installer_shares_the_app_identity() -> None:
-    # Different values = a second taskbar button next to the pin, or an installer
-    # that does not notice the running app.
+    # Different values = a second taskbar button next to the pin, an installer that
+    # does not notice the running app, or two "start at sign-in" entries.
     assert _iss_define("AppUserModelID") == APP_USER_MODEL_ID
     assert _iss_define("AppMutex") == INSTALLER_APP_MUTEX
     assert SINGLE_INSTANCE_MUTEX == "Local\\" + INSTALLER_APP_MUTEX
+    assert _iss_define("RunValueName") == AUTOSTART_RUN_VALUE
 
 
 def test_icon_has_every_size() -> None:

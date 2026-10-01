@@ -18,13 +18,15 @@
 #define AppGuid "36EAA32F-02FB-465C-B467-556918ACBC96"
 ; "{{" is Inno's escape for a literal "{": AppId becomes {36EAA32F-...}.
 #define AppId "{{" + AppGuid + "}"
-; The next two must equal app/companion/contract.py (tests/test_companion_packaging.py
-; checks them). The shortcut's AppUserModelID must be the one the process sets, or
-; Windows shows a second taskbar button next to the pinned one.
+; Where Inno Setup registers a per-user installation of this AppId.
+#define UninstallKey "Software\Microsoft\Windows\CurrentVersion\Uninstall\{" + AppGuid + "}_is1"
+; The next three must equal app/companion/contract.py (tests/test_companion_packaging.py
+; checks them). APP_USER_MODEL_ID: the shortcut's AppUserModelID must be the one the
+; process sets, or Windows shows a second taskbar button next to the pinned one.
 #define AppUserModelID "VoiceMate.Companion"
 ; INSTALLER_APP_MUTEX: the companion holds Local\VoiceMate.Companion while it runs.
 #define AppMutex "VoiceMate.Companion"
-; HKCU Run value, shared with the companion's own "start at login" setting.
+; AUTOSTART_RUN_VALUE: the HKCU Run value, shared with the app's "start at sign-in" setting.
 #define RunValueName "VoiceMate"
 #define RunKey "Software\Microsoft\Windows\CurrentVersion\Run"
 
@@ -88,8 +90,10 @@ spanish.QuitBeforeSetup=VoiceMate se está ejecutando. El instalador lo cerrará
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-; Off by default, like the companion's `start_at_login` setting.
-Name: "autostart"; Description: "{cm:AutoStartProgram,{#AppName}}"; GroupDescription: "{cm:AutoStartProgramGroupDescription}"; Flags: unchecked
+; Off by default, like the companion's `start_at_login` setting, and offered on a fresh
+; install only: after that the app's own setting owns the Run value, and UsePreviousTasks
+; would turn it back on at every upgrade after the user switched it off in the app.
+Name: "autostart"; Description: "{cm:AutoStartProgram,{#AppName}}"; GroupDescription: "{cm:AutoStartProgramGroupDescription}"; Flags: unchecked; Check: not IsInstalled
 
 [InstallDelete]
 ; An upgrade replaces the whole bundle: stale DLLs from another PySide6 must not linger.
@@ -107,6 +111,8 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; WorkingDir: "
 Root: HKCU; Subkey: "{#RunKey}"; ValueType: string; ValueName: "{#RunValueName}"; ValueData: """{app}\{#AppExeName}"" --autostart"; Flags: uninsdeletevalue; Tasks: autostart
 
 [Run]
+; skipifsilent: a silent install (/SILENT or /VERYSILENT, e.g. a future auto-update) does
+; not relaunch the app; such an updater has to start VoiceMate.exe itself afterwards.
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
@@ -125,10 +131,27 @@ begin
   Result := CheckForMutexes('{#AppMutex}');
 end;
 
+{ Where this app is already installed for the current user, from its uninstall key. }
+function InstalledDir(var Dir: String): Boolean;
+begin
+  Result := RegQueryStringValue(HKCU, '{#UninstallKey}', 'Inno Setup: App Path', Dir);
+end;
+
+{ Check function of the autostart task: true on upgrades and reinstalls. }
+function IsInstalled(): Boolean;
+var
+  Dir: String;
+begin
+  Result := InstalledDir(Dir);
+end;
+
 { Ask the running companion to quit through its single-instance channel, so it stops
   the engine it started cleanly, then wait for its mutex to go away. The forwarding
   process is not waited for: polling the mutex bounds the wait in every case. If the
-  app is still running afterwards, AppMutex makes Setup/Uninstall ask the user. }
+  app is still running afterwards, AppMutex makes Setup/Uninstall ask the user.
+  Nothing is shown during the wait (at most QuitTimeoutMs, usually a few seconds):
+  neither the wizard nor the uninstall progress form exists yet at this point, and a
+  custom form would depend on CreateCustomForm, whose prototype changed in 6.6. }
 procedure QuitRunningApp(const ExePath: String);
 var
   ResultCode, WaitedMs: Integer;
@@ -149,37 +172,37 @@ begin
   end;
 end;
 
-{ Runs before Setup's own AppMutex check. Upgrade while running: quit the installed
-  copy (with the user's consent) instead of asking them to find the tray icon. }
+{ Runs after the language dialog and before Setup's own AppMutex check. Upgrade while
+  running: quit the installed copy (with the user's consent) instead of asking them to
+  find the tray icon. }
 function InitializeSetup(): Boolean;
 var
-  InstalledDir: String;
+  Dir: String;
 begin
   Result := True;
   if not IsAppRunning() then
     Exit;
-  if not RegQueryStringValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{' + '{#AppGuid}' + '}_is1',
-    'Inno Setup: App Path', InstalledDir) then
+  if not InstalledDir(Dir) then
     Exit; { not installed (e.g. run from source): the AppMutex prompt handles it }
   if SuppressibleMsgBox(CustomMessage('QuitBeforeSetup'), mbConfirmation, MB_OKCANCEL, IDOK) <> IDOK then
   begin
     Result := False;
     Exit;
   end;
-  QuitRunningApp(AddBackslash(InstalledDir) + '{#AppExeName}');
+  QuitRunningApp(AddBackslash(Dir) + '{#AppExeName}');
 end;
 
-{ Runs before the uninstaller's own AppMutex check: quit first, then remove the files. }
-function InitializeUninstall(): Boolean;
-begin
-  Result := True;
-  QuitRunningApp(ExpandConstant('{app}\{#AppExeName}'));
-end;
-
+{ Uninstall order: InitializeUninstall, the "remove VoiceMate?" confirmation,
+  usAppMutexCheck, the AppMutex check, usUninstall, usPostUninstall. Quitting at
+  usAppMutexCheck means a cancelled uninstall leaves the app running. }
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
-  { The companion may have created the Run value itself ("start at login" in its
-    settings), which [Registry] does not know about: remove it in every case. }
-  if CurUninstallStep = usPostUninstall then
-    RegDeleteValue(HKCU, '{#RunKey}', '{#RunValueName}');
+  case CurUninstallStep of
+    usAppMutexCheck:
+      QuitRunningApp(ExpandConstant('{app}\{#AppExeName}'));
+    usPostUninstall:
+      { The app may have created the Run value itself ("start at sign-in" in its
+        settings), which [Registry] does not know about: remove it in every case. }
+      RegDeleteValue(HKCU, '{#RunKey}', '{#RunValueName}');
+  end;
 end;
