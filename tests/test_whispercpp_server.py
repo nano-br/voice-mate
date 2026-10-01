@@ -7,19 +7,25 @@ object.__new__ and points _base_url at a test http.server, exercising multipart
 
 from __future__ import annotations
 
+import subprocess
+import sys
 import threading
 from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
 import numpy as np
 import pytest
 
+from app.core.config import Config
+from app.features.whispercpp import server_backend as sb
 from app.features.whispercpp.server_backend import (
     WhisperCppServerBackend,
     _audio_to_wav_bytes,
     _build_multipart,
     _parse_response,
     _vulkan_device_warning,
+    kill_live_servers,
 )
 
 
@@ -154,3 +160,40 @@ def test_transcribe_surfaces_server_error(local_server: str) -> None:
             backend.transcribe(np.zeros(160, dtype=np.float32))
     finally:
         _EchoHandler.response_body = '{"text": "olá do server"}'
+
+
+_REAL_POPEN = subprocess.Popen  # the tests below replace subprocess.Popen
+
+
+def _sleeper() -> subprocess.Popen[bytes]:
+    return _REAL_POPEN([sys.executable, "-c", "import time; time.sleep(60)"])  # noqa: S603
+
+
+def _started_backend(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> WhisperCppServerBackend:
+    """A backend whose 'whisper-server' is a sleeping Python process (no model, no HTTP)."""
+    monkeypatch.setattr(sb.subprocess, "Popen", lambda *_args, **_kwargs: _sleeper())
+    for step in ("_wait_ready", "_report_vulkan_device", "_warmup"):
+        monkeypatch.setattr(WhisperCppServerBackend, step, lambda self: None)
+    return WhisperCppServerBackend(Config(), exe=tmp_path / "whisper-server", model=tmp_path / "model.bin")
+
+
+def test_started_servers_are_tracked_and_killed_before_a_hard_exit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A shutdown during the build exits with os._exit (no cleanup): the server the build
+    already started must not survive it holding the model in VRAM."""
+    backend = _started_backend(tmp_path, monkeypatch)
+    proc = backend._proc
+    assert proc is not None and proc in sb._LIVE_SERVERS
+    kill_live_servers()
+    assert proc.wait(timeout=10.0) is not None
+    assert proc not in sb._LIVE_SERVERS
+
+
+def test_close_forgets_the_server(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    backend = _started_backend(tmp_path, monkeypatch)
+    proc = backend._proc
+    assert proc is not None
+    backend.close()
+    assert proc.poll() is not None
+    assert proc not in sb._LIVE_SERVERS

@@ -24,7 +24,8 @@ StopCallback = Callable[[ShutdownReason], None]
 ExitCallback = Callable[[int], None]
 
 
-def _hard_exit(code: int) -> None:
+def hard_exit(code: int) -> None:
+    """Flush stdio and exit at once (no cleanup, no waiting for threads)."""
     for stream in (sys.stdout, sys.stderr):
         try:
             stream.flush()
@@ -36,7 +37,7 @@ def _hard_exit(code: int) -> None:
 class Lifecycle:
     """Readiness flag plus a single, idempotent shutdown request."""
 
-    def __init__(self, exit_now: ExitCallback = _hard_exit, exit_delay: float = 0.2) -> None:
+    def __init__(self, exit_now: ExitCallback = hard_exit, exit_delay: float = 0.2) -> None:
         self._exit_now = exit_now
         # Lets the HTTP response to /shutdown reach the client before the process dies.
         self._exit_delay = exit_delay

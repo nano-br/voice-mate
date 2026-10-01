@@ -127,6 +127,11 @@ msgstr ""
 msgid "[VoiceMate] ❌ The engine failed to start: {exc}"
 msgstr "[VoiceMate] ❌ O motor não conseguiu iniciar: {exc}"
 
+#: app/main.py:353
+#, python-brace-format
+msgid "[VoiceMate] Failed to stop the listener: {exc}"
+msgstr "[VoiceMate] Falha ao parar o listener: {exc}"
+
 #: app/cli/config_builder.py:108
 msgid "[VoiceMate] ⚠ Claude flow requires input-method=keyboard. Disabling."
 msgstr "[VoiceMate] ⚠ Fluxo Claude requer input-method=keyboard. Desabilitando."

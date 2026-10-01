@@ -1,9 +1,11 @@
 import os
+import signal
 import sys
 import threading
 import traceback
 from argparse import Namespace
 from dataclasses import dataclass
+from types import FrameType
 
 from app.cli.args import parse_args
 from app.cli.config_builder import build_config, delete_existing_auto_seed
@@ -21,9 +23,10 @@ from app.core.transcription_backend import TranscriptionBackend
 from app.core.transcription_handler import TranscriptionHandler
 from app.core.watchdog import Watchdog
 from app.daemon.auth import TOKEN_ENV, default_token_path, load_or_create_token
-from app.daemon.lifecycle import Lifecycle, watch_stdin_eof
+from app.daemon.lifecycle import Lifecycle, hard_exit, watch_stdin_eof
 from app.daemon.server import ApiServer, EngineInfo
 from app.features.tts.base import NullSpeaker, TextToSpeech
+from app.features.whispercpp.server_backend import kill_live_servers
 from app.i18n import _, setup_locale
 from app.platform.audio_probe import AudioServerProbe
 from app.platform.clipboard import create_clipboard_writer
@@ -52,6 +55,43 @@ def _start_warmup_thread(transcriber: object, speaker: TextToSpeech) -> threadin
 
     threading.Thread(target=_warmup_all, daemon=True, name="Warmup").start()
     return stt_warm
+
+
+def _exit_now(code: int) -> None:
+    """Hard exit for a shutdown requested while the engine loads: no cleanup runs, so
+    first kill the whisper-server the build may already have started (it holds VRAM)."""
+    kill_live_servers()
+    hard_exit(code)
+
+
+def _install_sigterm(lifecycle: Lifecycle) -> None:
+    """SIGTERM (`systemctl stop`, `kill`) shuts the engine down like stdin EOF.
+
+    The handler only starts a thread: it runs between two bytecodes of whatever the
+    main thread was doing, which may hold the lifecycle's (non-reentrant) lock.
+    """
+
+    def _on_sigterm(_signum: int, _frame: FrameType | None) -> None:
+        threading.Thread(target=lifecycle.request_shutdown, args=("supervisor",), daemon=True, name="Sigterm").start()
+
+    signal.signal(signal.SIGTERM, _on_sigterm)
+
+
+class _ListenerThread(threading.Thread):
+    """Runs the trigger listener off the main thread, which follows the lifecycle instead:
+    the keyboard/mouse listeners never return from listen(), so a /shutdown, stdin EOF or
+    SIGTERM could not end the process while the main thread sat inside it."""
+
+    def __init__(self, listener: InputListener) -> None:
+        super().__init__(daemon=True, name="Listener")
+        self._listener = listener
+        self.error: BaseException | None = None
+
+    def run(self) -> None:
+        try:
+            self._listener.listen()
+        except BaseException as exc:  # noqa: BLE001 (re-raised on the main thread)
+            self.error = exc
 
 
 def _configure_audio_env(platform: PlatformKind) -> None:
@@ -229,7 +269,8 @@ def main() -> None:
     # Session state hub: live state, results and API v2 events, served to the
     # consumers (the Windows hotkeys script, the companion app).
     status = SessionStatus()
-    lifecycle = Lifecycle()
+    lifecycle = Lifecycle(exit_now=_exit_now)
+    _install_sigterm(lifecycle)
 
     # Order matters (docs/companion-app.md, "Startup and readiness"): the token file,
     # the stdin watcher, then the HTTP API, all BEFORE the model loads (10 to 60 s), so
@@ -255,9 +296,17 @@ def main() -> None:
 
     try:
         engine = _build_engine(args, config, configured_flows, status)
+    except KeyboardInterrupt:  # Ctrl+C while the model loads: just leave
+        kill_live_servers()
+        print(_("\n[VoiceMate] Shutting down."))
+        sys.exit(0)
+    except SystemExit:
+        kill_live_servers()
+        raise
     except Exception as exc:  # noqa: BLE001 (a daemon that fails to build exits non-zero)
         print(_("[VoiceMate] ❌ The engine failed to start: {exc}").format(exc=exc), file=sys.stderr)
         traceback.print_exc()
+        kill_live_servers()
         sys.exit(1)
 
     tts_active = engine.speaker.is_active() and _has_chat_flow(engine.flows)
@@ -287,12 +336,21 @@ def main() -> None:
         listener.stop()
 
     try:
-        if lifecycle.mark_ready(_stop) and lifecycle.shutdown_reason is None:
-            listener.listen()
+        if lifecycle.mark_ready(_stop):
+            runner = _ListenerThread(listener)
+            runner.start()
+            while runner.is_alive() and not lifecycle.wait_shutdown(0.5):
+                pass
+            if runner.error is not None:
+                raise runner.error
     except KeyboardInterrupt:
         pass
     finally:
         status.hub.publish_shutdown(lifecycle.shutdown_reason or "user_quit")
+        try:
+            listener.stop()
+        except Exception as exc:  # noqa: BLE001 (shutting down anyway)
+            print(_("[VoiceMate] Failed to stop the listener: {exc}").format(exc=exc), file=sys.stderr)
         if api is not None:
             api.stop()
         if audio_probe is not None:
