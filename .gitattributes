@@ -4,6 +4,7 @@
 
 # Binários: nunca normalizar.
 *.png binary
+*.ico binary
 *.jpg binary
 *.wav binary
 *.bin binary

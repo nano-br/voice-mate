@@ -47,6 +47,14 @@ make setup     # detecta WSL2 + AMD, instala torch ROCm, whisper.cpp (Vulkan),
 make doctor    # diagnóstico: mic/áudio WSLg, binários, GPU — com correções
 ```
 
+> **App companion (recomendado no Windows):** o app de bandeja VoiceMate substitui os
+> dois scripts de hotkeys abaixo (PowerShell e AutoHotkey). Ele inicia e supervisiona o
+> daemon no WSL, registra as hotkeys, escreve o clipboard do Windows (com confirmação) e
+> reinicia o WSL quando o áudio trava. Instalação e uso: "App companion (bandeja)" no
+> [README](../README.pt-BR.md#app-companion-bandeja). Com o companion, não rode nenhum
+> dos scripts e tire os atalhos deles do `shell:startup`. Os scripts continuam
+> funcionando com o daemon do `make run`.
+
 No Windows, registre as hotkeys:
 
 - **PowerShell** (recomendado — também seta o clipboard nativo via `/result`):
@@ -113,6 +121,10 @@ Atenção: quando o Windows fica sem microfone, o PulseAudio do WSLg costuma
 resolve; depois rode `make run` de novo.
 
 ### Autostart (systemd)
+
+Com o app companion o serviço é opcional: o companion inicia o motor sozinho; se o
+serviço estiver habilitado, ele se conecta ao daemon do serviço e, na primeira
+execução, oferece desabilitá-lo.
 
 O `make setup` oferece instalar o serviço; manualmente:
 

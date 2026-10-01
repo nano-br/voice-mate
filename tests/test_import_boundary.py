@@ -19,6 +19,7 @@ _FORBIDDEN = (
     "mouse",
     "pynput",
     "evdev",
+    "app.daemon",
     "app.core",
     "app.features",
     "app.cli",

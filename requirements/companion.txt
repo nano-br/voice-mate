@@ -1,4 +1,6 @@
 # VoiceMate companion (tray app) runtime: Windows and, optionally, Linux.
 # It talks to the engine over HTTP and must not need the engine's stack.
+# Single source of the companion dependencies: the poetry extra `ui` in
+# pyproject.toml lists the same packages (tests/test_companion_packaging.py).
 pyside6-essentials>=6.8
 pywin32>=306; sys_platform == "win32"

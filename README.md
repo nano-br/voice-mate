@@ -199,7 +199,7 @@ integration — override with `--platform` / `--trigger`:
 Default hotkeys are identical everywhere: `Ctrl+Alt+V` (clipboard) and `Ctrl+Alt+A` (Claude). On WSL2 they are
 registered by `scripts/windows/voicemate-hotkeys.ahk` (or `.ps1`) which POSTs to the daemon — same
 "the stop hotkey picks the handler" semantics. Run `make doctor` to validate mic/audio/trigger/GPU with
-actionable fixes.
+actionable fixes. On Windows, the [companion app](#companion-app-tray) replaces these scripts.
 
 ## Usage
 
@@ -291,6 +291,74 @@ poetry run voice-mate --listener-refresh-seconds 30 --watchdog-timeout 60
 
 Default is `large-v3-turbo` — the best speed/quality balance, especially for mixed-language audio.
 
+## Companion app (tray)
+
+The companion is a small desktop app (PySide6) that lives in the system tray. It starts and supervises the engine, registers the hotkeys, plays the sound cues, writes each transcription to the clipboard and checks that it got there, and gives you one place to see the status and quit everything. On Windows it replaces the PowerShell/AutoHotkey script and drives the engine inside WSL2; on Linux it is an optional UI. The engine itself does not change: `make run` keeps working without the companion.
+
+### Install on Windows
+
+**With the installer (recommended).** Run `VoiceMate-Setup-<version>.exe`. It installs for your user only (no administrator prompt) into `%LOCALAPPDATA%\Programs\VoiceMate` and adds VoiceMate to the Start menu; a desktop shortcut and starting at sign-in are optional (the first install offers the latter, then **Start VoiceMate when I sign in** in Settings controls it). The installer speaks English, Portuguese and Spanish. To build it yourself (Python 3.12+ and Inno Setup 6.3+, `winget install JRSoftware.InnoSetup`):
+
+```powershell
+make companion-venv        # once: .venv-companion with the pinned PySide6 and PyInstaller
+make companion-installer   # dist\VoiceMate (PyInstaller), then dist\installer\VoiceMate-Setup-<version>.exe
+```
+
+**From source.** With Python 3.12+ on Windows:
+
+```powershell
+make companion-venv   # once
+make run-tray
+```
+
+Either way the engine still lives in WSL2 (install it as in [docs/wsl2.md](docs/wsl2.md)): the companion starts it for you, or attaches to one that is already running (for example the systemd service). If one of the old hotkey scripts (PowerShell or AutoHotkey) is still running, close it and remove its shortcut from `shell:startup`: the companion now owns `Ctrl+Alt+V` and `Ctrl+Alt+A`.
+
+### Pin to the taskbar
+
+Windows does not let installers pin apps. Open Start, search for VoiceMate, right-click it and choose **Pin to taskbar**. Clicking the pinned icon while VoiceMate runs opens its status window; right-clicking it offers **Settings**, **Restart engine**, **Restart WSL** and **Quit VoiceMate**. Pinning uses the Start menu shortcut, so it applies to the installed app.
+
+### Quit
+
+Tray icon menu > **Quit VoiceMate** (also a button in the status window and an entry in the pinned icon's right-click menu). Quitting stops the engine the companion started; an engine it only attached to (for example the systemd service) keeps running. From a terminal, for the installed app (PowerShell):
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\VoiceMate\VoiceMate.exe" --command quit
+```
+
+From source: `make run-tray ARGS="--command quit"`. A `--command` never starts VoiceMate: when it is not running, nothing happens.
+
+### Settings
+
+Tray icon menu > **Settings...**, in three tabs: **Hotkeys**; **Sounds** (built-in sounds or your own WAV files, volume); **General**: language, notifications, **Start VoiceMate when I sign in** and the engine (mode, WSL distro, engine folder, and **Restart WSL when audio fails**: **Automatically**, **Ask first** or **Never**). The settings are saved in `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) and survive an uninstall. Logs live in `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); tray icon menu > **Engine** > **Open logs** opens them.
+
+### Linux (optional)
+
+The CLI keeps working as before. For the tray icon and status window, in the repository:
+
+```bash
+poetry install --extras ui
+make run-tray
+```
+
+On Linux the engine keeps its own hotkeys (the **Hotkeys** tab shows them read-only). Without a system tray (for example GNOME without the AppIndicator extension) the status window is the main window. To add VoiceMate to the applications menu:
+
+```bash
+mkdir -p ~/.local/share/applications &&
+  sed "s|@VOICEMATE_DIR@|$PWD|g" packaging/linux/voicemate-companion.desktop \
+  > ~/.local/share/applications/voicemate-companion.desktop
+```
+
+### Troubleshooting
+
+| Symptom | Fix |
+| ------- | --- |
+| "Starting engine..." for a long time | The first model load takes 10 to 60 s. Check `engine.log` (**Engine** > **Open logs**) and the WSL distro and engine folder in Settings |
+| A hotkey shows "Used by another app" on first run | An old hotkey script (PowerShell or AutoHotkey) is still running: close it and remove it from `shell:startup` |
+| "WSL audio stopped" or "No microphone" | Connect a microphone. WSL is restarted as set in **Restart WSL when audio fails**; by hand: **Engine** > **Restart WSL** |
+| "The engine is older than this app. Restart or update it." | Update the checkout in WSL (`git pull`), then **Restart engine** |
+| A transcription was not copied | It stays under **Not copied**, in the tray menu (click it to copy) and in the status window (**Copy**) |
+| SmartScreen warns about the installer | The installer is not code-signed: **More info** > **Run anyway** |
+
 ## Makefile
 
 | Command            | Description                                   |
@@ -307,6 +375,11 @@ Default is `large-v3-turbo` — the best speed/quality balance, especially for m
 | `make format`      | Format code with Ruff                         |
 | `make lint`        | Lint with Ruff + type-check with Mypy         |
 | `make test`        | Run pytest suite                              |
+| `make run-tray`    | Run the companion app (tray); `ARGS="..."` passes flags |
+| `make companion-venv` | Create `.venv-companion` (companion dev env on Windows, pinned) |
+| `make companion-test` / `make companion-lint` | Test / lint the companion |
+| `make companion-build` | Freeze the companion with PyInstaller (`dist\VoiceMate`) |
+| `make companion-installer` | Build the Windows installer with Inno Setup (`dist\installer`) |
 | `make clean`       | Remove caches                                 |
 
 ## Architecture

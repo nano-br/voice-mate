@@ -199,7 +199,7 @@ con el portapapeles adecuados; puedes forzarlos con `--platform` / `--trigger`:
 Los atajos predeterminados son idénticos en todas partes: `Ctrl+Alt+V` (portapapeles) y `Ctrl+Alt+A` (Claude). En WSL2
 los registra `scripts/windows/voicemate-hotkeys.ahk` (o `.ps1`), que hace POST al daemon, con la misma
 semántica de "el atajo de detener elige el handler". Ejecuta `make doctor` para validar
-micrófono/audio/disparador/GPU con correcciones concretas.
+micrófono/audio/disparador/GPU con correcciones concretas. En Windows, la [app companion](#app-companion-bandeja) reemplaza estos scripts.
 
 ## Uso
 
@@ -291,6 +291,74 @@ poetry run voice-mate --listener-refresh-seconds 30 --watchdog-timeout 60
 
 El predeterminado es `large-v3-turbo`: el mejor equilibrio entre velocidad y calidad, especialmente para audio con mezcla de idiomas.
 
+## App companion (bandeja)
+
+El companion es una pequeña app de escritorio (PySide6) que vive en la bandeja del sistema. Inicia y supervisa el motor, registra los atajos, reproduce los sonidos de aviso, escribe cada transcripción en el portapapeles y comprueba que haya llegado, y reúne en un solo lugar el estado y el botón para salir de todo. En Windows reemplaza el script de PowerShell/AutoHotkey y controla el motor dentro de WSL2; en Linux es una interfaz opcional. El motor en sí no cambia: `make run` sigue funcionando sin el companion.
+
+### Instalación en Windows
+
+**Con el instalador (recomendado).** Ejecuta `VoiceMate-Setup-<versión>.exe`. Instala solo para tu usuario (sin pedir administrador) en `%LOCALAPPDATA%\Programs\VoiceMate` y agrega VoiceMate al menú Inicio; un acceso directo en el escritorio e iniciar junto con Windows son opcionales (la primera instalación ofrece lo segundo; después lo controla **Iniciar VoiceMate al iniciar sesión**, en la Configuración). El instalador habla español, inglés y portugués. Para generarlo tú mismo (Python 3.12+ e Inno Setup 6.3+, `winget install JRSoftware.InnoSetup`):
+
+```powershell
+make companion-venv        # una vez: .venv-companion con PySide6 y PyInstaller en las versiones fijadas
+make companion-installer   # dist\VoiceMate (PyInstaller), luego dist\installer\VoiceMate-Setup-<versión>.exe
+```
+
+**Desde el código fuente.** Con Python 3.12+ en Windows:
+
+```powershell
+make companion-venv   # una vez
+make run-tray
+```
+
+En ambos casos el motor sigue en WSL2 (instálalo como en [docs/wsl2.md](docs/wsl2.md)): el companion lo inicia por ti, o se conecta a uno que ya esté en ejecución (por ejemplo el servicio de systemd). Si uno de los scripts antiguos de atajos (PowerShell o AutoHotkey) sigue en ejecución, ciérralo y quita su acceso directo de `shell:startup`: ahora quien registra `Ctrl+Alt+V` y `Ctrl+Alt+A` es el companion.
+
+### Anclar a la barra de tareas
+
+Windows no permite que los instaladores anclen aplicaciones. Abre Inicio, busca VoiceMate, haz clic derecho sobre él y elige **Anclar a la barra de tareas**. Hacer clic en el icono anclado con VoiceMate en ejecución abre la ventana de estado; el clic derecho ofrece **Configuración**, **Reiniciar el motor**, **Reiniciar WSL** y **Salir de VoiceMate**. Anclar usa el acceso directo del menú Inicio, así que aplica a la app instalada.
+
+### Salir
+
+Menú del icono de la bandeja > **Salir de VoiceMate** (también es un botón en la ventana de estado y una opción del menú de clic derecho del icono anclado). Salir detiene el motor que inició el companion; un motor al que solo se conectó (por ejemplo el servicio de systemd) sigue en ejecución. Desde una terminal, para la app instalada (PowerShell):
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\VoiceMate\VoiceMate.exe" --command quit
+```
+
+Desde el código fuente: `make run-tray ARGS="--command quit"`. Un `--command` nunca inicia VoiceMate: si no está en ejecución, no pasa nada.
+
+### Configuración
+
+Menú del icono de la bandeja > **Configuración...**, en tres pestañas: **Atajos**; **Sonidos** (sonidos integrados o tus propios archivos WAV, volumen); **General**: idioma, notificaciones, **Iniciar VoiceMate al iniciar sesión** y el motor (modo, distro de WSL, carpeta del motor y **Reiniciar WSL si falla el audio**: **Automáticamente**, **Preguntar antes** o **Nunca**). La configuración se guarda en `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) y se conserva al desinstalar. Los logs están en `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); menú del icono de la bandeja > **Motor** > **Abrir registros** abre la carpeta.
+
+### Linux (opcional)
+
+La CLI sigue funcionando como antes. Para el icono de la bandeja y la ventana de estado, en el repositorio:
+
+```bash
+poetry install --extras ui
+make run-tray
+```
+
+En Linux el motor mantiene sus propios atajos (la pestaña **Atajos** los muestra solo para lectura). Sin bandeja del sistema (por ejemplo GNOME sin la extensión AppIndicator), la ventana de estado es la ventana principal. Para agregar VoiceMate al menú de aplicaciones:
+
+```bash
+mkdir -p ~/.local/share/applications &&
+  sed "s|@VOICEMATE_DIR@|$PWD|g" packaging/linux/voicemate-companion.desktop \
+  > ~/.local/share/applications/voicemate-companion.desktop
+```
+
+### Solución de problemas
+
+| Síntoma | Solución |
+| ------- | -------- |
+| "Iniciando el motor..." durante mucho tiempo | La primera carga del modelo tarda de 10 a 60 s. Revisa el `engine.log` (**Motor** > **Abrir registros**) y la distro de WSL y la carpeta del motor en la Configuración |
+| Un atajo muestra "En uso por otra app" en la primera ejecución | Un script antiguo de atajos (PowerShell o AutoHotkey) sigue en ejecución: ciérralo y quítalo de `shell:startup` |
+| "El audio de WSL se detuvo" o "Sin micrófono" | Conecta un micrófono. WSL se reinicia según **Reiniciar WSL si falla el audio**; a mano: **Motor** > **Reiniciar WSL** |
+| "El motor es más antiguo que esta app. Reinícialo o actualízalo." | Actualiza el checkout en WSL (`git pull`) y usa **Reiniciar el motor** |
+| Una transcripción no se copió | Queda en **No copiadas**, en el menú de la bandeja (haz clic para copiarla) y en la ventana de estado (**Copiar**) |
+| SmartScreen advierte sobre el instalador | El instalador no tiene firma de código: **Más información** > **Ejecutar de todas formas** |
+
 ## Makefile
 
 | Comando            | Descripción                                   |
@@ -307,6 +375,11 @@ El predeterminado es `large-v3-turbo`: el mejor equilibrio entre velocidad y cal
 | `make format`      | Formatea el código con Ruff                   |
 | `make lint`        | Lint con Ruff + verificación de tipos con Mypy |
 | `make test`        | Ejecuta la suite de pytest                    |
+| `make run-tray`    | Ejecuta la app companion (bandeja); `ARGS="..."` pasa flags |
+| `make companion-venv` | Crea `.venv-companion` (entorno del companion en Windows, versiones fijadas) |
+| `make companion-test` / `make companion-lint` | Tests / lint del companion |
+| `make companion-build` | Congela el companion con PyInstaller (`dist\VoiceMate`) |
+| `make companion-installer` | Genera el instalador de Windows con Inno Setup (`dist\installer`) |
 | `make clean`       | Elimina las cachés                            |
 
 ## Arquitectura

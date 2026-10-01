@@ -39,6 +39,10 @@ APP_USER_MODEL_ID: Final = "VoiceMate.Companion"
 # channel that forwards --command to the running instance.
 SINGLE_INSTANCE_MUTEX: Final = "Local\\VoiceMate.Companion"
 INSTALLER_APP_MUTEX: Final = "VoiceMate.Companion"
+# Value name under HKCU\Software\Microsoft\Windows\CurrentVersion\Run for "start at
+# sign-in". The installer's autostart task (packaging/windows/voicemate-companion.iss)
+# and app/companion/win/autostart.py must both use it, so they toggle the same entry.
+AUTOSTART_RUN_VALUE: Final = "VoiceMate"
 LOCAL_SERVER_PREFIX: Final = "voicemate-companion-"  # + user name (pipes are machine-global)
 
 # What the tray shows. `ready` lasts 3 s after a final result reached the clipboard
