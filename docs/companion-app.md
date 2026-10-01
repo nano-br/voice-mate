@@ -32,8 +32,10 @@ the Windows side is a PowerShell script. Problems this design addresses:
   clipboard delivery with verification, notifications, supervision, settings.
 - **Transport:** HTTP on loopback with a long-poll `GET /events`.
 - **i18n:** every user-facing string through `app.i18n._` (msgid English; catalogs
-  pt_BR, en, es; the en msgstr stays empty). Qt widgets get their text from `_()`,
-  never from Qt's translation system. The companion picks its language ONCE at
+  pt_BR, en, es; the en msgstr stays empty). Our widgets get their text from `_()`;
+  only Qt's built-in strings (standard context menus, file dialogs) use Qt's own
+  qtbase translations (`qtbase_pt_BR.qm`, `qtbase_es.qm`, installed with a
+  `QTranslator` after `set_language`). The companion picks its language ONCE at
   startup with `app.i18n.set_language(lang)` (new, owned by the companion UI stream,
   since `main.py` calls it; ignores `VOICEMATE_LANG`; `setup_locale` keeps its
   behavior for the engine):
