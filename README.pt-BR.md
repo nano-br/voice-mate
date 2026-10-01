@@ -1,4 +1,4 @@
-[English](README.md) | **Português**
+[English](README.md) | **Português** | [Español](README.es.md)
 
 # VoiceMate
 
@@ -87,9 +87,11 @@ Internamente, o prompt canônico (em inglês) tem um placeholder `{output_lang}`
 **Mensagens do próprio app** (logs, helps do CLI) também são localizadas via `gettext` + Babel. Default é PT-BR; controle via env var:
 
 ```bash
-# Mostra os logs do app em inglês
+# Mostra os logs do app em inglês (ou `es` para espanhol)
 VOICEMATE_LANG=en make run
 ```
+
+Catálogos disponíveis: `pt_BR`, `en` e `es`. Toda string exibida ao usuário precisa existir nos três; `pt_BR` e `es` traduzem, e o `en` mantém o `msgstr` vazio (o msgid em inglês já é o texto).
 
 Para editar/regenerar o catálogo de traduções:
 
@@ -99,7 +101,7 @@ make i18n-update      # propaga novas chaves para os .po existentes
 make i18n-compile     # compila .po → .mo (gettext lê o .mo em runtime)
 ```
 
-Os `.po` ficam em `app/i18n/locales/{pt_BR,en}/LC_MESSAGES/voicemate.po`.
+Os `.po` ficam em `app/i18n/locales/{pt_BR,en,es}/LC_MESSAGES/voicemate.po`.
 
 ### Convenções de código
 

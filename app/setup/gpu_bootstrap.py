@@ -369,7 +369,7 @@ def _prompt_yes_no(question: str, default_yes: bool, interactive: bool) -> bool:
     raw = _ask(f"{question} {suffix} ").lower()
     if not raw:
         return default_yes
-    return raw in ("s", "sim", "y", "yes")
+    return raw in ("s", "sim", "si", "sí", "y", "yes")
 
 
 def _ask(prompt: str) -> str:

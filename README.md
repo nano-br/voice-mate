@@ -1,4 +1,4 @@
-**English** | [Português](README.pt-BR.md)
+**English** | [Português](README.pt-BR.md) | [Español](README.es.md)
 
 # VoiceMate
 
@@ -87,9 +87,11 @@ Internally, the canonical prompt (written in English) has an `{output_lang}` pla
 **App messages themselves** (logs, CLI help text) are also localized via `gettext` + Babel. Default is PT-BR; switch with an env var:
 
 ```bash
-# App logs in English
+# App logs in English (or `es` for Spanish)
 VOICEMATE_LANG=en make run
 ```
+
+Available catalogs: `pt_BR`, `en` and `es`. Every user-facing string must exist in all three; `pt_BR` and `es` translate it, `en` keeps `msgstr` empty (the English msgid is the text).
 
 To edit / regenerate the translation catalog:
 
@@ -99,7 +101,7 @@ make i18n-update      # propagate new keys to existing .po files
 make i18n-compile     # compile .po → .mo (gettext loads .mo at runtime)
 ```
 
-Catalogs live in `app/i18n/locales/{pt_BR,en}/LC_MESSAGES/voicemate.po`.
+Catalogs live in `app/i18n/locales/{pt_BR,en,es}/LC_MESSAGES/voicemate.po`.
 
 ### Code conventions
 

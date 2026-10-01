@@ -16,6 +16,10 @@ Type=simple
 WorkingDirectory=%h/voice-mate
 # WSLg: áudio (mic RDPSource + playback RDPSink) via PulseAudio do WSLg.
 Environment=PULSE_SERVER=unix:/mnt/wslg/PulseServer
+# The user manager's PATH has no ~/.local/bin, where poetry (pipx/installer) lives.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Rebuild the translation catalogs a `git pull` may have changed (best-effort: "-").
+ExecStartPre=-/usr/bin/env make --no-print-directory i18n-mo
 ExecStart=/usr/bin/env poetry run voice-mate --trigger socket
 Restart=on-failure
 RestartSec=3
