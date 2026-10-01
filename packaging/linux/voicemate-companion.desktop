@@ -1,0 +1,22 @@
+# Launcher template for the VoiceMate companion on Linux (optional tray/status UI).
+# Needs `poetry install --extras ui` in the checkout. Install it for your user, from
+# the repository root, replacing @VOICEMATE_DIR@ with the checkout's absolute path:
+#   sed "s|@VOICEMATE_DIR@|$PWD|g" packaging/linux/voicemate-companion.desktop \
+#     > ~/.local/share/applications/voicemate-companion.desktop
+# Starting at login is a setting of the companion itself (XDG autostart).
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=VoiceMate
+GenericName=Voice dictation
+GenericName[pt_BR]=Ditado por voz
+GenericName[es]=Dictado por voz
+Comment=Voice to clipboard with local Whisper
+Comment[pt_BR]=Voz para a área de transferência com Whisper local
+Comment[es]=Voz al portapapeles con Whisper local
+Exec=make -C "@VOICEMATE_DIR@" run-tray
+Icon=@VOICEMATE_DIR@/app/companion/assets/voicemate-256.png
+Terminal=false
+Categories=Utility;Accessibility;
+Keywords=voice;dictation;speech;transcription;whisper;clipboard;
+StartupNotify=false

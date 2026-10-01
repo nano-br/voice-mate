@@ -1,6 +1,7 @@
 .PHONY: all setup configure doctor setup_env setup_env_minimal setup_env_claude setup_env_tts setup_env_custom lock \
         format lint test stt-eval run run-large run-turbo run-vozes-aleatorias run-reset-voz \
-        i18n-extract i18n-init-pt i18n-init-en i18n-init-es i18n-update i18n-compile i18n-mo clean
+        i18n-extract i18n-init-pt i18n-init-en i18n-init-es i18n-update i18n-compile i18n-mo clean \
+        companion-venv companion-test companion-lint run-tray companion-build companion-installer
 
 all: format lint test
 
@@ -111,6 +112,59 @@ run-vozes-aleatorias: $(MO_FILES)
 
 run-reset-voz: $(MO_FILES)
 	poetry run voice-mate --tts-reset-seed $(ARGS)
+
+# ─── Companion (tray app) ────────────────────────────────────────────────────
+# Windows: its own venv, .venv-companion (`make companion-venv`), since the engine
+# lives in WSL. Linux: .venv-companion when it exists, otherwise the poetry env with
+# the `ui` extra (`poetry install --extras ui`). Override with COMPANION_PY=...
+# Every recipe is one plain command with forward slashes, so it runs the same whether
+# make hands it to cmd.exe (PowerShell) or to sh (Git Bash).
+ifeq ($(OS),Windows_NT)
+COMPANION_VENV_PY := .venv-companion/Scripts/python.exe
+COMPANION_BOOTSTRAP ?= py -3
+else
+COMPANION_VENV_PY := .venv-companion/bin/python
+COMPANION_BOOTSTRAP ?= python3
+endif
+ifneq ($(wildcard $(COMPANION_VENV_PY)),)
+COMPANION_PY ?= "$(COMPANION_VENV_PY)"
+else ifneq ($(OS),Windows_NT)
+COMPANION_PY ?= poetry run python
+endif
+# The interpreter, or an error that stops only the target that needs it.
+companion_py = $(or $(COMPANION_PY),$(error No companion environment: run "make companion-venv" first))
+windows_only = $(if $(filter Windows_NT,$(OS)),,$(error "make $@" builds the Windows app: run it on Windows))
+COMPANION_TESTS := $(wildcard tests/companion) tests/test_import_boundary.py tests/test_companion_packaging.py
+COMPANION_SOURCES := app/companion app/protocol $(COMPANION_TESTS) \
+                     tools/gen_icon.py tools/build_installer.py packaging/windows/voicemate_launcher.py
+
+# Pinned (requirements/companion-constraints.txt), so builds are reproducible.
+companion-venv:
+	$(COMPANION_BOOTSTRAP) -m venv .venv-companion
+	"$(COMPANION_VENV_PY)" -m pip install -r requirements/companion-dev.txt -c requirements/companion-constraints.txt
+
+companion-test:
+	$(companion_py) -m pytest -q $(COMPANION_TESTS)
+
+companion-lint:
+	$(companion_py) -m ruff check $(COMPANION_SOURCES)
+	$(companion_py) -m ruff format --check $(COMPANION_SOURCES)
+	$(companion_py) -m mypy $(COMPANION_SOURCES)
+
+# Flags go through ARGS, e.g. make run-tray ARGS="--demo".
+run-tray:
+	$(companion_py) -m babel.messages.frontend compile -d app/i18n/locales -D voicemate
+	$(companion_py) -m app.companion.main $(ARGS)
+
+# dist/VoiceMate/VoiceMate.exe (PyInstaller onedir, packaging/windows/voicemate-companion.spec).
+companion-build:
+	$(windows_only)$(companion_py) -m PyInstaller --noconfirm --clean --distpath dist --workpath build/companion packaging/windows/voicemate-companion.spec
+
+# dist/installer/VoiceMate-Setup-<version>.exe. Needs Inno Setup 6.3+ (ISCC.exe); when it
+# is missing this explains how to get it (winget install JRSoftware.InnoSetup).
+# A custom location: make companion-installer ISCC="C:/path/to/ISCC.exe".
+companion-installer: companion-build
+	$(companion_py) -m tools.build_installer $(if $(ISCC),--iscc "$(ISCC)")
 
 clean:
 	rm -rf .pytest_cache .ruff_cache .mypy_cache
