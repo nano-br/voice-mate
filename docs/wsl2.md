@@ -82,7 +82,30 @@ expõe um protocolo **com estado** para isso, em `127.0.0.1:47821`:
 - `GET /status` / `GET /result` → estado e texto, com `?scope=all` (default —
   ouve qualquer consumidor) ou `?scope=mine` (só o que aquele `client_id`
   iniciou), e `?since=<seq>` para drenar os resultados em ordem sem perder
-  nenhum.
+  nenhum. Um item com `error` preenchido (texto vazio) é um **evento de erro**,
+  por exemplo `mic_unavailable`, com a mensagem pronta em `message`; o script
+  avisa no console e com uma notificação do Windows. Se o `instance` mudar, o
+  daemon reiniciou e o `seq` recomeçou do zero (o script volta a drenar do início);
+- `GET /health` → `pid`, `instance`, `lang` (o catálogo que o daemon está usando)
+  e `audio` (`ok`/`down`/`unknown`): a saúde do PulseAudio do WSLg, sondada com
+  `pactl info` a cada 20s;
+- `POST /shutdown` → encerra o daemon de forma limpa.
+
+### Microfone ausente ou áudio do WSLg travado
+
+Abrir o microfone nunca trava o atalho: a abertura roda em segundo plano e o
+`/trigger` responde na hora. Se o microfone não abrir (nenhum mic no Windows ou o
+PulseAudio do WSLg travado), em até 6s o daemon avisa "Microfone indisponível",
+toca o bipe de erro, volta ao estado ocioso e publica o evento `mic_unavailable`.
+O próximo atalho tenta abrir o microfone de novo; enquanto uma abertura anterior
+continuar presa no servidor de áudio, ele falha na hora (sem empilhar outra
+abertura travada) e pede `wsl --shutdown`. O bipe de início só toca depois que o
+microfone abriu de verdade.
+
+Atenção: quando o Windows fica sem microfone, o PulseAudio do WSLg costuma
+**travar de vez** e não volta sozinho mesmo depois de reconectar o mic
+(`pactl info` dá `Connection failure: Timeout`). Nesse caso só `wsl --shutdown`
+resolve; depois rode `make run` de novo.
 
 ### Autostart (systemd)
 
@@ -224,7 +247,9 @@ export PULSE_LATENCY_MSEC=300   # mais folga (latência maior) se ainda chiar
 |---|---|---|
 | Hotkey não faz nada | daemon parado / script Windows não rodando | `make run` no WSL; rode o .ps1 |
 | Clipboard não atualiza | script PowerShell parado | veja o feedback no console do .ps1 (gravando/transcrevendo/confirmado) |
-| "Daemon offline" no Windows | porta diferente / firewall | confira `--daemon-port` e o print do `make run` |
+| "Daemon offline" no Windows | daemon parado / porta diferente | `make run`; confira `--daemon-port` e o print do `make run` |
+| "Microfone indisponível" | nenhum mic no Windows, ou PulseAudio do WSLg travado | conecte um mic; se o Windows já tem mic, `wsl --shutdown` e `make run` |
+| `/health` com `"audio": "down"` | PulseAudio do WSLg travado | `wsl --shutdown` e `make run` |
 | Sem device de entrada | mic WSLg desabilitado | `wsl --update`; `make doctor` |
 | Transcrição lenta (10–50x) | caiu p/ CPU silenciosamente | `make doctor` (torch GPU); `rocminfo` |
 | CT2-ROCm falhou no build | ROCm dev incompleto | `make doctor`; instale rocm-hip-sdk; `make configure` re-tenta |

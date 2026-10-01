@@ -21,8 +21,12 @@ Today there is a single audio source (one microphone), so the current operation 
 global; the `client_id` just tags who started it. The per-client route already
 exists as a foundation for multiple consumers recording in parallel in the future.
 
-Fed from two sides: the `RecordingSession` reports the state transitions; the
-`ClipboardWriter` publishes the final text (`record_result`).
+Fed from two sides: the `RecordingSession` reports the state transitions and
+failures (`record_error`, e.g. the microphone could not be opened); the
+`ClipboardWriter` publishes the final text (`record_result`). Errors travel in the
+same ordered stream as results (`text` empty, `error` set to a stable code), so
+the consumer that drains `/result` sees them in order and can notify the user;
+consumers that only look at `text` simply skip them.
 
 Results live in a circular BUFFER (not just the last one): the producer (WSL) can
 generate faster than the consumer (Windows) polls — in back-to-back tests, two
@@ -48,6 +52,8 @@ _RESULT_BUFFER = 64
 SessionState = Literal["idle", "recording", "processing"]
 Scope = Literal["all", "mine"]
 ToggleAction = Literal["started", "stopped", "restarted"]
+# Stable codes for the error events (the Windows side switches on them).
+ErrorCode = Literal["mic_unavailable"]
 
 
 @dataclass(frozen=True)
@@ -76,12 +82,18 @@ class Operation:
 
 @dataclass(frozen=True)
 class Result:
-    """Last text produced, correlated to the operation that generated it."""
+    """Last text produced, correlated to the operation that generated it.
+
+    An error event is a Result with empty `text`, an `error` code and a
+    human-readable (localized) `message`.
+    """
 
     seq: int
     text: str
     op_seq: int
     client_id: str | None
+    error: ErrorCode | None = None
+    message: str = ""
 
 
 _IDLE = Operation(op_seq=0, state="idle", flow=None, client_id=None)
@@ -98,6 +110,10 @@ class SessionStatus:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
+        # Random per daemon process: `seq`/`op_seq` restart at 0 when the daemon
+        # restarts, so a consumer that sees a new `instance` must drain from 0 again
+        # (otherwise it would skip every result until seq caught up).
+        self.instance = secrets.token_hex(4)
         self._clients: set[str] = set()
         self._result_seq = 0
         self._current = _IDLE
@@ -144,10 +160,29 @@ class SessionStatus:
     # -- result (called by ClipboardWriter on copy) ------------------------
     def record_result(self, text: str) -> None:
         """Publish the final text, correlating it to the CURRENT operation."""
+        self._append(text, None, "")
+
+    def record_error(self, code: ErrorCode, message: str, op_seq: int, client_id: str | None) -> None:
+        """Publish an error event (e.g. mic unavailable) for the operation that failed.
+
+        Tagged explicitly (not with the current operation): the failure arrives
+        asynchronously and a newer operation may already have started.
+        """
+        self._append("", code, message, Operation(op_seq=op_seq, state="idle", flow=None, client_id=client_id))
+
+    def _append(self, text: str, error: ErrorCode | None, message: str, op: Operation | None = None) -> None:
         with self._lock:
             self._result_seq += 1
-            op = self._current
-            result = Result(seq=self._result_seq, text=text, op_seq=op.op_seq, client_id=op.client_id)
+            if op is None:
+                op = self._current
+            result = Result(
+                seq=self._result_seq,
+                text=text,
+                op_seq=op.op_seq,
+                client_id=op.client_id,
+                error=error,
+                message=message,
+            )
             self._last_result = result
             self._results.append(result)
             if op.client_id is not None:
@@ -165,6 +200,7 @@ class SessionStatus:
                 "client_id": op.client_id,
                 "is_yours": client_id is not None and op.client_id == client_id,
                 "result_seq": self._last_result.seq,
+                "instance": self.instance,
                 "scope": scope,
             }
 
@@ -190,6 +226,9 @@ class SessionStatus:
                 "text": res.text,
                 "op_seq": res.op_seq,
                 "client_id": res.client_id,
+                "error": res.error,
+                "message": res.message,
+                "instance": self.instance,
                 "scope": scope,
             }
 

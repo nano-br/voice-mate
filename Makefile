@@ -1,6 +1,6 @@
 .PHONY: all setup configure doctor setup_env setup_env_minimal setup_env_claude setup_env_tts setup_env_custom lock \
         format lint test stt-eval run run-large run-turbo run-vozes-aleatorias run-reset-voz \
-        i18n-extract i18n-init-pt i18n-init-en i18n-update i18n-compile clean
+        i18n-extract i18n-init-pt i18n-init-en i18n-init-es i18n-update i18n-compile clean
 
 all: format lint test
 
@@ -57,6 +57,9 @@ i18n-init-pt:
 
 i18n-init-en:
 	poetry run pybabel init -i app/i18n/locales/voicemate.pot -d app/i18n/locales -D voicemate -l en
+
+i18n-init-es:
+	poetry run pybabel init -i app/i18n/locales/voicemate.pot -d app/i18n/locales -D voicemate -l es
 
 i18n-update:
 	poetry run pybabel update -i app/i18n/locales/voicemate.pot -d app/i18n/locales -D voicemate

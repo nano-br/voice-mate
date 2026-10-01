@@ -25,6 +25,7 @@ from app.features import tts as tts_feature
 from app.features import whispercpp as whispercpp_feature
 from app.features.tts.base import NullSpeaker, TextToSpeech
 from app.i18n import _
+from app.platform.audio_probe import AudioHealth
 from app.platform.clipboard import ClipboardWriter, create_clipboard_writer
 
 if TYPE_CHECKING:
@@ -318,6 +319,7 @@ def build_listener(
     flows: list[FlowConfig],
     session: RecordingSession,
     status: SessionStatus | None = None,
+    audio_health: Callable[[], AudioHealth] | None = None,
 ) -> InputListener:
     trigger = resolve_trigger(config)
 
@@ -342,7 +344,7 @@ def build_listener(
             flow.name: _SocketTriggerCallback(session, flow.name) for flow in flows
         }
         return SocketTriggerListener(  # type: ignore[return-value]
-            flow_bindings, port=config.daemon_port, status=status
+            flow_bindings, port=config.daemon_port, status=status, audio_health=audio_health
         )
 
     bindings: dict[str, _HotkeyCallback] = {}

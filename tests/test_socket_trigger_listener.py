@@ -13,6 +13,7 @@ from collections.abc import Iterator
 import pytest
 
 from app.core.session_status import SessionStatus, ToggleOutcome
+from app.i18n import active_language
 from app.platform.listeners.socket_trigger_listener import SocketTriggerListener
 
 
@@ -102,16 +103,44 @@ def test_post_trigger_without_body_uses_default_flow(
     assert callbacks["clipboard"].event.wait(timeout=5.0)
 
 
-def test_get_trigger_with_query_flow_and_client_id(
-    listener: tuple[SocketTriggerListener, dict[str, _Recorder]],
-) -> None:
+def test_get_trigger_is_rejected(listener: tuple[SocketTriggerListener, dict[str, _Recorder]]) -> None:
+    """POST-only: a GET could be fired by any web page with a plain <img> tag."""
     instance, callbacks = listener
     status, body = _get(instance.port, "/trigger?flow=claude_chat&client_id=abc123")
-    assert status == 200
-    assert body["flow"] == "claude_chat"
-    assert body["client_id"] == "abc123"
-    assert callbacks["claude_chat"].event.wait(timeout=5.0)
-    assert callbacks["claude_chat"].client_ids == ["abc123"]  # the client_id reaches the binding
+    assert status == 405
+    assert callbacks["claude_chat"].count == 0
+
+
+def _request(
+    port: int, method: str, path: str, headers: dict[str, str], body: bytes | None = None
+) -> tuple[int, dict[str, object]]:
+    req = urllib.request.Request(f"http://127.0.0.1:{port}{path}", data=body, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=5.0) as resp:
+            return resp.status, json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        return exc.code, json.loads(exc.read().decode("utf-8"))
+
+
+@pytest.mark.parametrize("path", ["/trigger", "/shutdown", "/register"])
+def test_browser_originated_post_is_forbidden(
+    listener: tuple[SocketTriggerListener, dict[str, _Recorder]], path: str
+) -> None:
+    """Browsers always send Origin on cross-site POSTs; scripts/WinHTTP don't."""
+    instance, callbacks = listener
+    status, _body = _request(
+        instance.port, "POST", path, {"Origin": "https://evil.example", "Content-Type": "text/plain"}, b"{}"
+    )
+    assert status == 403
+    assert callbacks["clipboard"].count == 0
+    assert _get(instance.port, "/health")[0] == 200  # still serving (shutdown refused)
+
+
+def test_dns_rebinding_host_is_forbidden(listener: tuple[SocketTriggerListener, dict[str, _Recorder]]) -> None:
+    instance, _callbacks = listener
+    status, _body = _request(instance.port, "GET", "/result", {"Host": f"evil.example:{instance.port}"})
+    assert status == 403
+    assert _request(instance.port, "GET", "/health", {"Host": f"localhost:{instance.port}"})[0] == 200
 
 
 def test_unknown_flow_is_404(listener: tuple[SocketTriggerListener, dict[str, _Recorder]]) -> None:
@@ -123,12 +152,40 @@ def test_unknown_flow_is_404(listener: tuple[SocketTriggerListener, dict[str, _R
     assert callbacks["claude_chat"].count == 0
 
 
-def test_health_reports_flows(listener: tuple[SocketTriggerListener, dict[str, _Recorder]]) -> None:
+def test_health_reports_flows(
+    listener: tuple[SocketTriggerListener, dict[str, _Recorder]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("app.i18n._active_language", "es")  # not the "en" default
     instance, _callbacks = listener
     status, body = _get(instance.port, "/health")
     assert status == 200
     assert body["status"] == "ok"
     assert body["flows"] == ["clipboard", "claude_chat"]
+    assert isinstance(body["pid"], int)
+    assert body["audio"] == "unknown"  # no probe wired
+    assert body["lang"] == active_language() == "es"
+
+
+def test_health_reports_audio_probe_state() -> None:
+    instance = SocketTriggerListener({"clipboard": _Recorder()}, port=0, audio_health=lambda: "down")
+    thread = _serve(instance)
+    try:
+        assert _get(instance.port, "/health")[1]["audio"] == "down"
+    finally:
+        instance.stop()
+        thread.join(timeout=5.0)
+
+
+def test_shutdown_answers_then_stops_the_server() -> None:
+    """POST /shutdown is the launcher's clean "Quit": it answers, then listen() returns.
+    A request body (e.g. Invoke-RestMethod -Body '{}') is drained, not left unread."""
+    instance = SocketTriggerListener({"clipboard": _Recorder()}, port=0)
+    thread = _serve(instance)
+    status, body = _post(instance.port, "/shutdown", {"reason": "user_quit"})
+    assert status == 200
+    assert body["ok"] is True
+    thread.join(timeout=5.0)
+    assert not thread.is_alive(), "listen() should return after /shutdown"
 
 
 def test_unknown_route_is_404(listener: tuple[SocketTriggerListener, dict[str, _Recorder]]) -> None:
@@ -178,6 +235,9 @@ def test_register_status_and_result_roundtrip() -> None:
             "text": "texto do consumidor",
             "op_seq": 1,
             "client_id": client_id,
+            "error": None,
+            "message": "",
+            "instance": store.instance,
             "scope": "all",
         }
     finally:

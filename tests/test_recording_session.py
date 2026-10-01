@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import threading
 import time
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -19,19 +20,38 @@ class FakeRecorder:
         self.start_calls = 0
         self.stop_calls = 0
         self.next_audio: NDArray[np.float32] | None = np.zeros(16000, dtype=np.float32)
+        self.on_failure: Callable[[str], None] | None = None
+        self.on_opened: Callable[[], None] | None = None
+        self.auto_open = True
 
     @property
     def is_recording(self) -> bool:
         with self._lock:
             return self._recording
 
-    def start(self) -> bool:
+    def start(
+        self,
+        on_failure: Callable[[str], None] | None = None,
+        on_opened: Callable[[], None] | None = None,
+    ) -> bool:
         with self._lock:
             if self._recording:
                 return False
             self._recording = True
             self.start_calls += 1
+            self.on_failure = on_failure
+            self.on_opened = on_opened
+        if self.auto_open and on_opened is not None:
+            on_opened()  # a healthy mic opens right away
         return True
+
+    def fail_open(self, reason: str) -> None:
+        """Simulate the off-thread mic open failing (what Recorder does on a dead mic)."""
+        with self._lock:
+            self._recording = False
+            callback = self.on_failure
+        assert callback is not None
+        callback(reason)
 
     def stop(self) -> NDArray[np.float32] | None:
         with self._lock:
@@ -345,3 +365,112 @@ def test_handler_close_not_called_by_session() -> None:
     session.toggle("clipboard")
     assert handler.handle_done.wait(timeout=2.0)
     assert handler.close_calls == 0
+
+
+def _wait_for(pred: Callable[[], bool], timeout: float = 2.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if pred():
+            return True
+        time.sleep(0.005)
+    return False
+
+
+def test_start_cue_plays_only_once_the_mic_is_live() -> None:
+    """The start beep means "the mic is capturing": it waits for the open, and it
+    never plays when the open fails."""
+    session, recorder, _, audio, _ = _make_session()
+    recorder.auto_open = False
+
+    session.toggle("clipboard")
+    assert audio.recording_started_calls == 0  # open still in flight
+
+    assert recorder.on_opened is not None
+    recorder.on_opened()
+    assert audio.recording_started_calls == 1
+
+
+def test_mic_failure_returns_to_idle_and_publishes_error() -> None:
+    """No microphone: the session must not stay "recording" (the next press would STOP
+    a recording that never captured anything). It goes back to idle, beeps the error
+    and publishes an error event for the Windows side to notify the user."""
+    status = SessionStatus()
+    session, recorder, _, audio, _ = _make_session(status=status)
+
+    outcome = session.toggle("clipboard", client_id="c1")
+    assert outcome is not None and outcome.action == "started"
+
+    recorder.fail_open("PulseAudio: Unable to create stream: Timeout")
+
+    assert status.status(None, "all")["state"] == "idle"
+    assert _wait_for(lambda: audio.error_calls == 1)
+    res = status.result(None, "all")
+    assert res["error"] == "mic_unavailable"
+    assert res["client_id"] == "c1"
+    assert res["text"] == ""
+    assert "Unable to create stream" in str(res["message"])
+
+    # The next press starts a NEW recording (not a stop).
+    again = session.toggle("clipboard", client_id="c1")
+    assert again is not None and again.action == "started"
+    assert again.op_seq == outcome.op_seq + 1
+
+
+def test_late_mic_failure_of_an_old_operation_does_not_touch_the_new_one() -> None:
+    status = SessionStatus()
+    session, recorder, _, _, _ = _make_session(status=status)
+
+    session.toggle("clipboard")
+    stale_failure = recorder.on_failure
+    session.toggle("clipboard")  # stop → processing → idle
+    deadline = time.monotonic() + 2.0
+    while status.status(None, "all")["state"] != "idle" and time.monotonic() < deadline:
+        time.sleep(0.01)
+    started = session.toggle("clipboard")  # new operation, recording
+    assert started is not None and started.action == "started"
+
+    assert stale_failure is not None
+    stale_failure("late failure from the previous open")
+
+    assert status.status(None, "all")["state"] == "recording"  # untouched
+    assert status.result(None, "all")["error"] is None  # stale failure is not reported
+
+
+def test_mic_failure_after_the_user_already_pressed_stop() -> None:
+    """The open fails only after the user pressed stop (state processing): the flow
+    still ends idle and the failure is reported exactly once."""
+    status = SessionStatus()
+    session, recorder, _, audio, _ = _make_session(status=status)
+    recorder.auto_open = False
+    recorder.next_audio = None  # nothing was captured
+
+    session.toggle("clipboard")
+    failure = recorder.on_failure
+    session.toggle("clipboard")  # stop → processing
+    assert failure is not None
+    failure("timed out opening the microphone after 6s")
+
+    assert _wait_for(lambda: status.status(None, "all")["state"] == "idle")
+    assert _wait_for(lambda: audio.error_calls == 1)
+    assert status.result(None, "all")["error"] == "mic_unavailable"
+    assert status.result(None, "all", since=1)["seq"] == 1  # one event only
+
+
+def test_error_beep_is_single_flight() -> None:
+    """With a dead audio server the error beep hangs; repeated failures must not
+    pile up stuck beep threads."""
+    release = threading.Event()
+    session, recorder, _, audio, _ = _make_session()
+
+    def _stuck_error() -> None:
+        audio.error_calls += 1
+        release.wait(timeout=5.0)
+
+    audio.error = _stuck_error  # type: ignore[method-assign]
+    for _attempt in range(3):
+        session.toggle("clipboard")
+        recorder.fail_open("no device")
+    assert _wait_for(lambda: audio.error_calls == 1)
+    time.sleep(0.05)
+    assert audio.error_calls == 1  # the 2nd and 3rd were skipped while the 1st is stuck
+    release.set()

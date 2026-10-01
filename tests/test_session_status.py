@@ -135,3 +135,33 @@ def test_mark_idle_ignores_superseded_operation() -> None:
     s.mark_idle(1)  # late finalization of op 1
     assert s.status(None, "all")["state"] == "recording"
     assert s.status(None, "all")["op_seq"] == 2
+
+
+def test_error_event_is_drained_in_order_with_results() -> None:
+    """Errors travel in the same ordered stream as results (text empty, error code set),
+    so a consumer draining with `since` sees them in sequence."""
+    s = SessionStatus()
+    s.set_operation(1, "recording", "clipboard", None)
+    s.record_result("first")
+    s.record_error("mic_unavailable", "Microphone unavailable: no device", op_seq=1, client_id=None)
+    s.record_result("second")
+
+    r1 = s.result(None, "all", since=0)
+    assert (r1["seq"], r1["text"], r1["error"]) == (1, "first", None)
+    r2 = s.result(None, "all", since=1)
+    assert (r2["seq"], r2["text"], r2["error"]) == (2, "", "mic_unavailable")
+    assert r2["message"] == "Microphone unavailable: no device"
+    r3 = s.result(None, "all", since=2)
+    assert (r3["seq"], r3["text"], r3["error"]) == (3, "second", None)
+
+
+def test_error_is_tagged_with_the_failed_operation_not_the_current_one() -> None:
+    """The mic failure arrives asynchronously: if a newer operation already started,
+    the error must still belong to the operation (and client) that failed."""
+    s = SessionStatus()
+    s.set_operation(2, "recording", "clipboard", "newer-client")
+    s.record_error("mic_unavailable", "Microphone unavailable: x", op_seq=1, client_id="old-client")
+
+    res = s.result("old-client", "mine")
+    assert (res["op_seq"], res["client_id"], res["error"]) == (1, "old-client", "mic_unavailable")
+    assert s.result("newer-client", "mine")["error"] is None

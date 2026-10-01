@@ -59,6 +59,9 @@ class RecordingSession:
         self._stop_handler_id: str | None = None
         self._active_handler_id: str | None = None
         self._slow_warning_shown = False
+        # Single-flight error beep: with a dead audio server a beep hangs forever,
+        # so a new one is skipped while the previous is still stuck.
+        self._error_beep_busy = threading.Event()
         # op_seq: the session is the authority. Each recording that STARTS opens a
         # new operation; the STOP continues the same one (it goes to processing).
         self._op_counter = 0
@@ -115,18 +118,79 @@ class RecordingSession:
             self._status.set_operation(self._op_seq, state, self._op_flow, self._op_client_id)
 
     def _start_locked(self, handler_id: str, client_id: str | None) -> None:
-        if not self._recorder.start():
+        op_seq = self._op_counter + 1
+        # The start cue plays once the mic is LIVE (on the recorder's open thread):
+        # it never blocks the trigger, and it doesn't race the mic open for the device.
+        started = self._recorder.start(
+            on_failure=lambda reason: self._on_mic_failure(op_seq, reason),
+            on_opened=self._on_mic_opened,
+        )
+        if not started:
             self._state = "idle"
             return
         self._state = "recording"
-        self._op_counter += 1
-        self._op_seq = self._op_counter
+        self._op_counter = op_seq
+        self._op_seq = op_seq
         self._op_flow = handler_id
         self._op_client_id = client_id
         self._publish_state_locked("recording")
-        self._audio.recording_started()
         print(_("[VoiceMate] 🎙  Recording... (press to stop)"))
         self._schedule_timers_locked()
+
+    def _on_mic_opened(self) -> None:
+        try:
+            self._audio.recording_started()
+        except Exception as exc:  # noqa: BLE001 (best-effort cue; the recording itself is fine)
+            print(_("[VoiceMate] ⚠ Could not play the start beep ({exc}).").format(exc=exc), file=sys.stderr)
+
+    def _on_mic_failure(self, op_seq: int, reason: str) -> None:
+        """The microphone could not be opened for `op_seq` (called off-thread by the Recorder).
+
+        Returns the session to idle (so the next press STARTS again instead of
+        "stopping" a recording that never captured anything) and publishes an error
+        event, which the Windows side turns into a notification.
+        """
+        with self._lock:
+            if self._op_seq != op_seq:
+                return  # a newer operation owns the mic now and reports its own failures
+            client_id = self._op_client_id
+            active = self._state == "recording"
+            if active:
+                self._cancel_timers()
+                self._state = "idle"
+        if active and self._status is not None:
+            self._status.mark_idle(op_seq)
+        print(
+            _(
+                "[VoiceMate] 🎙 ✗ Microphone unavailable ({reason}). Check that a microphone is connected "
+                "and enabled, then press the hotkey again."
+            ).format(reason=reason),
+            file=sys.stderr,
+        )
+        if self._status is not None:
+            self._status.record_error(
+                "mic_unavailable",
+                _("Microphone unavailable: {reason}").format(reason=reason),
+                op_seq=op_seq,
+                client_id=client_id,
+            )
+        self._beep_error_async()
+
+    def _beep_error_async(self) -> None:
+        """Error cue off the caller's thread; skipped while a previous one is stuck."""
+        if self._error_beep_busy.is_set():
+            return
+        self._error_beep_busy.set()
+
+        def _run() -> None:
+            try:
+                self._audio.error()
+            except Exception:  # noqa: BLE001, S110 (best-effort beep: the audio device may be the problem)
+                pass
+            finally:
+                self._error_beep_busy.clear()
+
+        threading.Thread(target=_run, daemon=True, name="ErrorBeep").start()
 
     def _schedule_timers_locked(self) -> None:
         warning_at = self._max_seconds * self._warning_percent

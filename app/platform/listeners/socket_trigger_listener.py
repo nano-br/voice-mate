@@ -15,13 +15,27 @@ hub (`SessionStatus`) that consumers poll. Each consumer registers
 
 Endpoints:
   - POST /register                       → 200 {"client_id": "..."}
-  - POST /trigger  {"flow"?, "client_id"?}  (or GET /trigger?flow=&client_id=)
+  - POST /trigger  {"flow"?, "client_id"?}
                    → 200 {"ok", "flow", "client_id", "action", "op_seq", "state"}
   - GET  /status?client_id=&scope=       → 200 {"state", "op_seq", "flow",
-                   "client_id", "is_yours", "result_seq", "scope"}
-  - GET  /result?client_id=&scope=       → 200 {"seq", "text", "op_seq",
-                   "client_id", "scope"}  — for Windows to set the native clipboard
-  - GET  /health                         → 200 {"status": "ok", "flows": [...]}
+                   "client_id", "is_yours", "result_seq", "instance", "scope"}
+  - GET  /result?client_id=&scope=&since= → 200 {"seq", "text", "op_seq",
+                   "client_id", "error", "message", "instance", "scope"}, for
+                   Windows to set the native clipboard; `error` set (text empty) =
+                   an error event, e.g. "mic_unavailable"; a new `instance` = the
+                   daemon restarted and `seq` started over
+  - GET  /health                         → 200 {"status": "ok", "flows": [...],
+                   "pid", "instance", "audio": "ok"|"down"|"unknown", "lang"}, for
+                   the Windows side's supervision (audio = WSLg PulseAudio health;
+                   lang = the catalog the daemon speaks, followed by the script)
+  - POST /shutdown                       → 200 {"ok": true}, then the server stops
+                   and the app exits cleanly (the launcher's "Quit")
+
+Browser hardening: WSL2 forwards this port to Windows' loopback, where any web
+page can reach it. So the daemon refuses requests carrying an `Origin` header
+(browsers always send it on cross-site POSTs; scripts and WinHTTP don't) and a
+non-loopback `Host` (DNS rebinding), and the trigger is POST-only (a GET could be
+fired by a plain `<img>` tag).
 
 Keeps the "stop decides the destination" design: each request is equivalent to
 pressing that flow's hotkey — the callback is the same `session.toggle(flow)` as
@@ -31,6 +45,7 @@ the other listeners, now returning the operation.
 from __future__ import annotations
 
 import json
+import os
 import sys
 import threading
 import traceback
@@ -39,12 +54,15 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlparse
 
-from app.i18n import _
+from app.i18n import _, active_language
 
 if TYPE_CHECKING:
     from app.core.session_status import Scope, SessionStatus, ToggleOutcome
+    from app.platform.audio_probe import AudioHealth
 
 DEFAULT_DAEMON_PORT = 47821
+
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
 # Per-flow binding: receives the client_id (who fired it) and returns what the
 # toggle did. The start/stop decision is synchronous — only transcription is
@@ -65,6 +83,7 @@ class SocketTriggerListener:
         port: int = DEFAULT_DAEMON_PORT,
         host: str = "127.0.0.1",
         status: SessionStatus | None = None,
+        audio_health: Callable[[], AudioHealth] | None = None,
     ) -> None:
         if not bindings:
             raise ValueError("SocketTriggerListener requires at least one binding")
@@ -73,6 +92,7 @@ class SocketTriggerListener:
         self._host = host
         self._port = port
         self._status = status
+        self._audio_health = audio_health
         self._server: ThreadingHTTPServer | None = None
         self._lock = threading.Lock()
 
@@ -85,12 +105,19 @@ class SocketTriggerListener:
         return list(self._bindings)
 
     def listen(self, on_toggle: Callable[[], None] | None = None) -> None:
-        handler_cls = _build_handler(self._bindings, self._default_flow, self._status)
+        handler_cls = _build_handler(
+            self._bindings, self._default_flow, self._status, self._audio_health, self._request_shutdown
+        )
         with self._lock:
             self._server = ThreadingHTTPServer((self._host, self._port), handler_cls)
             # Ephemeral port (0) → expose the real port chosen by the OS.
             self._port = self._server.server_address[1]
         self._server.serve_forever(poll_interval=0.5)
+
+    def _request_shutdown(self) -> None:
+        # Off the request thread: shutdown() waits for serve_forever to exit, and the
+        # response must be flushed first. When listen() returns, main() cleans up and exits.
+        threading.Thread(target=self.stop, daemon=True, name="DaemonShutdown").start()
 
     def reinstall(self) -> None:
         """No-op: there's no OS hook to reinstall."""
@@ -109,12 +136,22 @@ def _build_handler(
     bindings: dict[str, TriggerBinding],
     default_flow: str,
     status: SessionStatus | None = None,
+    audio_health: Callable[[], AudioHealth] | None = None,
+    request_shutdown: Callable[[], None] | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     class _TriggerHandler(BaseHTTPRequestHandler):
         def do_POST(self) -> None:  # noqa: N802 — BaseHTTPRequestHandler signature
+            if self._reject_untrusted():
+                return
             parsed = urlparse(self.path)
             if parsed.path == "/register":
                 self._handle_register()
+                return
+            if parsed.path == "/shutdown" and request_shutdown is not None:
+                self._drain_body()  # an unread body can turn the close into an RST on the client
+                print(_("[VoiceMate] Shutdown requested over HTTP."))
+                self._respond(200, {"ok": True})
+                request_shutdown()
                 return
             if parsed.path != "/trigger":
                 self._respond(404, {"error": f"unknown route: {self.path}"})
@@ -127,12 +164,24 @@ def _build_handler(
             self._dispatch(flow, str(client_id) if client_id is not None else None)
 
         def do_GET(self) -> None:  # noqa: N802
+            if self._reject_untrusted():
+                return
             parsed = urlparse(self.path)
             query = parse_qs(parsed.query)
             client_id = query.get("client_id", [None])[0]
             scope = _scope_of(query.get("scope", [None])[0])
             if parsed.path == "/health":
-                self._respond(200, {"status": "ok", "flows": list(bindings)})
+                audio = audio_health() if audio_health is not None else "unknown"
+                body: dict[str, object] = {
+                    "status": "ok",
+                    "flows": list(bindings),
+                    "pid": os.getpid(),
+                    "audio": audio,
+                    "lang": active_language(),
+                }
+                if status is not None:
+                    body["instance"] = status.instance
+                self._respond(200, body)
                 return
             if parsed.path == "/status":
                 if status is None:
@@ -153,10 +202,30 @@ def _build_handler(
                 self._respond(200, status.result(client_id, scope, since))
                 return
             if parsed.path == "/trigger":
-                flow = query.get("flow", [default_flow])[0]
-                self._dispatch(flow, client_id)
+                self._respond(405, {"error": "use POST /trigger"})
                 return
             self._respond(404, {"error": f"unknown route: {parsed.path}"})
+
+        def _reject_untrusted(self) -> bool:
+            """Answer 403 to browser-originated or DNS-rebound requests. True = rejected."""
+            if self.headers.get("Origin") is not None:
+                self._respond(403, {"error": "cross-origin requests are not allowed"})
+                return True
+            host = self.headers.get("Host")
+            if host is not None:
+                try:
+                    hostname = urlparse(f"//{host}").hostname
+                except ValueError:  # malformed (e.g. unbalanced IPv6 brackets)
+                    hostname = None
+                if hostname not in _LOOPBACK_HOSTS:
+                    self._respond(403, {"error": "unexpected Host header"})
+                    return True
+            return False
+
+        def _drain_body(self) -> None:
+            length = int(self.headers.get("Content-Length", "0") or 0)
+            if length:
+                self.rfile.read(length)
 
         def _read_json_body(self) -> dict[str, object] | None:
             length = int(self.headers.get("Content-Length", "0"))

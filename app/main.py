@@ -15,6 +15,7 @@ from app.core.session_status import SessionStatus
 from app.core.watchdog import Watchdog
 from app.features.tts.base import NullSpeaker, TextToSpeech
 from app.i18n import _, setup_locale
+from app.platform.audio_probe import AudioServerProbe
 from app.platform.clipboard import create_clipboard_writer
 from app.platform.detect import default_trigger, detect_platform
 from app.platform.kinds import PlatformKind
@@ -98,7 +99,15 @@ def main() -> None:
         default_handler_id=default_handler_id,
         status=status,
     )
-    listener = build_listener(config, flows, session, status)
+    # WSL2: report WSLg PulseAudio health in /health, so the Windows launcher can
+    # restart WSL when the audio bridge dies (nothing inside the distro revives it).
+    audio_probe: AudioServerProbe | None = None
+    if config.platform == "wsl2" and config.trigger == "socket":
+        audio_probe = AudioServerProbe()
+        audio_probe.start()
+    listener = build_listener(
+        config, flows, session, status, audio_health=(lambda: audio_probe.state) if audio_probe is not None else None
+    )
 
     print(_("\n[VoiceMate] Ready. Input: {input_method}").format(input_method=config.input_method))
     print(
@@ -140,6 +149,8 @@ def main() -> None:
     except KeyboardInterrupt:
         pass
     finally:
+        if audio_probe is not None:
+            audio_probe.stop()
         if keepalive is not None:
             keepalive.stop()
         if watchdog is not None:
