@@ -190,7 +190,11 @@ buffer of 512 events. Client HTTP timeout: `wait` + 5 s.
   (`snapshot.pending_unacked`, `pending_results()`) for a manual copy
   (`copy_result` ACKs it `delivered` when its `instance` is the current daemon
   instance, otherwise it only copies; the last status wins). Never overwrite the
-  user's clipboard with stale text automatically.
+  user's clipboard with stale text automatically. A result delivered by
+  reconciliation (its event was missed) plays no cue: its `needs_cue` is unknown.
+- Results still queued when the daemon instance changes cannot be ACKed any more:
+  they go to the pending list (with the "not copied" notification) instead of being
+  written late.
 
 ### Other endpoints and flags
 
@@ -290,10 +294,12 @@ transcriptions were not copied"). `notify_level` filters them.
   (companion's own log: `companion.log` there; Linux:
   `${XDG_STATE_HOME:-~/.local/state}/voicemate/logs/`). `wsl.exe` (a stub that
   spawns the real one) goes into a Job Object with KILL_ON_JOB_CLOSE as a safety net.
-- Before spawning: if `/health` answers, attach. On first run, check
-  `systemctl --user is-enabled voicemate` through `wsl.exe`: if enabled, offer to
-  disable it, otherwise use attach mode (two daemons would race for the port and
-  the VRAM). A spawned engine that exits with "address in use" while `/health`
+- Before spawning: if `/health` answers, attach. Then check
+  `systemctl --user is-enabled voicemate` through `wsl.exe` (before every spawn, not
+  only the first: the unit may be enabled later): if enabled, use attach mode (two
+  daemons would race for the port and the VRAM) and notify how to disable it
+  (`systemctl --user disable --now voicemate`); the controller has no API for a
+  yes/no offer. A spawned engine that exits with "address in use" while `/health`
   answers means attach, not backoff.
 - Probing: a 500 ms TCP connect probe (a refused loopback connect takes ~2 s on
   Windows), then `/health` with a 2 s timeout, every 5 s. HTTP through
@@ -320,7 +326,9 @@ transcriptions were not copied"). `notify_level` filters them.
 - No capture device on Windows: never restart; warn, poll every 3 s; when a mic
   appears and audio is not `ok`, restart WSL.
 - Circuit breaker: 5 engine restarts in 15 min, or 3 WSL restarts in 1 h ->
-  `failed` plus a notification. A manual "Restart engine" / "Restart WSL" resets it.
+  `failed` plus a notification (the restart that would exceed the limit is not
+  attempted). A manual "Restart engine" / "Restart WSL" resets it.
+  `snapshot.restarts` counts the restarts in the windows, the one in progress included.
 - Restart engine and Quit: `POST /shutdown`, wait up to 8 s, close stdin, wait 2 s,
   terminate the job. An attached daemon (not started by this app) gets only
   `/unregister` on Quit and keeps running while something else keeps the distro up
@@ -334,7 +342,10 @@ messages to it. A chord needs a modifier, or is F1..F24; F12 is reserved by Wind
 (even with modifiers). `check_hotkey` tries a temporary registration (our own
 current registration is not `in_use`). The settings window suspends the global
 hotkeys while capturing; apply re-registers all of them at once and rolls back on
-failure. Stored as `ctrl+alt+v`. Only flows present in `flow_info` get registered.
+failure. Stored as `ctrl+alt+v` (the format, key names and display names are defined
+in `app/companion/chords.py`). Only flows present in `flow_info` get registered;
+until the first `/health` with `flow_info`, every configured chord is registered,
+so a press while the engine starts still gets the "engine is starting" notification.
 
 ### Sound cues
 
@@ -408,7 +419,10 @@ volume = 1.0
   forbids pinning from an installer: the first run explains
   "Start > right-click VoiceMate > Pin to taskbar".
 - Start at login: `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` with
-  `--autostart` (Windows), XDG autostart (Linux).
+  `--autostart` (Windows), XDG autostart (Linux). The Run value name is
+  `AUTOSTART_RUN_VALUE` (shared with the installer), its data `"<exe>" --autostart`.
+  The OS state is the source of truth for `start_at_login` (the installer may set
+  it): the core reads it on load and writes it on apply.
 
 ## Packaging
 

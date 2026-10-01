@@ -39,6 +39,8 @@ APP_USER_MODEL_ID: Final = "VoiceMate.Companion"
 # channel that forwards --command to the running instance.
 SINGLE_INSTANCE_MUTEX: Final = "Local\\VoiceMate.Companion"
 INSTALLER_APP_MUTEX: Final = "VoiceMate.Companion"
+# HKCU\Software\Microsoft\Windows\CurrentVersion\Run value: the installer (.iss) and win/autostart.py must use this name.
+AUTOSTART_RUN_VALUE: Final = "VoiceMate"
 LOCAL_SERVER_PREFIX: Final = "voicemate-companion-"  # + user name (pipes are machine-global)
 
 # What the tray shows. `ready` lasts 3 s after a final result reached the clipboard
@@ -218,7 +220,8 @@ class CompanionController(Protocol):
         /shutdown, then stdin EOF, then kill; an attached daemon is left running), unregisters
         hotkeys, then calls `on_done` from a controller thread (hard cap 15 s)."""
 
-    def settings(self) -> CompanionSettings: ...
+    def settings(self) -> CompanionSettings:
+        """Cached in memory (no I/O): always the latest normalized settings, including values the core fills in itself."""
 
     def apply_settings(self, settings: CompanionSettings) -> list[str]:
         """Validate, persist and apply. Returns localized errors; empty list = applied."""
