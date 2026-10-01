@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -30,17 +31,23 @@ def find_iscc(explicit: str | None) -> Path | None:
     on_path = shutil.which("ISCC")
     if on_path:
         return Path(on_path)
-    # winget installs per user under %LOCALAPPDATA%\Programs; the classic installer
-    # goes to Program Files (x86).
+    # A per-user install goes under %LOCALAPPDATA%\Programs, a machine-wide one under
+    # Program Files (x86) or Program Files; the folder carries the major version
+    # ("Inno Setup 6"), so take the newest one found.
     for variable in ("LOCALAPPDATA", "ProgramFiles(x86)", "ProgramFiles"):
         base = os.environ.get(variable)
         if not base:
             continue
-        for folder in ("Programs/Inno Setup 6", "Inno Setup 6"):
-            candidate = Path(base) / folder / "ISCC.exe"
-            if candidate.is_file():
-                return candidate
+        for parent in (Path(base) / "Programs", Path(base)):
+            candidates = parent.glob("Inno Setup */ISCC.exe")
+            newest = max(candidates, key=_folder_version, default=None)
+            if newest is not None:
+                return newest
     return None
+
+
+def _folder_version(iscc: Path) -> list[int]:
+    return [int(number) for number in re.findall(r"\d+", iscc.parent.name)]
 
 
 def main() -> int:

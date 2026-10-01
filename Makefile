@@ -122,15 +122,15 @@ run-reset-voz: $(MO_FILES)
 ifeq ($(OS),Windows_NT)
 COMPANION_VENV_PY := .venv-companion/Scripts/python.exe
 COMPANION_BOOTSTRAP ?= py -3
+COMPANION_FALLBACK_PY :=
 else
 COMPANION_VENV_PY := .venv-companion/bin/python
 COMPANION_BOOTSTRAP ?= python3
+COMPANION_FALLBACK_PY := poetry run python
 endif
-ifneq ($(wildcard $(COMPANION_VENV_PY)),)
-COMPANION_PY ?= "$(COMPANION_VENV_PY)"
-else ifneq ($(OS),Windows_NT)
-COMPANION_PY ?= poetry run python
-endif
+# Expanded when a recipe runs, not when the Makefile is read, so one invocation such
+# as `make companion-venv run-tray` already uses the venv it has just created.
+COMPANION_PY ?= $(if $(wildcard $(COMPANION_VENV_PY)),"$(COMPANION_VENV_PY)",$(COMPANION_FALLBACK_PY))
 # The interpreter, or an error that stops only the target that needs it.
 companion_py = $(or $(COMPANION_PY),$(error No companion environment: run "make companion-venv" first))
 windows_only = $(if $(filter Windows_NT,$(OS)),,$(error "make $@" builds the Windows app: run it on Windows))
