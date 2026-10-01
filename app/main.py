@@ -5,9 +5,6 @@ import traceback
 from argparse import Namespace
 from dataclasses import dataclass
 
-import numpy as np
-from numpy.typing import NDArray
-
 from app.cli.args import parse_args
 from app.cli.config_builder import build_config, delete_existing_auto_seed
 from app.cli.wiring import build_handlers, build_listener, build_speaker, build_transcriber
@@ -55,25 +52,6 @@ def _start_warmup_thread(transcriber: object, speaker: TextToSpeech) -> threadin
 
     threading.Thread(target=_warmup_all, daemon=True, name="Warmup").start()
     return stt_warm
-
-
-class _AfterWarmup:
-    """Transcriber whose calls wait for the background STT warmup to finish.
-
-    The backends are not thread-safe: with the API answering as soon as the model
-    is loaded, a trigger right after `ready` made the first transcription race the
-    warmup on the same model (openai-whisper on ROCm failed one or the other). The
-    recording itself is never delayed, only the transcription.
-    """
-
-    def __init__(self, inner: TranscriptionBackend, warm: threading.Event, timeout: float = 300.0) -> None:
-        self._inner = inner
-        self._warm = warm
-        self._timeout = timeout
-
-    def transcribe(self, audio: NDArray[np.float32]) -> str:
-        self._warm.wait(self._timeout)
-        return self._inner.transcribe(audio)
 
 
 def _configure_audio_env(platform: PlatformKind) -> None:
@@ -181,13 +159,15 @@ def _build_engine(args: Namespace, config: Config, flows: list[FlowConfig], stat
     default_handler_id = "clipboard" if "clipboard" in handlers else flows[0].name
     session = RecordingSession(
         recorder=recorder,
-        transcriber=_AfterWarmup(transcriber, stt_warm),
+        transcriber=transcriber,
         audio=audio_feedback,
         config=config,
         handlers=handlers,
         default_handler_id=default_handler_id,
         status=status,
         flow_kinds={flow.name: flow.kind for flow in flows},
+        # The backends are not thread-safe: the first transcription waits for the warmup.
+        stt_ready=stt_warm,
     )
     return _Engine(transcriber, speaker, owned_handlers, flows, session)
 

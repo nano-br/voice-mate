@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import threading
 import time
 from collections.abc import Callable
@@ -135,6 +136,7 @@ def _make_session(
     transcriber: FakeTranscriber | None = None,
     status: SessionStatus | None = None,
     config: Config | None = None,
+    stt_ready: threading.Event | None = None,
 ) -> tuple[RecordingSession, FakeRecorder, FakeTranscriber, FakeAudio, dict[str, FakeHandler]]:
     recorder = FakeRecorder()
     transcriber = transcriber or FakeTranscriber()
@@ -149,6 +151,7 @@ def _make_session(
         default_handler_id=next(iter(handlers)),
         status=status,
         flow_kinds={"clipboard": "clipboard", "claude_chat": "claude_chat"},
+        stt_ready=stt_ready,
     )
     return session, recorder, transcriber, audio, handlers
 
@@ -265,9 +268,9 @@ def test_slow_transcription_warns_once(capsys: pytest.CaptureFixture[str], monke
     """Slow backend (no GPU) → RTF warning printed once per session."""
     from app.core import recording_session as rs
 
-    # perf_counter returns 0 before and 30 after each transcribe → 30s for 1s of audio.
-    ticks = iter([0.0, 30.0] * 10)
-    monkeypatch.setattr(rs.time, "perf_counter", lambda: next(ticks))
+    # The session's clock returns 0 before and 30 after each transcribe → 30s for 1s of audio.
+    ticks = itertools.cycle([0.0, 30.0])
+    monkeypatch.setattr(rs, "_perf_counter", lambda: next(ticks))
 
     handler = FakeHandler()
     session, recorder, _, _, _ = _make_session(handlers={"clipboard": handler})
@@ -285,8 +288,8 @@ def test_slow_transcription_warns_once(capsys: pytest.CaptureFixture[str], monke
 def test_fast_transcription_no_warning(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
     from app.core import recording_session as rs
 
-    ticks = iter([0.0, 0.3] * 10)  # 0.3s for 1s of audio → healthy
-    monkeypatch.setattr(rs.time, "perf_counter", lambda: next(ticks))
+    ticks = itertools.cycle([0.0, 0.3])  # 0.3s for 1s of audio → healthy
+    monkeypatch.setattr(rs, "_perf_counter", lambda: next(ticks))
 
     handler = FakeHandler()
     session, recorder, _, _, _ = _make_session(handlers={"clipboard": handler})
@@ -651,8 +654,8 @@ def test_time_limit_warning_is_an_event_with_a_cue() -> None:
 def test_slow_backend_warning_is_published_once(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.core import recording_session as rs
 
-    ticks = iter([0.0, 30.0] * 10)
-    monkeypatch.setattr(rs.time, "perf_counter", lambda: next(ticks))
+    ticks = itertools.cycle([0.0, 30.0])
+    monkeypatch.setattr(rs, "_perf_counter", lambda: next(ticks))
     status = SessionStatus()
     cid, cursor = _client(status)
     handler = FakeHandler()
@@ -682,3 +685,137 @@ def test_transcription_failure_is_an_error_event() -> None:
     errors = [e for e in _events(status, cid, cursor) if e["type"] == "error"]
     assert [(e["code"], e["detail"]) for e in errors] == [("transcription_failed", "whisper exploded")]
     assert status.result(None, "all")["error"] == "transcription_failed"
+
+
+# -- one transcription at a time; the warmup wait is not inference time ------------
+
+
+class _OverlapProbe(FakeTranscriber):
+    """Takes `seconds` per call and records how many calls ever ran at once."""
+
+    def __init__(self, seconds: float) -> None:
+        super().__init__(text="texto")
+        self.seconds = seconds
+        self.running = 0
+        self.max_running = 0
+        self.started = threading.Event()
+        self._probe_lock = threading.Lock()
+
+    def transcribe(self, audio: NDArray[np.float32]) -> str:
+        with self._probe_lock:
+            self.running += 1
+            self.max_running = max(self.max_running, self.running)
+        self.started.set()
+        time.sleep(self.seconds)
+        with self._probe_lock:
+            self.running -= 1
+        self.calls.append(audio)
+        return self.text
+
+
+def _record_and_stop(session: RecordingSession, recorder: FakeRecorder) -> int:
+    started = session.toggle("clipboard")
+    assert started is not None and started.action == "started"
+    stopped = session.toggle("clipboard")
+    assert stopped is not None and stopped.action == "stopped"
+    return started.op_seq
+
+
+def test_transcriptions_never_overlap_after_a_cancel() -> None:
+    """The cancelled operation keeps transcribing in the background (inference cannot be
+    interrupted); the next one must wait for it, the backends are not thread-safe."""
+    probe = _OverlapProbe(seconds=0.4)
+    status = SessionStatus()
+    handler = FakeHandler()
+    session, recorder, _, _, _ = _make_session(handlers={"clipboard": handler}, transcriber=probe, status=status)
+
+    _record_and_stop(session, recorder)
+    assert probe.started.wait(timeout=2.0)
+    assert session.cancel().action == "cancelled"
+    _record_and_stop(session, recorder)
+
+    assert handler.handle_done.wait(timeout=5.0)
+    assert probe.max_running == 1
+    assert len(probe.calls) == 2  # the cancelled one finished, its text was dropped
+    assert handler.handle_calls == ["texto"]
+
+
+def test_transcriptions_never_overlap_after_a_restart() -> None:
+    probe = _OverlapProbe(seconds=0.4)
+    handler = FakeHandler()
+    session, recorder, _, _, _ = _make_session(handlers={"clipboard": handler}, transcriber=probe)
+
+    _record_and_stop(session, recorder)
+    assert probe.started.wait(timeout=2.0)
+    restarted = session.toggle("clipboard")  # restart while transcribing
+    assert restarted is not None and restarted.action == "restarted"
+    session.toggle("clipboard")  # stop the new recording right away
+    assert _wait_for(lambda: len(handler.handle_calls) == 2, timeout=5.0)
+    assert probe.max_running == 1
+
+
+def test_an_operation_cancelled_while_waiting_its_turn_is_not_transcribed() -> None:
+    probe = _OverlapProbe(seconds=0.4)
+    status = SessionStatus()
+    session, recorder, _, _, _ = _make_session(transcriber=probe, status=status)
+
+    _record_and_stop(session, recorder)
+    assert probe.started.wait(timeout=2.0)
+    assert session.cancel().action == "cancelled"
+    _record_and_stop(session, recorder)  # waits for the first transcription
+    time.sleep(0.1)
+    assert session.cancel().action == "cancelled"  # cancelled before its turn came
+    assert _wait_for(lambda: probe.running == 0, timeout=3.0)
+    time.sleep(0.2)
+    assert len(probe.calls) == 1
+
+
+def test_first_transcription_waits_for_the_warmup() -> None:
+    warm = threading.Event()
+    probe = _OverlapProbe(seconds=0.0)
+    handler = FakeHandler()
+    session, recorder, _, _, _ = _make_session(handlers={"clipboard": handler}, transcriber=probe, stt_ready=warm)
+
+    _record_and_stop(session, recorder)
+    assert not probe.started.wait(timeout=0.3)  # still warming up: not transcribing yet
+    warm.set()
+    assert handler.handle_done.wait(timeout=2.0)
+
+
+def test_a_warmup_wait_is_not_reported_as_a_slow_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Only the inference is timed: waiting for the warmup (or for another transcription)
+    must not look like a GPU-less backend, nor use up the once-per-session warning."""
+    from app.core import recording_session as rs
+
+    monkeypatch.setattr(rs, "_SLOW_FLOOR_S", 0.2)
+    monkeypatch.setattr(rs, "_SLOW_RATIO", 0.0)
+    warm = threading.Event()
+    status = SessionStatus()
+    cid, cursor = _client(status)
+    handler = FakeHandler()
+    session, recorder, _, _, _ = _make_session(handlers={"clipboard": handler}, status=status, stt_ready=warm)
+
+    _record_and_stop(session, recorder)
+    time.sleep(0.5)  # longer than the 0.2 s threshold
+    warm.set()
+    assert handler.handle_done.wait(timeout=2.0)
+    assert _wait_idle(status)
+    assert [e for e in _events(status, cid, cursor) if e["type"] == "warning"] == []
+
+    # A really slow inference still warns.
+    slow = _OverlapProbe(seconds=0.3)
+    handler2 = FakeHandler()
+    session2 = RecordingSession(
+        recorder=FakeRecorder(),  # type: ignore[arg-type]
+        transcriber=slow,  # type: ignore[arg-type]
+        audio=FakeAudio(),  # type: ignore[arg-type]
+        config=Config(max_recording_seconds=600),
+        handlers={"clipboard": handler2},  # type: ignore[dict-item]
+        status=status,
+    )
+    session2.toggle("clipboard")
+    session2.toggle("clipboard")
+    assert handler2.handle_done.wait(timeout=2.0)
+    assert _wait_for(lambda: any(e["type"] == "warning" for e in _events(status, cid, cursor)))
+    codes = [e["code"] for e in _events(status, cid, cursor) if e["type"] == "warning"]
+    assert codes == ["slow_backend"]

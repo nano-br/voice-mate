@@ -16,6 +16,16 @@ from app.core.transcription_handler import TranscriptionHandler
 from app.i18n import _
 from app.protocol.models import FlowKind, TriggerAction, TriggerExpect, WarningCode
 
+# The clock that times transcriptions (a module attribute so tests can replace it
+# without patching the global `time` module).
+_perf_counter = time.perf_counter
+# A transcription slower than max(_SLOW_FLOOR_S, _SLOW_RATIO x the audio) means the
+# backend is running without a GPU (the floor absorbs warmup effects).
+_SLOW_FLOOR_S = 5.0
+_SLOW_RATIO = 3.0
+# Longest wait for the background STT warmup before transcribing anyway.
+_STT_READY_TIMEOUT_S = 300.0
+
 
 def _describe(exc: BaseException) -> str:
     text = " ".join(str(exc).split()) or type(exc).__name__
@@ -38,6 +48,11 @@ class RecordingSession:
     trigger knows what happened. If a `SessionStatus` is injected, every state
     and phase change, result, warning and error is published to it, and the
     session only plays the cues that no client took over (the `cues` lease).
+
+    The transcription backends are not thread-safe: transcriptions run one at a
+    time (a cancelled or superseded operation may still be transcribing when the
+    next one stops), and the first waits for `stt_ready` (the background warmup
+    on the same model).
     """
 
     def __init__(
@@ -50,6 +65,7 @@ class RecordingSession:
         default_handler_id: str = "clipboard",
         status: SessionStatus | None = None,
         flow_kinds: Mapping[str, FlowKind] | None = None,
+        stt_ready: threading.Event | None = None,
     ) -> None:
         if not handlers:
             raise ValueError("RecordingSession needs at least one handler")
@@ -66,6 +82,8 @@ class RecordingSession:
         self._status = status
         self._flow_kinds: dict[str, FlowKind] = dict(flow_kinds or {})
         self._lock = threading.Lock()
+        self._stt_ready = stt_ready
+        self._stt_lock = threading.Lock()  # one transcription at a time
         self._warning_timer: threading.Timer | None = None
         self._timeout_timer: threading.Timer | None = None
         self._state: SessionState = "idle"
@@ -345,9 +363,15 @@ class RecordingSession:
 
             duration = len(result) / self._sample_rate
             print(_("[VoiceMate] ⏳ Transcribing {duration:.1f}s of audio...").format(duration=duration))
-            started_at = time.perf_counter()
-            text = self._transcriber.transcribe(result)
-            self._warn_if_slow(op, duration, time.perf_counter() - started_at)
+            if self._stt_ready is not None:
+                self._stt_ready.wait(_STT_READY_TIMEOUT_S)
+            with self._stt_lock:
+                if op.cancelled():
+                    return  # cancelled while waiting for its turn
+                started_at = _perf_counter()
+                text = self._transcriber.transcribe(result)
+                elapsed = _perf_counter() - started_at  # inference only, never the waits above
+            self._warn_if_slow(op, duration, elapsed)
             if op.cancelled():
                 return
             if not text:
@@ -387,7 +411,7 @@ class RecordingSession:
         duration (with a 5s floor to absorb warmup) indicates the backend is
         running on CPU/Vulkan-software. Warns once per session.
         """
-        if self._slow_warning_shown or elapsed <= max(5.0, 3.0 * audio_seconds):
+        if self._slow_warning_shown or elapsed <= max(_SLOW_FLOOR_S, _SLOW_RATIO * audio_seconds):
             return
         self._slow_warning_shown = True
         ratio = elapsed / audio_seconds if audio_seconds > 0 else float("inf")
