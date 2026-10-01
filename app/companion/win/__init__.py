@@ -1,1 +1,1 @@
-"""Windows-only parts of the companion (ctypes / pywin32); imported only on Windows."""
+"""Windows-only companion modules (ctypes/pywin32); see docs/companion-app.md, "Repo layout"."""
