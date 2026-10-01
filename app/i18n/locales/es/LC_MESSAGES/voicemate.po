@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-01 16:37-0300\n"
-"PO-Revision-Date: 2026-10-01 16:25-0300\n"
+"POT-Creation-Date: 2026-10-01 17:26-0300\n"
+"PO-Revision-Date: 2026-10-01 16:49-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: es\n"
 "Language-Team: es <LL@li.org>\n"
@@ -213,7 +213,7 @@ msgstr ""
 "[VoiceMate] ⚠ --input-method mouse solo es compatible con Windows "
 "(trigger={trigger}); usando atajos de teclado."
 
-#: app/core/recorder.py:90
+#: app/core/recorder.py:94
 msgid ""
 "the audio system is not responding (a previous microphone open is still "
 "stuck; on WSL2 run `wsl --shutdown`)"
@@ -221,12 +221,12 @@ msgstr ""
 "el sistema de audio no responde (una apertura anterior del micrófono "
 "sigue bloqueada; en WSL2 ejecuta `wsl --shutdown`)"
 
-#: app/core/recorder.py:142
+#: app/core/recorder.py:151
 #, python-brace-format
 msgid "timed out opening the microphone after {seconds:.0f}s"
 msgstr "se agotó el tiempo de espera al abrir el micrófono tras {seconds:.0f}s"
 
-#: app/core/recorder.py:172
+#: app/core/recorder.py:181
 #, python-brace-format
 msgid "[VoiceMate] ❌ Could not open the microphone ({reason})."
 msgstr "[VoiceMate] ❌ No se pudo abrir el micrófono ({reason})."
@@ -745,6 +745,300 @@ msgstr ""
 "[VoiceMate] ⚠ Falló el calentamiento de whisper-server (continuando): "
 "{exc}"
 
+#: app/i18n/windows_script_messages.py:28
+#, python-brace-format
+msgid "[VoiceMate] Windows audio device check unavailable: {0}"
+msgstr ""
+"[VoiceMate] La verificación de los dispositivos de audio de Windows no "
+"está disponible: {0}"
+
+#: app/i18n/windows_script_messages.py:29
+#, python-brace-format
+msgid "[VoiceMate] Connected to the daemon at {0}."
+msgstr "[VoiceMate] Conectado al daemon en {0}."
+
+#: app/i18n/windows_script_messages.py:30
+#, python-brace-format
+msgid ""
+"[VoiceMate] Lost contact with the daemon at {0} (stopped or restarting?)."
+" Retrying every {1} s."
+msgstr ""
+"[VoiceMate] Se perdió la conexión con el daemon en {0} (¿detenido o "
+"reiniciándose?). Reintentando cada {1} s."
+
+#: app/i18n/windows_script_messages.py:31
+msgid "connection refused"
+msgstr "conexión rechazada"
+
+#: app/i18n/windows_script_messages.py:32
+msgid "connection closed before the daemon answered"
+msgstr "conexión cerrada antes de que el daemon respondiera"
+
+#: app/i18n/windows_script_messages.py:33
+#, python-brace-format
+msgid "nothing is listening on {0}"
+msgstr "no hay nada escuchando en {0}"
+
+#: app/i18n/windows_script_messages.py:34
+#, python-brace-format
+msgid "[VoiceMate] Registered with the daemon as consumer {0}."
+msgstr "[VoiceMate] Registrado en el daemon como consumidor {0}."
+
+#: app/i18n/windows_script_messages.py:35
+#, python-brace-format
+msgid ""
+"[VoiceMate] Daemon restarted (instance {0} -> {1}): reading its results "
+"from the start."
+msgstr ""
+"[VoiceMate] Daemon reiniciado (instancia {0} -> {1}): leyendo sus "
+"resultados desde el principio."
+
+#: app/i18n/windows_script_messages.py:36
+#, python-brace-format
+msgid ""
+"[VoiceMate] Registered with the daemon as consumer {0} (assigned on the "
+"trigger)."
+msgstr ""
+"[VoiceMate] Registrado en el daemon como consumidor {0} (asignado en el "
+"disparador)."
+
+#: app/i18n/windows_script_messages.py:37
+#, python-brace-format
+msgid "[VoiceMate] > recording... (op {0})"
+msgstr "[VoiceMate] > grabando... (op {0})"
+
+#: app/i18n/windows_script_messages.py:38
+#, python-brace-format
+msgid "[VoiceMate] # transcribing... (op {0})"
+msgstr "[VoiceMate] # transcribiendo... (op {0})"
+
+#: app/i18n/windows_script_messages.py:39
+#, python-brace-format
+msgid "[VoiceMate] ~ restarted (op {0})"
+msgstr "[VoiceMate] ~ reiniciado (op {0})"
+
+#: app/i18n/windows_script_messages.py:40
+#, python-brace-format
+msgid "[VoiceMate] trigger '{0}' received."
+msgstr "[VoiceMate] disparador '{0}' recibido."
+
+#: app/i18n/windows_script_messages.py:41
+msgid "daemon offline"
+msgstr "daemon fuera de línea"
+
+#: app/i18n/windows_script_messages.py:42
+#, python-brace-format
+msgid ""
+"{0}: daemon offline at {1} ({2}). Start it in WSL with `make run`, then "
+"press the hotkey again."
+msgstr ""
+"{0}: daemon fuera de línea en {1} ({2}). Inícialo en WSL con `make run` y"
+" vuelve a presionar el atajo."
+
+#: app/i18n/windows_script_messages.py:43
+msgid "daemon busy"
+msgstr "daemon ocupado"
+
+#: app/i18n/windows_script_messages.py:45
+#, python-brace-format
+msgid ""
+"{0}: the daemon did not answer within {1} s (busy). It is running, so it "
+"may still act on this key press: check the WSL console before pressing "
+"again."
+msgstr ""
+"{0}: el daemon no respondió en {1} s (ocupado). Está en ejecución, así "
+"que aún puede actuar sobre este atajo: revisa la consola de WSL antes de "
+"volver a presionarlo."
+
+#: app/i18n/windows_script_messages.py:47
+msgid "daemon error"
+msgstr "error del daemon"
+
+#: app/i18n/windows_script_messages.py:48
+#, python-brace-format
+msgid "{0}: daemon error ({1}). See the WSL console for details."
+msgstr "{0}: error del daemon ({1}). Revisa los detalles en la consola de WSL."
+
+#: app/i18n/windows_script_messages.py:49
+msgid "trigger rejected"
+msgstr "disparador rechazado"
+
+#: app/i18n/windows_script_messages.py:50
+#, python-brace-format
+msgid "{0}: the daemon rejected the trigger ({1})."
+msgstr "{0}: el daemon rechazó el disparador ({1})."
+
+#: app/i18n/windows_script_messages.py:51
+msgid "trigger failed"
+msgstr "falló el disparador"
+
+#: app/i18n/windows_script_messages.py:52
+#, python-brace-format
+msgid "{0}: unexpected error talking to the daemon at {1}: {2}"
+msgstr "{0}: error inesperado al comunicarse con el daemon en {1}: {2}"
+
+#: app/i18n/windows_script_messages.py:53
+#, python-brace-format
+msgid "The daemon reported an error ({0})."
+msgstr "El daemon informó un error ({0})."
+
+#: app/i18n/windows_script_messages.py:54
+#, python-brace-format
+msgid "[VoiceMate] {0} (seq {1}, op {2}, error '{3}'; clipboard untouched)"
+msgstr "[VoiceMate] {0} (seq {1}, op {2}, error '{3}'; portapapeles sin cambios)"
+
+#: app/i18n/windows_script_messages.py:55
+msgid "error"
+msgstr "error"
+
+#: app/i18n/windows_script_messages.py:56
+msgid "microphone unavailable"
+msgstr "micrófono no disponible"
+
+#: app/i18n/windows_script_messages.py:57
+msgid ""
+"No microphone is connected to Windows. Connect one and press the hotkey "
+"again."
+msgstr ""
+"No hay ningún micrófono conectado a Windows. Conecta uno y vuelve a "
+"presionar el atajo."
+
+#: app/i18n/windows_script_messages.py:59
+msgid ""
+"Windows has an active microphone, but WSL cannot open it: the WSLg audio "
+"bridge is stuck. Run `wsl --shutdown`, then start the daemon again."
+msgstr ""
+"Windows tiene un micrófono activo, pero WSL no puede abrirlo: el puente "
+"de audio de WSLg está bloqueado. Ejecuta `wsl --shutdown` y vuelve a "
+"iniciar el daemon."
+
+#: app/i18n/windows_script_messages.py:62
+msgid ""
+"Could not query the Windows audio devices. Check that a microphone is "
+"connected; if it is, run `wsl --shutdown` and start the daemon again."
+msgstr ""
+"No se pudieron consultar los dispositivos de audio de Windows. Verifica "
+"que haya un micrófono conectado; si lo hay, ejecuta `wsl --shutdown` y "
+"vuelve a iniciar el daemon."
+
+#: app/i18n/windows_script_messages.py:65
+#, python-brace-format
+msgid ""
+"[VoiceMate] Transcription could not be copied to the clipboard (seq {0}, "
+"op {1}) after {2} tries. Full text below, copy it manually:"
+msgstr ""
+"[VoiceMate] No se pudo copiar la transcripción al portapapeles (seq {0}, "
+"op {1}) tras {2} intentos. Texto completo abajo, cópialo manualmente:"
+
+#: app/i18n/windows_script_messages.py:67
+#, python-brace-format
+msgid "----- VoiceMate transcription (seq {0}) -----"
+msgstr "----- Transcripción de VoiceMate (seq {0}) -----"
+
+#: app/i18n/windows_script_messages.py:68
+msgid "----- end -----"
+msgstr "----- fin -----"
+
+#: app/i18n/windows_script_messages.py:69
+msgid "Transcription could not be copied to the clipboard"
+msgstr "No se pudo copiar la transcripción al portapapeles"
+
+#: app/i18n/windows_script_messages.py:70
+#, python-brace-format
+msgid "\"{0}\" (the full text is in the VoiceMate console window)"
+msgstr "\"{0}\" (el texto completo está en la ventana de consola de VoiceMate)"
+
+#: app/i18n/windows_script_messages.py:71
+#, python-brace-format
+msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}, retry {2}): \"{3}\""
+msgstr ""
+"[VoiceMate] portapapeles confirmado (seq {0}, op {1}, reintento {2}): "
+"\"{3}\""
+
+#: app/i18n/windows_script_messages.py:72
+#, python-brace-format
+msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}): \"{2}\""
+msgstr "[VoiceMate] portapapeles confirmado (seq {0}, op {1}): \"{2}\""
+
+#: app/i18n/windows_script_messages.py:73
+#, python-brace-format
+msgid "[VoiceMate] could not confirm the clipboard (seq {0}): \"{1}\"; retrying."
+msgstr ""
+"[VoiceMate] no se pudo confirmar el portapapeles (seq {0}): \"{1}\"; "
+"reintentando."
+
+#: app/i18n/windows_script_messages.py:75
+msgid ""
+"WSL audio is stuck: the daemon cannot reach the WSLg PulseAudio server, "
+"so recording will fail. Run `wsl --shutdown`, then start the daemon "
+"again."
+msgstr ""
+"El audio de WSL está bloqueado: el daemon no puede llegar al servidor "
+"PulseAudio de WSLg, así que la grabación fallará. Ejecuta `wsl "
+"--shutdown` y vuelve a iniciar el daemon."
+
+#: app/i18n/windows_script_messages.py:77
+msgid "Windows has no microphone connected either: connect one first."
+msgstr "Windows tampoco tiene ningún micrófono conectado: conecta uno primero."
+
+#: app/i18n/windows_script_messages.py:78
+msgid "WSL audio is down"
+msgstr "audio de WSL caído"
+
+#: app/i18n/windows_script_messages.py:79
+msgid "[VoiceMate] WSL audio is working again."
+msgstr "[VoiceMate] El audio de WSL volvió a funcionar."
+
+#: app/i18n/windows_script_messages.py:80
+#, python-brace-format
+msgid "[VoiceMate] Unexpected error in the main loop (continuing): {0}"
+msgstr ""
+"[VoiceMate] Error inesperado en el bucle principal (continúa "
+"funcionando): {0}"
+
+#: app/i18n/windows_script_messages.py:81
+#, python-brace-format
+msgid "[VoiceMate] Hotkeys active: {0} (clipboard) / {1} (Claude) -> {2}"
+msgstr "[VoiceMate] Atajos activos: {0} (portapapeles) / {1} (Claude) -> {2}"
+
+#: app/i18n/windows_script_messages.py:82
+#, python-brace-format
+msgid "(unregistered, retrying every {0} s)"
+msgstr "(sin registrar, reintentando cada {0} s)"
+
+#: app/i18n/windows_script_messages.py:83
+#, python-brace-format
+msgid ""
+"[VoiceMate] Consumer {0} | scope={1}. Clipboard set by Windows. Leave "
+"this window open."
+msgstr ""
+"[VoiceMate] Consumidor {0} | scope={1}. Windows escribe en el "
+"portapapeles. Deja esta ventana abierta."
+
+#: app/i18n/windows_script_messages.py:85
+#, python-brace-format
+msgid ""
+"[VoiceMate] Daemon not reachable at {0} yet: start it in WSL (`make "
+"run`). The hotkeys stay active and this window connects as soon as it is "
+"up."
+msgstr ""
+"[VoiceMate] El daemon aún no está accesible en {0}: inícialo en WSL "
+"(`make run`). Los atajos siguen activos y esta ventana se conecta en "
+"cuanto esté listo."
+
+#: app/i18n/windows_script_messages.py:87
+msgid ""
+"[VoiceMate] Windows has no active microphone: recording will fail until "
+"you connect one."
+msgstr ""
+"[VoiceMate] Windows no tiene ningún micrófono activo: la grabación "
+"fallará hasta que conectes uno."
+
+#: app/i18n/windows_script_messages.py:88
+#, python-brace-format
+msgid "{0} is already registered by another app."
+msgstr "{0} ya está registrado por otra aplicación."
+
 #: app/platform/clipboard.py:114
 #, python-brace-format
 msgid ""
@@ -754,11 +1048,11 @@ msgstr ""
 "[VoiceMate] ⚠ Falló el portapapeles '{writer_name}' ({exc}); probando los"
 " demás mecanismos..."
 
-#: app/platform/listeners/socket_trigger_listener.py:151
+#: app/platform/listeners/socket_trigger_listener.py:152
 msgid "[VoiceMate] Shutdown requested over HTTP."
 msgstr "[VoiceMate] Cierre solicitado por HTTP."
 
-#: app/platform/listeners/socket_trigger_listener.py:253
+#: app/platform/listeners/socket_trigger_listener.py:260
 #, python-brace-format
 msgid "[VoiceMate] ❌ Error in trigger for flow '{flow}':"
 msgstr "[VoiceMate] ❌ Error en el disparador del flujo '{flow}':"
