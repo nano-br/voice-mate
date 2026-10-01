@@ -33,17 +33,15 @@ def find_iscc(explicit: str | None) -> Path | None:
         return Path(on_path)
     # A per-user install goes under %LOCALAPPDATA%\Programs, a machine-wide one under
     # Program Files (x86) or Program Files; the folder carries the major version
-    # ("Inno Setup 6"), so take the newest one found.
-    for variable in ("LOCALAPPDATA", "ProgramFiles(x86)", "ProgramFiles"):
-        base = os.environ.get(variable)
-        if not base:
-            continue
-        for parent in (Path(base) / "Programs", Path(base)):
-            candidates = parent.glob("Inno Setup */ISCC.exe")
-            newest = max(candidates, key=_folder_version, default=None)
-            if newest is not None:
-                return newest
-    return None
+    # ("Inno Setup 6"), so take the newest one found in any of them.
+    candidates = [
+        iscc
+        for variable in ("LOCALAPPDATA", "ProgramFiles(x86)", "ProgramFiles")
+        if (base := os.environ.get(variable))
+        for parent in (Path(base) / "Programs", Path(base))
+        for iscc in parent.glob("Inno Setup */ISCC.exe")
+    ]
+    return max(candidates, key=_folder_version, default=None)
 
 
 def _folder_version(iscc: Path) -> list[int]:

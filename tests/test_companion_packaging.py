@@ -1,5 +1,6 @@
-"""Packaging invariants of the companion: one dependency list, pinned builds, and the
-identities the installer shares with the running app."""
+"""Packaging invariants of the companion: one dependency list, pinned builds, the
+identities the installer shares with the running app, and how the installer build
+finds Inno Setup."""
 
 from __future__ import annotations
 
@@ -9,12 +10,15 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from app.companion.contract import (
     APP_USER_MODEL_ID,
     AUTOSTART_RUN_VALUE,
     INSTALLER_APP_MUTEX,
     SINGLE_INSTANCE_MUTEX,
 )
+from tools import build_installer
 
 _ROOT = Path(__file__).resolve().parents[1]
 _REQUIREMENTS = _ROOT / "requirements"
@@ -115,3 +119,39 @@ def test_icon_has_every_size() -> None:
     assert sizes == _ICON_SIZES
     for size in _ICON_SIZES:
         assert (_ASSETS / f"voicemate-{size}.png").is_file()
+
+
+def _fake_iscc(folder: Path) -> Path:
+    folder.mkdir(parents=True)
+    iscc = folder / "ISCC.exe"
+    iscc.touch()
+    return iscc
+
+
+@pytest.fixture
+def install_roots(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
+    """Empty per-user and machine-wide install roots, and no ISCC on PATH."""
+    roots = {variable: tmp_path / variable for variable in ("LOCALAPPDATA", "ProgramFiles(x86)", "ProgramFiles")}
+    for variable, root in roots.items():
+        root.mkdir()
+        monkeypatch.setenv(variable, str(root))
+    monkeypatch.setattr(build_installer.shutil, "which", lambda _name: None)
+    return roots
+
+
+def test_find_iscc_takes_the_newest_inno_setup_across_roots(install_roots: dict[str, Path]) -> None:
+    _fake_iscc(install_roots["LOCALAPPDATA"] / "Programs" / "Inno Setup 6")  # per user
+    newest = _fake_iscc(install_roots["ProgramFiles(x86)"] / "Inno Setup 7")  # machine-wide
+    _fake_iscc(install_roots["ProgramFiles"] / "Inno Setup 5")
+    assert build_installer.find_iscc(None) == newest
+
+
+def test_find_iscc_compares_versions_as_numbers(install_roots: dict[str, Path]) -> None:
+    _fake_iscc(install_roots["ProgramFiles(x86)"] / "Inno Setup 9")
+    newest = _fake_iscc(install_roots["LOCALAPPDATA"] / "Programs" / "Inno Setup 10")
+    assert build_installer.find_iscc(None) == newest
+
+
+def test_find_iscc_without_inno_setup_or_with_a_wrong_path(install_roots: dict[str, Path], tmp_path: Path) -> None:
+    assert build_installer.find_iscc(None) is None
+    assert build_installer.find_iscc(str(tmp_path / "missing" / "ISCC.exe")) is None
