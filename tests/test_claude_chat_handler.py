@@ -6,6 +6,7 @@ from collections.abc import Iterator
 
 import pytest
 
+from app.core.session_status import OperationHandle, SessionStatus
 from app.features.claude.chat_handler import ClaudeChatHandler
 
 
@@ -295,3 +296,94 @@ def test_handle_passes_configured_timeout_to_runtime() -> None:
     handler.handle("oi")
 
     assert captured["timeout"] == 42.0
+
+
+def _processing(status: SessionStatus, op_seq: int = 1) -> OperationHandle:
+    status.set_operation(op_seq, "processing", "claude_chat", "c1", flow_kind="claude_chat", phase="transcribing")
+    return status.operation(op_seq, "claude_chat", "c1")
+
+
+def _events(status: SessionStatus, client_id: str, since: int) -> list[dict[str, object]]:
+    response = status.hub.poll(client_id, instance=status.instance, since=since, wait=0)
+    return [{"type": e["type"], **e["data"]} for e in response["events"]]
+
+
+def test_phases_and_results_with_tts() -> None:
+    """thinking while Claude works, speaking from the first sentence handed to the TTS;
+    the transcript is an intermediate result, the spoken answer the final one."""
+    status = SessionStatus()
+    reg = status.hub.register(name="companion")
+    op = _processing(status)
+    handler = _handler(FakeRuntime(response="resposta falada"), FakeAudio(), FakeSpeaker(active=True))
+
+    handler.handle("pergunta", op)
+
+    events = _events(status, reg["client_id"], reg["cursor"])
+    phases = [e["phase"] for e in events if e["type"] == "state"]
+    assert phases == ["transcribing", "thinking", "speaking"]
+    results = [(e["kind"], e["text"], e["final"], e["spoken"]) for e in events if e["type"] == "result"]
+    assert results == [("transcript", "pergunta", False, False), ("ai_response", "resposta falada", True, True)]
+
+
+def test_phases_without_tts_skip_speaking() -> None:
+    status = SessionStatus()
+    op = _processing(status)
+    reg = status.hub.register(name="companion")
+    audio = FakeAudio()
+    handler = _handler(FakeRuntime(response="resposta"), audio, FakeSpeaker(active=False))
+
+    handler.handle("pergunta", op)
+
+    events = _events(status, reg["client_id"], reg["cursor"])
+    assert [e["phase"] for e in events if e["type"] == "state"] == ["thinking"]
+    assert [(e["final"], e["spoken"]) for e in events if e["type"] == "result"] == [(False, False), (True, False)]
+    assert audio.ai_response_ready_calls == 1
+
+
+def test_leases_move_clipboard_and_ai_ready_cue_to_the_client() -> None:
+    status = SessionStatus()
+    status.hub.register(name="companion", capabilities=["clipboard", "cues"])
+    clipboard = FakeClipboard()
+    audio = FakeAudio()
+    handler = _handler(FakeRuntime(response="resposta"), audio, FakeSpeaker(active=False), clipboard)
+
+    handler.handle("pergunta", _processing(status))
+
+    assert clipboard.copied == []
+    assert audio.ai_response_ready_calls == 0
+    pending = status.hub.results("unacked", 10)["results"]
+    assert [(r["kind"], r["delivery"]) for r in pending] == [("transcript", "pending"), ("ai_response", "pending")]
+
+
+def test_chat_failure_is_an_error_event() -> None:
+    status = SessionStatus()
+    op = _processing(status)
+    reg = status.hub.register(name="companion")
+    audio = FakeAudio()
+    handler = _handler(FakeRuntime(raise_exc=RuntimeError("rate limited")), audio, FakeSpeaker(active=False))
+
+    handler.handle("pergunta", op)
+
+    errors = [e for e in _events(status, reg["client_id"], reg["cursor"]) if e["type"] == "error"]
+    assert [(e["code"], e["detail"]) for e in errors] == [("chat_failed", "rate limited")]
+    assert audio.error_calls == 1
+    assert status.result(None, "all")["error"] == "chat_failed"  # also in the v1 stream
+
+
+def test_superseded_operation_keeps_the_transcript_but_does_not_call_claude() -> None:
+    """A restart took over between the transcription and the handler: the user's words are
+    still delivered (as the operation's final result), Claude is not called."""
+    status = SessionStatus()
+    superseded = threading.Event()
+    superseded.set()
+    op = status.operation(1, "claude_chat", None, superseded)
+    runtime = FakeRuntime()
+    clipboard = FakeClipboard()
+    handler = _handler(runtime, FakeAudio(), FakeSpeaker(active=False), clipboard)
+
+    handler.handle("pergunta", op)
+
+    assert runtime.send_calls == []
+    assert clipboard.copied == ["pergunta"]
+    (record,) = status.hub.results("recent", 10)["results"]
+    assert (record["kind"], record["final"]) == ("transcript", True)

@@ -145,18 +145,6 @@ def test_clip_exe_not_offered_when_interop_broken(monkeypatch: pytest.MonkeyPatc
     assert "clip.exe" in names
 
 
-def test_wsl_writer_records_to_session_status(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The text goes to the SessionStatus (so Windows can set the clipboard via /result),
-    regardless of whether the local mechanism (wl-copy) works or not."""
-    from app.core.session_status import SessionStatus
-
-    status = SessionStatus()
-    monkeypatch.setattr(cb.shutil, "which", lambda n: "/usr/bin/wl-copy" if n == "wl-copy" else None)
-    monkeypatch.setattr(cb.subprocess, "run", lambda cmd, **kw: None)
-    WslClipboardWriter(status).copy("transcrição")
-    assert status.get() == (1, "transcrição")
-
-
 def test_factory_by_platform() -> None:
     assert isinstance(create_clipboard_writer("windows"), PyperclipWriter)
     assert isinstance(create_clipboard_writer("linux-x11"), PyperclipWriter)

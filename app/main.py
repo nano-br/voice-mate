@@ -76,11 +76,11 @@ def main() -> None:
     # thrash glitches WSLg audio. In sequence each one runs fast.
     _start_warmup_thread(transcriber, speaker)
 
-    # Session state hub: live state + last result, pollable by consumers (the
-    # Windows hotkeys script). On WSL2 the native clipboard is set by the Windows
-    # side (via /result) — the hub keeps the last transcription.
+    # Session state hub: live state + results, pollable by consumers (the Windows
+    # hotkeys script). The handlers publish every result there: on WSL2 the native
+    # clipboard is set by the Windows side (via /result).
     status = SessionStatus()
-    clipboard = create_clipboard_writer(config.platform, status)
+    clipboard = create_clipboard_writer(config.platform)
     handlers, owned_handlers = build_handlers(flows, audio_feedback, speaker, config.output_lang, clipboard=clipboard)
     if not handlers:
         speaker.close()
@@ -98,6 +98,7 @@ def main() -> None:
         handlers=handlers,
         default_handler_id=default_handler_id,
         status=status,
+        flow_kinds={flow.name: flow.kind for flow in flows},
     )
     # WSL2: report WSLg PulseAudio health in /health, so the Windows launcher can
     # restart WSL when the audio bridge dies (nothing inside the distro revives it).

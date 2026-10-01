@@ -236,6 +236,16 @@ msgstr "[VoiceMate] ❌ No se pudo abrir el micrófono ({reason})."
 msgid "[VoiceMate] ⚠ Unknown handler: {handler_id}"
 msgstr "[VoiceMate] ⚠ Handler desconocido: {handler_id}"
 
+#: app/core/recording_session.py:142
+#, python-brace-format
+msgid "[VoiceMate] ✗ Operation {op_seq} cancelled."
+msgstr "[VoiceMate] ✗ Operación {op_seq} cancelada."
+
+#: app/core/recording_session.py:149
+#, python-brace-format
+msgid "[VoiceMate] ⚠ Could not stop the microphone: {exc}"
+msgstr "[VoiceMate] ⚠ No se pudo detener el micrófono: {exc}"
+
 #: app/core/recording_session.py:198
 msgid "[VoiceMate] 🎙  Recording... (press to stop)"
 msgstr "[VoiceMate] 🎙  Grabando... (presiona para detener)"
@@ -264,6 +274,11 @@ msgstr "Micrófono no disponible: {reason}"
 msgid "[VoiceMate] ⚠ Recording will end in {remaining:.0f}s"
 msgstr "[VoiceMate] ⚠ La grabación terminará en {remaining:.0f}s"
 
+#: app/core/recording_session.py:312
+#, python-brace-format
+msgid "Recording will end in {remaining:.0f}s."
+msgstr "La grabación terminará en {remaining:.0f}s."
+
 #: app/core/recording_session.py:322
 msgid "[VoiceMate] ⏰ Maximum time reached. Ending recording..."
 msgstr "[VoiceMate] ⏰ Tiempo máximo alcanzado. Finalizando la grabación..."
@@ -271,6 +286,10 @@ msgstr "[VoiceMate] ⏰ Tiempo máximo alcanzado. Finalizando la grabación..."
 #: app/core/recording_session.py:342
 msgid "[VoiceMate] No audio captured."
 msgstr "[VoiceMate] No se capturó audio."
+
+#: app/core/recording_session.py:343
+msgid "No audio captured."
+msgstr "No se capturó audio."
 
 #: app/core/recording_session.py:347
 #, python-brace-format
@@ -281,9 +300,18 @@ msgstr "[VoiceMate] ⏳ Transcribiendo {duration:.1f}s de audio..."
 msgid "[VoiceMate] No speech detected."
 msgstr "[VoiceMate] No se detectó voz."
 
+#: app/core/recording_session.py:355
+msgid "No speech detected."
+msgstr "No se detectó voz."
+
 #: app/core/recording_session.py:360
 msgid "[VoiceMate] ❌ Error processing the recording:"
 msgstr "[VoiceMate] ❌ Error al procesar la grabación:"
+
+#: app/core/recording_session.py:365
+#, python-brace-format
+msgid "Transcription failed: {detail}"
+msgstr "La transcripción falló: {detail}"
 
 #: app/core/recording_session.py:396
 #, python-brace-format
@@ -295,6 +323,14 @@ msgstr ""
 "[VoiceMate] ⚠ Transcripción {ratio:.0f}× más lenta que el audio "
 "({elapsed:.0f}s para {audio_seconds:.0f}s): probablemente el backend se "
 "está ejecutando SIN GPU. Ejecuta `make doctor` para diagnosticarlo."
+
+#: app/core/recording_session.py:406
+msgid ""
+"Transcription is much slower than the audio: the backend is probably "
+"running without a GPU."
+msgstr ""
+"La transcripción es mucho más lenta que el audio: probablemente el "
+"backend se ejecuta sin GPU."
 
 #: app/core/transcriber.py:26
 #, python-brace-format
@@ -316,6 +352,11 @@ msgstr "[VoiceMate] Modelo listo."
 #, python-brace-format
 msgid "[VoiceMate] ✓ Copied: {preview}"
 msgstr "[VoiceMate] ✓ Copiado: {preview}"
+
+#: app/core/transcription_handler.py:49
+#, python-brace-format
+msgid "[VoiceMate] ✓ Transcribed (the companion copies it): {preview}"
+msgstr "[VoiceMate] ✓ Transcrito (la app companion lo copia): {preview}"
 
 #: app/daemon/hub.py:311
 #, python-brace-format
@@ -371,6 +412,19 @@ msgstr "[VoiceMate] ✓ Transcripción: {preview}"
 msgid "[VoiceMate] 📋 Transcription copied to clipboard."
 msgstr "[VoiceMate] 📋 Transcripción copiada al portapapeles."
 
+#: app/features/claude/chat_handler.py:119
+#: app/features/claude/chat_handler.py:157
+msgid "[VoiceMate] 📋 The companion copies it to the clipboard."
+msgstr "[VoiceMate] 📋 La app companion lo copia al portapapeles."
+
+#: app/features/claude/chat_handler.py:121
+msgid ""
+"[VoiceMate] Claude not called: the operation was cancelled or a new "
+"recording took over."
+msgstr ""
+"[VoiceMate] Claude no fue llamado: la operación se canceló o una nueva "
+"grabación tomó el relevo."
+
 #: app/features/claude/chat_handler.py:132
 msgid "[VoiceMate] 🤖 Calling Claude..."
 msgstr "[VoiceMate] 🤖 Llamando a Claude..."
@@ -408,10 +462,20 @@ msgstr ""
 "[VoiceMate] ⏱ Claude superó el tiempo de espera ({timeout:.0f}s), "
 "descartando el turno."
 
+#: app/features/claude/chat_handler.py:173
+#, python-brace-format
+msgid "Claude did not answer within {timeout:.0f}s."
+msgstr "Claude no respondió en {timeout:.0f}s."
+
 #: app/features/claude/chat_handler.py:177
 #, python-brace-format
 msgid "[VoiceMate] ❌ Error talking to Claude: {exc}"
 msgstr "[VoiceMate] ❌ Error al comunicarse con Claude: {exc}"
+
+#: app/features/claude/chat_handler.py:181
+#, python-brace-format
+msgid "Error talking to Claude: {detail}"
+msgstr "Error al comunicarse con Claude: {detail}"
 
 #: app/features/claude/chat_handler.py:204
 msgid "[VoiceMate] 💬 Claude responding..."
