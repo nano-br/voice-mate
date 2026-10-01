@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Final, get_args
 
-from app.companion.contract import CompanionSettings, CompanionSnapshot, FlowEntry, TrayState
+from app.companion.contract import SETTINGS_VERSION, CompanionSettings, CompanionSnapshot, FlowEntry, TrayState
 from app.protocol.models import FlowKind
 
 # A recording is in progress: the flow actions become "Stop and ...".
@@ -15,16 +15,24 @@ _FLOW_KINDS: Final[tuple[FlowKind, ...]] = get_args(FlowKind)
 
 
 def displayed_flows(snapshot: CompanionSnapshot, settings: CompanionSettings) -> tuple[FlowEntry, ...]:
-    """The engine's flows; before the engine reports them, the flows of the saved hotkeys
-    (named after their kind by default), so the menu and the settings never look empty."""
+    """The engine's flows. Before the engine reports them: the default flows (named after
+    their kind) plus any saved binding of such a flow, so the menu and the settings never
+    look empty, and a flow whose shortcut was cleared can still get a new one."""
     if snapshot.flows:
         return snapshot.flows
+    names = [binding.flow for binding in CompanionSettings().hotkeys]
+    names += [binding.flow for binding in settings.hotkeys if binding.flow not in names]
     flows: list[FlowEntry] = []
-    for binding in settings.hotkeys:
-        if binding.flow in _FLOW_KINDS and all(flow.name != binding.flow for flow in flows):
-            kind: FlowKind = "claude_chat" if binding.flow == "claude_chat" else "clipboard"
-            flows.append(FlowEntry(name=binding.flow, kind=kind, engine_chord=""))
+    for name in names:
+        if name in _FLOW_KINDS:
+            kind: FlowKind = "claude_chat" if name == "claude_chat" else "clipboard"
+            flows.append(FlowEntry(name=name, kind=kind, engine_chord=""))
     return tuple(flows)
+
+
+def settings_read_only(settings: CompanionSettings) -> bool:
+    """Saved by a newer VoiceMate: shown, never written (the core refuses to apply)."""
+    return settings.version > SETTINGS_VERSION
 
 
 def chord_for(flow: FlowEntry, snapshot: CompanionSnapshot, settings: CompanionSettings) -> str:

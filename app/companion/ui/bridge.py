@@ -11,6 +11,7 @@ callback happens to run on the GUI thread itself (no re-entrancy).
 from __future__ import annotations
 
 import logging
+import queue
 import threading
 from collections.abc import Callable
 from typing import TypeVar
@@ -39,6 +40,9 @@ class ControllerBridge(QObject):
         self.controller = controller
         self._latest: CompanionSnapshot = controller.snapshot()
         self._unsubscribe: list[Unsubscribe] = []
+        self._serial_queue: queue.SimpleQueue[Callable[[], None]] = queue.SimpleQueue()
+        self._serial_lock = threading.Lock()
+        self._serial_thread: threading.Thread | None = None
         queued = Qt.ConnectionType.QueuedConnection
         self._snapshot_posted.connect(self._on_snapshot, queued)
         self._notification_posted.connect(self._on_notification, queued)
@@ -95,6 +99,28 @@ class ControllerBridge(QObject):
             self.call_soon(lambda: on_done(result))
 
         threading.Thread(target=runner, name="companion-ui-call", daemon=True).start()
+
+    def run_serial(self, work: Callable[[], None]) -> None:
+        """Run `work` on ONE background thread, in call order, never on the GUI thread.
+
+        For calls whose order matters (suspend, then resume the global hotkeys): separate
+        threads could resume before they suspend.
+        """
+        with self._serial_lock:
+            if self._serial_thread is None:
+                self._serial_thread = threading.Thread(
+                    target=self._serial_loop, name="companion-ui-serial", daemon=True
+                )
+                self._serial_thread.start()
+        self._serial_queue.put(work)
+
+    def _serial_loop(self) -> None:
+        while True:
+            work = self._serial_queue.get()
+            try:
+                work()
+            except Exception:
+                log.warning("serial background call failed", exc_info=True)
 
     @Slot(object)
     def _on_snapshot(self, snapshot: CompanionSnapshot) -> None:

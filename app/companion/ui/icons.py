@@ -36,6 +36,7 @@ from app.companion.contract import TrayState
 GlyphTone = Literal["light", "dark"]
 Badge = Literal[
     "none",
+    "octagon",
     "clock",
     "arrows",
     "record",
@@ -54,7 +55,7 @@ APP_ICON_SIZES: Final = (16, 20, 24, 32, 40, 48, 64, 128, 256)
 _UNITS: Final = 32.0  # every shape is designed on a 32 x 32 grid
 
 STATE_BADGES: Final[dict[TrayState, Badge]] = {
-    "stopped": "none",
+    "stopped": "octagon",
     "starting": "clock",
     "restarting": "arrows",
     "idle": "none",
@@ -72,13 +73,14 @@ _AMBER: Final = QColor("#F2A516")
 _VIOLET: Final = QColor("#8B5CF6")
 _GREEN: Final = QColor("#1F9D55")
 _YELLOW: Final = QColor("#FFC83D")
-_GREY: Final = QColor("#7A7A7A")
+_GREY: Final = QColor("#8C8C8C")  # mid grey: readable on dark and light taskbars
 _WHITE: Final = QColor("#FFFFFF")
 _INK: Final = QColor("#1B1B1B")
 
 _BADGE_CENTER: Final = QPointF(23.0, 23.0)
 _BADGE_RADIUS: Final = 8.5
 _BADGE_GAP: Final = 1.8  # transparent ring that separates the badge from the glyph
+_RECORD_RADIUS: Final = 6.4
 
 
 def taskbar_glyph_tone() -> GlyphTone:
@@ -220,6 +222,16 @@ def _badge_outline(badge: Badge, grow: float = 0.0) -> QPainterPath:
                 ]
             )
         )
+    elif badge == "record":
+        # A smaller solid dot (the usual REC light): its silhouette differs from the discs.
+        small = _RECORD_RADIUS + grow
+        path.addEllipse(center, small, small)
+    elif badge == "octagon":
+        points = [
+            QPointF(center.x() + radius * math.cos(angle), center.y() + radius * math.sin(angle))
+            for angle in (math.radians(22.5 + 45.0 * step) for step in range(8))
+        ]
+        path.addPolygon(QPolygonF([*points, points[0]]))
     elif badge == "cross":
         side = 2.0 * radius - 1.0
         path.addRoundedRect(QRectF(center.x() - side / 2, center.y() - side / 2, side, side), 3.0, 3.0)
@@ -270,29 +282,32 @@ def _paint_record(painter: QPainter) -> None:
 def _paint_clock(painter: QPainter) -> None:
     _fill_badge(painter, "clock", _GREY)
     c = _BADGE_CENTER
-    painter.setPen(_symbol_pen(_WHITE, 2.0))
-    painter.drawLine(c, QPointF(c.x(), c.y() - 5.0))
-    painter.drawLine(c, QPointF(c.x() + 3.8, c.y() + 1.5))
+    painter.setPen(_symbol_pen(_WHITE, 2.4))
+    painter.drawLine(c, QPointF(c.x(), c.y() - 5.2))
+    painter.drawLine(c, QPointF(c.x() + 4.2, c.y() + 1.8))
 
 
 def _paint_arrows(painter: QPainter) -> None:
-    _fill_badge(painter, "arrows", _GREY)
+    # No disc: a thick circular arrow, so "restarting" differs from the "starting" clock by
+    # its silhouette (a ring with a gap), not only by the symbol inside.
     c = _BADGE_CENTER
-    painter.setPen(_symbol_pen(_WHITE, 2.0))
+    radius = 6.2
+    painter.setPen(_symbol_pen(_GREY, 3.8))
     painter.setBrush(Qt.BrushStyle.NoBrush)
-    radius = 4.6
-    arc = QRectF(c.x() - radius, c.y() - radius, 2 * radius, 2 * radius)
-    painter.drawArc(arc, 30 * 16, 250 * 16)
-    # Arrow head at the start of the arc (30 degrees).
-    angle = math.radians(30.0)
+    painter.drawArc(QRectF(c.x() - radius, c.y() - radius, 2 * radius, 2 * radius), 60 * 16, 270 * 16)
+    # Arrow head at the start of the arc (60 degrees), pointing along it.
+    angle = math.radians(60.0)
     tip = QPointF(c.x() + radius * math.cos(angle), c.y() - radius * math.sin(angle))
     painter.setPen(Qt.PenStyle.NoPen)
-    painter.setBrush(_WHITE)
-    painter.drawPolygon(
-        QPolygonF(
-            [QPointF(tip.x() - 3.2, tip.y() - 0.6), QPointF(tip.x() + 2.4, tip.y() - 2.2), tip + QPointF(0.6, 3.4)]
-        )
-    )
+    painter.setBrush(_GREY)
+    painter.drawPolygon(QPolygonF([tip + QPointF(-4.6, -2.2), tip + QPointF(3.2, -3.4), tip + QPointF(1.4, 4.4)]))
+
+
+def _paint_octagon(painter: QPainter) -> None:
+    _fill_badge(painter, "octagon", _GREY)
+    c = _BADGE_CENTER
+    painter.setPen(_symbol_pen(_WHITE, 2.6))
+    painter.drawLine(QPointF(c.x() - 4.2, c.y()), QPointF(c.x() + 4.2, c.y()))
 
 
 def _paint_hourglass(painter: QPainter) -> None:
@@ -340,7 +355,7 @@ def _paint_speaker(painter: QPainter) -> None:
 def _paint_check(painter: QPainter) -> None:
     _fill_badge(painter, "check", _GREEN)
     c = _BADGE_CENTER
-    painter.setPen(_symbol_pen(_WHITE, 2.4))
+    painter.setPen(_symbol_pen(_WHITE, 2.8))
     painter.setBrush(Qt.BrushStyle.NoBrush)
     path = QPainterPath(QPointF(c.x() - 4.2, c.y() + 0.2))
     path.lineTo(QPointF(c.x() - 1.2, c.y() + 3.4))
@@ -367,6 +382,7 @@ def _paint_cross(painter: QPainter) -> None:
 
 
 _BADGE_PAINTERS: Final[dict[Badge, Callable[[QPainter], None]]] = {
+    "octagon": _paint_octagon,
     "clock": _paint_clock,
     "arrows": _paint_arrows,
     "record": _paint_record,

@@ -38,15 +38,32 @@ def _action(menu: QMenu, text: str) -> QAction:
     raise AssertionError(f"no menu item {text!r} in {_texts(menu)}")
 
 
-def _signature(state: TrayState, tone: icons.GlyphTone, size: int) -> bytes:
-    """Gray levels + alpha: what is left of the icon for someone who cannot tell colors apart."""
+def _planes(state: TrayState, tone: icons.GlyphTone, size: int) -> list[tuple[int, int]]:
+    """(lightness, alpha) per pixel: what is left of the icon without colors."""
     image = icons.tray_pixmap(state, tone, size).toImage().convertToFormat(QImage.Format.Format_ARGB32)
-    gray = bytearray()
-    for y in range(image.height()):
-        for x in range(image.width()):
-            color = image.pixelColor(x, y)
-            gray += bytes((color.lightness() // 32, color.alpha() // 32))
-    return bytes(gray)
+    return [
+        (image.pixelColor(x, y).lightness(), image.pixelColor(x, y).alpha())
+        for y in range(image.height())
+        for x in range(image.width())
+    ]
+
+
+def _visible_difference(first: list[tuple[int, int]], second: list[tuple[int, int]]) -> int:
+    """Pixels that differ clearly: a big step in lightness, or in coverage (the silhouette)."""
+    return sum(
+        1
+        for (light_a, alpha_a), (light_b, alpha_b) in zip(first, second, strict=True)
+        if abs(alpha_a - alpha_b) >= 128 or (min(alpha_a, alpha_b) >= 128 and abs(light_a - light_b) >= 64)
+    )
+
+
+def _silhouette(state: TrayState, size: int) -> list[bool]:
+    image = icons.tray_pixmap(state, "light", size).toImage().convertToFormat(QImage.Format.Format_ARGB32)
+    return [image.pixelColor(x, y).alpha() >= 128 for y in range(image.height()) for x in range(image.width())]
+
+
+# At 16 px a badge is about 9 x 9 pixels: ask for a clear difference in at least 8 of them.
+_MIN_DIFFERENT_PIXELS = {16: 8, 32: 32}
 
 
 @pytest.mark.parametrize("size", [16, 32])
@@ -54,9 +71,18 @@ def _signature(state: TrayState, tone: icons.GlyphTone, size: int) -> bytes:
 def test_every_tray_state_is_distinguishable_without_color(
     qapp: QApplication, tone: icons.GlyphTone, size: int
 ) -> None:
-    signatures = {state: _signature(state, tone, size) for state in ALL_STATES}
+    planes = {state: _planes(state, tone, size) for state in ALL_STATES}
     for first, second in itertools.combinations(ALL_STATES, 2):
-        assert signatures[first] != signatures[second], f"{first} and {second} look the same at {size} px"
+        different = _visible_difference(planes[first], planes[second])
+        assert different >= _MIN_DIFFERENT_PIXELS[size], f"{first}/{second}: {different} px at {size} px"
+
+
+@pytest.mark.parametrize(("first", "second"), [("stopped", "idle"), ("starting", "restarting")])
+@pytest.mark.parametrize("size", [16, 32])
+def test_related_states_differ_by_badge_shape(
+    qapp: QApplication, first: TrayState, second: TrayState, size: int
+) -> None:
+    assert _silhouette(first, size) != _silhouette(second, size)
 
 
 def test_tray_icon_has_every_size_and_follows_the_taskbar_tone(qapp: QApplication) -> None:
@@ -180,13 +206,25 @@ def test_menu_actions_call_the_controller(ui: CompanionUi, fake: FakeController)
     tray.cancel_action.setEnabled(True)
     tray.cancel_action.trigger()
     tray.restart_engine_action.trigger()
-    tray.restart_wsl_action.trigger()
     tray.open_logs_action.trigger()
     assert fake.called("toggle") == [("clipboard",), ("claude_chat",)]
     assert fake.called("cancel") == [()]
     assert fake.called("restart_engine") == [()]
-    assert fake.called("restart_wsl") == [()]
     assert fake.called("open_logs") == [()]
+
+
+@pytest.mark.parametrize(("answer", "restarts"), [("Restart WSL", [()]), ("Cancel", [])])
+def test_restart_wsl_from_the_menu_asks_first(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool], answer: str, restarts: list[tuple[()]]
+) -> None:
+    _tray(ui).restart_wsl_action.trigger()
+    box = ui._restart_wsl_box
+    assert box is not None and box.isVisible()
+    assert "Docker" in box.text()
+    assert fake.called("restart_wsl") == []
+    next(button for button in box.buttons() if button.text() == answer).click()
+    assert process_events(lambda: ui._restart_wsl_box is None)
+    assert fake.called("restart_wsl") == restarts
 
 
 def test_engine_submenu_hides_restart_wsl_outside_wsl2(qapp: QApplication, process_events: Callable[..., bool]) -> None:
@@ -198,7 +236,28 @@ def test_engine_submenu_hides_restart_wsl_outside_wsl2(qapp: QApplication, proce
     fake.start()
     process_events()
     assert not _tray(companion).restart_wsl_action.isVisible()
+    companion.confirm_restart_wsl()  # e.g. a stale jump list task
+    assert companion._restart_wsl_box is None
     companion.bridge.detach()
+
+
+def test_menu_reads_the_live_settings_before_showing(ui: CompanionUi, fake: FakeController) -> None:
+    """Settings changes do not come with a snapshot: the menu re-reads them when it opens."""
+    from dataclasses import replace
+
+    from app.companion.contract import HotkeyBinding
+
+    tray = _tray(ui)
+    current = fake.settings()
+    with fake._lock:  # changed behind the UI's back (no snapshot published)
+        fake._settings = replace(
+            current, engine_mode="external", hotkeys=(HotkeyBinding("clipboard", "f9"),), cues_enabled=False
+        )
+    tray.menu.aboutToShow.emit()
+    assert not tray.restart_wsl_action.isVisible()
+    assert tray.mute_action.isChecked()
+    assert _action(tray.menu, "Dictate").text() == "Dictate\tF9"
+    assert _action(tray.menu, "Ask Claude").text() == "Ask Claude"  # no binding: no hotkey shown
 
 
 def test_pending_and_wsl_restart_items_follow_the_snapshot(
@@ -253,6 +312,35 @@ def test_mute_sounds_applies_the_settings(
     assert process_events(lambda: ui.settings().cues_enabled is False)
     tray.menu.aboutToShow.emit()
     assert tray.mute_action.isChecked()
+
+
+def test_mute_never_overwrites_what_the_core_changed(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    """The core filled in a detected engine_dir after the UI started: Mute must keep it."""
+    from dataclasses import replace
+
+    fake.set_settings(replace(fake.settings(), engine_dir="detected/voice-mate", client_key="k-123"))
+    process_events()
+    _tray(ui).mute_action.trigger()
+    assert process_events(lambda: bool(fake.called("apply_settings")))
+    (applied,) = fake.called("apply_settings")[0]
+    assert applied == replace(fake.settings(), cues_enabled=False)  # type: ignore[comparison-overlap]
+    assert (applied.engine_dir, applied.client_key) == ("detected/voice-mate", "k-123")  # type: ignore[attr-defined]
+
+
+def test_mute_is_disabled_for_settings_from_a_newer_version(
+    qapp: QApplication, process_events: Callable[..., bool]
+) -> None:
+    from app.companion.contract import CompanionSettings
+
+    fake = FakeController(settings=CompanionSettings(version=99))
+    companion = CompanionUi(fake, tray_available=True, exit_app=lambda: None)
+    companion.bridge.attach()
+    tray = _tray(companion)
+    tray.menu.aboutToShow.emit()
+    assert not tray.mute_action.isEnabled()
+    companion.bridge.detach()
 
 
 def test_mute_failure_notifies_and_restores_the_check(

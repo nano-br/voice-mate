@@ -21,15 +21,20 @@ class Shell(Protocol):
     def has_tray(self) -> bool: ...
 
     def settings(self) -> CompanionSettings:
-        """The applied settings (cached; refreshed after every successful apply)."""
+        """`controller.settings()`, read live every time: the UI never keeps a copy."""
 
-    def settings_applied(self, settings: CompanionSettings) -> None: ...
+    def settings_changed(self) -> None:
+        """Settings were applied: re-render what depends on them."""
 
     def show_status(self) -> None: ...
 
     def show_settings(self) -> None: ...
 
-    def confirm_wsl_restart(self) -> None: ...
+    def confirm_wsl_restart(self) -> None:
+        """Answer the controller's pending question (policy "ask")."""
+
+    def confirm_restart_wsl(self) -> None:
+        """A manual "Restart WSL" (menu, jump list): confirm first, it stops every distro."""
 
     def set_muted(self, muted: bool) -> None: ...
 

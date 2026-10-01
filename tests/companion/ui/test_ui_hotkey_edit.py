@@ -83,7 +83,7 @@ def test_backspace_clears(dialog: tuple[QDialog, HotkeyEdit, list[str]]) -> None
 def test_unsupported_keys_keep_capturing(dialog: tuple[QDialog, HotkeyEdit, list[str]]) -> None:
     _window, edit, _events = dialog
     edit.start_capture()
-    QTest.keyClick(edit, Qt.Key.Key_Comma, Mod.ControlModifier)
+    QTest.keyClick(edit, Qt.Key.Key_VolumeUp, Mod.ControlModifier)
     assert edit.capturing
     assert edit.placeholderText() == "This key cannot be used"
     QTest.keyClick(edit, Qt.Key.Key_F8)

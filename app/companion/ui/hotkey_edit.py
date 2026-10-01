@@ -12,7 +12,7 @@ from PySide6.QtCore import QEvent, Qt, Signal
 from PySide6.QtGui import QFocusEvent, QFont, QKeyEvent, QMouseEvent
 from PySide6.QtWidgets import QLineEdit, QWidget
 
-from app.companion.ui.chords import chord_display, chord_from_key, is_modifier_key, modifiers_display
+from app.companion.ui.chords import chord_from_key, display_chord, is_modifier_key, modifiers_display
 from app.i18n import _
 
 _CLEAR_KEYS = (Qt.Key.Key_Backspace, Qt.Key.Key_Delete)
@@ -164,7 +164,7 @@ class HotkeyEdit(QLineEdit):
 
     def _show_chord(self) -> None:
         self.setPlaceholderText(_("No shortcut"))
-        self.setText(chord_display(self._chord))
+        self.setText(display_chord(self._chord))
 
     def _set_italic(self, italic: bool) -> None:
         font = QFont(self.font())

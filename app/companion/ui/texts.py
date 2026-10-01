@@ -24,7 +24,7 @@ from app.companion.contract import (
     UiLanguage,
     WslRestartPolicy,
 )
-from app.companion.ui.chords import chord_display
+from app.companion.ui.chords import display_chord
 from app.i18n import _
 from app.protocol.models import AudioHealth, FlowKind
 
@@ -93,7 +93,7 @@ def _fallback_line(snapshot: CompanionSnapshot, state: TrayState, idle_chord: st
         return _("Restarting engine...")
     if state == "idle":
         if idle_chord:
-            return _("Listening for {chord}").format(chord=chord_display(idle_chord))
+            return _("Listening for {chord}").format(chord=display_chord(idle_chord))
         return _("Ready")
     if state == "transcribing":
         return _("Transcribing...")

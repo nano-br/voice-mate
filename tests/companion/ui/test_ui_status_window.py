@@ -187,3 +187,38 @@ def test_escape_hides_the_window_when_a_tray_exists(ui: CompanionUi, process_eve
     process_events()
     QTest.keyClick(ui.status_window, Qt.Key.Key_Escape)
     assert not ui.status_window.isVisible()
+
+
+def test_restart_engine_stays_available_while_the_engine_starts(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    fake.publish(tray_state="starting", supervisor="starting", engine_ready=False)
+    process_events()
+    assert ui.status_window.restart_button.isEnabled()  # the doc: restart works during the load
+    ui.status_window.restart_button.click()
+    assert fake.called("restart_engine") == [()]
+
+
+def test_space_on_dictate_starts_and_stops_with_the_same_button(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    from PySide6.QtTest import QTest
+
+    window = ui.status_window
+    window.show()
+    process_events()
+    button = window.flow_buttons[0]
+    button.setFocus()
+    QTest.keyClick(button, Qt.Key.Key_Space)
+    process_events()
+    assert window.flow_buttons[0] is button  # relabeled, not rebuilt: the focus stays
+    assert button.text() == "Stop and copy"
+    QTest.keyClick(button, Qt.Key.Key_Space)
+    assert fake.called("toggle") == [("clipboard",), ("clipboard",)]
+
+
+def test_flow_buttons_come_before_cancel_in_the_tab_order(ui: CompanionUi) -> None:
+    window = ui.status_window
+    first, second = window.flow_buttons
+    assert first.nextInFocusChain() is second
+    assert second.nextInFocusChain() is window.cancel_button

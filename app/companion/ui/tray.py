@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QMenu, QSystemTrayIcon
 
 from app.companion.contract import CompanionSnapshot, FlowEntry, NotificationLevel, RecentItem, TrayState
 from app.companion.ui import texts
-from app.companion.ui.chords import chord_display
+from app.companion.ui.chords import display_chord
 from app.companion.ui.icons import GlyphTone, taskbar_glyph_tone, tray_icon
 from app.companion.ui.shell import Shell
 from app.companion.ui.view_model import (
@@ -18,6 +18,7 @@ from app.companion.ui.view_model import (
     chord_for,
     displayed_flows,
     idle_chord,
+    settings_read_only,
 )
 from app.i18n import _
 
@@ -46,8 +47,9 @@ class TrayIcon(QObject):
         self._snapshot = shell.bridge.snapshot
         self._tone: GlyphTone = taskbar_glyph_tone()
         self._icons: dict[tuple[TrayState, GlyphTone], QIcon] = {}
-        self._flow_key: tuple[tuple[str, str, str, bool], ...] = ()
+        self._flow_key: tuple[tuple[str, str], ...] = ()
         self._flow_actions: list[QAction] = []
+        self._quitting = False
 
         self.tray = QSystemTrayIcon(self)
         self.menu = QMenu()
@@ -94,8 +96,8 @@ class TrayIcon(QObject):
         self.engine_menu = menu.addMenu(_("Engine"))
         self.restart_engine_action = self.engine_menu.addAction(_("Restart engine"))
         self.restart_engine_action.triggered.connect(self._shell.controller.restart_engine)
-        self.restart_wsl_action = self.engine_menu.addAction(_("Restart WSL"))
-        self.restart_wsl_action.triggered.connect(self._shell.controller.restart_wsl)
+        self.restart_wsl_action = self.engine_menu.addAction(_("Restart WSL..."))
+        self.restart_wsl_action.triggered.connect(self._shell.confirm_restart_wsl)
         self.engine_menu.addSeparator()
         self.open_logs_action = self.engine_menu.addAction(_("Open logs"))
         self.open_logs_action.triggered.connect(self._shell.controller.open_logs)
@@ -104,28 +106,30 @@ class TrayIcon(QObject):
         menu.addSeparator()
         self.quit_action = menu.addAction(_("Quit VoiceMate"))
         self.quit_action.triggered.connect(self._shell.quit_app)
-        # Refresh the parts that do not come with snapshots (mute) right before showing.
-        menu.aboutToShow.connect(self._refresh_settings_items)
+        # Settings do not come with snapshots: refresh what depends on them before showing.
+        menu.aboutToShow.connect(self._before_menu_shows)
 
-    def _rebuild_flow_actions(self, flows: tuple[FlowEntry, ...], snapshot: CompanionSnapshot) -> None:
-        settings = self._shell.settings()
+    def _render_flow_actions(self, flows: tuple[FlowEntry, ...], snapshot: CompanionSnapshot) -> None:
+        """One action per flow. Rebuilt only when the flows change; labels update in place."""
+        key = tuple((flow.name, flow.kind) for flow in flows)
+        if key != self._flow_key:
+            self._flow_key = key
+            for action in self._flow_actions:
+                self.menu.removeAction(action)
+                action.deleteLater()
+            self._flow_actions = []
+            for flow in flows:
+                action = QAction(self.menu)
+                action.setData(flow.name)
+                action.triggered.connect(lambda _checked=False, name=flow.name: self._shell.controller.toggle(name))
+                self.menu.insertAction(self.cancel_action, action)
+                self._flow_actions.append(action)
+        settings = self._shell.settings()  # live: the chords may have just changed
         recording = snapshot.tray_state in RECORDING_STATES
-        key = tuple((flow.name, flow.kind, chord_for(flow, snapshot, settings), recording) for flow in flows)
-        if key == self._flow_key:
-            return
-        self._flow_key = key
-        for action in self._flow_actions:
-            self.menu.removeAction(action)
-            action.deleteLater()
-        self._flow_actions = []
-        for flow, (_name, _kind, chord, _recording) in zip(flows, key, strict=True):
+        for flow, action in zip(flows, self._flow_actions, strict=True):
             title = texts.flow_stop_title(flow.kind) if recording else texts.flow_title(flow, flows)
-            label = menu_text(title) + (f"\t{chord_display(chord)}" if chord else "")
-            action = QAction(label, self.menu)
-            action.setData(flow.name)
-            action.triggered.connect(lambda _checked=False, name=flow.name: self._shell.controller.toggle(name))
-            self.menu.insertAction(self.cancel_action, action)
-            self._flow_actions.append(action)
+            chord = chord_for(flow, snapshot, settings)
+            action.setText(menu_text(title) + (f"\t{display_chord(chord)}" if chord else ""))
 
     # ------------------------------------------------------------------ rendering
 
@@ -137,7 +141,7 @@ class TrayIcon(QObject):
         self._snapshot = snapshot
         settings = self._shell.settings()
         flows = displayed_flows(snapshot, settings)
-        self._rebuild_flow_actions(flows, snapshot)
+        self._render_flow_actions(flows, snapshot)
         enabled = can_trigger(snapshot)
         for action in self._flow_actions:
             action.setEnabled(enabled)
@@ -146,8 +150,6 @@ class TrayIcon(QObject):
         self.pending_menu.setTitle(_("Not copied ({count})").format(count=pending) if pending else _("Not copied"))
         self.pending_menu.menuAction().setVisible(pending > 0)
         self.wsl_restart_action.setVisible(snapshot.pending_wsl_restart)
-        wsl_mode = settings.engine_mode == "wsl2"
-        self.restart_wsl_action.setVisible(wsl_mode)
         self._refresh_settings_items()
         self.tray.setIcon(self._icon_for(snapshot.tray_state))
         self.refresh_time()
@@ -160,7 +162,17 @@ class TrayIcon(QObject):
         self.tray.setToolTip(texts.tooltip(snapshot, chord))
 
     def _refresh_settings_items(self) -> None:
-        self.mute_action.setChecked(not self._shell.settings().cues_enabled)
+        """What depends on the settings, read live (also right before the menu shows)."""
+        settings = self._shell.settings()
+        self.mute_action.setChecked(not settings.cues_enabled)
+        self.mute_action.setEnabled(not settings_read_only(settings))
+        self.restart_wsl_action.setVisible(settings.engine_mode == "wsl2")
+
+    def _before_menu_shows(self) -> None:
+        if self._quitting:
+            return
+        self._refresh_settings_items()
+        self._render_flow_actions(displayed_flows(self._snapshot, self._shell.settings()), self._snapshot)
 
     def _icon_for(self, state: TrayState) -> QIcon:
         key = (state, self._tone)
@@ -209,6 +221,7 @@ class TrayIcon(QObject):
         self.tray.showMessage(title, message, _MESSAGE_ICONS[level], 10_000)
 
     def set_quitting(self) -> None:
+        self._quitting = True
         self.tray.setToolTip(f"{texts.APP_NAME}\n{_('Quitting...')}")
         for action in self.menu.actions():
             action.setEnabled(False)

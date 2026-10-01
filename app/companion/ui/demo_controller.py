@@ -20,6 +20,7 @@ from app.companion.contract import (
     CueName,
     CueSettings,
     FlowEntry,
+    HotkeyBinding,
     HotkeyCheck,
     Notification,
     NotificationListener,
@@ -27,7 +28,7 @@ from app.companion.contract import (
     SnapshotListener,
     Unsubscribe,
 )
-from app.companion.ui.chords import is_function_key, split_chord
+from app.companion.ui.chords import normalize_chord
 from app.i18n import _
 from app.protocol.models import ResultKind, ResultRecord
 
@@ -217,13 +218,24 @@ class FakeController:
             return self._settings
 
     def apply_settings(self, settings: CompanionSettings) -> list[str]:
+        """Like the core: invalid chords (an empty one included) are refused, and what is
+        saved is normalized (canonical chords, no "~/" in the engine folder)."""
         self._call("apply_settings", settings)
         if self.apply_errors:
             return list(self.apply_errors)
+        invalid = [binding.chord for binding in settings.hotkeys if normalize_chord(binding.chord) is None]
+        if invalid:
+            return [_("{hotkey} is not a valid hotkey.").format(hotkey=chord) for chord in invalid]
+        hotkeys = tuple(HotkeyBinding(b.flow, normalize_chord(b.chord) or b.chord) for b in settings.hotkeys)
+        engine_dir = settings.engine_dir.strip().removeprefix("~/")
+        self.set_settings(replace(settings, hotkeys=hotkeys, engine_dir=engine_dir))
+        return []
+
+    def set_settings(self, settings: CompanionSettings) -> None:
+        """Test hook: the core changing its settings on its own (e.g. a detected engine_dir)."""
         with self._lock:
             self._settings = settings
         self.publish()
-        return []
 
     def check_hotkey(self, chord: str, flow: str) -> HotkeyCheck:
         self._call("check_hotkey", chord, flow)
@@ -231,11 +243,12 @@ class FakeController:
             return self.hotkey_results[chord]
         if self.snapshot().hotkeys_owned_by_engine:
             return "engine_owned"
-        modifiers, key = split_chord(chord)
-        if not key or key == "f12" or (not modifiers and not is_function_key(key)):
+        normalized = normalize_chord(chord)
+        if normalized is None:
             return "invalid"
-        if any(binding.chord == chord and binding.flow != flow for binding in self.settings().hotkeys):
-            return "duplicate"
+        for binding in self.settings().hotkeys:
+            if binding.flow != flow and normalize_chord(binding.chord) == normalized:
+                return "duplicate"
         return "ok"
 
     def suspend_hotkeys(self, suspended: bool) -> None:

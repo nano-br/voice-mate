@@ -51,7 +51,7 @@ def test_round_trip_sends_every_edit_to_apply_settings(
     edit = dialog.hotkeys_page.rows[0].edit
     QTest.mouseClick(edit, Qt.MouseButton.LeftButton)
     QTest.keyClick(edit, Qt.Key.Key_D, Mod.ControlModifier | Mod.ShiftModifier)
-    assert fake.called("suspend_hotkeys") == [(True,), (False,)]
+    assert process_events(lambda: fake.called("suspend_hotkeys") == [(True,), (False,)])
     assert process_events(lambda: _status(dialog)[0] == "Available")
     assert ("ctrl+shift+d", "clipboard") in fake.called("check_hotkey")
 
@@ -135,7 +135,7 @@ def test_escape_cancels_the_capture_but_not_the_dialog(
     QTest.keyClick(edit, Qt.Key.Key_Escape)
     assert dialog.isVisible()
     assert edit.chord == "ctrl+alt+a"
-    assert fake.called("suspend_hotkeys") == [(True,), (False,)]
+    assert process_events(lambda: fake.called("suspend_hotkeys") == [(True,), (False,)])
 
 
 def test_closing_the_dialog_while_capturing_resumes_the_hotkeys(
@@ -145,7 +145,7 @@ def test_closing_the_dialog_while_capturing_resumes_the_hotkeys(
     dialog.hotkeys_page.rows[0].edit.start_capture()
     dialog.cancel_button.click()
     assert not dialog.isVisible()
-    assert fake.called("suspend_hotkeys") == [(True,), (False,)]
+    assert process_events(lambda: fake.called("suspend_hotkeys") == [(True,), (False,)])
 
 
 def test_duplicates_are_flagged_and_a_swap_is_accepted(
@@ -246,8 +246,14 @@ def test_sound_rows_follow_their_toggles(ui: CompanionUi) -> None:
     assert row.stack.currentIndex() == 1
     row.enabled.setChecked(False)
     assert not row.volume.isEnabled()
+    assert row.preview.isEnabled()
     sounds.cues_enabled.setChecked(False)
-    assert not sounds.cue_box.isEnabled()
+    other = sounds.rows["ready"]
+    assert not other.enabled.isEnabled() and not other.volume.isEnabled() and not other.source.isEnabled()
+    # Preview plays even when the sounds are muted (contract): it stays available.
+    assert all(cue_row.preview.isEnabled() for cue_row in sounds.rows.values())
+    sounds.cues_enabled.setChecked(True)
+    assert other.volume.isEnabled() and not row.volume.isEnabled()
 
 
 def test_wsl_fields_follow_the_engine_mode(ui: CompanionUi) -> None:
@@ -268,3 +274,126 @@ def test_reopening_reloads_the_applied_settings(
     ui.show_settings()
     assert ui.settings_dialog is dialog
     assert dialog.general_page.engine_dir.text() == fake.settings().engine_dir
+
+
+def test_a_cleared_shortcut_drops_its_binding(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    """No binding = no hotkey for that flow. An empty chord would be refused by the core."""
+    dialog = _open(ui)
+    edit = dialog.hotkeys_page.rows[1].edit
+    edit.setFocus()
+    QTest.keyClick(edit, Qt.Key.Key_Backspace)
+    assert edit.chord == ""
+    dialog.ok_button.click()
+    assert process_events(lambda: not dialog.isVisible())
+    (sent,) = fake.called("apply_settings")[0]
+    assert sent.hotkeys == (HotkeyBinding("clipboard", "ctrl+alt+v"),)  # type: ignore[attr-defined]
+    assert ui.settings().hotkeys == (HotkeyBinding("clipboard", "ctrl+alt+v"),)
+    # The flow is still offered, so it can get a shortcut again.
+    ui.show_settings()
+    assert [row.flow.name for row in dialog.hotkeys_page.rows] == ["clipboard", "claude_chat"]
+    assert dialog.hotkeys_page.rows[1].edit.chord == ""
+
+
+def test_a_flow_without_a_saved_binding_is_not_sent_empty(
+    qapp: QApplication, process_events: Callable[..., bool]
+) -> None:
+    flows = (*FakeController().snapshot().flows, FlowEntry("notes", "clipboard", "ctrl+alt+n"))
+    fake = FakeController(flows=())
+    companion = CompanionUi(fake, tray_available=False, exit_app=lambda: None)
+    companion.bridge.attach()
+    fake.start()
+    fake.publish(flows=flows)  # the engine reports a flow the settings never bound
+    process_events()
+    dialog = _open(companion)
+    assert [row.flow.name for row in dialog.hotkeys_page.rows] == ["clipboard", "claude_chat", "notes"]
+    dialog.general_page.engine_dir.setText("elsewhere")
+    dialog.ok_button.click()
+    assert process_events(lambda: not dialog.isVisible())
+    assert fake.called("apply_settings")
+    assert all(binding.chord for binding in fake.settings().hotkeys)
+    dialog.hide()
+    companion.bridge.detach()
+
+
+def test_apply_keeps_what_the_core_changed_meanwhile(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    dialog = _open(ui)
+    # The core changes settings while the window is open (a detected engine folder, a
+    # client key, another cue).
+    current = fake.settings()
+    cues = dict(current.cues)
+    cues["ready"] = CueSettings(preset="click")
+    fake.set_settings(replace(current, engine_dir="detected/voice-mate", client_key="k-1", cues=cues))
+    process_events()
+    _select_data(dialog.sounds_page.rows["start"].preset, "soft")
+    dialog.ok_button.click()
+    assert process_events(lambda: not dialog.isVisible())
+    (sent,) = fake.called("apply_settings")[0]
+    assert sent.engine_dir == "detected/voice-mate"  # type: ignore[attr-defined]
+    assert sent.client_key == "k-1"  # type: ignore[attr-defined]
+    assert sent.cues["ready"] == CueSettings(preset="click")  # type: ignore[attr-defined]
+    assert sent.cues["start"] == CueSettings(preset="soft")  # type: ignore[attr-defined]
+
+
+def test_apply_shows_what_the_core_normalized(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    dialog = _open(ui)
+    dialog.general_page.engine_dir.setText("~/projects/voice-mate")
+    dialog.apply_button.click()
+    assert process_events(lambda: dialog.error_text == "Settings saved.")
+    assert dialog.general_page.engine_dir.text() == "projects/voice-mate"
+    assert not dialog.apply_button.isEnabled()
+
+
+def test_errors_reopen_a_dialog_closed_while_saving(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    fake.apply_errors = ["Could not save the settings file."]
+    dialog = _open(ui)
+    dialog.general_page.engine_dir.setText("x")
+    dialog.apply_button.click()
+    dialog.hide()  # closed before the answer came back
+    assert process_events(lambda: dialog.isVisible())
+    assert "Could not save the settings file." in dialog.error_text
+    assert dialog.general_page.engine_dir.text() == "x"  # the edit is still there
+
+
+def test_volumes_off_the_slider_grid_are_not_edits(qapp: QApplication, process_events: Callable[..., bool]) -> None:
+    cues = dict(CompanionSettings().cues)
+    cues["start"] = CueSettings(volume=0.333)
+    fake = FakeController(settings=CompanionSettings(master_volume=0.555, cues=cues))
+    companion = CompanionUi(fake, tray_available=False, exit_app=lambda: None)
+    companion.bridge.attach()
+    dialog = _open(companion)
+    assert not dialog.is_dirty()
+    assert not dialog.apply_button.isEnabled()
+    dialog.sounds_page.rows["start"].volume.setValue(40)
+    assert dialog.collect().cues["start"].volume == 0.4
+    assert dialog.collect().master_volume == 0.555
+    dialog.hide()
+    companion.bridge.detach()
+
+
+def test_rebase_settings_merges_per_field_flow_and_cue() -> None:
+    from app.companion.ui.settings_window import rebase_settings
+
+    baseline = CompanionSettings()
+    edited = replace(
+        baseline,
+        language="es",
+        hotkeys=(HotkeyBinding("clipboard", "f9"),),  # claude_chat cleared, clipboard changed
+    )
+    current = replace(
+        baseline,
+        engine_dir="detected",
+        hotkeys=(*baseline.hotkeys, HotkeyBinding("notes", "ctrl+alt+n")),
+    )
+    rebased = rebase_settings(edited, baseline, current)
+    assert rebased.language == "es"
+    assert rebased.engine_dir == "detected"
+    assert rebased.hotkeys == (HotkeyBinding("clipboard", "f9"), HotkeyBinding("notes", "ctrl+alt+n"))
+    assert rebase_settings(baseline, baseline, current) == current

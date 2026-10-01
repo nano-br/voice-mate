@@ -1,44 +1,72 @@
 from __future__ import annotations
 
+import argparse
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 
 pytest.importorskip("PySide6")
 
+from PySide6.QtCore import QCoreApplication  # noqa: E402
+from PySide6.QtWidgets import QApplication  # noqa: E402
+
 from app.companion import main as companion_main  # noqa: E402
+from app.companion.contract import CompanionSettings  # noqa: E402
 from app.companion.ui.demo_controller import FakeController  # noqa: E402
+from app.companion.ui.single_instance import Reply  # noqa: E402
 
 _ROOT = Path(__file__).resolve().parents[3]
 
 
 @pytest.fixture(autouse=True)
-def keep_the_test_process_aumid(monkeypatch: pytest.MonkeyPatch) -> None:
+def keep_the_test_process_aumid(monkeypatch: pytest.MonkeyPatch, qapp: QApplication) -> None:
     if sys.platform == "win32":
         from app.companion.win import aumid
 
         monkeypatch.setattr(aumid, "set_app_user_model_id", lambda app_id="": True)
+    monkeypatch.setattr(companion_main.time, "sleep", lambda _seconds: None)
 
 
-class _TakenLock:
-    def acquire(self) -> bool:
-        return False
+class _Lock:
+    """Taken by another instance until `free_after` acquire attempts."""
 
-    def release(self) -> None:
-        raise AssertionError("never acquired")
-
-
-class _FreeLock:
-    def __init__(self) -> None:
+    def __init__(self, free_after: int | None = None) -> None:
+        self.attempts = 0
+        self.free_after = free_after
         self.released = False
 
     def acquire(self) -> bool:
-        return True
+        self.attempts += 1
+        return self.free_after is not None and self.attempts > self.free_after
 
     def release(self) -> None:
         self.released = True
+
+
+class _Replies:
+    def __init__(self, *replies: Reply) -> None:
+        self.replies = list(replies)
+        self.sent: list[tuple[str, str]] = []
+
+    def __call__(self, name: str, command: str, timeout_ms: int = 3000) -> Reply:
+        self.sent.append((name, command))
+        return self.replies.pop(0) if len(self.replies) > 1 else self.replies[0]
+
+
+def _patch(monkeypatch: pytest.MonkeyPatch, lock: _Lock, replies: _Replies) -> list[argparse.Namespace]:
+    started: list[argparse.Namespace] = []
+    monkeypatch.setattr(companion_main, "create_instance_lock", lambda suffix: lock)
+    monkeypatch.setattr(companion_main, "send_command", replies)
+
+    def run(app: QApplication, args: argparse.Namespace, suffix: str) -> int:
+        started.append(args)
+        return 7
+
+    monkeypatch.setattr(companion_main, "_run", run)
+    return started
 
 
 def test_parse_args() -> None:
@@ -58,56 +86,124 @@ def test_parse_args() -> None:
     ],
 )
 def test_a_second_launch_forwards_its_command(monkeypatch: pytest.MonkeyPatch, argv: list[str], expected: str) -> None:
-    sent: list[tuple[str, str]] = []
-
-    def send(name: str, command: str) -> bool:
-        sent.append((name, command))
-        return True
-
-    monkeypatch.setattr(companion_main, "create_instance_lock", lambda suffix: _TakenLock())
-    monkeypatch.setattr(companion_main, "send_command", send)
-    monkeypatch.setattr(companion_main, "QCoreApplication", lambda args: None)
+    replies = _Replies("ok")
+    started = _patch(monkeypatch, _Lock(), replies)
     assert companion_main.main(argv) == 0
-    assert [command for _name, command in sent] == [expected]
-    assert sent[0][0].startswith("voicemate-companion-")
+    assert [command for _name, command in replies.sent] == [expected]
+    assert Path(replies.sent[0][0]).name.startswith("voicemate-companion-")
+    assert started == []
+
+
+def test_a_second_launch_retries_while_the_first_one_starts(monkeypatch: pytest.MonkeyPatch) -> None:
+    replies = _Replies("none", "none", "ok")  # not listening yet, then listening
+    _patch(monkeypatch, _Lock(), replies)
+    assert companion_main.main(["--command", "settings"]) == 0
+    assert len(replies.sent) == 3
+
+
+def test_a_second_launch_gives_up_after_the_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(companion_main, "FORWARD_TIMEOUT_S", 0.0)
+    _patch(monkeypatch, _Lock(), _Replies("none"))
+    assert companion_main.main(["--command", "quit"]) == 1
+
+
+def test_a_refused_command_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch(monkeypatch, _Lock(), _Replies("error"))
+    assert companion_main.main(["--command", "show"]) == 1
+
+
+def test_a_plain_launch_waits_for_a_quitting_instance_then_starts(monkeypatch: pytest.MonkeyPatch) -> None:
+    lock = _Lock(free_after=3)  # the old instance releases the lock a little later
+    started = _patch(monkeypatch, lock, _Replies("quitting", "quitting", "none"))
+    assert companion_main.main([]) == 7
+    assert len(started) == 1
+    assert lock.released
+
+
+def test_a_command_to_a_quitting_instance_does_not_start_voicemate(monkeypatch: pytest.MonkeyPatch) -> None:
+    replies = _Replies("quitting")
+    started = _patch(monkeypatch, _Lock(free_after=1), replies)
+    assert companion_main.main(["--command", "settings"]) == 0
+    assert replies.sent  # it did ask
+    assert started == []
 
 
 def test_a_second_autostart_does_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(companion_main, "create_instance_lock", lambda suffix: _TakenLock())
-    monkeypatch.setattr(companion_main, "send_command", lambda name, command: pytest.fail("must not send"))
+    replies = _Replies("ok")
+    _patch(monkeypatch, _Lock(), replies)
     assert companion_main.main(["--autostart"]) == 0
-
-
-def test_a_second_launch_reports_an_unanswered_command(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(companion_main, "create_instance_lock", lambda suffix: _TakenLock())
-    monkeypatch.setattr(companion_main, "send_command", lambda name, command: False)
-    monkeypatch.setattr(companion_main, "QCoreApplication", lambda args: None)
-    assert companion_main.main(["--command", "quit"]) == 1
+    assert replies.sent == []
 
 
 @pytest.mark.parametrize("command", ["quit", "show", "settings", "restart-engine", "restart-wsl"])
 def test_a_command_never_starts_voicemate(monkeypatch: pytest.MonkeyPatch, command: str) -> None:
     """The uninstaller sends quit; a jump list task may outlive the app: exit 0, start nothing."""
-    lock = _FreeLock()
-    monkeypatch.setattr(companion_main, "create_instance_lock", lambda suffix: lock)
-    monkeypatch.setattr(companion_main, "_run", lambda args, suffix: pytest.fail("must not start"))
+    lock = _Lock(free_after=0)
+    started = _patch(monkeypatch, lock, _Replies("ok"))
     assert companion_main.main(["--command", command]) == 0
+    assert started == []
+    assert lock.released
+
+
+def test_a_plain_launch_starts_when_nothing_runs(monkeypatch: pytest.MonkeyPatch) -> None:
+    lock = _Lock(free_after=0)
+    started = _patch(monkeypatch, lock, _Replies("ok"))
+    assert companion_main.main(["--autostart"]) == 7
+    assert started[0].autostart
     assert lock.released
 
 
 def test_demo_uses_its_own_lock_and_the_fake_controller(monkeypatch: pytest.MonkeyPatch) -> None:
     suffixes: list[str] = []
+    replies = _Replies("ok")
+    _patch(monkeypatch, _Lock(), replies)
 
-    def lock_for(suffix: str) -> _TakenLock:
+    def lock_for(suffix: str) -> _Lock:
         suffixes.append(suffix)
-        return _TakenLock()
+        return _Lock()
 
     monkeypatch.setattr(companion_main, "create_instance_lock", lock_for)
-    monkeypatch.setattr(companion_main, "send_command", lambda name, command: name.endswith("-demo"))
-    monkeypatch.setattr(companion_main, "QCoreApplication", lambda args: None)
     assert companion_main.main(["--demo"]) == 0
     assert suffixes == ["-demo"]
+    assert replies.sent[0][0].endswith(("-demo", "-demo.sock"))
     assert isinstance(companion_main._create_controller(demo=True), FakeController)
+
+
+@pytest.fixture
+def remove_translators(qapp: QApplication) -> Iterator[list[object]]:
+    installed: list[object] = []
+    yield installed
+    for translator in installed:
+        QCoreApplication.removeTranslator(translator)  # type: ignore[arg-type]
+
+
+def test_qt_strings_follow_the_ui_language(
+    qapp: QApplication, monkeypatch: pytest.MonkeyPatch, remove_translators: list[object]
+) -> None:
+    monkeypatch.setattr(companion_main, "active_language", lambda: "en")
+    assert companion_main.install_qt_translations(qapp) is None
+    monkeypatch.setattr(companion_main, "active_language", lambda: "pt_BR")
+    translator = companion_main.install_qt_translations(qapp)
+    if translator is None:
+        pytest.skip("this Qt build ships no qtbase_pt_BR.qm")
+    remove_translators.append(translator)
+    assert QCoreApplication.translate("QPlatformTheme", "Cancel") == "Cancelar"
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="the jump list is Windows-only")
+def test_jump_list_offers_restart_wsl_only_in_wsl_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.companion.win import jumplist
+
+    written: list[list[str]] = []
+    monkeypatch.setattr(jumplist, "set_jump_list_tasks", lambda tasks: written.append([t.command for t in tasks]))
+    update = companion_main.jump_list_updater()
+    assert update is not None
+    update(CompanionSettings(engine_mode="wsl2"))
+    update(CompanionSettings(engine_mode="external"))
+    assert written == [
+        ["settings", "restart-engine", "restart-wsl", "quit"],
+        ["settings", "restart-engine", "quit"],
+    ]
 
 
 def test_the_core_controller_is_imported_lazily() -> None:

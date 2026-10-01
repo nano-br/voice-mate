@@ -27,11 +27,20 @@ class NotificationPresenter(QObject):
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
-        self._tray = tray
+        self._tray: TrayIcon | None = None
         self._status_window = status_window
         self._actions = actions
         self._last_action: NotificationAction = "none"
         self.shown: list[Notification] = []  # newest last; for tests and diagnostics (bounded)
+        self.set_tray(tray)
+
+    def set_tray(self, tray: TrayIcon | None) -> None:
+        """The tray can appear after startup (Linux panels at login)."""
+        if tray is self._tray:
+            return
+        if self._tray is not None:
+            self._tray.message_clicked.disconnect(self.on_clicked)
+        self._tray = tray
         if tray is not None:
             tray.message_clicked.connect(self.on_clicked)
 

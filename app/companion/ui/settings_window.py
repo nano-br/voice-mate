@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Sequence
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
 
-from PySide6.QtCore import QSignalBlocker, Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QSignalBlocker, Qt, QTimer, Signal
 from PySide6.QtGui import QCloseEvent, QPalette
 from PySide6.QtWidgets import (
     QAbstractButton,
@@ -41,7 +41,6 @@ from PySide6.QtWidgets import (
 
 from app.companion.contract import (
     CUE_NAMES,
-    SETTINGS_VERSION,
     CompanionSettings,
     CompanionSnapshot,
     CueName,
@@ -60,7 +59,7 @@ from app.companion.ui import texts
 from app.companion.ui.hotkey_edit import HotkeyEdit
 from app.companion.ui.icons import app_icon
 from app.companion.ui.shell import Shell
-from app.companion.ui.view_model import chord_for, displayed_flows
+from app.companion.ui.view_model import chord_for, displayed_flows, settings_read_only
 from app.i18n import _
 
 SAVED_MESSAGE_MS = 4000
@@ -99,6 +98,12 @@ def _percent_slider(accessible_name: str) -> QSlider:
     return slider
 
 
+def _slider_volume(slider: QSlider, loaded: float) -> float:
+    """The slider's volume; the loaded value itself while the slider still shows it, so a
+    volume such as 0.333 does not count as edited just by opening the window."""
+    return loaded if slider.value() == round(loaded * 100) else slider.value() / 100
+
+
 def _secondary(label: QLabel) -> QLabel:
     label.setForegroundRole(QPalette.ColorRole.PlaceholderText)
     label.setWordWrap(True)
@@ -114,6 +119,7 @@ class _HotkeyRow:
     edit: HotkeyEdit
     status: QLabel
     token: object = field(default_factory=object)
+    result: HotkeyCheck | None = None  # the colored status shown (re-colored on palette changes)
 
 
 class HotkeysPage(QWidget):
@@ -179,8 +185,8 @@ class HotkeysPage(QWidget):
             status.setTextFormat(Qt.TextFormat.PlainText)
             row = _HotkeyRow(flow, edit, status)
             edit.chord_changed.connect(lambda _chord, current=row: self._on_chord_changed(current))
-            edit.capture_started.connect(lambda: self._shell.controller.suspend_hotkeys(True))
-            edit.capture_finished.connect(lambda: self._shell.controller.suspend_hotkeys(False))
+            edit.capture_started.connect(lambda: self._suspend_hotkeys(True))
+            edit.capture_finished.connect(lambda: self._suspend_hotkeys(False))
             self.grid.addWidget(label, index, 0)
             self.grid.addWidget(edit, index, 1)
             self.grid.addWidget(status, index, 2)
@@ -203,13 +209,23 @@ class HotkeysPage(QWidget):
         return {row.flow.name: row.edit.chord for row in self._rows}
 
     def collect(self, base: tuple[HotkeyBinding, ...]) -> tuple[HotkeyBinding, ...]:
-        """The edited bindings; flows not shown (not served by the engine) are kept as they are."""
+        """The edited bindings. A cleared shortcut drops its binding (no binding = no hotkey;
+        the core rejects empty chords); flows not shown here are kept as they are."""
         if self._engine_owned:
             return base
         edited = self.chords()
-        bindings = [HotkeyBinding(b.flow, edited.pop(b.flow)) if b.flow in edited else b for b in base]
-        bindings.extend(HotkeyBinding(flow, chord) for flow, chord in edited.items())
+        bindings: list[HotkeyBinding] = []
+        for binding in base:
+            chord = edited.pop(binding.flow, binding.chord)
+            if chord:
+                bindings.append(HotkeyBinding(binding.flow, chord))
+        bindings.extend(HotkeyBinding(flow, chord) for flow, chord in edited.items() if chord)
         return tuple(bindings)
+
+    def _suspend_hotkeys(self, suspended: bool) -> None:
+        # One serial worker: never block the GUI, and never resume before suspending.
+        controller = self._shell.controller
+        self._shell.bridge.run_serial(lambda: controller.suspend_hotkeys(suspended))
 
     def restore_defaults(self) -> None:
         defaults = {binding.flow: binding.chord for binding in CompanionSettings().hotkeys}
@@ -264,22 +280,28 @@ class HotkeysPage(QWidget):
         return {other.edit.chord for other in self._rows if other is not row}
 
     def _show_status(self, row: _HotkeyRow, result: HotkeyCheck) -> None:
-        text = texts.hotkey_check_labels()[result]
-        color = _status_color(self, result == "ok")
         if result == "engine_owned":
-            self._show_neutral(row, text)
+            self._show_neutral(row, texts.hotkey_check_labels()[result])
             return
-        row.status.setText(text)
-        row.status.setStyleSheet(f"color: {color};")
+        row.result = result
+        row.status.setText(texts.hotkey_check_labels()[result])
+        row.status.setStyleSheet(f"color: {_status_color(self, result == 'ok')};")
         row.status.setToolTip(texts.hotkey_rule() if result == "invalid" else "")
-        row.status.setAccessibleName(text)
 
     def _show_neutral(self, row: _HotkeyRow, text: str) -> None:
+        row.result = None
         row.status.setText(text)
         row.status.setStyleSheet("")
         row.status.setForegroundRole(QPalette.ColorRole.PlaceholderText)
         row.status.setToolTip("")
-        row.status.setAccessibleName(text)
+
+    def changeEvent(self, event: QEvent) -> None:
+        # Light/dark switch: the green/orange status colors are picked per palette.
+        if event.type() == QEvent.Type.PaletteChange:
+            for row in self._rows:
+                if row.result is not None:
+                    self._show_status(row, row.result)
+        super().changeEvent(event)
 
 
 # ---------------------------------------------------------------------- Sounds page
@@ -297,6 +319,7 @@ class _CueRow:
     volume: QSlider
     volume_label: QLabel
     preview: QToolButton
+    loaded_volume: float = 1.0  # as loaded: kept when the slider still shows it (no false edits)
 
 
 class SoundsPage(QWidget):
@@ -305,6 +328,7 @@ class SoundsPage(QWidget):
     def __init__(self, shell: Shell, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._shell = shell
+        self._loaded_master_volume = 0.0
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
@@ -395,6 +419,7 @@ class SoundsPage(QWidget):
     def load(self, settings: CompanionSettings) -> None:
         with QSignalBlocker(self):
             self.cues_enabled.setChecked(settings.cues_enabled)
+            self._loaded_master_volume = settings.master_volume
             self.master_volume.setValue(round(settings.master_volume * 100))
             self.master_volume_label.setText(f"{self.master_volume.value()}%")
             for cue, row in self.rows.items():
@@ -404,6 +429,7 @@ class SoundsPage(QWidget):
                 row.preset.setCurrentIndex(max(row.preset.findData(cue_settings.preset), 0))
                 row.file.setText(cue_settings.file)
                 row.file.setToolTip(cue_settings.file)
+                row.loaded_volume = cue_settings.volume
                 row.volume.setValue(round(cue_settings.volume * 100))
                 row.volume_label.setText(f"{row.volume.value()}%")
                 self._sync_row(row)
@@ -417,22 +443,27 @@ class SoundsPage(QWidget):
             source=source,
             preset=preset,
             file=row.file.text(),
-            volume=row.volume.value() / 100,
+            volume=_slider_volume(row.volume, row.loaded_volume),
         )
 
     def collect(self) -> tuple[bool, float, dict[CueName, CueSettings]]:
         cues = {cue: self.cue_settings(row) for cue, row in self.rows.items()}
-        return self.cues_enabled.isChecked(), self.master_volume.value() / 100, cues
+        master = _slider_volume(self.master_volume, self._loaded_master_volume)
+        return self.cues_enabled.isChecked(), master, cues
 
     def _sync_row(self, row: _CueRow) -> None:
         is_file = row.source.currentData() == "file"
         row.stack.setCurrentIndex(1 if is_file else 0)
-        on = row.enabled.isChecked()
+        master_on = self.cues_enabled.isChecked()
+        row.enabled.setEnabled(master_on)
+        on = master_on and row.enabled.isChecked()
         for widget in (row.source, row.stack, row.volume, row.volume_label):
             widget.setEnabled(on)
+        # Preview stays available: it plays even when muted or disabled (contract).
 
     def _on_master_toggled(self, enabled: bool) -> None:
-        self.cue_box.setEnabled(enabled)
+        for row in self.rows.values():
+            self._sync_row(row)
         self.changed.emit()
 
     def _choose_file(self, row: _CueRow) -> None:
@@ -445,9 +476,9 @@ class SoundsPage(QWidget):
 
     def _preview(self, row: _CueRow) -> None:
         settings = self.cue_settings(row)
-        master = self.master_volume.value() / 100
+        master = _slider_volume(self.master_volume, self._loaded_master_volume)
         controller = self._shell.controller
-        self._shell.bridge.run_async(lambda: controller.preview_cue(row.cue, settings, master), lambda _r: None)
+        self._shell.bridge.run_serial(lambda: controller.preview_cue(row.cue, settings, master))
 
 
 # ---------------------------------------------------------------------- General page
@@ -553,14 +584,13 @@ class GeneralPage(QWidget):
 
 
 class SettingsDialog(QDialog):
-    applied = Signal(object)  # CompanionSettings, after a successful apply
-
     def __init__(self, shell: Shell, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._shell = shell
         self._baseline = shell.settings()
         self._busy = False
         self._read_only = False
+        self._message_ok: bool | None = None  # the message's color: True ok, False problem, None plain
         self.setWindowTitle(_("VoiceMate Settings"))
         self.setWindowIcon(app_icon())
         self.setMinimumSize(620, 460)
@@ -572,7 +602,6 @@ class SettingsDialog(QDialog):
             _("These settings were saved by a newer version of VoiceMate. They are shown read-only.")
         )
         self.read_only_note.setWordWrap(True)
-        self.read_only_note.setStyleSheet(f"color: {_status_color(self, False)};")
         layout.addWidget(self.read_only_note)
         self.tabs = QTabWidget()
         self.hotkeys_page = HotkeysPage(shell)
@@ -587,11 +616,10 @@ class SettingsDialog(QDialog):
         self.message.setWordWrap(True)
         self.message.setTextFormat(Qt.TextFormat.RichText)
         self.message.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        self.message.setAccessibleName(_("Messages"))
         self.message.hide()
         layout.addWidget(self.message)
 
-        # Our own button texts: Qt's standard buttons would come from Qt's catalogs.
+        # Our own button texts (translated with the app's catalogs).
         self.buttons = QDialogButtonBox()
         self.ok_button = self.buttons.addButton(_("OK"), QDialogButtonBox.ButtonRole.AcceptRole)
         self.cancel_button = self.buttons.addButton(_("Cancel"), QDialogButtonBox.ButtonRole.RejectRole)
@@ -605,14 +633,16 @@ class SettingsDialog(QDialog):
         self._message_timer = QTimer(self)
         self._message_timer.setSingleShot(True)
         self._message_timer.timeout.connect(self.message.hide)
+        self._recolor()
         self.load()
 
     # ------------------------------------------------------------------ state
 
     def load(self) -> None:
-        """(Re)read the applied settings and the engine's flows into every page."""
+        """(Re)read the applied settings and the engine's flows into every page. These are
+        the baseline: Apply sends only what the user changed relative to them."""
         self._baseline = self._shell.controller.settings()
-        self._read_only = self._baseline.version > SETTINGS_VERSION
+        self._read_only = settings_read_only(self._baseline)
         self.read_only_note.setVisible(self._read_only)
         snapshot = self._shell.bridge.snapshot
         self.hotkeys_page.load(self._baseline, snapshot, self._read_only)
@@ -624,6 +654,7 @@ class SettingsDialog(QDialog):
         self._update_buttons()
 
     def collect(self) -> CompanionSettings:
+        """The baseline with every edit of this window applied."""
         cues_enabled, master_volume, cues = self.sounds_page.collect()
         edited = replace(
             self._baseline,
@@ -656,8 +687,8 @@ class SettingsDialog(QDialog):
         if self._busy:
             return
         self.hotkeys_page.cancel_capture()
-        settings = self.collect()
-        if settings == self._baseline:
+        edited, baseline = self.collect(), self._baseline
+        if edited == baseline:
             if close_after:
                 self.accept()
             return
@@ -665,36 +696,54 @@ class SettingsDialog(QDialog):
         self._update_buttons()
         self._show_message(_("Saving..."), None)
         controller = self._shell.controller
+
+        def work() -> list[str]:
+            # Only the user's edits, on top of the LIVE settings: the core may have changed
+            # others since this window opened (client_key, a detected engine_dir...).
+            return controller.apply_settings(rebase_settings(edited, baseline, controller.settings()))
+
         self._shell.bridge.run_async(
-            lambda: controller.apply_settings(settings),
-            lambda errors: self._applied(settings, errors, close_after),
-            lambda exc: self._applied(settings, [_("Unexpected error: {error}").format(error=exc)], False),
+            work,
+            lambda errors: self._applied(errors, close_after),
+            lambda exc: self._applied([_("Unexpected error: {error}").format(error=exc)], False),
         )
 
-    def _applied(self, settings: CompanionSettings, errors: list[str], close_after: bool) -> None:
+    def _applied(self, errors: list[str], close_after: bool) -> None:
         self._busy = False
         if errors:
             items = "".join(f"<li>{_escape(error)}</li>" for error in errors)
             header = _escape(_("The settings were not saved:"))
-            self._show_message(f"{header}<ul style='margin: 2px 0 0 -20px;'>{items}</ul>", _status_color(self, False))
+            self._show_message(f"{header}<ul style='margin: 2px 0 0 -20px;'>{items}</ul>", False)
             self._update_buttons()
+            if not self.isVisible():
+                self.present(reload=False)  # closed while saving: the errors must not get lost
             return
-        self._baseline = settings
-        self._shell.settings_applied(settings)
-        self.applied.emit(settings)
-        self._update_buttons()
+        self._shell.settings_changed()
         if close_after:
             self.message.hide()
             self.accept()
             return
-        self._show_message(_escape(_("Settings saved.")), _status_color(self, True))
+        self.load()  # the core normalizes what it saves (chords, "~/" in the folder...)
+        self._show_message(_escape(_("Settings saved.")), True)
         self._message_timer.start(SAVED_MESSAGE_MS)
 
-    def _show_message(self, html: str, color: str | None) -> None:
+    def _show_message(self, html: str, ok: bool | None) -> None:
         self._message_timer.stop()
-        self.message.setStyleSheet(f"color: {color};" if color else "")
+        self._message_ok = ok
+        self._recolor()
         self.message.setText(html)
         self.message.show()
+
+    def _recolor(self) -> None:
+        self.read_only_note.setStyleSheet(f"color: {_status_color(self, False)};")
+        ok = self._message_ok
+        self.message.setStyleSheet("" if ok is None else f"color: {_status_color(self, ok)};")
+
+    def changeEvent(self, event: QEvent) -> None:
+        # Light/dark switch: the message colors are picked per palette.
+        if event.type() == QEvent.Type.PaletteChange and hasattr(self, "message"):
+            self._recolor()
+        super().changeEvent(event)
 
     @property
     def error_text(self) -> str:
@@ -717,6 +766,47 @@ class SettingsDialog(QDialog):
         self.raise_()
         self.activateWindow()
         self.tabs.tabBar().setFocus(Qt.FocusReason.ActiveWindowFocusReason)
+
+
+def rebase_settings(
+    edited: CompanionSettings, baseline: CompanionSettings, current: CompanionSettings
+) -> CompanionSettings:
+    """The user's edits (`edited` vs `baseline`) applied on top of the live `current` settings.
+
+    Untouched fields come from `current`. Hotkeys merge per flow and cues per cue, so an
+    edit of one shortcut or one sound never resets another one changed meanwhile.
+    """
+    changes: dict[str, object] = {}
+    for item in fields(CompanionSettings):
+        mine, before = getattr(edited, item.name), getattr(baseline, item.name)
+        if mine == before:
+            continue
+        if item.name == "hotkeys":
+            changes[item.name] = _rebase_hotkeys(edited.hotkeys, baseline.hotkeys, current.hotkeys)
+        elif item.name == "cues":
+            merged = dict(current.cues)
+            merged.update({cue: value for cue, value in edited.cues.items() if baseline.cues.get(cue) != value})
+            changes[item.name] = merged
+        else:
+            changes[item.name] = mine
+    return replace(current, **changes)  # type: ignore[arg-type]
+
+
+def _rebase_hotkeys(
+    mine: tuple[HotkeyBinding, ...], before: tuple[HotkeyBinding, ...], live: tuple[HotkeyBinding, ...]
+) -> tuple[HotkeyBinding, ...]:
+    edited = {binding.flow: binding.chord for binding in mine}
+    original = {binding.flow: binding.chord for binding in before}
+    touched = {flow for flow in edited.keys() | original.keys() if edited.get(flow) != original.get(flow)}
+    result: list[HotkeyBinding] = []
+    for binding in live:
+        if binding.flow not in touched:
+            result.append(binding)
+        elif binding.flow in edited:  # a cleared shortcut (not in `edited`) drops its binding
+            result.append(HotkeyBinding(binding.flow, edited[binding.flow]))
+    present = {binding.flow for binding in result}
+    result.extend(binding for binding in mine if binding.flow in touched and binding.flow not in present)
+    return tuple(result)
 
 
 def _escape(text: str) -> str:

@@ -6,7 +6,7 @@ AppIndicator extension) it is the main window, and closing it quits VoiceMate.
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QCloseEvent, QColor, QFont, QKeyEvent, QPalette
 from PySide6.QtWidgets import (
     QFormLayout,
@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 
 from app.companion.contract import CompanionSnapshot, FlowEntry, Notification, RecentItem
 from app.companion.ui import texts
-from app.companion.ui.chords import chord_display
+from app.companion.ui.chords import display_chord
 from app.companion.ui.icons import app_icon, state_pixmap
 from app.companion.ui.shell import Shell
 from app.companion.ui.tray import result_label
@@ -51,18 +51,14 @@ class Banner(QFrame):
     def __init__(self, tone: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("banner")
-        self.setFrameShape(QFrame.Shape.StyledPanel)
-        self.setAutoFillBackground(True)
-        palette = self.palette()
-        base = palette.color(QPalette.ColorRole.Window)
+        # Translucent tint and border: they blend with whatever the window color is, so the
+        # banner keeps its contrast when the palette switches between light and dark.
         tint = QColor(tone)
-        mixed = QColor(
-            (base.red() * 3 + tint.red()) // 4,
-            (base.green() * 3 + tint.green()) // 4,
-            (base.blue() * 3 + tint.blue()) // 4,
+        rgb = f"{tint.red()}, {tint.green()}, {tint.blue()}"
+        self.setStyleSheet(
+            f"QFrame#banner {{ background-color: rgba({rgb}, 0.16); border: 1px solid rgba({rgb}, 0.6);"
+            " border-radius: 4px; }"
         )
-        palette.setColor(QPalette.ColorRole.Window, mixed)
-        self.setPalette(palette)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 8)
         self.label = QLabel()
@@ -84,7 +80,7 @@ class StatusWindow(QWidget):
         self._shell = shell
         self._snapshot = shell.bridge.snapshot
         self._flow_buttons: list[QPushButton] = []
-        self._flow_key: tuple[tuple[str, str, str, bool], ...] = ()
+        self._flow_key: tuple[tuple[str, str], ...] = ()
         self._results_key: tuple[object, ...] = (None,)
         self.setWindowTitle(texts.APP_NAME)
         self.setWindowIcon(app_icon())
@@ -112,7 +108,6 @@ class StatusWindow(QWidget):
         font.setWeight(QFont.Weight.DemiBold)
         self.status_label.setFont(font)
         self.status_label.setWordWrap(True)
-        self.status_label.setAccessibleName(_("Status"))
         self.detail_label = QLabel()
         self.detail_label.setWordWrap(True)
         self.detail_label.setForegroundRole(QPalette.ColorRole.PlaceholderText)
@@ -215,8 +210,7 @@ class StatusWindow(QWidget):
         self._snapshot = snapshot
         settings = self._shell.settings()
         state = snapshot.tray_state
-        glyph = self.palette().color(QPalette.ColorRole.WindowText)
-        self.state_icon.setPixmap(state_pixmap(state, glyph, HEADER_ICON_SIZE, self.devicePixelRatioF()))
+        self._render_icon()
         self.detail_label.setText(snapshot.detail)
         self.detail_label.setVisible(bool(snapshot.detail))
         self.outdated_banner.setVisible(snapshot.engine_outdated)
@@ -233,7 +227,6 @@ class StatusWindow(QWidget):
         self.audio_value.setText(texts.audio_labels()[snapshot.audio])
         self.mics_value.setText(texts.mic_count_label(snapshot.mic_count))
         self.restarts_value.setText(str(snapshot.restarts))
-        self.restart_button.setEnabled(snapshot.supervisor not in ("starting", "restarting"))
 
         recent = self._shell.controller.recent_results()
         pending = self._shell.controller.pending_results()
@@ -249,6 +242,17 @@ class StatusWindow(QWidget):
         self.pending_group.setVisible(bool(pending))
         self.refresh_time()
         self._ensure_fits()
+
+    def _render_icon(self) -> None:
+        glyph = self.palette().color(QPalette.ColorRole.WindowText)
+        pixmap = state_pixmap(self._snapshot.tray_state, glyph, HEADER_ICON_SIZE, self.devicePixelRatioF())
+        self.state_icon.setPixmap(pixmap)
+
+    def changeEvent(self, event: QEvent) -> None:
+        # Light/dark switch: the glyph follows the text color.
+        if event.type() == QEvent.Type.PaletteChange and hasattr(self, "state_icon"):
+            self._render_icon()
+        super().changeEvent(event)
 
     def _ensure_fits(self) -> None:
         """Grow (never shrink) to fit banners that just appeared. The layout's minimum size
@@ -267,24 +271,30 @@ class StatusWindow(QWidget):
         self.status_label.setText(texts.status_line(self._snapshot, chord))
 
     def _render_flow_buttons(self, snapshot: CompanionSnapshot, flows: tuple[FlowEntry, ...]) -> None:
+        """One button per flow. Rebuilt only when the flows change, otherwise relabeled in
+        place, so the focus stays on the button (Space starts, Space again stops)."""
+        key = tuple((flow.name, flow.kind) for flow in flows)
+        if key != self._flow_key:
+            self._flow_key = key
+            for button in self._flow_buttons:
+                self.actions_row.removeWidget(button)
+                button.deleteLater()
+            self._flow_buttons = []
+            for index, flow in enumerate(flows):
+                button = QPushButton()
+                button.clicked.connect(lambda _checked=False, name=flow.name: self._shell.controller.toggle(name))
+                self.actions_row.insertWidget(index, button)
+                self._flow_buttons.append(button)
+            # New buttons would come last in the tab order: put them before Cancel.
+            chain = [self.message_close, *self._flow_buttons, self.cancel_button]
+            for first, second in zip(chain, chain[1:], strict=False):
+                QWidget.setTabOrder(first, second)
         settings = self._shell.settings()
         recording = snapshot.tray_state in RECORDING_STATES
-        key = tuple((flow.name, flow.kind, chord_for(flow, snapshot, settings), recording) for flow in flows)
-        if key == self._flow_key:
-            return
-        self._flow_key = key
-        for button in self._flow_buttons:
-            self.actions_row.removeWidget(button)
-            button.deleteLater()
-        self._flow_buttons = []
-        for index, (flow, (_name, _kind, chord, _rec)) in enumerate(zip(flows, key, strict=True)):
-            title = texts.flow_stop_title(flow.kind) if recording else texts.flow_title(flow, flows)
-            button = QPushButton(title)
-            if chord:
-                button.setToolTip(chord_display(chord))
-            button.clicked.connect(lambda _checked=False, name=flow.name: self._shell.controller.toggle(name))
-            self.actions_row.insertWidget(index, button)
-            self._flow_buttons.append(button)
+        for flow, button in zip(flows, self._flow_buttons, strict=True):
+            button.setText(texts.flow_stop_title(flow.kind) if recording else texts.flow_title(flow, flows))
+            chord = chord_for(flow, snapshot, settings)
+            button.setToolTip(display_chord(chord) if chord else "")
 
     @property
     def flow_buttons(self) -> list[QPushButton]:
