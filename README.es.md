@@ -297,7 +297,7 @@ El companion es una pequeña app de escritorio (PySide6) que vive en la bandeja 
 
 ### Instalación en Windows
 
-**Con el instalador (recomendado).** Ejecuta `VoiceMate-Setup-<versión>.exe`. Instala solo para tu usuario (sin pedir administrador) en `%LOCALAPPDATA%\Programs\VoiceMate` y agrega VoiceMate al menú Inicio; un acceso directo en el escritorio e iniciar junto con Windows son opcionales. El instalador habla español, inglés y portugués. Para generarlo tú mismo (Python 3.12+ e Inno Setup 6.3+, `winget install JRSoftware.InnoSetup`):
+**Con el instalador (recomendado).** Ejecuta `VoiceMate-Setup-<versión>.exe`. Instala solo para tu usuario (sin pedir administrador) en `%LOCALAPPDATA%\Programs\VoiceMate` y agrega VoiceMate al menú Inicio; un acceso directo en el escritorio e iniciar junto con Windows son opcionales (la primera instalación ofrece lo segundo; después lo controla **Iniciar VoiceMate al iniciar sesión**, en la Configuración). El instalador habla español, inglés y portugués. Para generarlo tú mismo (Python 3.12+ e Inno Setup 6.3+, `winget install JRSoftware.InnoSetup`):
 
 ```powershell
 make companion-venv        # una vez: .venv-companion con PySide6 y PyInstaller en las versiones fijadas
@@ -311,19 +311,25 @@ make companion-venv   # una vez
 make run-tray
 ```
 
-En ambos casos el motor sigue en WSL2 (instálalo como en [docs/wsl2.md](docs/wsl2.md)): el companion lo inicia por ti, o se conecta a uno que ya esté en ejecución (por ejemplo el servicio de systemd). Si el script antiguo de atajos sigue en ejecución, ciérralo y quita su acceso directo de `shell:startup`: ahora quien registra `Ctrl+Alt+V` y `Ctrl+Alt+A` es el companion.
+En ambos casos el motor sigue en WSL2 (instálalo como en [docs/wsl2.md](docs/wsl2.md)): el companion lo inicia por ti, o se conecta a uno que ya esté en ejecución (por ejemplo el servicio de systemd). Si uno de los scripts antiguos de atajos (PowerShell o AutoHotkey) sigue en ejecución, ciérralo y quita su acceso directo de `shell:startup`: ahora quien registra `Ctrl+Alt+V` y `Ctrl+Alt+A` es el companion.
 
 ### Anclar a la barra de tareas
 
-Windows no permite que los instaladores anclen aplicaciones. Abre Inicio, busca VoiceMate, haz clic derecho sobre él y elige **Anclar a la barra de tareas**. Hacer clic en el icono anclado con VoiceMate en ejecución abre la ventana de estado; el clic derecho ofrece Configuración, Reiniciar motor, Reiniciar WSL y Salir. Anclar usa el acceso directo del menú Inicio, así que aplica a la app instalada.
+Windows no permite que los instaladores anclen aplicaciones. Abre Inicio, busca VoiceMate, haz clic derecho sobre él y elige **Anclar a la barra de tareas**. Hacer clic en el icono anclado con VoiceMate en ejecución abre la ventana de estado; el clic derecho ofrece **Configuración**, **Reiniciar el motor**, **Reiniciar WSL** y **Salir de VoiceMate**. Anclar usa el acceso directo del menú Inicio, así que aplica a la app instalada.
 
 ### Salir
 
-Menú del icono de la bandeja > **Salir de VoiceMate** (también es un botón en la ventana de estado y una opción del menú de clic derecho del icono anclado). Salir detiene el motor que inició el companion; un motor al que solo se conectó (por ejemplo el servicio de systemd) sigue en ejecución. Desde una terminal: `VoiceMate.exe --command quit`.
+Menú del icono de la bandeja > **Salir de VoiceMate** (también es un botón en la ventana de estado y una opción del menú de clic derecho del icono anclado). Salir detiene el motor que inició el companion; un motor al que solo se conectó (por ejemplo el servicio de systemd) sigue en ejecución. Desde una terminal, para la app instalada (PowerShell):
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\VoiceMate\VoiceMate.exe" --command quit
+```
+
+Desde el código fuente: `make run-tray ARGS="--command quit"`. Un `--command` nunca inicia VoiceMate: si no está en ejecución, no pasa nada.
 
 ### Configuración
 
-Menú del icono de la bandeja > **Configuración...**: atajos, sonidos de aviso (presets o tus propios archivos WAV, volumen), distro de WSL y carpeta del motor, qué hacer cuando el audio de WSL se bloquea (reiniciar WSL automáticamente, preguntar antes o nunca), notificaciones, idioma e iniciar junto con Windows. Se guarda en `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) y se conserva al desinstalar. Los logs están en `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); menú del icono de la bandeja > **Motor > Abrir logs** abre la carpeta.
+Menú del icono de la bandeja > **Configuración...**, en tres pestañas: **Atajos**; **Sonidos** (sonidos integrados o tus propios archivos WAV, volumen); **General**: idioma, notificaciones, **Iniciar VoiceMate al iniciar sesión** y el motor (modo, distro de WSL, carpeta del motor y **Reiniciar WSL si falla el audio**: **Automáticamente**, **Preguntar antes** o **Nunca**). La configuración se guarda en `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) y se conserva al desinstalar. Los logs están en `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); menú del icono de la bandeja > **Motor** > **Abrir registros** abre la carpeta.
 
 ### Linux (opcional)
 
@@ -334,10 +340,11 @@ poetry install --extras ui
 make run-tray
 ```
 
-En Linux el motor mantiene sus propios atajos (la Configuración los muestra solo para lectura). Sin bandeja del sistema (por ejemplo GNOME sin la extensión AppIndicator), la ventana de estado es la ventana principal. Para agregar VoiceMate al menú de aplicaciones:
+En Linux el motor mantiene sus propios atajos (la pestaña **Atajos** los muestra solo para lectura). Sin bandeja del sistema (por ejemplo GNOME sin la extensión AppIndicator), la ventana de estado es la ventana principal. Para agregar VoiceMate al menú de aplicaciones:
 
 ```bash
-sed "s|@VOICEMATE_DIR@|$PWD|g" packaging/linux/voicemate-companion.desktop \
+mkdir -p ~/.local/share/applications &&
+  sed "s|@VOICEMATE_DIR@|$PWD|g" packaging/linux/voicemate-companion.desktop \
   > ~/.local/share/applications/voicemate-companion.desktop
 ```
 
@@ -345,12 +352,12 @@ sed "s|@VOICEMATE_DIR@|$PWD|g" packaging/linux/voicemate-companion.desktop \
 
 | Síntoma | Solución |
 | ------- | -------- |
-| "Iniciando el motor..." durante mucho tiempo | La primera carga del modelo tarda de 10 a 60 s. Revisa el `engine.log` (**Motor > Abrir logs**) y la distro de WSL y la carpeta del motor en la Configuración |
-| Un atajo aparece como ocupado en la primera ejecución | El script antiguo de PowerShell/AutoHotkey sigue en ejecución: ciérralo y quítalo de `shell:startup` |
-| "El audio de WSL está caído" o "Sin micrófono" | Conecta un micrófono. WSL se reinicia automáticamente, o después de preguntar, según la Configuración; a mano: **Motor > Reiniciar WSL** |
-| El companion dice que el motor está desactualizado | El motor en WSL es más antiguo que el companion: actualiza ese checkout (`git pull`) y reinicia el motor |
-| Una transcripción no se copió | Queda en **Pendientes** en el menú de la bandeja: haz clic para copiarla |
-| SmartScreen advierte sobre el instalador | El instalador no tiene firma de código: **Más información > Ejecutar de todas formas** |
+| "Iniciando el motor..." durante mucho tiempo | La primera carga del modelo tarda de 10 a 60 s. Revisa el `engine.log` (**Motor** > **Abrir registros**) y la distro de WSL y la carpeta del motor en la Configuración |
+| Un atajo muestra "En uso por otra app" en la primera ejecución | Un script antiguo de atajos (PowerShell o AutoHotkey) sigue en ejecución: ciérralo y quítalo de `shell:startup` |
+| "El audio de WSL se detuvo" o "Sin micrófono" | Conecta un micrófono. WSL se reinicia según **Reiniciar WSL si falla el audio**; a mano: **Motor** > **Reiniciar WSL** |
+| "El motor es más antiguo que esta app. Reinícialo o actualízalo." | Actualiza el checkout en WSL (`git pull`) y usa **Reiniciar el motor** |
+| Una transcripción no se copió | Queda en **No copiadas**, en el menú de la bandeja (haz clic para copiarla) y en la ventana de estado (**Copiar**) |
+| SmartScreen advierte sobre el instalador | El instalador no tiene firma de código: **Más información** > **Ejecutar de todas formas** |
 
 ## Makefile
 

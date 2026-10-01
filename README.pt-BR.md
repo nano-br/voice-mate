@@ -331,7 +331,7 @@ O companion é um pequeno app de desktop (PySide6) que fica na bandeja do sistem
 
 ### Instalação no Windows
 
-**Com o instalador (recomendado).** Rode o `VoiceMate-Setup-<versão>.exe`. Ele instala só para o seu usuário (sem pedir administrador) em `%LOCALAPPDATA%\Programs\VoiceMate` e adiciona o VoiceMate ao menu Iniciar; um atalho na área de trabalho e iniciar junto com o Windows são opcionais. O instalador fala português, inglês e espanhol. Para gerá-lo você mesmo (Python 3.12+ e Inno Setup 6.3+, `winget install JRSoftware.InnoSetup`):
+**Com o instalador (recomendado).** Rode o `VoiceMate-Setup-<versão>.exe`. Ele instala só para o seu usuário (sem pedir administrador) em `%LOCALAPPDATA%\Programs\VoiceMate` e adiciona o VoiceMate ao menu Iniciar; um atalho na área de trabalho e iniciar junto com o Windows são opcionais (a primeira instalação oferece a segunda opção; depois quem controla é **Iniciar o VoiceMate ao fazer login**, nas Configurações). O instalador fala português, inglês e espanhol. Para gerá-lo você mesmo (Python 3.12+ e Inno Setup 6.3+, `winget install JRSoftware.InnoSetup`):
 
 ```powershell
 make companion-venv        # uma vez: .venv-companion com PySide6 e PyInstaller nas versões fixadas
@@ -345,19 +345,25 @@ make companion-venv   # uma vez
 make run-tray
 ```
 
-Nos dois casos o motor continua no WSL2 (instale como em [docs/wsl2.md](docs/wsl2.md)): o companion o inicia para você, ou se conecta a um que já esteja rodando (por exemplo o serviço do systemd). Se o script antigo de hotkeys ainda estiver rodando, feche-o e remova o atalho dele do `shell:startup`: agora quem registra `Ctrl+Alt+V` e `Ctrl+Alt+A` é o companion.
+Nos dois casos o motor continua no WSL2 (instale como em [docs/wsl2.md](docs/wsl2.md)): o companion o inicia para você, ou se conecta a um que já esteja rodando (por exemplo o serviço do systemd). Se um dos scripts antigos de hotkeys (PowerShell ou AutoHotkey) ainda estiver rodando, feche-o e remova o atalho dele do `shell:startup`: agora quem registra `Ctrl+Alt+V` e `Ctrl+Alt+A` é o companion.
 
 ### Fixar na barra de tarefas
 
-O Windows não deixa instaladores fixarem apps. Abra o Iniciar, pesquise VoiceMate, clique nele com o botão direito e escolha **Fixar na barra de tarefas**. Clicar no ícone fixado com o VoiceMate rodando abre a janela de status; o botão direito oferece Configurações, Reiniciar motor, Reiniciar WSL e Sair. Fixar usa o atalho do menu Iniciar, então vale para o app instalado.
+O Windows não deixa instaladores fixarem apps. Abra o Iniciar, pesquise VoiceMate, clique nele com o botão direito e escolha **Fixar na barra de tarefas**. Clicar no ícone fixado com o VoiceMate rodando abre a janela de status; o botão direito oferece **Configurações**, **Reiniciar o motor**, **Reiniciar o WSL** e **Sair do VoiceMate**. Fixar usa o atalho do menu Iniciar, então vale para o app instalado.
 
 ### Sair
 
-Menu do ícone na bandeja > **Sair do VoiceMate** (também é um botão na janela de status e um item do menu de botão direito do ícone fixado). Sair encerra o motor que o companion iniciou; um motor ao qual ele só se conectou (por exemplo o serviço do systemd) continua rodando. Pelo terminal: `VoiceMate.exe --command quit`.
+Menu do ícone na bandeja > **Sair do VoiceMate** (também é um botão na janela de status e um item do menu de botão direito do ícone fixado). Sair encerra o motor que o companion iniciou; um motor ao qual ele só se conectou (por exemplo o serviço do systemd) continua rodando. Pelo terminal, para o app instalado (PowerShell):
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\VoiceMate\VoiceMate.exe" --command quit
+```
+
+Pelo código-fonte: `make run-tray ARGS="--command quit"`. Um `--command` nunca inicia o VoiceMate: se ele não estiver rodando, nada acontece.
 
 ### Configurações
 
-Menu do ícone na bandeja > **Configurações...**: hotkeys, sons de aviso (presets ou seus próprios arquivos WAV, volume), distro do WSL e pasta do motor, o que fazer quando o áudio do WSL trava (reiniciar o WSL sozinho, perguntar antes ou nunca), notificações, idioma e iniciar junto com o Windows. Ficam salvas em `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) e sobrevivem a uma desinstalação. Os logs ficam em `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); menu do ícone na bandeja > **Motor > Abrir logs** abre a pasta.
+Menu do ícone na bandeja > **Configurações...**, em três abas: **Atalhos**; **Sons** (sons embutidos ou seus próprios arquivos WAV, volume); **Geral**: idioma, notificações, **Iniciar o VoiceMate ao fazer login** e o motor (modo, distro do WSL, pasta do motor e **Reiniciar o WSL se o áudio falhar**: **Automaticamente**, **Perguntar antes** ou **Nunca**). As configurações ficam salvas em `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) e sobrevivem a uma desinstalação. Os logs ficam em `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); menu do ícone na bandeja > **Motor** > **Abrir logs** abre a pasta.
 
 ### Linux (opcional)
 
@@ -368,10 +374,11 @@ poetry install --extras ui
 make run-tray
 ```
 
-No Linux o motor mantém as próprias hotkeys (as Configurações as mostram só para leitura). Sem bandeja do sistema (por exemplo GNOME sem a extensão AppIndicator), a janela de status vira a janela principal. Para colocar o VoiceMate no menu de aplicativos:
+No Linux o motor mantém as próprias hotkeys (a aba **Atalhos** as mostra só para leitura). Sem bandeja do sistema (por exemplo GNOME sem a extensão AppIndicator), a janela de status vira a janela principal. Para colocar o VoiceMate no menu de aplicativos:
 
 ```bash
-sed "s|@VOICEMATE_DIR@|$PWD|g" packaging/linux/voicemate-companion.desktop \
+mkdir -p ~/.local/share/applications &&
+  sed "s|@VOICEMATE_DIR@|$PWD|g" packaging/linux/voicemate-companion.desktop \
   > ~/.local/share/applications/voicemate-companion.desktop
 ```
 
@@ -379,12 +386,12 @@ sed "s|@VOICEMATE_DIR@|$PWD|g" packaging/linux/voicemate-companion.desktop \
 
 | Sintoma | Correção |
 | ------- | -------- |
-| "Iniciando o motor..." por muito tempo | A primeira carga do modelo leva de 10 a 60 s. Veja o `engine.log` (**Motor > Abrir logs**) e a distro do WSL e a pasta do motor nas Configurações |
-| Uma hotkey aparece como ocupada na primeira execução | O script antigo PowerShell/AutoHotkey ainda está rodando: feche-o e remova-o do `shell:startup` |
-| "Áudio do WSL travado" ou "Sem microfone" | Conecte um microfone. O WSL é reiniciado sozinho, ou depois de perguntar, conforme as Configurações; à mão: **Motor > Reiniciar WSL** |
-| O companion diz que o motor está desatualizado | O motor no WSL é mais antigo que o companion: atualize aquele checkout (`git pull`) e reinicie o motor |
-| Uma transcrição não foi copiada | Ela fica em **Pendentes** no menu da bandeja: clique para copiar |
-| O SmartScreen alerta sobre o instalador | O instalador não tem assinatura de código: **Mais informações > Executar assim mesmo** |
+| "Iniciando o motor..." por muito tempo | A primeira carga do modelo leva de 10 a 60 s. Veja o `engine.log` (**Motor** > **Abrir logs**) e a distro do WSL e a pasta do motor nas Configurações |
+| Uma hotkey mostra "Em uso por outro app" na primeira execução | Um script antigo de hotkeys (PowerShell ou AutoHotkey) ainda está rodando: feche-o e remova-o do `shell:startup` |
+| "O áudio do WSL parou" ou "Sem microfone" | Conecte um microfone. O WSL é reiniciado conforme **Reiniciar o WSL se o áudio falhar**; à mão: **Motor** > **Reiniciar o WSL** |
+| "O motor é mais antigo que este app. Reinicie ou atualize o motor." | Atualize o checkout no WSL (`git pull`) e use **Reiniciar o motor** |
+| Uma transcrição não foi copiada | Ela fica em **Não copiadas**, no menu da bandeja (clique para copiar) e na janela de status (**Copiar**) |
+| O SmartScreen alerta sobre o instalador | O instalador não tem assinatura de código: **Mais informações** > **Executar assim mesmo** |
 
 ## Makefile
 

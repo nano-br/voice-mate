@@ -297,7 +297,7 @@ The companion is a small desktop app (PySide6) that lives in the system tray. It
 
 ### Install on Windows
 
-**With the installer (recommended).** Run `VoiceMate-Setup-<version>.exe`. It installs for your user only (no administrator prompt) into `%LOCALAPPDATA%\Programs\VoiceMate` and adds VoiceMate to the Start menu; a desktop shortcut and starting at sign-in are optional. The installer speaks English, Portuguese and Spanish. To build it yourself (Python 3.12+ and Inno Setup 6.3+, `winget install JRSoftware.InnoSetup`):
+**With the installer (recommended).** Run `VoiceMate-Setup-<version>.exe`. It installs for your user only (no administrator prompt) into `%LOCALAPPDATA%\Programs\VoiceMate` and adds VoiceMate to the Start menu; a desktop shortcut and starting at sign-in are optional (the first install offers the latter, then **Start VoiceMate when I sign in** in Settings controls it). The installer speaks English, Portuguese and Spanish. To build it yourself (Python 3.12+ and Inno Setup 6.3+, `winget install JRSoftware.InnoSetup`):
 
 ```powershell
 make companion-venv        # once: .venv-companion with the pinned PySide6 and PyInstaller
@@ -311,19 +311,25 @@ make companion-venv   # once
 make run-tray
 ```
 
-Either way the engine still lives in WSL2 (install it as in [docs/wsl2.md](docs/wsl2.md)): the companion starts it for you, or attaches to one that is already running (for example the systemd service). If the old hotkey script is still running, close it and remove its shortcut from `shell:startup`: the companion now owns `Ctrl+Alt+V` and `Ctrl+Alt+A`.
+Either way the engine still lives in WSL2 (install it as in [docs/wsl2.md](docs/wsl2.md)): the companion starts it for you, or attaches to one that is already running (for example the systemd service). If one of the old hotkey scripts (PowerShell or AutoHotkey) is still running, close it and remove its shortcut from `shell:startup`: the companion now owns `Ctrl+Alt+V` and `Ctrl+Alt+A`.
 
 ### Pin to the taskbar
 
-Windows does not let installers pin apps. Open Start, search for VoiceMate, right-click it and choose **Pin to taskbar**. Clicking the pinned icon while VoiceMate runs opens its status window; right-clicking it offers Settings, Restart engine, Restart WSL and Quit. Pinning uses the Start menu shortcut, so it applies to the installed app.
+Windows does not let installers pin apps. Open Start, search for VoiceMate, right-click it and choose **Pin to taskbar**. Clicking the pinned icon while VoiceMate runs opens its status window; right-clicking it offers **Settings**, **Restart engine**, **Restart WSL** and **Quit VoiceMate**. Pinning uses the Start menu shortcut, so it applies to the installed app.
 
 ### Quit
 
-Tray icon menu > **Quit VoiceMate** (also a button in the status window and an entry in the pinned icon's right-click menu). Quitting stops the engine the companion started; an engine it only attached to (for example the systemd service) keeps running. From a terminal: `VoiceMate.exe --command quit`.
+Tray icon menu > **Quit VoiceMate** (also a button in the status window and an entry in the pinned icon's right-click menu). Quitting stops the engine the companion started; an engine it only attached to (for example the systemd service) keeps running. From a terminal, for the installed app (PowerShell):
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\VoiceMate\VoiceMate.exe" --command quit
+```
+
+From source: `make run-tray ARGS="--command quit"`. A `--command` never starts VoiceMate: when it is not running, nothing happens.
 
 ### Settings
 
-Tray icon menu > **Settings...**: hotkeys, sound cues (presets or your own WAV files, volume), WSL distro and engine folder, what to do when WSL audio gets stuck (restart WSL automatically, ask first, or never), notifications, language and starting at sign-in. They are saved in `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) and survive an uninstall. Logs live in `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); tray icon menu > **Engine > Open logs** opens them.
+Tray icon menu > **Settings...**, in three tabs: **Hotkeys**; **Sounds** (built-in sounds or your own WAV files, volume); **General**: language, notifications, **Start VoiceMate when I sign in** and the engine (mode, WSL distro, engine folder, and **Restart WSL when audio fails**: **Automatically**, **Ask first** or **Never**). The settings are saved in `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) and survive an uninstall. Logs live in `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); tray icon menu > **Engine** > **Open logs** opens them.
 
 ### Linux (optional)
 
@@ -334,10 +340,11 @@ poetry install --extras ui
 make run-tray
 ```
 
-On Linux the engine keeps its own hotkeys (Settings shows them read-only). Without a system tray (for example GNOME without the AppIndicator extension) the status window is the main window. To add VoiceMate to the applications menu:
+On Linux the engine keeps its own hotkeys (the **Hotkeys** tab shows them read-only). Without a system tray (for example GNOME without the AppIndicator extension) the status window is the main window. To add VoiceMate to the applications menu:
 
 ```bash
-sed "s|@VOICEMATE_DIR@|$PWD|g" packaging/linux/voicemate-companion.desktop \
+mkdir -p ~/.local/share/applications &&
+  sed "s|@VOICEMATE_DIR@|$PWD|g" packaging/linux/voicemate-companion.desktop \
   > ~/.local/share/applications/voicemate-companion.desktop
 ```
 
@@ -345,12 +352,12 @@ sed "s|@VOICEMATE_DIR@|$PWD|g" packaging/linux/voicemate-companion.desktop \
 
 | Symptom | Fix |
 | ------- | --- |
-| "Starting engine..." for a long time | The first model load takes 10 to 60 s. Check `engine.log` (**Engine > Open logs**) and the WSL distro and engine folder in Settings |
-| A hotkey is reported as taken on first run | The old PowerShell/AutoHotkey script is still running: close it and remove it from `shell:startup` |
-| "WSL audio is down" or "No microphone" | Connect a microphone. WSL is restarted automatically, or after asking, as set in Settings; by hand: **Engine > Restart WSL** |
-| The companion says the engine is outdated | The engine in WSL is older than the companion: update that checkout (`git pull`) and restart the engine |
-| A transcription was not copied | It stays under **Pending** in the tray menu: click it to copy |
-| SmartScreen warns about the installer | The installer is not code-signed: **More info > Run anyway** |
+| "Starting engine..." for a long time | The first model load takes 10 to 60 s. Check `engine.log` (**Engine** > **Open logs**) and the WSL distro and engine folder in Settings |
+| A hotkey shows "Used by another app" on first run | An old hotkey script (PowerShell or AutoHotkey) is still running: close it and remove it from `shell:startup` |
+| "WSL audio stopped" or "No microphone" | Connect a microphone. WSL is restarted as set in **Restart WSL when audio fails**; by hand: **Engine** > **Restart WSL** |
+| "The engine is older than this app. Restart or update it." | Update the checkout in WSL (`git pull`), then **Restart engine** |
+| A transcription was not copied | It stays under **Not copied**, in the tray menu (click it to copy) and in the status window (**Copy**) |
+| SmartScreen warns about the installer | The installer is not code-signed: **More info** > **Run anyway** |
 
 ## Makefile
 
