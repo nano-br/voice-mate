@@ -230,7 +230,10 @@ class CompanionController(Protocol):
     def suspend_hotkeys(self, suspended: bool) -> None:
         """Release the global hotkeys while the UI captures a new chord."""
 
-    def preview_cue(self, cue: CueName, settings: CueSettings) -> None: ...
+    def preview_cue(self, cue: CueName, settings: CueSettings, master_volume: float) -> None:
+        """Play `cue` once with these (possibly unsaved) settings at `master_volume` x
+        `settings.volume`, also when cues are muted or this cue is disabled: the settings
+        window previews what the user is editing, before it is applied."""
 
     def recent_results(self) -> list[RecentItem]:
         """Cached (no I/O): the last 10 delivered/seen results, newest first."""
