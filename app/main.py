@@ -5,6 +5,9 @@ import traceback
 from argparse import Namespace
 from dataclasses import dataclass
 
+import numpy as np
+from numpy.typing import NDArray
+
 from app.cli.args import parse_args
 from app.cli.config_builder import build_config, delete_existing_auto_seed
 from app.cli.wiring import build_handlers, build_listener, build_speaker, build_transcriber
@@ -33,17 +36,44 @@ from app.protocol.models import FlowInfo, ShutdownReason
 from app.setup.persisted_config import load_persisted
 
 
-def _start_warmup_thread(transcriber: object, speaker: TextToSpeech) -> None:
-    """Warm up STT and TTS in ONE thread, sequentially (avoids GPU contention)."""
+def _start_warmup_thread(transcriber: object, speaker: TextToSpeech) -> threading.Event:
+    """Warm up STT and TTS in ONE thread, sequentially (avoids GPU contention).
+
+    Returns an event set once the STT warmup is over (successful or not).
+    """
+    stt_warm = threading.Event()
 
     def _warmup_all() -> None:
-        stt_warmup = getattr(transcriber, "warmup", None)
-        if callable(stt_warmup):
-            stt_warmup()
+        try:
+            stt_warmup = getattr(transcriber, "warmup", None)
+            if callable(stt_warmup):
+                stt_warmup()
+        finally:
+            stt_warm.set()
         if speaker.is_active():
             speaker.warmup()
 
     threading.Thread(target=_warmup_all, daemon=True, name="Warmup").start()
+    return stt_warm
+
+
+class _AfterWarmup:
+    """Transcriber whose calls wait for the background STT warmup to finish.
+
+    The backends are not thread-safe: with the API answering as soon as the model
+    is loaded, a trigger right after `ready` made the first transcription race the
+    warmup on the same model (openai-whisper on ROCm failed one or the other). The
+    recording itself is never delayed, only the transcription.
+    """
+
+    def __init__(self, inner: TranscriptionBackend, warm: threading.Event, timeout: float = 300.0) -> None:
+        self._inner = inner
+        self._warm = warm
+        self._timeout = timeout
+
+    def transcribe(self, audio: NDArray[np.float32]) -> str:
+        self._warm.wait(self._timeout)
+        return self._inner.transcribe(audio)
 
 
 def _configure_audio_env(platform: PlatformKind) -> None:
@@ -136,7 +166,7 @@ def _build_engine(args: Namespace, config: Config, flows: list[FlowConfig], stat
     # pay for ROCm kernel tuning at startup. Running them at the same time stalls
     # the GPU (the 1st transcription once took 45s vs ~3s in isolation) and the
     # thrash glitches WSLg audio. In sequence each one runs fast.
-    _start_warmup_thread(transcriber, speaker)
+    stt_warm = _start_warmup_thread(transcriber, speaker)
 
     # The handlers publish every result to the session hub (`status`): on WSL2 the
     # Windows side reads it there and sets the native clipboard itself.
@@ -151,7 +181,7 @@ def _build_engine(args: Namespace, config: Config, flows: list[FlowConfig], stat
     default_handler_id = "clipboard" if "clipboard" in handlers else flows[0].name
     session = RecordingSession(
         recorder=recorder,
-        transcriber=transcriber,
+        transcriber=_AfterWarmup(transcriber, stt_warm),
         audio=audio_feedback,
         config=config,
         handlers=handlers,
