@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import re
+import sys
 import unicodedata
 from collections import Counter
 from collections.abc import Callable, Iterator
 from pathlib import Path
+from typing import Literal
 
 import pytest
 from babel.messages.catalog import Catalog
@@ -14,7 +16,7 @@ from babel.messages.mofile import write_mo
 from babel.messages.pofile import read_po
 
 import app.i18n as i18n_module
-from app.i18n import _, active_language, setup_locale
+from app.i18n import _, active_language, set_language, setup_locale
 
 _SOURCE_LOCALES_DIR = Path(i18n_module.__file__).parent / "locales"
 _DOMAIN = "voicemate"
@@ -187,6 +189,57 @@ def test_reported_language_matches_the_text_actually_shown(monkeypatch: pytest.M
         setup_locale("pt-BR")
         shown = (active_language(), _("[VoiceMate] 🤖 Calling Claude..."))
         assert shown == (expected_lang, expected_text), requested
+
+
+@pytest.mark.parametrize(
+    ("language", "expected_lang", "expected_text"),
+    [
+        ("pt-BR", "pt_BR", "[VoiceMate] 🤖 Chamando Claude..."),
+        ("es", "es", "[VoiceMate] 🤖 Llamando a Claude..."),
+        ("en", "en", "[VoiceMate] 🤖 Calling Claude..."),
+    ],
+)
+def test_set_language_loads_the_companion_language_and_ignores_the_env_var(
+    monkeypatch: pytest.MonkeyPatch, language: Literal["pt-BR", "en", "es"], expected_lang: str, expected_text: str
+) -> None:
+    """The companion has its own `language` setting: VOICEMATE_LANG configures the engine."""
+    monkeypatch.setenv("VOICEMATE_LANG", "es" if language != "es" else "pt-BR")
+    set_language(language)
+    assert (active_language(), _("[VoiceMate] 🤖 Calling Claude...")) == (expected_lang, expected_text)
+
+
+@pytest.mark.parametrize(
+    ("os_language", "expected_lang"),
+    [
+        ("pt_BR", "pt_BR"),
+        ("pt_PT", "pt_BR"),  # any Portuguese reads pt_BR better than English
+        ("es_MX", "es"),
+        ("en_US", "en"),
+        ("fr_FR", "en"),  # no catalog: English msgids, never the pt-BR engine default
+        (None, "en"),
+    ],
+)
+def test_set_language_auto_follows_the_os_ui_language(
+    monkeypatch: pytest.MonkeyPatch, os_language: str | None, expected_lang: str
+) -> None:
+    monkeypatch.setenv("VOICEMATE_LANG", "pt-BR")
+    monkeypatch.setattr(i18n_module, "_os_ui_language", lambda: os_language)
+    set_language("auto")
+    assert active_language() == expected_lang
+
+
+def test_os_ui_language_reads_the_posix_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    if sys.platform == "win32":
+        pytest.skip("Windows reads GetUserDefaultUILanguage, not the environment")
+    for variable in ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"):
+        monkeypatch.delenv(variable, raising=False)
+    monkeypatch.setenv("LANG", "es_MX.UTF-8")
+    assert i18n_module._os_ui_language() == "es_MX"
+    monkeypatch.setenv("LANGUAGE", "pt_BR:en")
+    assert i18n_module._os_ui_language() == "pt_BR"
+    monkeypatch.setenv("LANGUAGE", "")
+    monkeypatch.setenv("LC_ALL", "C")
+    assert i18n_module._os_ui_language() == "es_MX"
 
 
 def test_setup_locale_with_unknown_lang_does_not_raise(monkeypatch: pytest.MonkeyPatch) -> None:
