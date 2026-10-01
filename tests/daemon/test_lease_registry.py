@@ -158,3 +158,18 @@ def test_registry_forgets_the_oldest_idle_clients_beyond_its_bound() -> None:
     assert reg.is_known(holder.client_id)  # a lease holder is never evicted
     assert not reg.is_known("c2")
     assert reg.is_known("c5")
+
+
+def test_eviction_never_drops_a_client_with_a_poll_in_flight() -> None:
+    clock = Clock()
+    ids = (f"c{n}" for n in itertools.count(1))
+    reg = LeaseRegistry(clock=clock, id_factory=lambda: next(ids), max_clients=2)
+    poller = reg.register()  # the oldest client, no lease, but blocked in a long poll
+    assert reg.begin_poll(poller.client_id)
+    assert reg.polling(poller.client_id)
+    for _n in range(3):
+        clock.now += 1
+        reg.register()
+    assert reg.is_known(poller.client_id)
+    reg.end_poll(poller.client_id)
+    assert not reg.polling(poller.client_id)

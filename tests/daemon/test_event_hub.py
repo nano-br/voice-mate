@@ -261,3 +261,37 @@ def test_errors_and_warnings_carry_code_detail_message_and_op() -> None:
         "PortAudio -9996",
     )
     assert (warning["type"], _data(warning)["code"], _data(warning)["op_seq"]) == ("warning", "no_speech", 7)
+
+
+def test_nothing_is_appended_after_the_shutdown_event() -> None:
+    """Clients consider the instance gone after `shutdown`: later work (a handler still
+    finishing) is not journaled, and the daemon writes and beeps for itself again."""
+    hub = EventHub()
+    cid, cursor = _register(hub, "clipboard", "cues")
+    hub.publish_shutdown("user_quit")
+    after = hub.cursor
+    hub.set_state(1, "recording", flow="clipboard", flow_kind="clipboard", client_id=None)
+    hub.publish_health("down")
+    assert hub.publish_result("late", op_seq=1, kind="transcript", flow=None, final=True) == Publication(
+        True, True, True
+    )
+    assert hub.publish_error("transcription_failed", detail="", message="", op_seq=1).play_cue is True
+    assert hub.cursor == after
+    assert hub.state()["state"] == "recording"  # the state itself still follows the engine
+    assert hub.audio == "down"
+    assert [e["type"] for e in _poll(hub, cid, cursor)["events"]] == ["shutdown"]
+
+
+def test_polling_reports_a_long_poll_in_flight() -> None:
+    hub = EventHub()
+    cid, cursor = _register(hub)
+    assert hub.polling(cid) is False
+    thread = threading.Thread(target=lambda: _poll(hub, cid, cursor, wait=5.0))
+    thread.start()
+    deadline = time.monotonic() + 5.0
+    while not hub.polling(cid) and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert hub.polling(cid) is True
+    hub.publish_health("down")
+    thread.join(timeout=5.0)
+    assert hub.polling(cid) is False

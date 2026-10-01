@@ -12,7 +12,9 @@ So a lease that changes hands mid-flight can never produce a double cue, nor a
 result that nobody writes to the clipboard.
 
 A cancelled operation (`POST /cancel`) publishes nothing more: results,
-errors and warnings for its `op_seq` are dropped here.
+errors and warnings for its `op_seq` are dropped here. After the `shutdown`
+event nothing is appended any more (clients consider this instance gone), and
+the daemon does every job itself again.
 """
 
 from __future__ import annotations
@@ -222,6 +224,8 @@ class EventHub:
         with self._lock:
             if op_seq in self._cancelled:
                 return DROPPED
+            if self._shut_down:
+                return DAEMON_ONLY
             holders = self._leases.holders()
             clipboard_holder = holders.get("clipboard")
             cue_holder = holders.get("cues")
@@ -263,7 +267,8 @@ class EventHub:
             if audio == self._audio:
                 return
             self._audio = audio
-            self._journal.append("health", {"audio": audio})
+            if not self._shut_down:
+                self._journal.append("health", {"audio": audio})
 
     def publish_shutdown(self, reason: ShutdownReason) -> bool:
         """Last event of this instance; wakes every pending long poll. False = already published."""
@@ -336,6 +341,10 @@ class EventHub:
     def leases_of(self, client_id: str) -> list[Capability]:
         return self._leases.leases_of(client_id)
 
+    def polling(self, client_id: str) -> bool:
+        """The client has an /events long poll in flight."""
+        return self._leases.polling(client_id)
+
     def client_name(self, client_id: str) -> str:
         return self._leases.name_of(client_id)
 
@@ -384,6 +393,8 @@ class EventHub:
         if new == self._op:
             return None
         self._op = new
+        if self._shut_down:
+            return None
         cue_holder = self._leases.holders().get("cues")
         return self._journal.append("state", _state_data(new), cue_holder=cue_holder)
 
@@ -391,6 +402,8 @@ class EventHub:
         with self._lock:
             if op_seq in self._cancelled:
                 return DROPPED
+            if self._shut_down:
+                return DAEMON_ONLY
             cue_holder = self._leases.holders().get("cues")
             self._journal.append(event_type, data, cue_holder=cue_holder)
         return Publication(published=True, write_clipboard=False, play_cue=cue_holder is None)

@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import threading
 import traceback
@@ -74,6 +75,12 @@ if TYPE_CHECKING:
 DEFAULT_DAEMON_PORT: Final = 47821
 MAX_WAIT_S: Final = 25.0  # longest /events long poll; clients use wait + 5 s as their HTTP timeout
 _MAX_BODY: Final = 256 * 1024
+# Socket timeout of a request's reads and writes (request line, headers, body). A
+# long poll waits on the journal, not on the socket, so it is not affected; an idle
+# or stalled connection is dropped instead of pinning a server thread.
+_SOCKET_TIMEOUT_S: Final = 10.0
+# A decimal integer as query parameters carry them (isdigit() also accepts "²").
+_INT_RE: Final = re.compile(r"-?[0-9]{1,18}")
 
 _LOOPBACK_HOSTS: Final = frozenset({"127.0.0.1", "localhost", "::1"})
 _GET_ROUTES: Final = frozenset({"/health", "/status", "/result", "/events", "/results"})
@@ -140,7 +147,7 @@ def _is_int(value: object) -> bool:
 
 
 def _int_param(raw: str | None) -> int | None:
-    if raw is None or not raw.lstrip("-").isdigit():
+    if raw is None or _INT_RE.fullmatch(raw) is None:
         return None
     return int(raw)
 
@@ -230,28 +237,35 @@ class ApiServer:
             self._serving.start()
 
     def _serve(self, server: _HttpServer) -> None:
-        try:
-            server.serve_forever(poll_interval=0.5)
-        finally:
-            self._stopped.set()
+        server.serve_forever(poll_interval=0.5)
 
     def wait_stopped(self, timeout: float | None = None) -> bool:
+        """True once `stop()` finished (requests drained, socket closed)."""
         return self._stopped.wait(timeout)
 
     def stop(self, grace: float = 1.0) -> None:
-        """Stop serving; requests in flight (woken long polls) get `grace` seconds to finish."""
+        """Stop serving; requests in flight (woken long polls) get `grace` seconds to finish.
+
+        A second call (another thread stopping too) waits for the first one to finish.
+        """
         with self._lock:
+            already = self._closed
             server = self._server
             serving = self._serving
             self._server = None
             self._serving = None
             self._closed = True
-        if server is not None:
-            if serving is not None:
-                server.shutdown()  # never called from the serving thread: requests run on their own
-            server.wait_idle(grace)
-            server.server_close()
-        self._stopped.set()
+        if already:
+            self._stopped.wait(grace + 5.0)
+            return
+        try:
+            if server is not None:
+                if serving is not None:
+                    server.shutdown()  # never called from the serving thread: requests run on their own
+                server.wait_idle(grace)
+                server.server_close()
+        finally:
+            self._stopped.set()
 
     # -- dispatch ----------------------------------------------------------------
     def dispatch(self, method: str, raw_path: str, headers: Mapping[str, str], body: bytes) -> _Reply:
@@ -422,9 +436,13 @@ class ApiServer:
         with self._lock:
             names = self._info.flow_names
         raw_flow = payload.get("flow")
-        flow = str(raw_flow) if raw_flow is not None else (names[0] if names else "clipboard")
+        if raw_flow is not None and not isinstance(raw_flow, str):
+            return _error(400, "flow must be a string")
+        flow = raw_flow or (names[0] if names else "clipboard")
         raw_client = payload.get("client_id")
-        client_id = str(raw_client) if raw_client is not None else None
+        if raw_client is not None and not isinstance(raw_client, str):
+            return _error(400, "client_id must be a string")
+        client_id = raw_client or None  # "" is the same as no client_id
         expect = payload.get("expect", "toggle")
         if expect not in _TRIGGER_EXPECTS:
             return _error(400, "expect must be 'toggle', 'start' or 'stop'")
@@ -491,7 +509,9 @@ class ApiServer:
 
     def _shutdown(self, payload: dict[str, object]) -> _Reply:
         raw = payload.get("reason")
-        reason: ShutdownReason = cast(ShutdownReason, raw) if raw in _SHUTDOWN_REASONS else "user_quit"
+        if raw is not None and raw not in _SHUTDOWN_REASONS:
+            return _error(400, "reason must be 'user_quit', 'restart' or 'supervisor'")
+        reason: ShutdownReason = cast(ShutdownReason, raw) if raw is not None else "user_quit"
         print(_("[VoiceMate] Shutdown requested over HTTP."))
         return _Reply(200, {"ok": True}, after=lambda: self._request_shutdown(reason))
 
@@ -529,6 +549,8 @@ class _HttpServer(ThreadingHTTPServer):
 
 
 class _Handler(BaseHTTPRequestHandler):
+    timeout = _SOCKET_TIMEOUT_S  # socketserver applies it to the connection
+
     def handle(self) -> None:
         server = cast(_HttpServer, self.server)
         server.request_started()

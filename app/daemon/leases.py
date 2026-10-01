@@ -27,7 +27,7 @@ LEASE_MIN_S: Final = 10
 LEASE_MAX_S: Final = 120
 LEASE_DEFAULT_S: Final = 40
 # Bound on remembered clients (v1 consumers never unregister). The oldest client
-# holding no lease is forgotten first.
+# holding no lease and with no long poll in flight is forgotten first.
 MAX_CLIENTS: Final = 256
 
 CAPABILITIES: tuple[Capability, ...] = get_args(Capability)
@@ -191,6 +191,12 @@ class LeaseRegistry:
         holders = self.holders()
         return [cap for cap in CAPABILITIES if holders.get(cap) == client_id]
 
+    def polling(self, client_id: str) -> bool:
+        """The client has an /events long poll in flight."""
+        with self._lock:
+            client = self._clients.get(client_id)
+            return client is not None and client.polls > 0
+
     def name_of(self, client_id: str) -> str:
         with self._lock:
             client = self._clients.get(client_id)
@@ -224,7 +230,10 @@ class LeaseRegistry:
         if len(self._clients) <= self._max_clients:
             return
         holding = set(self._holders.values())
-        idle = sorted((c for c in self._clients.values() if c.client_id not in holding), key=lambda c: c.last_seen)
+        idle = sorted(
+            (c for c in self._clients.values() if c.client_id not in holding and c.polls == 0),
+            key=lambda c: c.last_seen,
+        )
         for client in idle[: len(self._clients) - self._max_clients]:
             del self._clients[client.client_id]
 

@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import socket
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Callable, Iterator
 from typing import Any
@@ -13,6 +15,7 @@ from typing import Any
 import pytest
 
 from app.core.session_status import CancelOutcome, SessionStatus, ToggleOutcome
+from app.daemon import server as server_module
 from app.daemon.lifecycle import Lifecycle
 from app.daemon.server import ApiServer, EngineInfo
 from app.protocol.models import FlowInfo, ShutdownReason, TriggerAction, TriggerExpect
@@ -76,6 +79,15 @@ def call(
 
 
 MakeServer = Callable[..., ApiServer]
+
+
+def _wait_until(predicate: Callable[[], bool], timeout: float = 5.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(0.01)
+    return False
 
 
 @pytest.fixture
@@ -279,7 +291,7 @@ def test_shutdown_event_wakes_a_pending_long_poll(make_server: MakeServer) -> No
     received: list[dict[str, Any]] = []
     poller = threading.Thread(target=lambda: received.append(call(server, "GET", query, timeout=25)[1]))
     poller.start()
-    time.sleep(0.2)
+    assert _wait_until(lambda: status.hub.polling(reg["client_id"])), "the long poll never started"
     assert call(server, "POST", "/shutdown", {"reason": "restart"}) == (200, {"ok": True})
     poller.join(timeout=5.0)
     assert received, "the long poll was not woken by the shutdown"
@@ -305,6 +317,10 @@ def test_trigger_passes_expect_and_answers_the_outcome(make_server: MakeServer) 
     }
     assert control.toggles == [("claude_chat", "c1", "stop")]
     assert call(server, "POST", "/trigger", {"expect": "maybe"})[0] == 400
+    assert call(server, "POST", "/trigger", {"client_id": 7})[0] == 400
+    assert call(server, "POST", "/trigger", {"flow": ["clipboard"]})[0] == 400
+    code, assigned = call(server, "POST", "/trigger", {"flow": "clipboard", "client_id": ""})
+    assert code == 200 and assigned["client_id"]  # "" is the same as no client_id: one is assigned
     code, missing = call(server, "POST", "/trigger", {"flow": "telepathy"})
     assert code == 404
     assert missing["flows"] == ["clipboard", "claude_chat"]
@@ -381,3 +397,52 @@ def test_routes_and_methods(make_server: MakeServer) -> None:
     assert call(server, "POST", "/health", {})[0] == 405
     assert call(server, "GET", "/nope")[0] == 404
     assert call(server, "POST", "/register", raw=b"{not json")[0] == 400
+
+
+# -- round-trip edge cases ----------------------------------------------------------------
+
+
+@pytest.mark.parametrize("raw", ["--5", "\u00b2", "1e3", " 4", "99999999999999999999"])
+def test_malformed_integers_never_crash_a_route(make_server: MakeServer, raw: str) -> None:
+    """isdigit() accepted "--5" and "\u00b2", then int() raised: a 500 with a traceback."""
+    status = SessionStatus()
+    server = make_server(status=status)
+    _, reg = call(server, "POST", "/register", {})
+    quoted = urllib.parse.quote(raw)
+    assert call(server, "GET", f"/result?since={quoted}")[0] == 200  # ignored, like a missing since
+    code, body = call(server, "GET", f"/events?client_id={reg['client_id']}&instance={status.instance}&since={quoted}")
+    assert (code, body["reset"]) == (200, True)
+    assert call(server, "GET", f"/results?limit={quoted}")[0] == 400
+
+
+def test_shutdown_rejects_an_unknown_reason(make_server: MakeServer) -> None:
+    reasons: list[ShutdownReason] = []
+    server = make_server(on_shutdown=reasons.append)
+    assert call(server, "POST", "/shutdown", {"reason": "bored"})[0] == 400
+    assert call(server, "POST", "/shutdown", None) == (200, {"ok": True})
+    assert reasons == ["user_quit"]
+
+
+def test_an_idle_connection_is_dropped_and_does_not_pin_stop(
+    make_server: MakeServer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(server_module._Handler, "timeout", 0.3)
+    server = make_server()
+    with socket.create_connection(("127.0.0.1", server.port), timeout=5.0) as idle:
+        idle.settimeout(5.0)
+        started = time.monotonic()
+        assert idle.recv(1) == b""  # the server closed the silent connection
+        assert time.monotonic() - started < 3.0
+    started = time.monotonic()
+    server.stop(grace=5.0)
+    assert time.monotonic() - started < 2.0  # nothing left in flight to wait for
+
+
+def test_concurrent_stops_both_return_once_drained(make_server: MakeServer) -> None:
+    server = make_server()
+    other = threading.Thread(target=server.stop)
+    other.start()
+    server.stop()
+    other.join(timeout=10.0)
+    assert not other.is_alive()
+    assert server.wait_stopped(timeout=0)

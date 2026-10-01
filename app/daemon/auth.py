@@ -13,12 +13,16 @@ import hmac
 import os
 import secrets
 import stat
+import time
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Final
 
 TOKEN_ENV: Final = "VOICEMATE_API_TOKEN"
 TOKEN_BYTES: Final = 32
+# How long to wait for another starting engine to finish writing the token file it
+# just created before treating it as empty.
+_RACE_WAIT_S: Final = 1.0
 
 
 def default_token_path() -> Path:
@@ -41,8 +45,9 @@ def load_or_create_token(path: Path | None = None, env: Mapping[str, str] | None
     try:
         fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     except FileExistsError:
-        # Created concurrently (another engine starting): use theirs unless it is empty.
-        existing = _read(target)
+        # Created concurrently (another engine starting): use theirs, giving it a moment
+        # to write the token; only a file that stays empty gets overwritten.
+        existing = _read_soon(target)
         if existing:
             return existing
         fd = os.open(target, os.O_WRONLY | os.O_TRUNC)
@@ -60,6 +65,15 @@ def bearer_matches(header: str | None, token: str) -> bool:
     if scheme.lower() != "bearer":
         return False
     return hmac.compare_digest(value.strip().encode("utf-8"), token.encode("utf-8"))
+
+
+def _read_soon(path: Path) -> str:
+    deadline = time.monotonic() + _RACE_WAIT_S
+    while True:
+        existing = _read(path)
+        if existing or time.monotonic() >= deadline:
+            return existing
+        time.sleep(0.05)
 
 
 def _read(path: Path) -> str:

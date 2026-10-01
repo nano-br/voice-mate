@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import stat
 import sys
+import threading
 from pathlib import Path
 
 import pytest
@@ -66,3 +67,11 @@ def test_env_override_wins_and_touches_no_file(tmp_path: Path) -> None:
 )
 def test_bearer_matches(header: str | None, ok: bool) -> None:
     assert bearer_matches(header, "secret") is ok
+
+
+def test_a_token_file_another_engine_is_still_writing_is_reused(tmp_path: Path) -> None:
+    """First-run race: another engine created the file and has not written it yet."""
+    path = tmp_path / "api-token"
+    path.write_text("", encoding="utf-8")
+    threading.Timer(0.2, lambda: path.write_text("theirs\n", encoding="utf-8")).start()
+    assert load_or_create_token(path, env={}) == "theirs"
