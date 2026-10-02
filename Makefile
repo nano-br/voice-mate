@@ -1,7 +1,8 @@
 .PHONY: all setup configure doctor setup_env setup_env_minimal setup_env_claude setup_env_tts setup_env_custom lock \
         format lint test stt-eval run run-large run-turbo run-vozes-aleatorias run-reset-voz \
         i18n-extract i18n-init-pt i18n-init-en i18n-init-es i18n-init-ru i18n-init-zh i18n-update i18n-compile i18n-mo clean \
-        companion-venv companion-test companion-lint run-tray companion-build companion-installer
+        companion-venv companion-test companion-lint run-tray companion-build companion-installer \
+        docs-screenshots
 
 all: format lint test
 
@@ -150,7 +151,8 @@ companion_py = $(or $(COMPANION_PY),$(error No companion environment: run "make 
 windows_only = $(if $(filter Windows_NT,$(OS)),,$(error "make $@" builds the Windows app: run it on Windows))
 COMPANION_TESTS := $(wildcard tests/companion) tests/test_import_boundary.py tests/test_companion_packaging.py
 COMPANION_SOURCES := app/companion app/protocol $(COMPANION_TESTS) \
-                     tools/gen_icon.py tools/build_installer.py packaging/windows/voicemate_launcher.py
+                     tools/gen_icon.py tools/build_installer.py tools/render_screenshots.py \
+                     packaging/windows/voicemate_launcher.py
 
 # Pinned (requirements/companion-constraints.txt), so builds are reproducible.
 companion-venv:
@@ -179,6 +181,12 @@ companion-build:
 # A custom location: make companion-installer ISCC="C:/path/to/ISCC.exe".
 companion-installer: companion-build
 	$(companion_py) -m tools.build_installer $(if $(ISCC),--iscc "$(ISCC)")
+
+# README screenshots (docs/assets/screenshots/<lang>/) and banners (docs/assets/brand/),
+# rendered by the companion's own UI in every language without showing anything on screen.
+# One language: make docs-screenshots ARGS="--lang pt-BR".
+docs-screenshots:
+	$(windows_only)$(companion_py) -m tools.render_screenshots $(ARGS)
 
 clean:
 	rm -rf .pytest_cache .ruff_cache .mypy_cache
