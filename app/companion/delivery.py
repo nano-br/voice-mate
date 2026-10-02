@@ -307,10 +307,12 @@ class DeliveryQueue:
                     resync.append(record["result_seq"])
                 elif key in self._acked and key not in queued:
                     # Already ACKed, yet the daemon still lists it. Twice in a row: that ACK
-                    # was dropped after the controller's retries (a first listing may only
-                    # predate an ACK in transit, so it never doubles the normal path). The
-                    # same status again, at most once per reconciliation, or it would stay
-                    # pending in the daemon and come back as stale on the next start.
+                    # was most likely dropped after the controller's retries (a first listing
+                    # may only predate an ACK in transit). Rounds close together (on
+                    # registration) or slow retries can still double an ACK in transit,
+                    # which is harmless: the daemon just sets the same status. The same
+                    # status again, at most once per reconciliation, or it would stay pending
+                    # in the daemon and come back as stale on the next start.
                     listed_acked.add(key)
                     if key in self._suspect:
                         resend.append(_ack(record["result_seq"], self._acked[key]))

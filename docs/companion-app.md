@@ -242,7 +242,8 @@ they belong to:
   companion already ACKed that two reconciliations in a row still list as unacked
   gets the same status again, at most once per reconciliation, unless it is queued
   or in flight. One listing alone does nothing (that ACK may still be in transit),
-  so the normal path never sends an ACK twice. Without this, a lost `failed` or
+  so a normal ACK in transit is rarely sent twice (and a duplicate is harmless: the
+  daemon just sets the same status). Without this, a lost `failed` or
   `dismissed` ACK left the result pending in the daemon, and it came back as stale
   on the next start (also after the user had cleared it).
 - Results still queued when the daemon instance changes cannot be ACKed any more:
