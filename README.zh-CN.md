@@ -12,7 +12,7 @@
 
 ## 为什么
 
-云端听写很快，直到它不快的时候。VoiceMate 在你的 GPU 上**本地**运行 Whisper，音频永远不会离开你的电脑，没有网络延迟，没有月费，也无需在隐私上做出妥协。按下快捷键，说话，随处粘贴。
+云端听写很快，但并非一直如此。VoiceMate 在你的 GPU 上**本地**运行 Whisper，音频永远不会离开你的电脑，没有网络延迟，没有月费，也无需在隐私上做出妥协。按下快捷键，说话，随处粘贴。
 
 ## 功能
 
@@ -24,7 +24,7 @@
 - **配合 Win+V 的双剪贴板**：AI 流程先复制转写结果，再复制回复，因此 Windows 剪贴板历史记录会把两者并排显示，方便核对
 - **由停止键决定去向**：用任意快捷键开始；*停止*时按下的快捷键决定由哪个处理程序接手（剪贴板或 Claude）
 - **随时取消**：在 Claude 回复期间（或 TTS 朗读期间）按下任意快捷键，会立即取消并开始新的录音，对话上下文保持不变
-- **自我修复的监听器**：定期重新安装全局快捷键，以便在高负载下 Windows 悄悄移除钩子后恢复
+- **自我修复的快捷键监听器**：定期重新安装全局快捷键，以便在高负载下 Windows 悄悄移除钩子后恢复
 - **看门狗**：进程级健康监控，卡死时自动重启
 - **可配置的最长录音时间**：防止忘记结束录音（默认：10 分钟）
 - **声音反馈**：开始、警告、转写完成和 AI 回复就绪各有不同的提示音
@@ -35,8 +35,7 @@
 - 以下任一受支持的环境（平台层会自动选择合适的集成方式）：
   - **Windows 10/11** 原生（推荐 NVIDIA）：最初的目标平台，保持不变
   - **Linux** 原生，X11 或 Wayland
-  - Windows 11 上的 **WSL2**（Ubuntu）：应用**完全在 WSL 内**运行，Windows 端只需一个很小的
-    快捷键脚本；这是 **AMD GPU**（ROCm）的推荐方案。参见 [docs/wsl2.md](docs/wsl2.md)
+  - Windows 11 上的 **WSL2**（Ubuntu）：应用**完全在 WSL 内**运行，Windows 端只需一个很小的快捷键脚本；这是 **AMD GPU**（ROCm）的推荐方案。参见 [docs/wsl2.md](docs/wsl2.md)
 - Python 3.12（通过 VoxCPM2 的 TTS 流程尚不支持 3.13）
 - [Poetry](https://python-poetry.org/docs/#installation)
 - GPU 是可选的，但强烈推荐（TTS 要达到可接受的延迟则必须有 GPU）：
@@ -91,7 +90,7 @@ make run ARGS="--output-lang en"
 VOICEMATE_LANG=en make run
 ```
 
-可用的目录：`pt_BR`、`en` 和 `es`。每个面向用户的字符串都必须存在于这三个目录中；`pt_BR` 和 `es` 提供翻译，`en` 的 `msgstr` 保持为空（英语 msgid 本身就是文本）。
+可用的翻译目录：`pt_BR`、`en` 和 `es`。每个面向用户的字符串都必须存在于这三个翻译目录中；`pt_BR` 和 `es` 提供翻译，`en` 的 `msgstr` 保持为空（英语 msgid 本身就是文本）。
 
 编辑 / 重新生成翻译目录：
 
@@ -101,7 +100,7 @@ make i18n-update      # 将新的键同步到现有的 .po 文件
 make i18n-compile     # 将 .po 编译为 .mo（gettext 在运行时加载 .mo）
 ```
 
-目录位于 `app/i18n/locales/{pt_BR,en,es}/LC_MESSAGES/voicemate.po`。
+翻译目录文件位于 `app/i18n/locales/{pt_BR,en,es}/LC_MESSAGES/voicemate.po`。
 
 ### 代码约定
 
@@ -158,16 +157,9 @@ Claude 完成认证后，VoiceMate 的 AI 流程会在 `poetry run voice-mate` �
 | Linux + NVIDIA       | CUDA `cu128`               | `faster-whisper`（CUDA）                                  | GPU（CUDA）            |
 | 任意平台，无 GPU     | CPU                        | `faster-whisper`（int8）                                  | CPU（较慢）            |
 
-**Linux/WSL2 上的 AMD（AMD 推荐方案）：** 安装程序会提供构建
-[CTranslate2-ROCm 分支](https://github.com/arlo-phoenix/CTranslate2-rocm) 的选项。有了它，转写使用的
-就是与 NVIDIA 完全相同的 `faster-whisper` 引擎（质量完全一致）。如果你跳过它（或构建失败），这条
-链会自动回退到用 Vulkan 构建的 **whisper.cpp**（服务器模式让模型保持常驻，启动很快）并配合 silero-VAD，
-再回退到 `openai-whisper`。该选择会被记住（配置中的 `ct2_rocm_ok`）；
-`make configure` 会重试，`make stt-eval` 会客观衡量质量（WER + 词语切分检测器）。
+**Linux/WSL2 上的 AMD（AMD 推荐方案）：** 安装程序会提供构建 [CTranslate2-ROCm 复刻版（fork）](https://github.com/arlo-phoenix/CTranslate2-rocm) 的选项。有了它，转写使用的就是与 NVIDIA 完全相同的 `faster-whisper` 引擎（质量完全一致）。如果你跳过它（或构建失败），这条链会自动回退到用 Vulkan 构建的 **whisper.cpp**（服务器模式让模型保持常驻，启动很快）并配合 silero-VAD，再回退到 `openai-whisper`。该选择会被记住（配置中的 `ct2_rocm_ok`）；`make configure` 会重试，`make stt-eval` 会客观衡量质量（WER + 单词拆分错误检测器）。
 
-**Windows 上的 AMD：** 转写使用 **whisper.cpp + Vulkan**，即一个小型原生程序加上一个 GGUF 模型
-（large-v3-turbo fp16），下载到 `~/.cache/voicemate/whispercpp/`（经过 SHA-256 校验）。ROCm 版 PyTorch
-仍然会被安装，但只用于 TTS。
+**Windows 上的 AMD：** 转写使用 **whisper.cpp + Vulkan**，即一个小型原生程序加上一个 GGUF 模型（large-v3-turbo fp16），下载到 `~/.cache/voicemate/whispercpp/`（经过 SHA-256 校验）。ROCm 版 PyTorch 仍然会被安装，但只用于 TTS。
 
 确认 GPU 加速已生效：
 
@@ -186,8 +178,7 @@ poetry run python -c "import torch; print('GPU:', torch.cuda.is_available())"
 
 ### 平台与触发方式
 
-平台层（`app/platform/`）会检测你所处的环境，并选择合适的快捷键机制和剪贴板
-集成方式；可以用 `--platform` / `--trigger` 覆盖：
+平台层（`app/platform/`）会检测你所处的环境，并选择合适的快捷键机制和剪贴板集成方式；可以用 `--platform` / `--trigger` 覆盖：
 
 | 平台            | 快捷键触发方式（默认）                    | 剪贴板               | 说明 |
 | --------------- | ----------------------------------------- | -------------------- | ----- |
@@ -196,10 +187,7 @@ poetry run python -c "import torch; print('GPU:', torch.cuda.is_available())"
 | `linux-wayland` | `evdev`（/dev/input，需要加入 `input` 组）| pyperclip（wl-copy） | `sudo usermod -aG input $USER` |
 | `wsl2`          | `socket`：本地 HTTP 守护进程 + Windows 端的小型快捷键脚本 | WSLg 同步（备用 `clip.exe`） | 参见 [docs/wsl2.md](docs/wsl2.md) |
 
-默认快捷键在所有平台上都相同：`Ctrl+Alt+V`（剪贴板）和 `Ctrl+Alt+A`（Claude）。在 WSL2 上，它们由
-`scripts/windows/voicemate-hotkeys.ahk`（或 `.ps1`）注册，脚本会向守护进程发送 POST 请求，语义同样是
-“停止时按下的快捷键决定处理程序”。运行 `make doctor` 可以检查麦克风/音频/触发方式/GPU，并给出
-可操作的修复建议。在 Windows 上，[配套应用](#配套应用托盘)取代了这些脚本。
+默认快捷键在所有平台上都相同：`Ctrl+Alt+V`（剪贴板）和 `Ctrl+Alt+A`（Claude）。在 WSL2 上，它们由 `scripts/windows/voicemate-hotkeys.ahk`（或 `.ps1`）注册，脚本会向守护进程发送 POST 请求，语义同样是“停止时按下的快捷键决定处理程序”。运行 `make doctor` 可以检查麦克风/音频/触发方式/GPU，并给出可操作的修复建议。在 Windows 上，[配套应用](#配套应用托盘)取代了这些脚本。
 
 ## 使用方法
 
@@ -261,7 +249,7 @@ poetry run voice-mate --tts-voice "一位巴西男性，声音低沉，语速从
 # TTS 强制使用 CPU（较慢，但无需 GPU）
 poetry run voice-mate --tts-device cpu
 
-# 将生成的 TTS 音频保存到目录
+# 将生成的 TTS 音频保存到指定文件夹
 poetry run voice-mate --tts-save-dir ./tts_logs
 
 # Whisper 转写强制使用 CPU（没有可用的 GPU 时）
@@ -321,7 +309,7 @@ Windows 不允许安装程序固定应用。打开“开始”菜单，搜索 Vo
 
 ### 退出
 
-托盘图标菜单 > **退出 VoiceMate**（状态窗口中也有这个按钮，固定图标的右键菜单中也有这一项）。退出会停止配套应用启动的引擎；它只是连接上的引擎（例如 systemd 服务）会继续运行。对于已安装的应用，可在终端（PowerShell）中执行：
+托盘图标菜单 > **退出 VoiceMate**（状态窗口中也有这个按钮，固定图标的右键菜单中也有这一项）。退出时，由配套应用启动的引擎会被停止；配套应用只是连接上的引擎（例如 systemd 服务）则会继续运行。对于已安装的应用，可在终端（PowerShell）中执行：
 
 ```powershell
 & "$env:LOCALAPPDATA\Programs\VoiceMate\VoiceMate.exe" --command quit
@@ -370,7 +358,7 @@ mkdir -p ~/.local/share/applications &&
 | `make setup`       | 检测平台 + GPU，安装对应的 PyTorch + 模块，并记住选择 |
 | `make configure`   | 重新运行 GPU/模块选择程序（例如更换 GPU 之后） |
 | `make doctor`      | 环境诊断（麦克风/音频、触发方式、whisper.cpp、GPU）并给出修复建议 |
-| `make stt-eval`    | STT 质量关卡：基于本地样本的 WER + 词语切分检测器 |
+| `make stt-eval`    | STT 质量关卡：基于本地样本的 WER + 单词拆分错误检测器 |
 | `make setup_env`   | 旧版安装方式（默认 NVIDIA + 全部 extras）     |
 | `make lock`        | 重新生成 `poetry.lock`（修改 pyproject 之后） |
 | `make run`         | 使用默认模型（`large-v3-turbo`）运行          |

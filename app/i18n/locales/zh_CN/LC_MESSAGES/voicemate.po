@@ -147,7 +147,7 @@ msgstr ""
 #: app/cli/config_builder.py:237
 #, python-brace-format
 msgid "[VoiceMate] Auto-seed removed: {path}"
-msgstr "[VoiceMate] 已删除自动种子：{path}"
+msgstr "[VoiceMate] 已删除自动参考音频：{path}"
 
 #: app/cli/config_builder.py:240
 #, python-brace-format
@@ -450,7 +450,7 @@ msgstr "正在重启（第 {attempt} 次尝试）"
 #: app/companion/model.py:647
 #, python-brace-format
 msgid "Listening for {hotkey}"
-msgstr "正在监听 {hotkey}"
+msgstr "等待按下 {hotkey}"
 
 #: app/companion/model.py:647 app/companion/ui/texts.py:97
 msgid "Ready"
@@ -1265,7 +1265,7 @@ msgstr "正在重启引擎..."
 #: app/companion/ui/texts.py:96
 #, python-brace-format
 msgid "Listening for {chord}"
-msgstr "正在监听 {chord}"
+msgstr "等待按下 {chord}"
 
 #: app/companion/ui/texts.py:111
 msgid "Check the microphone"
@@ -1423,7 +1423,7 @@ msgstr "立即重启 WSL..."
 
 #: app/companion/ui/tray.py:93
 msgid "Mute sounds"
-msgstr "静音"
+msgstr "静音提示音"
 
 #: app/companion/ui/tray.py:149
 #, python-brace-format
@@ -1542,7 +1542,7 @@ msgid ""
 "({elapsed:.0f}s for {audio_seconds:.0f}s) — the backend is probably "
 "running WITHOUT GPU. Run `make doctor` for diagnosis."
 msgstr ""
-"[VoiceMate] ⚠ 转写耗时是音频时长的 {ratio:.0f}×（{audio_seconds:.0f} 秒的音频用了 "
+"[VoiceMate] ⚠ 转写耗时是音频时长的 {ratio:.0f} 倍（{audio_seconds:.0f} 秒的音频用了 "
 "{elapsed:.0f} 秒），后端很可能没有使用 GPU。请运行 `make doctor` 进行诊断。"
 
 #: app/core/recording_session.py:430
@@ -1819,26 +1819,26 @@ msgstr ""
 #: app/features/tts/omnivoice_speaker.py:281
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] Auto-seed loaded from {cached_wav}"
-msgstr "[OmniVoiceSpeaker] 已从 {cached_wav} 加载自动种子"
+msgstr "[OmniVoiceSpeaker] 已从 {cached_wav} 加载自动参考音频"
 
 #: app/features/tts/omnivoice_speaker.py:283
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ Failed to read auto-seed: {exc}"
-msgstr "[OmniVoiceSpeaker] ⚠ 读取自动种子失败：{exc}"
+msgstr "[OmniVoiceSpeaker] ⚠ 读取自动参考音频失败：{exc}"
 
 #: app/features/tts/omnivoice_speaker.py:303
 msgid "[OmniVoiceSpeaker] soundfile not installed — could not save auto-seed."
-msgstr "[OmniVoiceSpeaker] 未安装 soundfile，无法保存自动种子。"
+msgstr "[OmniVoiceSpeaker] 未安装 soundfile，无法保存自动参考音频。"
 
 #: app/features/tts/omnivoice_speaker.py:312
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ Failed to save auto-seed: {exc}"
-msgstr "[OmniVoiceSpeaker] ⚠ 保存自动种子失败：{exc}"
+msgstr "[OmniVoiceSpeaker] ⚠ 保存自动参考音频失败：{exc}"
 
 #: app/features/tts/omnivoice_speaker.py:316
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] Auto-seed saved to {wav_path}"
-msgstr "[OmniVoiceSpeaker] 自动种子已保存到 {wav_path}"
+msgstr "[OmniVoiceSpeaker] 自动参考音频已保存到 {wav_path}"
 
 #: app/features/tts/omnivoice_speaker.py:322
 msgid "[OmniVoiceSpeaker] soundfile not installed — could not save audio."
@@ -1895,12 +1895,12 @@ msgstr "[VoxCPMSpeaker] 朗读时出错：{exc}"
 #: app/features/tts/voxcpm_speaker.py:155
 #, python-brace-format
 msgid "[VoxCPMSpeaker] Auto-seed loaded from {cached_wav}"
-msgstr "[VoxCPMSpeaker] 已从 {cached_wav} 加载自动种子"
+msgstr "[VoxCPMSpeaker] 已从 {cached_wav} 加载自动参考音频"
 
 #: app/features/tts/voxcpm_speaker.py:159
 #, python-brace-format
 msgid "[VoxCPMSpeaker] ⚠ Failed to read auto-seed: {exc}"
-msgstr "[VoxCPMSpeaker] ⚠ 读取自动种子失败：{exc}"
+msgstr "[VoxCPMSpeaker] ⚠ 读取自动参考音频失败：{exc}"
 
 #: app/features/tts/voxcpm_speaker.py:181
 msgid "[VoxCPMSpeaker] Loading VoxCPM2 (first run downloads weights)..."
@@ -1915,8 +1915,8 @@ msgid ""
 "[VoxCPMSpeaker] ⚠ PyTorch without GPU acceleration — VoxCPM will run on "
 "CPU (synthesis ~50-100× slower than GPU)."
 msgstr ""
-"[VoxCPMSpeaker] ⚠ PyTorch 没有 GPU 加速，VoxCPM 将在 CPU 上运行（合成速度比 GPU 慢约 "
-"50-100×）。"
+"[VoxCPMSpeaker] ⚠ PyTorch 没有 GPU 加速，VoxCPM 将在 CPU 上运行（合成速度比 GPU 慢约 50-100"
+" 倍）。"
 
 #: app/features/tts/voxcpm_speaker.py:218
 msgid ""
@@ -1953,17 +1953,17 @@ msgstr "[VoxCPMSpeaker] ⚠ 关闭生成器失败：{exc}"
 
 #: app/features/tts/voxcpm_speaker.py:324
 msgid "[VoxCPMSpeaker] soundfile not installed — could not save auto-seed."
-msgstr "[VoxCPMSpeaker] 未安装 soundfile，无法保存自动种子。"
+msgstr "[VoxCPMSpeaker] 未安装 soundfile，无法保存自动参考音频。"
 
 #: app/features/tts/voxcpm_speaker.py:336
 #, python-brace-format
 msgid "[VoxCPMSpeaker] ⚠ Failed to save auto-seed: {exc}"
-msgstr "[VoxCPMSpeaker] ⚠ 保存自动种子失败：{exc}"
+msgstr "[VoxCPMSpeaker] ⚠ 保存自动参考音频失败：{exc}"
 
 #: app/features/tts/voxcpm_speaker.py:340
 #, python-brace-format
 msgid "[VoxCPMSpeaker] Auto-seed saved to {wav_path}"
-msgstr "[VoxCPMSpeaker] 自动种子已保存到 {wav_path}"
+msgstr "[VoxCPMSpeaker] 自动参考音频已保存到 {wav_path}"
 
 #: app/features/tts/voxcpm_speaker.py:362
 #, python-brace-format
@@ -2083,17 +2083,17 @@ msgstr "[VoiceMate] 已作为消费者 {0} 注册到守护进程（在触发时�
 #: app/i18n/windows_script_messages.py:37
 #, python-brace-format
 msgid "[VoiceMate] > recording... (op {0})"
-msgstr "[VoiceMate] > 正在录音...（操作 {0}）"
+msgstr "[VoiceMate] > 正在录音...（op {0}）"
 
 #: app/i18n/windows_script_messages.py:38
 #, python-brace-format
 msgid "[VoiceMate] # transcribing... (op {0})"
-msgstr "[VoiceMate] # 正在转写...（操作 {0}）"
+msgstr "[VoiceMate] # 正在转写...（op {0}）"
 
 #: app/i18n/windows_script_messages.py:39
 #, python-brace-format
 msgid "[VoiceMate] ~ restarted (op {0})"
-msgstr "[VoiceMate] ~ 已重新开始（操作 {0}）"
+msgstr "[VoiceMate] ~ 已重新开始录音（op {0}）"
 
 #: app/i18n/windows_script_messages.py:40
 #, python-brace-format
@@ -2223,17 +2223,17 @@ msgstr "“{0}”（完整文本位于 VoiceMate 控制台窗口中）"
 #: app/i18n/windows_script_messages.py:73
 #, python-brace-format
 msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}, retry {2}): \"{3}\""
-msgstr "[VoiceMate] 剪贴板已确认（seq {0}，op {1}，重试 {2}）：“{3}”"
+msgstr "[VoiceMate] 已确认写入剪贴板（seq {0}，op {1}，重试 {2}）：“{3}”"
 
 #: app/i18n/windows_script_messages.py:74
 #, python-brace-format
 msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}): \"{2}\""
-msgstr "[VoiceMate] 剪贴板已确认（seq {0}，op {1}）：“{2}”"
+msgstr "[VoiceMate] 已确认写入剪贴板（seq {0}，op {1}）：“{2}”"
 
 #: app/i18n/windows_script_messages.py:75
 #, python-brace-format
 msgid "[VoiceMate] could not confirm the clipboard (seq {0}): \"{1}\"; retrying."
-msgstr "[VoiceMate] 无法确认剪贴板（seq {0}）：“{1}”；正在重试。"
+msgstr "[VoiceMate] 无法确认是否已写入剪贴板（seq {0}）：“{1}”；正在重试。"
 
 #: app/i18n/windows_script_messages.py:77
 msgid ""
@@ -2322,7 +2322,7 @@ msgstr "  （在 WSL2 上还需安装 ROCm：https://rocm.docs.amd.com ）"
 
 #: app/setup/ct2_rocm.py:50
 msgid "⚠ GPU gfx target not detected (rocminfo); using the fork's default list."
-msgstr "⚠ 未检测到 GPU 的 gfx 目标（rocminfo）；使用该分支的默认列表。"
+msgstr "⚠ 未检测到 GPU 的 gfx 目标（rocminfo）；使用该复刻版（fork）的默认列表。"
 
 #: app/setup/ct2_rocm.py:60
 msgid "⚠ Build completed but validation failed (import/GPU). See messages above."
@@ -2538,7 +2538,7 @@ msgstr "没有 X11？请使用 --trigger evdev（Wayland），需要加入 input
 
 #: app/setup/doctor.py:240
 msgid "Trigger (Windows hooks)"
-msgstr "触发器（Windows 钩子）"
+msgstr "触发方式（Windows 钩子）"
 
 #: app/setup/doctor.py:240
 msgid "keyboard/mouse libs"
