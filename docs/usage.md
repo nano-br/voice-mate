@@ -98,7 +98,7 @@ Whisper gets one pinned language for stable results; foreign terms inside the sp
 **With the companion:** Settings > **General** > "Dictation language:". The options are:
 
 - "Same as the interface" (the default): the language of the companion (`pt-BR`, `en`, `es`, `ru` or `zh-CN`).
-- "Detect automatically": Whisper detects the language of each recording, which is less stable for short recordings. Claude keeps answering in the interface language.
+- "Detect automatically": Whisper detects the language of each recording, which is less stable for short recordings. Claude keeps answering in the interface language. With Kokoro, pin a language: the engine then also gives `auto` to the TTS, and Kokoro answers in its American English voice, even for Portuguese or Spanish.
 - One language, each named in its own language: "Português", "English", "Español", "Русский", "中文", "Français", "Deutsch", "Italiano" or "日本語". A pinned language also sets the language of Claude's spoken answers.
 
 The companion passes the choice to the engine it starts as `--transcription-language` and `--output-lang`, and changing it restarts the engine. An engine the companion only connects to keeps its own flags: with the mode "Connect only" the setting is disabled, and a systemd unit or an engine you started by hand is attached to, not started, so it follows its own `--transcription-language` and `--output-lang`.
@@ -108,10 +108,21 @@ The companion passes the choice to the engine it starts as `--transcription-lang
 ```bash
 make run ARGS="--output-lang en"
 make run ARGS="--transcription-language en"
-VOICEMATE_LANG=en make run          # engine messages only (pt-BR, en, es, ru or zh-CN)
 ```
 
-`VOICEMATE_LANG` changes the language of the engine messages and wins over `--output-lang` there; it does not change what Whisper hears. The companion ignores it.
+`make run` runs in the shell of the system where the engine runs: bash on Linux and inside WSL, PowerShell or cmd for an engine run natively on Windows. The `ARGS` examples work in all of them.
+
+`VOICEMATE_LANG` changes the language of the engine messages only (`pt-BR`, `en`, `es`, `ru` or `zh-CN`). It wins over `--output-lang` there, and does not change what Whisper hears. Set it in the shell that runs `make run`:
+
+```bash
+VOICEMATE_LANG=en make run          # bash: Linux, or inside WSL
+```
+
+```powershell
+$env:VOICEMATE_LANG="en"; make run  # PowerShell: engine run natively on Windows
+```
+
+The companion ignores it.
 
 ## Companion app
 

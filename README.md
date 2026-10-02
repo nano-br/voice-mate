@@ -78,7 +78,7 @@ A second module came later: a voice conversation with Claude. You speak, Claude 
 
 The installer contains the companion app only. The engine runs inside a WSL2 distro, so set that up first (**experimental**; full guide in [docs/installation.md](docs/installation.md)).
 
-1. In PowerShell, install WSL2 with Ubuntu: `wsl --install -d Ubuntu-24.04`, then open Ubuntu. Inside it, install the audio packages; Python 3.12 (Ubuntu 24.04 ships it) and [Poetry](https://python-poetry.org/docs/#installation) must be on the `PATH` of a login shell too:
+1. In PowerShell, install WSL2 with Ubuntu: `wsl --install -d Ubuntu-24.04`, then open Ubuntu (if you already had another WSL distro, also run `wsl --set-default Ubuntu-24.04`, or set "WSL distro:" in Settings later). Inside it, install the audio packages; Python 3.12 (Ubuntu 24.04 ships it) and [Poetry](https://python-poetry.org/docs/#installation) must be on the `PATH` of a login shell too:
    ```bash
    sudo apt install -y libportaudio2 libasound2-plugins pulseaudio-utils wl-clipboard git make
    ```
@@ -107,7 +107,7 @@ make doctor                          # checks microphone, audio, hotkeys and GPU
 make run ARGS="--output-lang en"     # starts the engine with its own hotkeys (Windows native or Linux)
 ```
 
-**The engine defaults to Portuguese** (`--output-lang pt-BR`): that pins Whisper to Portuguese and sets the language of Claude's answers and of the engine messages. Without a flag, English speech comes out wrong. Use `--output-lang en` (or another code) for all three, `--transcription-language en` to pin only what Whisper hears, and `VOICEMATE_LANG=en make run` to change only the engine messages (it wins over `--output-lang`). The companion passes these flags itself, see [Usage](#usage).
+**The engine defaults to Portuguese** (`--output-lang pt-BR`): that pins Whisper to Portuguese and sets the language of Claude's answers and of the engine messages. Without a flag, English speech comes out wrong. Use `--output-lang en` (or another code) for all three, `--transcription-language en` to pin only what Whisper hears, and the `VOICEMATE_LANG` environment variable to change only the engine messages (it wins over `--output-lang`). Set it in the shell that runs `make run`: `VOICEMATE_LANG=en make run` in bash (Linux, WSL), `$env:VOICEMATE_LANG="en"; make run` in PowerShell (engine run natively on Windows). The companion passes these flags itself, see [Usage](#usage).
 
 To run the companion from source on Windows, with the engine in WSL2: `make companion-venv` once, then `make run-tray`. On Linux, run `make setup` and `make run` as above; for the optional tray and status window, `poetry install --extras ui` and then `make run-tray` ([details](docs/installation.md#linux-experimental)).
 
@@ -120,7 +120,7 @@ To run the companion from source on Windows, with the engine in WSL2: `make comp
 
 Press `Ctrl+Alt+V`, speak after the start cue, press `Ctrl+Alt+V` again, then paste with `Ctrl+V` anywhere. The hotkey that stops the recording decides where the text goes. A text that could not reach the clipboard waits in **Not copied** (tray menu and status window), where one click copies it. To quit, choose **Quit VoiceMate** in the tray menu; an engine that the companion did not start keeps running.
 
-**Dictation language.** In Settings > **General**, "Dictation language:" decides the language you speak. The default is "Same as the interface"; "Detect automatically" lets Whisper detect each recording (Claude keeps answering in the interface language); or pick one language. The companion passes it to the engine it starts as `--transcription-language` and `--output-lang`, and changing it restarts the engine. An engine the companion only connects to (a systemd unit, or one started by hand) keeps its own flags.
+**Dictation language.** In Settings > **General**, "Dictation language:" decides the language you speak. The default is "Same as the interface"; "Detect automatically" lets Whisper detect each recording (Claude keeps answering in the interface language; with Kokoro, pin a language instead); or pick one language. The companion passes it to the engine it starts as `--transcription-language` and `--output-lang`, and changing it restarts the engine. An engine the companion only connects to (a systemd unit, or one started by hand) keeps its own flags.
 
 The voice conversation with Claude needs the Claude Code CLI installed and signed in, and the `claude` module chosen in `make setup`. See [docs/usage.md](docs/usage.md#claude-flow-experimental).
 
@@ -271,7 +271,7 @@ Overview. Full diagram: [docs/architecture.md, Tray states](docs/architecture.md
 ```mermaid
 flowchart TD
     launch(["Launch"]) --> q_health{"Engine already answers?"}
-    q_health -- "Yes" --> attach["Attach to it"] --> healthy
+    q_health -- "Yes" --> attach["Attach to it, wait until ready"] --> healthy
     q_health -- "No" --> q_dir{"Engine folder found?"}
     q_dir -- "No" --> failed["Error<br/>wait for a manual restart"]
     q_dir -- "Yes" --> spawn["Start make run-engine<br/>in WSL"]

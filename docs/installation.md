@@ -29,7 +29,7 @@ The installer (`VoiceMate-Setup-x.y.z.exe`) contains the companion app only. The
 
 ### 1. Prepare WSL2
 
-1. Install WSL2 with Ubuntu and update it from PowerShell: `wsl --install -d Ubuntu-24.04`, then `wsl --update`. WSLg (audio and clipboard bridge) comes with current WSL. The engine needs Python 3.12, which Ubuntu 24.04 ships: on a newer Ubuntu, install Python 3.12 yourself.
+1. Install WSL2 with Ubuntu and update it from PowerShell: `wsl --install -d Ubuntu-24.04`, then `wsl --update`. If you already had another WSL distro, make this one the default with `wsl --set-default Ubuntu-24.04`, or set "WSL distro:" in Settings. WSLg (audio and clipboard bridge) comes with current WSL. The engine needs Python 3.12, which Ubuntu 24.04 ships: on a newer Ubuntu, install Python 3.12 yourself.
 2. Inside Ubuntu, install the system packages:
    ```bash
    sudo apt install -y libportaudio2 libasound2-plugins pulseaudio-utils wl-clipboard \
@@ -84,7 +84,7 @@ make doctor
 make run ARGS="--output-lang en"
 ```
 
-The engine defaults to Portuguese (`--output-lang pt-BR`): without a flag Whisper is pinned to Portuguese, and Claude's answers and the engine messages are in Portuguese too. Use `--output-lang en` (or another code), `--transcription-language en` to pin only what Whisper hears, or `VOICEMATE_LANG=en make run` for the engine messages only. The engine messages quoted in these guides are the English ones. See [usage.md](usage.md#dictation-language).
+The engine defaults to Portuguese (`--output-lang pt-BR`): without a flag Whisper is pinned to Portuguese, and Claude's answers and the engine messages are in Portuguese too. Use `--output-lang en` (or another code), `--transcription-language en` to pin only what Whisper hears, or the `VOICEMATE_LANG` environment variable (set in the shell that runs `make run`: `VOICEMATE_LANG=en make run` in bash, `$env:VOICEMATE_LANG="en"; make run` in PowerShell) for the engine messages only. The engine messages quoted in these guides are the English ones. See [usage.md](usage.md#dictation-language).
 
 ### What `make setup` does
 

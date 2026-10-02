@@ -64,7 +64,7 @@ Without the companion: run `wsl --shutdown` in PowerShell, then `make run` again
 
 ## Engine problems
 
-The engine messages quoted in this guide are English. The engine prints them in the language of `--output-lang`, whose default is Portuguese (`pt-BR`), or of `VOICEMATE_LANG`, which wins. An engine you start with a plain `make run` therefore logs in Portuguese: add `ARGS="--output-lang en"` (or `VOICEMATE_LANG=en`) to read the English text. The companion passes the flag itself, from "Dictation language:" in Settings.
+The engine messages quoted in this guide are English. The engine prints them in the language of `--output-lang`, whose default is Portuguese (`pt-BR`), or of `VOICEMATE_LANG`, which wins. An engine you start with a plain `make run` therefore logs in Portuguese: add `ARGS="--output-lang en"` (or set `VOICEMATE_LANG=en` in the shell that runs it) to read the English text. The companion passes the flag itself, from "Dictation language:" in Settings.
 
 | Symptom | Cause | Fix |
 |---|---|---|
