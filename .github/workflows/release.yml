@@ -1,0 +1,196 @@
+# Builds the Windows installer and publishes it as a GitHub release (docs/releasing.md).
+#
+# - push of a tag vX.Y.Z (or vX.Y.Z-pre): build, then create the release (or update it,
+#   when it exists) with the installer, its .sha256 and the translated notes.
+# - workflow_dispatch with an existing tag: the same, again (assets are replaced).
+# - pull_request touching the packaging: build only, the installer becomes a workflow
+#   artifact, nothing is published.
+#
+# The build job only reads the repository; the publish job is the only one that may write.
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build and publish again (e.g. v0.1.0)"
+        required: true
+        type: string
+  pull_request:
+    paths:
+      - "packaging/**"
+      - "tools/build_installer.py"
+      - "tools/release_check.py"
+      - "requirements/companion*"
+      - "app/companion/version.py"
+      - ".github/workflows/release.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.pull_request.number || inputs.tag || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Pinned, so every release is compiled by the same Inno Setup (6.3+ is required).
+  INNO_SETUP_VERSION: "6.7.1"
+  MAKE_VERSION: "4.4.1"
+
+jobs:
+  build:
+    name: Build the Windows installer
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+      prerelease: ${{ steps.release.outputs.prerelease }}
+      installer: ${{ steps.release.outputs.installer }}
+      artifact: ${{ steps.stage.outputs.artifact }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # A re-run builds the tag itself, whatever branch the workflow was started from.
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
+          # The whole history, to check that the tag is on main.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements/companion*.txt
+
+      - name: Check the tag, the version and the notes
+        id: release
+        env:
+          EVENT: ${{ github.event_name }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = pull_request ]; then
+            # Nothing is published: the version must be valid, the notes may not exist yet.
+            python -m tools.release_check --skip-notes --github-output "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          python -m tools.release_check --tag "$TAG" --github-output "$GITHUB_OUTPUT"
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::error::$TAG is not on main: tag a commit of main (docs/releasing.md)"
+            exit 1
+          fi
+
+      - name: Install GNU make (when the image has none)
+        run: |
+          set -euo pipefail
+          if ! command -v make >/dev/null 2>&1; then
+            choco install make --version="$MAKE_VERSION" -y --no-progress
+          fi
+          make --version | head -n 1
+
+      # `upgrade` installs it when missing and moves any other version to the pinned one.
+      - name: Install Inno Setup ${{ env.INNO_SETUP_VERSION }}
+        shell: pwsh
+        run: |
+          choco upgrade innosetup --version="$env:INNO_SETUP_VERSION" --allow-downgrade -y --no-progress
+          if ($LASTEXITCODE -ne 0) { throw "choco could not install Inno Setup $env:INNO_SETUP_VERSION" }
+          $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "ISCC.exe not found at $iscc after installing Inno Setup" }
+          "ISCC=$($iscc -replace '\\', '/')" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Output "Using $iscc"
+
+      - name: Create the companion environment
+        run: make companion-venv COMPANION_BOOTSTRAP=python
+
+      - name: Build the installer
+        run: make companion-installer ISCC="$ISCC"
+
+      - name: Checksum and stage the assets
+        id: stage
+        env:
+          EVENT: ${{ github.event_name }}
+          VERSION: ${{ steps.release.outputs.version }}
+          INSTALLER: ${{ steps.release.outputs.installer }}
+          NOTES: ${{ steps.release.outputs.notes }}
+        run: |
+          set -euo pipefail
+          if [ ! -f "dist/installer/$INSTALLER" ]; then
+            echo "::error::dist/installer/$INSTALLER was not built (found: $(ls dist/installer 2>/dev/null | tr '\n' ' '))"
+            exit 1
+          fi
+          mkdir -p dist/release/assets
+          cp "dist/installer/$INSTALLER" dist/release/assets/
+          cd dist/release/assets
+          hash=$(sha256sum "$INSTALLER" | cut -d ' ' -f 1)
+          printf '%s  %s\n' "$hash" "$INSTALLER" > "$INSTALLER.sha256"
+          sha256sum -c "$INSTALLER.sha256"
+          cd ../../..
+          if [ "$EVENT" != pull_request ]; then
+            python -m tools.release_check --stage-notes dist/release/assets
+            # The release body: the English notes, then the checksum.
+            {
+              cat "$NOTES"
+              printf '\n## SHA-256\n\n```text\n%s  %s\n```\n' "$hash" "$INSTALLER"
+              printf '\nCheck the download in PowerShell: `(Get-FileHash .\\%s -Algorithm SHA256).Hash`\n' "$INSTALLER"
+            } > dist/release/body.md
+          fi
+          echo "artifact=VoiceMate-$VERSION-windows" >> "$GITHUB_OUTPUT"
+          {
+            echo "### $INSTALLER"
+            echo
+            echo "SHA-256: \`$hash\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.stage.outputs.artifact }}
+          path: dist/release/
+          if-no-files-found: error
+          retention-days: ${{ github.event_name == 'pull_request' && 7 || 30 }}
+
+  publish:
+    name: Publish the GitHub release
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ needs.build.outputs.tag }}
+      PRERELEASE: ${{ needs.build.outputs.prerelease }}
+      INSTALLER: ${{ needs.build.outputs.installer }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact }}
+          path: release
+
+      - name: Verify the checksum
+        working-directory: release/assets
+        run: sha256sum -c "$INSTALLER.sha256"
+
+      # A new release is created as a draft and published once every asset is up, so
+      # nobody sees it without its installer. An existing one is updated in place.
+      - name: Create or update the release
+        run: |
+          set -euo pipefail
+          title="VoiceMate $TAG"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$title" --notes-file release/body.md --prerelease="$PRERELEASE"
+            gh release upload "$TAG" release/assets/* --clobber
+          else
+            flags=()
+            if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
+            gh release create "$TAG" --verify-tag --draft --title "$title" --notes-file release/body.md "${flags[@]}"
+            gh release upload "$TAG" release/assets/* --clobber
+            gh release edit "$TAG" --draft=false
+          fi
+          gh release view "$TAG" --json url,assets --jq '.url, (.assets[].name)'
