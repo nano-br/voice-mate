@@ -14,7 +14,9 @@ def _fake_module(name: str) -> types.ModuleType:
 
 
 def test_claude_is_available_when_sdk_present() -> None:
-    # The dev env has the extra installed, so the live check must agree.
+    # The dev env has the extra installed, so the live check must agree. CI installs the
+    # engine without its extras (.github/workflows/ci.yml): nothing to agree with there.
+    pytest.importorskip("claude_agent_sdk")
     assert claude_feature.is_available() is True
 
 

@@ -199,6 +199,10 @@ def test_process_image_path_is_this_interpreter() -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows registry")
 def test_winreg_adapter_against_a_scratch_key() -> None:
     """The real adapter, under a throwaway HKCU key (never the real NotifyIconSettings)."""
+    # Never true here (skipif above), but it tells mypy, when it checks this file on Linux,
+    # that the rest is Windows-only (an `assert sys.platform` does not, inside a function).
+    if sys.platform != "win32":
+        return
     import winreg
 
     key_path = rf"Software\VoiceMateCompanionTest-{uuid.uuid4().hex}"
