@@ -307,13 +307,12 @@ def _application(offscreen: bool) -> QApplication:
     return qapp
 
 
-def _compile_catalogs() -> Path:
-    """The .mo files are not in git: compile every .po into a new temporary folder (the
-    caller removes it), so the checkout's own locales folder is never written."""
+def _compile_catalogs(locales: Path) -> None:
+    """The .mo files are not in git: compile every .po into `locales`, a temporary folder
+    the caller creates and removes, so the checkout's own locales folder is never written."""
     from babel.messages.mofile import write_mo
     from babel.messages.pofile import read_po
 
-    locales = Path(tempfile.mkdtemp(prefix="voicemate-shots-"))
     for po in LOCALES_DIR.glob("*/LC_MESSAGES/voicemate.po"):
         catalog = po.parents[1].name
         with po.open("rb") as source:
@@ -322,7 +321,6 @@ def _compile_catalogs() -> Path:
         mo.parent.mkdir(parents=True)
         with mo.open("wb") as target:
             write_mo(target, messages)
-    return locales
 
 
 def _pump(qapp: QApplication, seconds: float = 0.2) -> None:
@@ -371,8 +369,9 @@ def _record(seq: int, text: str, kind: ResultKind) -> ResultRecord:
 
 def _render_language(language: str, out: Path, offscreen: bool) -> int:
     qapp = _application(offscreen)
-    locales = _compile_catalogs()
+    locales = Path(tempfile.mkdtemp(prefix="voicemate-shots-"))
     try:
+        _compile_catalogs(locales)
         # The catalogs are read on demand by the UI: the folder must outlive the whole render.
         return _render_with_catalogs(qapp, language, out, locales)
     finally:
