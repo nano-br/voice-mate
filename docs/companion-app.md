@@ -238,6 +238,13 @@ they belong to:
   instance, otherwise it only copies; the last status wins). Never overwrite the
   user's clipboard with stale text automatically. A result delivered by
   reconciliation (its event was missed) plays no cue: its `needs_cue` is unknown.
+- An ACK can be dropped (the controller gives up after 5 attempts): a result the
+  companion already ACKed that two reconciliations in a row still list as unacked
+  gets the same status again, at most once per reconciliation, unless it is queued
+  or in flight. One listing alone does nothing (that ACK may still be in transit),
+  so the normal path never sends an ACK twice. Without this, a lost `failed` or
+  `dismissed` ACK left the result pending in the daemon, and it came back as stale
+  on the next start (also after the user had cleared it).
 - Results still queued when the daemon instance changes cannot be ACKed any more:
   they go to the pending list (with the "not copied" notification) instead of being
   written late.
@@ -515,7 +522,8 @@ When neither the variable nor a home directory is available, `paths` raises
 guesses a folder (settings written to a temporary folder would be lost silently).
 `main.py` catches it, logs it, shows a critical message box in the OS language
 ("VoiceMate cannot find its data folder: APPDATA is not set...", built from a msgid
-with the variable names, since the exception text is English) and exits with code 1;
+with the variable names, since the exception text is English; Qt's translations are
+installed first, so its OK button speaks the same language) and exits with code 1;
 `setup_file_logging` skips companion.log in that case instead of raising. Helpers that only look for optional things under the home directory (the
 Linux engine folder detection, the local API token) treat a missing home directory
 as "not found".

@@ -17,6 +17,8 @@ Rules from docs/companion-app.md, "Delivery, ACK and reconciliation":
   restored result the daemon still reports as unacked (its ACK was lost with the old
   run) is ACKed `dismissed` again and stays pending. `clear_pending` empties the list
   (the user's "Clear list"); cleared results stay known, so they never come back.
+- an ACK dropped after the controller's retries is sent again (same status) when two
+  reconciliations in a row still list the result as unacked.
 """
 
 from __future__ import annotations
@@ -145,6 +147,9 @@ class DeliveryQueue:
         self._pending: OrderedDict[Key, RecentItem] = OrderedDict()  # oldest first
         # Restored from disk: the daemon may never have received their ACK (see on_unacked).
         self._unsynced: set[Key] = set()
+        # ACKed, yet listed as unacked by the last reconciliation: listed again by the next
+        # one means the ACK was lost (dropped after the controller's retries), not in transit.
+        self._suspect: set[Key] = set()
 
     # --- views ---------------------------------------------------------------------
 
@@ -282,6 +287,9 @@ class DeliveryQueue:
             return []
         stale: list[ResultRecord] = []
         resync: list[int] = []
+        resend: list[Ack] = []
+        listed_acked: set[Key] = set()
+        queued = set(self.queued_keys())
         for record in records:
             if record.get("delivery") != "pending":
                 continue
@@ -297,6 +305,15 @@ class DeliveryQueue:
                     else:
                         self._mark_acked(key, "dismissed")
                     resync.append(record["result_seq"])
+                elif key in self._acked and key not in queued:
+                    # Already ACKed, yet the daemon still lists it. Twice in a row: that ACK
+                    # was dropped after the controller's retries (a first listing may only
+                    # predate an ACK in transit, so it never doubles the normal path). The
+                    # same status again, at most once per reconciliation, or it would stay
+                    # pending in the daemon and come back as stale on the next start.
+                    listed_acked.add(key)
+                    if key in self._suspect:
+                        resend.append(_ack(record["result_seq"], self._acked[key]))
                 continue
             self._remember(instance, record)
             if record["age_s"] < STALE_AFTER_S:
@@ -304,9 +321,12 @@ class DeliveryQueue:
                 self._insert(_Entry(job_from_record(instance, record)))
             else:
                 stale.append(record)
+        self._suspect = listed_acked
         effects: list[DeliveryEffect] = []
         if resync:
             effects.append(SendAck(instance, tuple(_ack(seq, "dismissed") for seq in resync)))
+        if resend:
+            effects.append(SendAck(instance, tuple(resend)))
         if stale:
             for record in stale:
                 self._set_status((instance, record["result_seq"]), "dismissed", record)

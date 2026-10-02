@@ -86,11 +86,12 @@ def _create_controller(demo: bool) -> CompanionController:
     return controller
 
 
-def _report_missing_data_dir(error: DataDirError) -> None:
+def _report_missing_data_dir(app: QApplication, error: DataDirError) -> None:
     """No settings can be read without the data folder: say what to set, in the OS
-    language (a windowed build has no console for the traceback)."""
+    language, Qt's own button included (a windowed build has no console for the traceback)."""
     log.error("%s", error)
     set_language("auto")
+    qt_translator = install_qt_translations(app)
     QMessageBox.critical(
         None,
         "VoiceMate",
@@ -99,6 +100,8 @@ def _report_missing_data_dir(error: DataDirError) -> None:
             "Set {variable} or {home_variable} for your user and start VoiceMate again."
         ).format(variable=error.variable, home_variable=error.home_variable),
     )
+    if qt_translator is not None:
+        app.removeTranslator(qt_translator)
 
 
 def _forward(lock: InstanceLock, args: argparse.Namespace, suffix: str) -> int | None:
@@ -230,7 +233,7 @@ def _run(app: QApplication, args: argparse.Namespace, suffix: str) -> int:
     try:
         controller = _create_controller(args.demo)
     except DataDirError as exc:
-        _report_missing_data_dir(exc)
+        _report_missing_data_dir(app, exc)
         server.close()
         return 1
     set_language(controller.settings().language)

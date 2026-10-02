@@ -359,3 +359,36 @@ def test_abandon_queue_keeps_undelivered_results_for_the_next_run() -> None:
     assert started(effects) == []
     assert sorted(acks(effects)) == [(1, "dismissed"), (2, "dismissed")]
     assert keys(again.pending()) == [(INSTANCE, 5), (INSTANCE, 1), (INSTANCE, 2)]
+
+
+def test_an_ack_the_daemon_never_got_is_sent_again_with_the_same_status() -> None:
+    q = queue()
+    q.on_unacked(INSTANCE, [record(1, 60.0)], 0.0)  # stale: ACKed dismissed
+    q.on_result(INSTANCE, result(2), 0.0, 0.0)
+    q.on_delivery_done((INSTANCE, 2), True, 0.1)  # ACKed delivered
+    # First listing after the ACKs: they may still be in transit, nothing is doubled.
+    assert q.on_unacked(INSTANCE, [record(1, 70.0), record(2, 10.0)], 10.0) == []
+    # Listed again by the next round: those ACKs were dropped. Same status, once per round.
+    effects = q.on_unacked(INSTANCE, [record(1, 80.0), record(2, 20.0)], 20.0)
+    assert sorted(acks(effects)) == [(1, "dismissed"), (2, "delivered")]
+    assert started(effects) == [] and not any(isinstance(e, NotCopied) for e in effects)
+    assert acks(q.on_unacked(INSTANCE, [record(1, 90.0)], 30.0)) == [(1, "dismissed")]
+    assert [i.record["result_seq"] for i in q.pending()] == [1]  # still offered, never delivered
+
+
+def test_an_ack_in_transit_is_not_sent_twice() -> None:
+    q = queue()
+    q.on_unacked(INSTANCE, [record(1, 60.0)], 0.0)
+    assert q.on_unacked(INSTANCE, [record(1, 70.0)], 10.0) == []  # the ACK had not landed yet
+    assert q.on_unacked(INSTANCE, [], 20.0) == []  # it did
+    assert q.on_unacked(INSTANCE, [record(1, 90.0)], 30.0) == []  # a fresh suspicion, not a resend
+
+
+def test_a_queued_result_is_never_acked_by_reconciliation() -> None:
+    q = queue()
+    q.on_result(INSTANCE, result(1), 0.0, 0.0)  # in flight
+    q.on_delivery_done((INSTANCE, 1), False, 0.1)  # retrying
+    q.on_unacked(INSTANCE, [record(7, 60.0)], 0.2)
+    q.copy(INSTANCE, 7, 0.3)  # a manual copy of an ACKed result, queued
+    for now in (10.0, 20.0, 30.0):
+        assert acks(q.on_unacked(INSTANCE, [record(1, now), record(7, now)], now)) == []

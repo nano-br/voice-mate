@@ -299,13 +299,24 @@ def test_a_missing_data_folder_is_explained_not_a_traceback(
         raise DataDirError("APPDATA", "USERPROFILE")
 
     shown: list[tuple[object, str, str]] = []
+    order: list[str] = []
     monkeypatch.setattr(companion_main, "CommandServer", Server)
     monkeypatch.setattr(companion_main, "_create_controller", no_folder)
-    monkeypatch.setattr(companion_main, "set_language", lambda _language: None)  # keep the English msgids
-    monkeypatch.setattr(
-        companion_main.QMessageBox, "critical", lambda parent, title, text: shown.append((parent, title, text))
-    )
+    monkeypatch.setattr(companion_main, "set_language", lambda language: order.append(f"language {language}"))
+
+    def qt_translations(app: QApplication) -> None:
+        assert app is qapp
+        order.append("qt translations")
+
+    def critical(parent: object, title: str, text: str) -> None:
+        order.append("box")
+        shown.append((parent, title, text))
+
+    monkeypatch.setattr(companion_main, "install_qt_translations", qt_translations)
+    monkeypatch.setattr(companion_main.QMessageBox, "critical", critical)
     assert companion_main._run(qapp, companion_main.parse_args([]), "-test") == 1
+    # Qt's own button ("OK") in the same language as the message.
+    assert order == ["language auto", "qt translations", "box"]
     ((parent, title, text),) = shown
     assert parent is None and title == "VoiceMate"
     assert text.startswith("VoiceMate cannot find its data folder: APPDATA is not set")

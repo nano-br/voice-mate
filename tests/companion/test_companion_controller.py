@@ -283,6 +283,25 @@ def test_quit_keeps_what_was_still_queued(make_controller: ControllerKit, daemon
     assert [i.record["text"] for i in again.pending_results()] == ["dictated just before quitting"]
 
 
+def test_a_lost_ack_is_sent_again(make_controller: ControllerKit, daemon: FakeDaemon) -> None:
+    seq = daemon.add_old_unacked("dismissed, but the daemon never heard", age_s=45)
+    controller, parts, _backend = make_controller(daemon)
+    controller.start()
+    assert wait_until(lambda: daemon.ack_status(seq) == "dismissed")
+    with daemon.cond:  # as if that ACK had been dropped after its retries
+        next(r for r in daemon.results if r.record["result_seq"] == seq).record["delivery"] = "pending"
+
+    def sent() -> int:
+        return sum(1 for _client, _instance, ack in daemon.acks if ack["result_seq"] == seq)
+
+    before = sent()
+    assert wait_until(lambda: daemon.ack_status(seq) == "dismissed", timeout=3)  # two rounds later
+    threading.Event().wait(1.0)  # several more reconciliation rounds (FAST timings)
+    assert sent() == before + 1  # once: no storm once the daemon has it
+    assert parts.clipboard.texts == []
+    assert [i.record["result_seq"] for i in controller.pending_results()] == [seq]
+
+
 def test_a_pending_list_that_cannot_be_saved_does_not_break_delivery(
     make_controller: ControllerKit, daemon: FakeDaemon, tmp_path: Path
 ) -> None:
