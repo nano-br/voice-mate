@@ -497,7 +497,11 @@ def _grab_menu(qapp: QApplication, menu: QMenu, warnings: list[str]) -> QImage:
 
 
 def _grab_question(
-    qapp: QApplication, opener: Callable[[], None], current: Callable[[], object], name: str, warnings: list[str]
+    qapp: QApplication,
+    opener: Callable[[], None],
+    current: Callable[[], QMessageBox | None],
+    name: str,
+    warnings: list[str],
 ) -> QImage:
     """Open one of the UI's question boxes, grab it and close it. It is never on screen, so
     nothing should answer it; should anything close it before the grab, open it again."""
@@ -507,7 +511,8 @@ def _grab_question(
         if not isinstance(box, QMessageBox):
             raise SystemExit(f"{name}: the dialog did not open")
         _pump(qapp)
-        if current() is box:
+        still_open = current() is box
+        if still_open:
             image = _grab(box, name, warnings)
             box.close()
             _pump(qapp)
