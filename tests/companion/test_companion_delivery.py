@@ -186,6 +186,41 @@ def test_instance_change_moves_queued_results_to_pending() -> None:
     assert acks(effects) == []
 
 
+def test_a_failed_delivery_of_an_old_instance_is_not_retried_on_the_new_one() -> None:
+    q = queue()
+    q.on_result(INSTANCE, result(1), 0.0, 0.0)  # in flight
+    q.set_instance("inst-b", 0.5)  # the daemon restarted meanwhile
+    effects = q.on_delivery_done((INSTANCE, 1), False, 1.0)
+    assert [e.count for e in effects if isinstance(e, NotCopied)] == [1]
+    assert acks(effects) == [] and started(effects) == []
+    assert q.next_wakeup() is None  # no retry scheduled
+    assert [item.record["result_seq"] for item in q.pending()] == [1]
+    assert q.tick(10.0) == []
+
+
+def test_an_event_after_reconciliation_does_not_rewrite_recent() -> None:
+    q = queue()
+    q.on_unacked(INSTANCE, [record(4, 1.0)], 0.0)  # queued by reconciliation: no cue info
+    q.on_delivery_done((INSTANCE, 4), True, 0.1)
+    assert q.recent()[0].record["delivery"] == "delivered"
+    assert q.on_result(INSTANCE, result(4), 0.0, 0.2) == []  # the late event
+    assert q.recent()[0].record["delivery"] == "delivered"
+
+
+def test_an_event_racing_reconciliation_fills_the_cue_flags() -> None:
+    q = queue()
+    q.on_result(INSTANCE, result(1), 0.0, 0.0)  # in flight, blocks 2
+    q.on_unacked(INSTANCE, [record(2, 1.0)], 0.1)  # reconciliation saw 2 before its event
+    spoken = result(2)
+    spoken["kind"] = "ai_response"
+    spoken["spoken"] = True
+    assert q.on_result(INSTANCE, spoken, 0.0, 0.2) == []  # already queued: not twice
+    effects = q.on_delivery_done((INSTANCE, 1), True, 0.3)
+    (job,) = [e.job for e in effects if isinstance(e, StartDelivery)]
+    assert job.result_seq == 2 and job.needs_cue and job.spoken
+    assert [item.record["delivery"] for item in q.recent() if item.record["result_seq"] == 2] == ["pending"]
+
+
 def test_lost_clipboard_verdict_times_out_as_a_failure() -> None:
     q = queue()
     q.on_result(INSTANCE, result(1), 0.0, 0.0)

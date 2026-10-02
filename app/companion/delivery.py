@@ -17,7 +17,7 @@ Rules from docs/companion-app.md, "Delivery, ACK and reconciliation":
 from __future__ import annotations
 
 from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Final
 
 from app.companion.contract import RecentItem
@@ -181,8 +181,14 @@ class DeliveryQueue:
         return effects + self._advance(now)
 
     def on_result(self, instance: str, data: ResultData, ts: float, now: float) -> list[DeliveryEffect]:
-        """A `result` event. Every result goes to Recent; `needs_delivery` ones are queued."""
+        """A `result` event. Every result goes to Recent; `needs_delivery` ones are queued.
+
+        Reconciliation may have queued (or even delivered) it first: then Recent keeps its
+        status, and a job still waiting takes the event's `needs_cue` and `spoken`."""
         key = (instance, data["result_seq"])
+        if self.is_known(key):
+            self._refresh_job(key, data)
+            return []
         self._remember(
             instance,
             ResultRecord(
@@ -197,7 +203,7 @@ class DeliveryQueue:
                 delivery="pending" if data["needs_delivery"] else "daemon",
             ),
         )
-        if not data["needs_delivery"] or self.is_known(key):
+        if not data["needs_delivery"]:
             return []
         job = DeliveryJob(
             instance=instance,
@@ -266,6 +272,10 @@ class DeliveryQueue:
                 effects.append(SendAck(job.instance, (_ack(job.result_seq, "delivered"),)))
         elif job.manual:
             effects.append(DeliveryFailed(job))
+        elif job.instance != self.instance:
+            # The daemon restarted meanwhile: never retried (nor ACKed) on the new instance.
+            self._move_to_pending(job)
+            effects.append(NotCopied(1))
         else:
             entry.attempts += 1
             if entry.attempts <= RETRIES:
@@ -285,6 +295,16 @@ class DeliveryQueue:
         return self._advance(now)
 
     # --- internals ---------------------------------------------------------------------
+
+    def _refresh_job(self, key: Key, data: ResultData) -> None:
+        entries = ([self._in_flight] if self._in_flight is not None else []) + self._queue
+        for entry in entries:
+            if entry.job.key == key and not entry.job.manual:
+                entry.job = replace(
+                    entry.job,
+                    needs_cue=entry.job.needs_cue or data["needs_cue"],
+                    spoken=entry.job.spoken or data["spoken"],
+                )
 
     def _insert(self, entry: _Entry) -> None:
         if entry.job.manual:
