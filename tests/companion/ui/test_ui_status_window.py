@@ -7,7 +7,7 @@ import pytest
 
 pytest.importorskip("PySide6")
 
-from PySide6.QtCore import Qt  # noqa: E402
+from PySide6.QtCore import QEvent, Qt  # noqa: E402
 from PySide6.QtWidgets import QApplication, QMessageBox  # noqa: E402
 
 from app.companion.contract import Notification  # noqa: E402
@@ -224,3 +224,12 @@ def test_flow_buttons_come_before_cancel_in_the_tab_order(ui: CompanionUi) -> No
     first, second = window.flow_buttons
     assert first.nextInFocusChain() is second
     assert second.nextInFocusChain() is window.cancel_button
+
+
+def test_header_icon_is_repainted_when_the_scale_changes(ui: CompanionUi) -> None:
+    """Moved to a monitor with another scale: the header icon is painted again for it,
+    not left as a blurry upscale of the old pixmap."""
+    window = ui.status_window
+    before = window.state_icon.pixmap().cacheKey()
+    QApplication.sendEvent(window, QEvent(QEvent.Type.DevicePixelRatioChange))
+    assert window.state_icon.pixmap().cacheKey() != before

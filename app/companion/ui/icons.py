@@ -128,7 +128,7 @@ _DESIGN_16: Final = _Design(
     record=(2.0, 3.0),
     ellipsis=(3.5, 3.0, 1.0),
     sparkle=(4.0, 1.6),
-    bubble=(3.75, 7.0, 4.5, 1.6),
+    bubble=(3.0, 7.0, 4.0, 1.5),
     check=((5.0, 3.75), (7.0, 5.75), (11.0, 1.75)),
     ring=(2.5, 1.1),
     badge=(12.0, 12.0, 4.0),
@@ -149,7 +149,7 @@ _DESIGN_20: Final = _Design(
     record=(2.25, 3.5),
     ellipsis=(4.5, 3.5, 1.15),
     sparkle=(4.5, 1.8),
-    bubble=(4.5, 8.0, 5.0, 1.8),
+    bubble=(4.0, 8.0, 5.0, 1.8),
     check=((6.25, 4.5), (8.75, 7.0), (13.75, 2.0)),
     ring=(2.75, 1.25),
     badge=(15.0, 15.0, 5.0),
@@ -389,9 +389,9 @@ def _paint_bubble(painter: QPainter, design: _Design) -> None:
     tail_path.addPolygon(
         QPolygonF(
             [
-                QPointF(cx - tail * 0.7, body.bottom() - 0.5),
-                QPointF(cx - tail * 0.5, body.bottom() + tail),
-                QPointF(cx + tail * 0.5, body.bottom() - 0.5),
+                QPointF(cx - tail * 0.55, body.bottom() - 0.5),
+                QPointF(cx - tail * 0.15, body.bottom() + tail),
+                QPointF(cx + tail * 0.45, body.bottom() - 0.5),
             ]
         )
     )
