@@ -24,7 +24,7 @@ configure:
 	poetry run python -m app.setup.gpu_bootstrap --reconfigure
 
 # Diagnóstico do ambiente: áudio/mic (WSLg), grupo input (evdev), whisper.cpp,
-# Claude CLI, torch+GPU. Nunca aborta — imprime ✓/✗ com a correção de cada item.
+# Claude CLI, torch+GPU. Nunca aborta, imprime ✓/✗ com a correção de cada item.
 doctor:
 	poetry run python -m app.setup.doctor
 
@@ -148,7 +148,7 @@ endif
 COMPANION_PY ?= $(if $(wildcard $(COMPANION_VENV_PY)),"$(COMPANION_VENV_PY)",$(COMPANION_FALLBACK_PY))
 # The interpreter, or an error that stops only the target that needs it.
 companion_py = $(or $(COMPANION_PY),$(error No companion environment: run "make companion-venv" first))
-windows_only = $(if $(filter Windows_NT,$(OS)),,$(error "make $@" builds the Windows app: run it on Windows))
+windows_only = $(if $(filter Windows_NT,$(OS)),,$(error "make $@" runs on Windows only: run it on Windows))
 COMPANION_TESTS := $(wildcard tests/companion) tests/test_import_boundary.py tests/test_companion_packaging.py
 COMPANION_SOURCES := app/companion app/protocol $(COMPANION_TESTS) \
                      tools/gen_icon.py tools/build_installer.py tools/render_screenshots.py \

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import get_args
 
@@ -12,7 +13,10 @@ pytest.importorskip("PySide6")
 from app.companion.contract import TrayState, UiLanguage  # noqa: E402
 from tools import render_screenshots  # noqa: E402
 
-LOCALES = Path(__file__).resolve().parents[3] / "app" / "i18n" / "locales"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+LOCALES = REPO_ROOT / "app" / "i18n" / "locales"
+SHOTS = REPO_ROOT / "docs" / "assets" / "screenshots"
+BRAND = REPO_ROOT / "docs" / "assets" / "brand"
 
 
 def test_one_screenshot_language_per_shipped_catalog() -> None:
@@ -35,6 +39,16 @@ def test_tray_states_image_shows_every_state_once() -> None:
     assert sorted(render_screenshots.TRAY_STATES) == sorted(get_args(TrayState))
 
 
+def test_committed_images_match_the_tool() -> None:
+    """A renamed, added or deleted image must come with a re-render (the READMEs link them)."""
+    for language in render_screenshots.LANGUAGES:
+        committed = {png.stem for png in (SHOTS / language).glob("*.png")}
+        assert committed == set(render_screenshots.SCREENSHOT_NAMES), language
+    assert (SHOTS / "tray-states.png").is_file()
+    assert (BRAND / "banner-light.png").is_file()
+    assert (BRAND / "banner-dark.png").is_file()
+
+
 def test_refuses_to_run_outside_windows(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(render_screenshots.sys, "platform", "linux")
+    monkeypatch.setattr(sys, "platform", "linux")
     assert render_screenshots.main([]) == 2

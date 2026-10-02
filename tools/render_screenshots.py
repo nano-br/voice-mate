@@ -10,8 +10,9 @@ before it is first shown, so Qt lays it out and paints it without mapping a nati
 `--offscreen` uses Qt's offscreen platform instead (a fallback; its fonts and style differ).
 
 What runs is the real UI (`CompanionUi`, the tray menu, the settings dialog, the question
-boxes) driven by the demo `FakeController`: no engine, no hotkeys, no settings file, no
-tray icon. The sample dictations are generic and written per language below; the engine
+boxes) driven by the demo `FakeController`: no engine, no hotkeys, no settings file, and a
+tray icon object that is built (it reads the taskbar theme from the registry, read-only) but
+never shown. The sample dictations are generic and written per language below; the engine
 settings shown are fixed (the default WSL distro and a `voice-mate` folder), so nothing
 from this computer ends up in the images.
 
@@ -21,9 +22,9 @@ at the size the app opens it with, and fixed sample data: two runs write the sam
 Each language renders in its own process, like the app picks its language once at startup.
 
 Writes (`--lang all`, the default; `--lang <one>` writes only that language's folder):
-- `<out>/<lang>/{status,settings-hotkeys,settings-sounds,settings-general,tray-menu,
-  dialog-restart-wsl,dialog-language}.png`, plus `hero.png`: the status window and the
-  tray menu side by side.
+- `<out>/<lang>/<name>.png` for every name in `SCREENSHOT_NAMES`: the status window, one
+  image per settings tab, the tray menu, the two question boxes and `hero`, the status
+  window and the tray menu side by side.
 - `<out>/tray-states.png`: the tray glyph of every state on a dark and a light taskbar strip.
 - `<brand-out>/banner-light.png` and `banner-dark.png`: the app icon and the wordmark, for
   light and dark page backgrounds.
@@ -36,7 +37,6 @@ not fit its widget is reported as a warning.
 from __future__ import annotations
 
 import argparse
-import atexit
 import os
 import shutil
 import subprocess
@@ -92,6 +92,18 @@ DEFAULT_BRAND_OUT: Final = Path("docs/assets/brand")
 LANGUAGES: Final[dict[str, str]] = {"en": "en", "pt-BR": "pt_BR", "es": "es", "ru": "ru", "zh-CN": "zh_CN"}
 SCALE: Final = 2  # device pixels per logical pixel: crisp when a README shows them at half size
 STYLE: Final = "windows11"
+
+# The images written per language, in the order they are rendered (the READMEs link them).
+SCREENSHOT_NAMES: Final = (
+    "status",
+    "settings-hotkeys",
+    "settings-sounds",
+    "settings-general",
+    "tray-menu",
+    "dialog-restart-wsl",
+    "dialog-language",
+    "hero",
+)
 
 # Framing, in logical pixels.
 FRAME_MARGIN: Final = 24
@@ -206,9 +218,17 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         description="Render the README screenshots and brand banners from the companion UI (Windows only).",
     )
     parser.add_argument("--lang", choices=[*LANGUAGES, "all"], default="all", help="README language (default: all).")
-    parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help=f"Screenshots folder (default: {DEFAULT_OUT}).")
     parser.add_argument(
-        "--brand-out", type=Path, default=DEFAULT_BRAND_OUT, help=f"Banner folder (default: {DEFAULT_BRAND_OUT})."
+        "--out",
+        type=Path,
+        default=DEFAULT_OUT,
+        help=f"Screenshots folder, relative to the repository root, not the current folder (default: {DEFAULT_OUT}).",
+    )
+    parser.add_argument(
+        "--brand-out",
+        type=Path,
+        default=DEFAULT_BRAND_OUT,
+        help=f"Banner folder, relative to the repository root; only used with --lang all (default: {DEFAULT_BRAND_OUT}).",
     )
     parser.add_argument(
         "--offscreen", action="store_true", help="Use Qt's offscreen platform instead of the hidden Windows one."
@@ -277,8 +297,9 @@ def _application(offscreen: bool) -> QApplication:
     qapp.installEventFilter(hider)
     _FILTERS.append(hider)
     QGuiApplication.styleHints().setColorScheme(Qt.ColorScheme.Light)
-    if STYLE in (key.lower() for key in QStyleFactory.keys()):
-        qapp.setStyle(STYLE)
+    if STYLE not in (key.lower() for key in QStyleFactory.keys()):
+        raise SystemExit(f"the {STYLE} style is not available in this Qt; the screenshots would not match")
+    qapp.setStyle(STYLE)
     qapp.setFont(QFont("Segoe UI", 9))
     ratio = qapp.primaryScreen().devicePixelRatio()
     if ratio != SCALE:
@@ -287,13 +308,12 @@ def _application(offscreen: bool) -> QApplication:
 
 
 def _compile_catalogs() -> Path:
-    """The .mo files are not in git: compile every .po into a temporary folder (removed at
-    exit), so the checkout's own locales folder is never written."""
+    """The .mo files are not in git: compile every .po into a new temporary folder (the
+    caller removes it), so the checkout's own locales folder is never written."""
     from babel.messages.mofile import write_mo
     from babel.messages.pofile import read_po
 
     locales = Path(tempfile.mkdtemp(prefix="voicemate-shots-"))
-    atexit.register(shutil.rmtree, locales, ignore_errors=True)
     for po in LOCALES_DIR.glob("*/LC_MESSAGES/voicemate.po"):
         catalog = po.parents[1].name
         with po.open("rb") as source:
@@ -335,7 +355,7 @@ class _SampleController(FakeController):
         self._next_seq = len(samples.recent) + 1
 
 
-def _record(seq: int, text: str, kind: ResultKind, pending: bool = False) -> ResultRecord:
+def _record(seq: int, text: str, kind: ResultKind) -> ResultRecord:
     return ResultRecord(
         result_seq=seq,
         op_seq=seq,
@@ -345,15 +365,24 @@ def _record(seq: int, text: str, kind: ResultKind, pending: bool = False) -> Res
         final=True,
         created_ts=0.0,
         age_s=0.0,
-        delivery="pending" if pending else "delivered",
+        delivery="delivered",
     )
 
 
 def _render_language(language: str, out: Path, offscreen: bool) -> int:
+    qapp = _application(offscreen)
+    locales = _compile_catalogs()
+    try:
+        # The catalogs are read on demand by the UI: the folder must outlive the whole render.
+        return _render_with_catalogs(qapp, language, out, locales)
+    finally:
+        shutil.rmtree(locales, ignore_errors=True)
+
+
+def _render_with_catalogs(qapp: QApplication, language: str, out: Path, locales: Path) -> int:
     import app.i18n as i18n
 
-    qapp = _application(offscreen)
-    i18n._LOCALES_DIR = _compile_catalogs()
+    i18n._LOCALES_DIR = locales
     i18n.set_language(language)  # type: ignore[arg-type]
     catalog = LANGUAGES[language]
     if i18n.active_language() != catalog:
@@ -388,7 +417,8 @@ def _render_language(language: str, out: Path, offscreen: bool) -> int:
     status.present()
     _pump(qapp)
     status_image = _grab(status, "status", warnings)
-    save_png(frame(status_image), target / "status.png")
+    written: set[str] = set()
+    _save(target, "status", frame(status_image), written)
     status.hide()
 
     # Settings, one image per tab, in the dialog's own tab order.
@@ -410,14 +440,14 @@ def _render_language(language: str, out: Path, offscreen: bool) -> int:
     for page, name in sorted(pages, key=lambda pair: tabs.indexOf(pair[0])):
         tabs.setCurrentWidget(page)
         _pump(qapp)
-        save_png(frame(_grab(dialog, name, warnings)), target / f"{name}.png")
+        _save(target, name, frame(_grab(dialog, name, warnings)), written)
     dialog.hide()
 
     # The tray menu, as a right click on the tray icon opens it.
     tray = ui.tray
     assert tray is not None
     menu_image = _grab_menu(qapp, tray.menu, warnings)
-    save_png(frame(menu_image), target / "tray-menu.png")
+    _save(target, "tray-menu", frame(menu_image), written)
 
     # Question boxes.
     for name, opener, attribute in (
@@ -425,9 +455,11 @@ def _render_language(language: str, out: Path, offscreen: bool) -> int:
         ("dialog-language", ui.offer_language_restart, "_language_box"),
     ):
         image = _grab_question(qapp, opener, partial(getattr, ui, attribute), name, warnings)
-        save_png(frame(image), target / f"{name}.png")
+        _save(target, name, frame(image), written)
 
-    save_png(hero(status_image, menu_image), target / "hero.png")
+    _save(target, "hero", hero(status_image, menu_image), written)
+    if written != set(SCREENSHOT_NAMES):
+        raise SystemExit(f"rendered {sorted(written)}, expected {sorted(SCREENSHOT_NAMES)}")
 
     for warning in warnings:
         print(f"warning: {language}: {warning}")
@@ -435,6 +467,13 @@ def _render_language(language: str, out: Path, offscreen: bool) -> int:
     ui.bridge.detach()
     del translator
     return 0
+
+
+def _save(target: Path, name: str, image: QImage, written: set[str]) -> None:
+    if name not in SCREENSHOT_NAMES:
+        raise SystemExit(f"{name} is not in SCREENSHOT_NAMES")
+    save_png(image, target / f"{name}.png")
+    written.add(name)
 
 
 def _grab(widget: QWidget, name: str, warnings: list[str]) -> QImage:
@@ -558,7 +597,7 @@ def _at_device_pixels(image: QImage) -> QImage:
 
 
 def hero(status: QImage, menu: QImage) -> QImage:
-    """The status window and the tray menu side by side, bottoms aligned, framed together."""
+    """The status window and the tray menu side by side, vertically centred, framed together."""
     status, menu = frame(status), frame(menu)
     overlap = (2 * FRAME_MARGIN - HERO_GAP) * SCALE  # their shared margin shrinks to the gap
     width = status.width() + menu.width() - overlap
@@ -566,8 +605,8 @@ def hero(status: QImage, menu: QImage) -> QImage:
     out = QImage(width, height, QImage.Format.Format_ARGB32_Premultiplied)
     out.fill(Qt.GlobalColor.transparent)
     painter = QPainter(out)
-    painter.drawImage(0, height - status.height(), status)
-    painter.drawImage(status.width() - overlap, height - menu.height(), menu)
+    painter.drawImage(0, (height - status.height()) // 2, status)
+    painter.drawImage(status.width() - overlap, (height - menu.height()) // 2, menu)
     painter.end()
     return out
 
