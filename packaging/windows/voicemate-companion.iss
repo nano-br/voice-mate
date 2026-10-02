@@ -73,20 +73,30 @@ ShowLanguageDialog=auto
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
+Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
+; Inno Setup ships no Simplified Chinese: the unofficial translation listed on
+; https://jrsoftware.org/files/istrans/ is vendored next to this script (see its README).
+Name: "chinesesimplified"; MessagesFile: "languages\ChineseSimplified.isl"
 
 [Messages]
 ; Windows 11 does not let installers pin to the taskbar: tell the user how to do it.
 english.FinishedLabel=Setup has finished installing [name] on your computer.%n%nTo pin it to the taskbar: open Start, search for VoiceMate, right-click it and choose "Pin to taskbar".
 brazilianportuguese.FinishedLabel=O instalador terminou de instalar o [name] no seu computador.%n%nPara fixá-lo na barra de tarefas: abra o Iniciar, pesquise VoiceMate, clique nele com o botão direito e escolha "Fixar na barra de tarefas".
 spanish.FinishedLabel=El programa completó la instalación de [name] en su sistema.%n%nPara anclarlo a la barra de tareas: abra Inicio, busque VoiceMate, haga clic derecho sobre él y elija "Anclar a la barra de tareas".
+russian.FinishedLabel=Программа установки завершила установку [name] на ваш компьютер.%n%nЧтобы закрепить его на панели задач, откройте меню «Пуск», найдите VoiceMate, щёлкните по нему правой кнопкой мыши и выберите «Закрепить на панели задач».
+chinesesimplified.FinishedLabel=安装程序已在您的电脑中安装了 [name]。%n%n若要将其固定到任务栏：打开“开始”菜单，搜索 VoiceMate，右键单击它，然后选择“固定到任务栏”。
 
 [CustomMessages]
 english.AppComment=Voice to clipboard with local Whisper
 brazilianportuguese.AppComment=Voz para a área de transferência com Whisper local
 spanish.AppComment=Voz al portapapeles con Whisper local
+russian.AppComment=Голос в буфер обмена с локальным Whisper
+chinesesimplified.AppComment=使用本地 Whisper 将语音转写到剪贴板
 english.QuitBeforeSetup=VoiceMate is running. Setup will close it, and the engine it started, before installing.%n%nContinue?
 brazilianportuguese.QuitBeforeSetup=O VoiceMate está em execução. O instalador vai fechá-lo, junto com o motor que ele iniciou, antes de instalar.%n%nContinuar?
 spanish.QuitBeforeSetup=VoiceMate se está ejecutando. El instalador lo cerrará, junto con el motor que inició, antes de instalar.%n%n¿Continuar?
+russian.QuitBeforeSetup=VoiceMate запущен. Перед установкой программа установки закроет его вместе с движком, который он запустил.%n%nПродолжить?
+chinesesimplified.QuitBeforeSetup=VoiceMate 正在运行。安装程序将在安装前关闭它及其启动的引擎。%n%n是否继续？
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
