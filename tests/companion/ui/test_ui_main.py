@@ -13,6 +13,7 @@ pytest.importorskip("PySide6")
 from PySide6.QtCore import QCoreApplication  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
+from app import i18n  # noqa: E402
 from app.companion import main as companion_main  # noqa: E402
 from app.companion.contract import CompanionSettings  # noqa: E402
 from app.companion.ui.demo_controller import FakeController  # noqa: E402
@@ -240,6 +241,54 @@ def remove_translators(qapp: QApplication) -> Iterator[list[object]]:
     yield installed
     for translator in installed:
         QCoreApplication.removeTranslator(translator)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("catalog", "cancel"), [("pt_BR", "Cancelar"), ("es", "Cancelar"), ("ru", "Отмена"), ("zh_CN", "取消")]
+)
+def test_qt_strings_speak_every_translated_language(
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
+    remove_translators: list[object],
+    catalog: str,
+    cancel: str,
+) -> None:
+    assert catalog in companion_main._QT_CATALOGS
+    monkeypatch.setattr(companion_main, "active_language", lambda: catalog)
+    translator = companion_main.install_qt_translations(qapp)
+    if translator is None:
+        pytest.skip(f"this Qt build ships no qtbase_{catalog}.qm")
+    remove_translators.append(translator)
+    assert QCoreApplication.translate("QPlatformTheme", "Cancel") == cancel
+
+
+@pytest.fixture
+def restore_app_font(qapp: QApplication) -> Iterator[None]:
+    font = qapp.font()
+    yield
+    qapp.setFont(font)
+
+
+def test_chinese_ui_adds_han_fonts_after_the_ui_font(
+    qapp: QApplication, monkeypatch: pytest.MonkeyPatch, restore_app_font: None
+) -> None:
+    """Segoe UI has no Han glyphs: Qt's own fallback may pick a Japanese font on a Windows
+    that is not in Chinese. Latin and Cyrillic text keep the platform font."""
+    first = qapp.font().families() or [qapp.font().family()]
+    monkeypatch.setattr(companion_main, "active_language", lambda: "ru")
+    companion_main.install_script_fonts(qapp)
+    assert (qapp.font().families() or [qapp.font().family()]) == first
+    monkeypatch.setattr(companion_main, "active_language", lambda: "zh_CN")
+    companion_main.install_script_fonts(qapp)
+    companion_main.install_script_fonts(qapp)  # idempotent
+    families = qapp.font().families()
+    assert families[: len(first)] == first
+    assert families[len(first) :] == list(companion_main._SCRIPT_FONTS["zh_CN"])
+    assert "Microsoft YaHei UI" in families
+
+
+def test_qt_catalogs_cover_every_translated_ui_language() -> None:
+    assert set(companion_main._QT_CATALOGS) == set(i18n._UI_LANGUAGE_CATALOGS.values()) - {"en"}
 
 
 def test_qt_strings_follow_the_ui_language(

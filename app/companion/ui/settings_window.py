@@ -630,7 +630,10 @@ class SettingsDialog(QDialog):
         self._message_ok: bool | None = None  # the message's color: True ok, False problem, None plain
         self.setWindowTitle(_("VoiceMate Settings"))
         self.setWindowIcon(app_icon())
-        self.setMinimumSize(620, 460)
+        # Only the first size: the layout owns the minimum, so the pages never shrink below
+        # their contents (an explicit minimum would win over it and clip longer translations,
+        # such as Russian cue names on the Sounds tab).
+        self.resize(620, 460)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)

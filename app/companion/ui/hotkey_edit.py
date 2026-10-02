@@ -8,8 +8,8 @@ so a chord such as Alt+S never triggers a button mnemonic instead.
 
 from __future__ import annotations
 
-from PySide6.QtCore import QEvent, Qt, Signal
-from PySide6.QtGui import QFocusEvent, QFont, QKeyEvent, QMouseEvent
+from PySide6.QtCore import QEvent, QSize, Qt, Signal
+from PySide6.QtGui import QFocusEvent, QFont, QFontMetrics, QKeyEvent, QMouseEvent
 from PySide6.QtWidgets import QLineEdit, QWidget
 
 from app.companion.ui.chords import chord_from_key, display_chord, is_modifier_key, modifiers_display
@@ -17,6 +17,9 @@ from app.i18n import _
 
 _CLEAR_KEYS = (Qt.Key.Key_Backspace, Qt.Key.Key_Delete)
 _START_KEYS = (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space)
+_MIN_WIDTH = 170
+# What a QLineEdit adds around its text (frame and text margins), with room to spare.
+_TEXT_PADDING = 24
 _OWN_MODIFIER = {
     Qt.Key.Key_Control: Qt.KeyboardModifier.ControlModifier,
     Qt.Key.Key_Alt: Qt.KeyboardModifier.AltModifier,
@@ -51,7 +54,6 @@ class HotkeyEdit(QLineEdit):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setMinimumWidth(170)
         self.setAccessibleDescription(_("Press Enter, then the new shortcut. Esc cancels, Backspace clears."))
         self._show_chord()
 
@@ -160,7 +162,24 @@ class HotkeyEdit(QLineEdit):
             self.finish_capture(None)
         super().focusOutEvent(event)
 
+    def minimumSizeHint(self) -> QSize:
+        hint = super().minimumSizeHint()
+        return QSize(max(hint.width(), self._prompt_width()), hint.height())
+
+    def sizeHint(self) -> QSize:
+        hint = super().sizeHint()
+        return QSize(max(hint.width(), self._prompt_width()), hint.height())
+
     # ------------------------------------------------------------------ helpers
+
+    def _prompt_width(self) -> int:
+        """Wide enough for every prompt the field shows (italic while capturing): some
+        translations are much longer than "Press the new shortcut..."."""
+        italic = QFont(self.font())
+        italic.setItalic(True)
+        metrics = QFontMetrics(italic)
+        prompts = (_("Press the new shortcut..."), _("This key cannot be used"), _("No shortcut"))
+        return max(_MIN_WIDTH, *(int(metrics.horizontalAdvance(prompt)) + _TEXT_PADDING for prompt in prompts))
 
     def _show_chord(self) -> None:
         self.setPlaceholderText(_("No shortcut"))

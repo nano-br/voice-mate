@@ -565,3 +565,22 @@ def test_the_sound_file_picker_works_without_a_home_folder(ui: CompanionUi, monk
     row.file.setText("")
     sounds._choose_file(row)
     assert starts == [""]  # the dialog opens where Qt wants instead of failing
+
+
+def test_dialog_never_clips_its_pages(
+    ui: CompanionUi, monkeypatch: pytest.MonkeyPatch, process_events: Callable[..., bool]
+) -> None:
+    """The layout owns the minimum size: longer translations (Russian cue names on the
+    Sounds tab) make the window wider instead of squeezing the rows under their text."""
+    from app.companion.ui import texts
+
+    long_labels = {cue: f"{label} with a much longer translation" for cue, label in texts.cue_labels().items()}
+    monkeypatch.setattr(texts, "cue_labels", lambda: long_labels)
+    dialog = _open(ui)
+    for index in range(dialog.tabs.count()):
+        dialog.tabs.setCurrentIndex(index)
+        process_events()
+        assert dialog.width() >= dialog.minimumSizeHint().width(), dialog.tabs.tabText(index)
+        assert dialog.height() >= dialog.minimumSizeHint().height(), dialog.tabs.tabText(index)
+    row = next(iter(dialog.sounds_page.rows.values()))
+    assert row.enabled.width() >= row.enabled.sizeHint().width()
