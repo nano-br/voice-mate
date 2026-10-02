@@ -1,8 +1,9 @@
-"""Write the VoiceMate app icon: the M wave with the coral dot on the indigo tile.
+"""Write the VoiceMate app icon: the mark (a person with raised arms whose body is a
+sound wave, and a coral head) on the framed tile, blue-to-magenta around deep indigo.
 
-The mark is drawn by `app.companion.ui.icons.brand_image` (the same code that paints
-the tray glyphs and the windows' fallback icon), so the packaged icon can never drift
-from what the app draws. See docs/brand.md for the identity.
+The icon is drawn by `app.companion.ui.icons.brand_image` (the same code that paints
+the windows' fallback icon and, without the tile, the tray glyphs), so the packaged
+icon can never drift from what the app draws. See docs/brand.md for the identity.
 
 Writes `app/companion/assets/voicemate-<size>.png` for every size and
 `app/companion/assets/voicemate.ico` with all of them: 16..64 as 32-bit BMP
@@ -10,9 +11,8 @@ entries and 256 as PNG, the classic layout that every Windows tool reads
 (PyInstaller and Inno Setup included).
 
 Each size is drawn on its own pixel grid instead of being downscaled: 16, 20 and 24 px
-have their own designs with straight edges on pixel boundaries, the other sizes use
-the smooth 32-unit geometry. The output is deterministic, so re-running it only
-changes files when the drawing changes.
+are hand-tuned, the other sizes snap the smooth geometry to whole pixels. The output is
+deterministic, so re-running it only changes files when the drawing changes.
 
 Run it from the repository root:
     Windows: .venv-companion\\Scripts\\python -m tools.gen_icon

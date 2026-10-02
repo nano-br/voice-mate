@@ -1,100 +1,109 @@
-# VoiceMate brand: the mark and the status light
+# VoiceMate brand: the mark, the tray glyph and the app icon
 
-VoiceMate turns your voice into text ready to paste. Its icon has to do two jobs: be
+VoiceMate turns your voice into text ready to paste. Its icon has two jobs: be
 recognizable as VoiceMate (Start menu, taskbar, installer, windows) and, in the tray,
 tell at a glance what the companion is doing, the way the Windows microphone-in-use
-indicator does. It is not a microphone: a microphone says "audio device", every
-recorder and every Windows sound icon already uses it, and VoiceMate is a companion,
-not a device.
+indicator does. It is not a microphone: a microphone says "audio device", and VoiceMate
+is a companion, not a device.
 
-## The mark: the voice that writes M(ate)
+## The mark: a companion made of your voice
 
-- **The M wave:** one continuous, thick, white sound-wave stroke that draws a capital M
-  (up, down, up, down) with round caps and round joins. Your voice (the wave) becomes
-  the companion (the M of VoiceMate).
-- **The coral dot:** one solid dot floating above the middle valley of the M, between
-  the two peaks, like a listening light. It is the companion paying attention, and in
-  the tray it is the status light (below).
-- **The tile:** a rounded square with a diagonal gradient from indigo (top left) to
-  violet (bottom right). It carries its own colors, so the icon reads on dark and
-  light taskbars without a theme-specific variant.
+One continuous, thick sound-wave stroke with round caps and round joins, and one dot:
 
-The code is the source of truth: `app/companion/ui/icons.py` draws the mark and the
-tray glyphs, and `tools/gen_icon.py` (`python -m tools.gen_icon`) writes the packaged
+- **The arms:** the two outer ends of the wave, raised.
+- **The body:** the deep V in the middle of the wave, which goes lower than the arms.
+  The body is your voice.
+- **The head:** a solid coral dot above the V, between the shoulders, with a clear gap.
+  It is the companion paying attention, and it stays the same coral in every state.
+
+Read together: a person with raised arms whose body is your voice wave, an assistant
+glad to help. The concept drawing it comes from is the reference; the code is the
+source of truth: `app/companion/ui/icons.py` draws the mark, the tray glyphs and the app
+icon, and `tools/gen_icon.py` (`python -m tools.gen_icon`) writes the packaged
 `app/companion/assets/voicemate.ico` and `voicemate-<size>.png` from the same code.
-`tests/companion/ui/test_ui_icons.py` fails when the PNGs or the `.ico` entries are older than
-the drawing.
+`tests/companion/ui/test_ui_icons.py` fails when the PNGs or the `.ico` entries are older
+than the drawing.
+
+### Geometry
+
+The mark's own units (from the concept drawing: 1024 px canvas divided by 32; y grows
+downwards):
+
+| Part | Value |
+|---|---|
+| Wave | (7, 17.3) left arm, (10.8, 10.3) left shoulder, (16, 21.9) body, (21.2, 10.3) right shoulder, (25, 17.3) right arm |
+| Stroke | 3, round caps and joins |
+| Head | centre (16, 7.9), radius 1.95 |
+
+- Every size is painted on its own, never downscaled from a big bitmap. Below 48 px the
+  stroke is a whole number of pixels, the caps and the head land on the pixel grid and
+  the figure stays symmetric about its axis; the head is never narrower than the stroke.
+- At 16, 20 and 24 px (the tray at 100, 125 and 150 %) the figure is hand-tuned on its
+  own pixel grid wherever the automatic snap loses it: a 2 px stroke, the head raised
+  above the shoulders with a 1 px gap, the body's lowest point well below the arms.
 
 ### Colors
 
 | Role | Hex |
 |---|---|
-| Tile, top left | `#4338CA` |
-| Tile, bottom right | `#7C3AED` |
-| M wave | `#FFFFFF` |
-| Brand dot (coral) | `#FB7185` |
-| Recording | `#EF4444` |
-| Transcribing, warning | `#F59E0B` |
-| Claude answering | `#22D3EE` |
-| Copied (ready) | `#34D399` |
-| Starting rings | `#E5E7EB` |
-| Stopped tile | `#3F3F46` to `#52525B`, wave `#D4D4D8` |
-| Ink on the warning badge | `#1B1B1B` |
+| Head (coral) | `#FB7185` |
+| Mark on the app icon | `#FFFFFF` |
+| App tile frame | `#4F6EF7` (top right) to `#A24FE0` (bottom left) |
+| App tile inner square | `#2A0FA0` (top) to `#3B12B5` (bottom) |
+| Tray glyph on a dark taskbar | `#FFFFFF` (stopped: `#9A9A9A`) |
+| Tray glyph on a light taskbar | `#111111` (stopped: `#6B6B6B`) |
 
-### Geometry
+## The tray glyph: the mark plus a state badge
 
-Designed on a 32-unit grid (y grows downwards); every size is painted on its own,
-never downscaled from a big bitmap.
+The tray shows the mark alone, with no tile and no background, in the taskbar's
+foreground color: white on a dark taskbar, near-black on a light one (the tray follows
+`SystemUsesLightTheme` and redraws when it changes). The head stays coral. The STATE is
+told only by a small badge in the bottom-right corner; with a badge the mark gets smaller
+and moves to the top-left corner so the badge never cuts its right arm, and a transparent
+ring separates the badge from the mark.
 
-| | 32-unit grid (32, 40, 48, 64, 128, 256 px) | 24 px grid | 20 px grid | 16 px grid |
+| `TrayState` | Badge |
+|---|---|
+| `idle` | none: the full-size mark |
+| `stopped` | grey octagon with a white bar; the mark and its head are dimmed to grey |
+| `starting` | grey disc with clock hands |
+| `restarting` | grey circular arrow (a ring with a gap, no disc) |
+| `recording` | small solid red dot (the REC light) |
+| `transcribing` | amber disc with a dark hourglass |
+| `thinking` | violet speech bubble with three dots |
+| `speaking` | violet disc with a white speaker |
+| `ready` (3 s) | green disc with a white check |
+| `warning` | yellow triangle with a dark "!" |
+| `error` | red rounded square with a white X |
+
+Badges differ by SHAPE (disc, small dot, octagon, triangle, rounded square, speech
+bubble, open ring) and by their symbol, never only by color. No animation by default.
+
+## The app icon: the framed tile
+
+The exe, the Start menu shortcut, the installer and the windows show the mark in white
+with its coral head on a framed tile, like the concept drawing: an outer rounded square
+with a blue-to-magenta gradient, around a deep-indigo inner square.
+
+| | 32-unit grid (32 px and up) | 24 px | 20 px | 16 px |
 |---|---|---|---|---|
-| Tile | 1..31, corner radius 7 (22 %) | 1..23, radius 5 | 0..20, radius 4.5 | 0..16, radius 3.5 |
-| Wave stroke | 4 | 3 | 2 | 2 |
-| Wave points | (6, 22.5) (10.75, 12.5) (16, 20) (21.25, 12.5) (26, 22.5) | (4.5, 18.5) (8.5, 10.5) (12, 16.5) (15.5, 10.5) (19.5, 18.5) | (4, 16) (7, 8) (10, 13) (13, 8) (16, 16) | (3, 13) (5.5, 7) (8, 11) (10.5, 7) (13, 13) |
-| Dot | centre (16, 9.5), radius 2.6 | centre (12, 5.5), radius 2.5 | centre (10, 5), radius 2 | centre (8, 4), radius 2 |
+| Margin | 0.5 | 1 | 0 | 0 |
+| Outer corner | 7 (22 %) | 5 | 4.5 | 3.5 |
+| Frame | 3 | 2 | 1 | 1 |
+| Inner corner | 5 | 3.5 | 3.5 | 2.5 |
 
-- The 16, 20 and 24 px designs (the tray at 100, 125 and 150 %) are drawn on their own
-  pixel grids: the wave's outer edges and the tile land on whole pixels, and the mark is
-  symmetric about the centre line. 16 and 20 px have no transparent margin (a fraction of
-  a pixel would only blur the tile's edge).
-- The dot sits between the peaks, slightly above them, with a clear gap to the wave.
-
-## The status light (tray)
-
-The tray shows the full mark, and the state is told by the dot. Every state has its
-own SHAPE; the color only reinforces it.
-
-| `TrayState` | Signal | Shape |
-|---|---|---|
-| `idle` | brand dot | the coral dot: listening for the hotkey |
-| `recording` | record | a red dot inside a white ring (the biggest light), the most prominent state |
-| `transcribing` | ellipsis | three small amber dots in a row |
-| `thinking` | sparkle | a cyan four-point sparkle (Claude is thinking) |
-| `speaking` | bubble | a cyan speech bubble whose tail points into the M (the answer is read aloud) |
-| `ready` (3 s) | check | a mint check mark (copied to the clipboard) |
-| `starting` | ring | a hollow light-grey ring: the light is not on yet |
-| `restarting` | open ring | the ring with a gap and an arrow head: going round again |
-| `stopped` | off | grey tile and wave, no dot |
-| `warning` | triangle | no dot; an amber triangle with a dark "!" in the bottom-right corner, cut out of the tile |
-| `error` | cross | no dot; a red disc with a white X in the bottom-right corner, cut out of the tile |
-
-The warning and error badges replace the dot: the companion cannot listen properly
-(no microphone, WSL audio down, the engine failed), so the listening light is off.
-No animation by default.
+The mark fills about 86 % of the inner square's width. At 16 and 20 px the frame is a
+one-pixel bright edge around the dark square.
 
 ## Do and don't
 
-- **Do** keep the mark on its tile, with the dot above the valley of the M.
-- **Do** tell a state by shape first. A new state gets a new silhouette, and
-  `tests/companion/ui/test_ui_icons.py` checks every pair at 16, 20, 24 and 32 px with the
-  hue removed (luma and coverage only).
-- **Do** check new artwork at 16 px on a dark (`#202020`) and a light (`#F3F3F3`)
-  taskbar before shipping it.
-- **Don't** draw a microphone, a speaker or any other device: the identity is the M wave
-  and its dot.
-- **Don't** rely on color alone (red vs green dot, for example): color-blind users and
-  high contrast themes would lose the state.
-- **Don't** scale a big bitmap down for the small sizes, or add thin details that
-  vanish at 16 px.
-- **Don't** recolor the tile per theme: the gradient tile is what makes the icon read
-  on any taskbar.
+- **Do** keep the body's V lower than the arms and the head above the shoulders, with a
+  gap: that is what makes it a figure and not a plain wave.
+- **Do** tell a tray state by the badge's shape first. A new state gets a new silhouette
+  or symbol, and `tests/companion/ui/test_ui_icons.py` checks every pair at 16, 20, 24 and
+  32 px with colors removed (lightness and coverage only).
+- **Do** check new artwork at 16 px on a dark (`#202020`) and a light (`#F3F3F3`) taskbar.
+- **Don't** draw a microphone, a speaker or any other device as the identity.
+- **Don't** recolor the head per state, or rely on color alone to tell states apart.
+- **Don't** put a tile or background behind the tray glyph, or scale a big bitmap down
+  for the small sizes.

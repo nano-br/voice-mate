@@ -241,8 +241,15 @@ class StatusWindow(QWidget):
         self._ensure_fits()
 
     def _render_icon(self) -> None:
-        pixmap = state_pixmap(self._snapshot.tray_state, HEADER_ICON_SIZE, self.devicePixelRatioF())
+        glyph = self.palette().color(QPalette.ColorRole.WindowText)
+        pixmap = state_pixmap(self._snapshot.tray_state, glyph, HEADER_ICON_SIZE, self.devicePixelRatioF())
         self.state_icon.setPixmap(pixmap)
+
+    def changeEvent(self, event: QEvent) -> None:
+        # Light/dark switch: the glyph follows the text color.
+        if event.type() == QEvent.Type.PaletteChange and hasattr(self, "state_icon"):
+            self._render_icon()
+        super().changeEvent(event)
 
     def event(self, event: QEvent) -> bool:
         # Moved to a screen with another scale: repaint the header icon for it.

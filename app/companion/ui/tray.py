@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QObject, Signal
-from PySide6.QtGui import QAction, QIcon
+from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtGui import QAction, QGuiApplication, QIcon
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon
 
 from app.companion.contract import CompanionSnapshot, FlowEntry, NotificationLevel, RecentItem, TrayState
 from app.companion.ui import texts
 from app.companion.ui.chords import display_chord
-from app.companion.ui.icons import tray_icon
+from app.companion.ui.icons import GlyphTone, taskbar_glyph_tone, tray_icon
 from app.companion.ui.shell import Shell
 from app.companion.ui.view_model import (
     CANCELLABLE_STATES,
@@ -22,6 +22,7 @@ from app.companion.ui.view_model import (
 )
 from app.i18n import _
 
+THEME_POLL_MS = 4000
 MENU_TEXT_LIMIT = 48
 _MESSAGE_ICONS = {
     "info": QSystemTrayIcon.MessageIcon.Information,
@@ -44,7 +45,8 @@ class TrayIcon(QObject):
         super().__init__(parent)
         self._shell = shell
         self._snapshot = shell.bridge.snapshot
-        self._icons: dict[TrayState, QIcon] = {}  # the tile reads on any taskbar: no theme variants
+        self._tone: GlyphTone = taskbar_glyph_tone()
+        self._icons: dict[tuple[TrayState, GlyphTone], QIcon] = {}
         self._flow_key: tuple[tuple[str, str], ...] = ()
         self._flow_actions: list[QAction] = []
         self._quitting = False
@@ -57,6 +59,12 @@ class TrayIcon(QObject):
         self.tray.activated.connect(self._on_activated)
         self.tray.messageClicked.connect(self.message_clicked)
 
+        # The taskbar theme can change at any time; reading one registry value is cheap.
+        self._theme_timer = QTimer(self)
+        self._theme_timer.setInterval(THEME_POLL_MS)
+        self._theme_timer.timeout.connect(self._refresh_tone)
+        self._theme_timer.start()
+        QGuiApplication.styleHints().colorSchemeChanged.connect(self._refresh_tone)
         self.show_snapshot(self._snapshot)
 
     # ------------------------------------------------------------------ building
@@ -166,10 +174,17 @@ class TrayIcon(QObject):
         self._render_flow_actions(displayed_flows(self._snapshot, self._shell.settings()), self._snapshot)
 
     def _icon_for(self, state: TrayState) -> QIcon:
-        icon = self._icons.get(state)
+        key = (state, self._tone)
+        icon = self._icons.get(key)
         if icon is None:
-            icon = self._icons[state] = tray_icon(state)
+            icon = self._icons[key] = tray_icon(state, self._tone)
         return icon
+
+    def _refresh_tone(self) -> None:
+        tone = taskbar_glyph_tone()
+        if tone != self._tone:
+            self._tone = tone
+            self.tray.setIcon(self._icon_for(self._snapshot.tray_state))
 
     # ------------------------------------------------------------------ submenus
 
