@@ -123,6 +123,7 @@ def ui(
         if box is not None:
             setattr(companion, attribute, None)
             box.close()
+            box.deleteLater()
     companion.status_window.hide()
     if companion.tray is not None:
         companion.tray.hide()
