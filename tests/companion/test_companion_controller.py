@@ -163,7 +163,7 @@ def test_stale_unacked_results_are_dismissed_and_kept_for_manual_copy(
     assert wait_until(lambda: recorder.last.pending_unacked == 1)
     (pending,) = controller.pending_results()
     assert pending.record["text"] == "dictated while the app was closed"
-    assert wait_until(lambda: "Not copied" in recorder.titles())
+    assert wait_until(lambda: "Not copied to the clipboard" in recorder.titles())
     controller.copy_result(pending.instance, pending.record["result_seq"])
     assert wait_until(lambda: daemon.ack_status(seq) == "delivered")  # last status wins
     assert parts.clipboard.texts[-1] == "dictated while the app was closed"
@@ -193,7 +193,7 @@ def test_failed_delivery_retries_then_acks_failed(make_controller: ControllerKit
     assert wait_until(lambda: daemon.ack_status(seq) == "failed", timeout=8)
     assert parts.clipboard.fail_next == 6  # 1 attempt + 3 retries
     assert wait_until(lambda: recorder.last.pending_unacked == 1)
-    assert "Not copied" in recorder.titles()
+    assert "Not copied to the clipboard" in recorder.titles()
     assert any(p.name.startswith("error-") for p in parts.sound.played)
 
 

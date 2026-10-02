@@ -27,11 +27,15 @@ def test_controller_notifications_become_tray_balloons(
     balloons: list[tuple[str, str, NotificationLevel]],
     process_events: Callable[..., bool],
 ) -> None:
-    fake.notify(Notification("error", "Not copied", "A transcription did not reach the clipboard.", "show_status"))
+    fake.notify(
+        Notification(
+            "error", "Not copied to the clipboard", "A transcription did not reach the clipboard.", "show_status"
+        )
+    )
     fake.notify(Notification("info", "Engine ready", "Press Ctrl+Alt+V."))
     process_events()
     assert balloons == [
-        ("Not copied", "A transcription did not reach the clipboard.", "error"),
+        ("Not copied to the clipboard", "A transcription did not reach the clipboard.", "error"),
         ("Engine ready", "Press Ctrl+Alt+V.", "info"),
     ]
     assert not ui.status_window.message_banner.isVisible()

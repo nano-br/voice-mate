@@ -884,9 +884,9 @@ def _build(state: CoreState, note: _Note) -> tuple[NotificationLevel, str, str, 
             message = _("{count} transcriptions were not copied to the clipboard. Open VoiceMate to copy them.").format(
                 count=note.count
             )
-        return "error", _("Not copied"), message, "show_status"
+        return "error", _("Not copied to the clipboard"), message, "show_status"
     if code == "copy_failed":
-        return "error", _("Not copied"), _("The text could not be copied to the clipboard. Try again."), "none"
+        return "error", _("Copy failed"), _("The text could not be copied to the clipboard. Try again."), "none"
     # hotkey_in_use
     return (
         "warning",

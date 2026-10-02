@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 22:53-0300\n"
+"POT-Creation-Date: 2026-10-01 23:17-0300\n"
 "PO-Revision-Date: 2026-05-21 14:42-0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -690,10 +690,12 @@ msgid ""
 "to copy them."
 msgstr ""
 
-#: app/companion/model.py:887 app/companion/model.py:889
-#: app/companion/ui/status_window.py:163 app/companion/ui/tray.py:86
-#: app/companion/ui/tray.py:149
-msgid "Not copied"
+#: app/companion/model.py:887
+msgid "Not copied to the clipboard"
+msgstr ""
+
+#: app/companion/model.py:889
+msgid "Copy failed"
 msgstr ""
 
 #: app/companion/model.py:889
@@ -1087,6 +1089,11 @@ msgstr ""
 
 #: app/companion/ui/status_window.py:160
 msgid "Restarts:"
+msgstr ""
+
+#: app/companion/ui/status_window.py:163 app/companion/ui/tray.py:86
+#: app/companion/ui/tray.py:149
+msgid "Not copied"
 msgstr ""
 
 #: app/companion/ui/status_window.py:164

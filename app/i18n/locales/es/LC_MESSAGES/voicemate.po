@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-01 22:53-0300\n"
+"POT-Creation-Date: 2026-10-01 23:17-0300\n"
 "PO-Revision-Date: 2026-10-01 16:49-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: es\n"
@@ -770,11 +770,13 @@ msgstr ""
 "{count} transcripciones no se copiaron al portapapeles. Abre VoiceMate "
 "para copiarlas."
 
-#: app/companion/model.py:887 app/companion/model.py:889
-#: app/companion/ui/status_window.py:163 app/companion/ui/tray.py:86
-#: app/companion/ui/tray.py:149
-msgid "Not copied"
-msgstr "No copiadas"
+#: app/companion/model.py:887
+msgid "Not copied to the clipboard"
+msgstr "No se copió al portapapeles"
+
+#: app/companion/model.py:889
+msgid "Copy failed"
+msgstr "No se pudo copiar"
 
 #: app/companion/model.py:889
 msgid "The text could not be copied to the clipboard. Try again."
@@ -1183,6 +1185,11 @@ msgstr "Micrófonos:"
 #: app/companion/ui/status_window.py:160
 msgid "Restarts:"
 msgstr "Reinicios:"
+
+#: app/companion/ui/status_window.py:163 app/companion/ui/tray.py:86
+#: app/companion/ui/tray.py:149
+msgid "Not copied"
+msgstr "No copiadas"
 
 #: app/companion/ui/status_window.py:164
 msgid "Transcriptions that never reached the clipboard. Copy them from here."

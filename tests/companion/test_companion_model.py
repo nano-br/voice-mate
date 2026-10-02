@@ -429,6 +429,7 @@ def test_delivery_failure_cue_always_plays_and_not_copied_aggregates() -> None:
     sim = Sim().healthy()
     sim.feed(DeliveryOutcome(job(needs_cue=False), False))
     assert sim.cues == ["error"]
+    assert sim.notes[-1][1] == "Not copied to the clipboard"
     assert sim.notes[-1][2] == "A transcription was not copied to the clipboard. Open VoiceMate to copy it."
     sim.advance(60)
     sim.feed(NotCopiedSeen(2))
@@ -437,6 +438,14 @@ def test_delivery_failure_cue_always_plays_and_not_copied_aggregates() -> None:
     sim.feed(NotCopiedSeen(1))
     assert sim.notes[-1][2].startswith("A transcription")
     assert len(sim.notes) == 3  # never dropped
+
+
+def test_manual_copy_failure_has_its_own_title() -> None:
+    sim = Sim().healthy()
+    sim.feed(DeliveryOutcome(job(manual=True), False))
+    assert sim.cues == ["error"]
+    assert sim.notes[-1][:2] == ("error", "Copy failed")
+    assert sim.notes[-1][2] == "The text could not be copied to the clipboard. Try again."
 
 
 def test_notifications_are_rate_limited_per_code() -> None:
