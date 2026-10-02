@@ -1009,6 +1009,17 @@ msgstr ""
 "que aún puede actuar sobre este atajo: revisa la consola de WSL antes de "
 "volver a presionarlo."
 
+#: app/i18n/windows_script_messages.py:47
+msgid "daemon loading"
+msgstr "daemon cargando"
+
+#: app/i18n/windows_script_messages.py:48
+#, python-brace-format
+msgid "{0}: the daemon is still loading the model, try again in a few seconds."
+msgstr ""
+"{0}: el daemon todavía está cargando el modelo, inténtalo de nuevo en "
+"unos segundos."
+
 #: app/i18n/windows_script_messages.py:49
 msgid "daemon error"
 msgstr "error del daemon"

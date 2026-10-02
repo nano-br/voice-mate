@@ -892,6 +892,15 @@ msgid ""
 "again."
 msgstr ""
 
+#: app/i18n/windows_script_messages.py:47
+msgid "daemon loading"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:48
+#, python-brace-format
+msgid "{0}: the daemon is still loading the model, try again in a few seconds."
+msgstr ""
+
 #: app/i18n/windows_script_messages.py:49
 msgid "daemon error"
 msgstr ""

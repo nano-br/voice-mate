@@ -44,6 +44,8 @@ MESSAGES: tuple[str, ...] = (
     N_(
         "{0}: the daemon did not answer within {1} s (busy). It is running, so it may still act on this key press: check the WSL console before pressing again."
     ),
+    N_("daemon loading"),
+    N_("{0}: the daemon is still loading the model, try again in a few seconds."),
     N_("daemon error"),
     N_("{0}: daemon error ({1}). See the WSL console for details."),
     N_("trigger rejected"),
