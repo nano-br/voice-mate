@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-02 02:19-0300\n"
+"POT-Creation-Date: 2026-10-02 02:48-0300\n"
 "PO-Revision-Date: 2026-05-21 14:42-0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -728,7 +728,7 @@ msgid ""
 "other hotkeys in Settings."
 msgstr ""
 
-#: app/companion/settings_store.py:88 app/companion/ui/settings_window.py:555
+#: app/companion/settings_store.py:88 app/companion/ui/settings_window.py:556
 msgid "Language"
 msgstr ""
 
@@ -740,11 +740,11 @@ msgstr ""
 msgid "WSL restart"
 msgstr ""
 
-#: app/companion/settings_store.py:91 app/companion/ui/settings_window.py:556
+#: app/companion/settings_store.py:91 app/companion/ui/settings_window.py:557
 msgid "Notifications"
 msgstr ""
 
-#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:631
+#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:632
 msgid "Hotkeys"
 msgstr ""
 
@@ -835,7 +835,7 @@ msgid ""
 "engine again."
 msgstr ""
 
-#: app/companion/ui/app.py:172 app/companion/ui/settings_window.py:646
+#: app/companion/ui/app.py:172 app/companion/ui/settings_window.py:647
 #: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:79
 msgid "Cancel"
 msgstr ""
@@ -910,7 +910,7 @@ msgid "Master volume"
 msgstr ""
 
 #: app/companion/ui/settings_window.py:358
-#: app/companion/ui/settings_window.py:632
+#: app/companion/ui/settings_window.py:633
 msgid "Sounds"
 msgstr ""
 
@@ -991,99 +991,101 @@ msgstr ""
 #: app/companion/ui/settings_window.py:516
 msgid ""
 "Shows the icon with the recording and transcription state next to the "
-"clock, instead of hiding it behind the arrow."
+"clock, instead of hiding it behind the arrow. An icon hidden in the "
+"Windows taskbar settings stays hidden until you turn this off and on "
+"again."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:524 app/companion/ui/tray.py:96
+#: app/companion/ui/settings_window.py:525 app/companion/ui/tray.py:96
 msgid "Engine"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:531
+#: app/companion/ui/settings_window.py:532
 msgid "Mode:"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:533
+#: app/companion/ui/settings_window.py:534
 msgid "Default distro"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:534
+#: app/companion/ui/settings_window.py:535
 msgid "WSL distro:"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:536
+#: app/companion/ui/settings_window.py:537
 msgid "Detect automatically"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:537
+#: app/companion/ui/settings_window.py:538
 msgid "The voice-mate folder: relative to your home folder, or absolute."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:538
+#: app/companion/ui/settings_window.py:539
 msgid "Engine folder:"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:541
+#: app/companion/ui/settings_window.py:542
 msgid ""
 "Restarting WSL brings its audio back, but it stops every running distro, "
 "Docker included."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:543
+#: app/companion/ui/settings_window.py:544
 msgid "Restart WSL when audio fails:"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:557
+#: app/companion/ui/settings_window.py:558
 msgid "Mode"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:558
+#: app/companion/ui/settings_window.py:559
 msgid "WSL distro"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:559
+#: app/companion/ui/settings_window.py:560
 msgid "Engine folder"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:560
+#: app/companion/ui/settings_window.py:561
 msgid "Restart WSL when audio fails"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:615
+#: app/companion/ui/settings_window.py:616
 msgid "VoiceMate Settings"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:623
+#: app/companion/ui/settings_window.py:624
 msgid ""
 "These settings were saved by a newer version of VoiceMate. They are shown"
 " read-only."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:633
+#: app/companion/ui/settings_window.py:634
 msgid "General"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:645
+#: app/companion/ui/settings_window.py:646
 msgid "OK"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:647
+#: app/companion/ui/settings_window.py:648
 msgid "Apply"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:718
+#: app/companion/ui/settings_window.py:719
 msgid "Saving..."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:729
+#: app/companion/ui/settings_window.py:730
 #, python-brace-format
 msgid "Unexpected error: {error}"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:736
+#: app/companion/ui/settings_window.py:737
 msgid "The settings were not saved:"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:748
+#: app/companion/ui/settings_window.py:749
 msgid "Settings saved."
 msgstr ""
 

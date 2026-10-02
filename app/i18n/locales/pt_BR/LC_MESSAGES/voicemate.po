@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-02 02:19-0300\n"
+"POT-Creation-Date: 2026-10-02 02:48-0300\n"
 "PO-Revision-Date: 2026-10-01 16:49-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: pt_BR\n"
@@ -807,7 +807,7 @@ msgstr ""
 "do VoiceMate estiver rodando, feche-o e remova-o de shell:startup, ou "
 "escolha outros atalhos nas Configurações."
 
-#: app/companion/settings_store.py:88 app/companion/ui/settings_window.py:555
+#: app/companion/settings_store.py:88 app/companion/ui/settings_window.py:556
 msgid "Language"
 msgstr "Idioma"
 
@@ -819,11 +819,11 @@ msgstr "Modo do motor"
 msgid "WSL restart"
 msgstr "Reinício do WSL"
 
-#: app/companion/settings_store.py:91 app/companion/ui/settings_window.py:556
+#: app/companion/settings_store.py:91 app/companion/ui/settings_window.py:557
 msgid "Notifications"
 msgstr "Notificações"
 
-#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:631
+#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:632
 msgid "Hotkeys"
 msgstr "Atalhos"
 
@@ -920,7 +920,7 @@ msgstr ""
 "Isso para todas as distros do WSL em execução, inclusive o Docker, e "
 "inicia o motor de novo."
 
-#: app/companion/ui/app.py:172 app/companion/ui/settings_window.py:646
+#: app/companion/ui/app.py:172 app/companion/ui/settings_window.py:647
 #: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:79
 msgid "Cancel"
 msgstr "Cancelar"
@@ -997,7 +997,7 @@ msgid "Master volume"
 msgstr "Volume geral"
 
 #: app/companion/ui/settings_window.py:358
-#: app/companion/ui/settings_window.py:632
+#: app/companion/ui/settings_window.py:633
 msgid "Sounds"
 msgstr "Sons"
 
@@ -1078,40 +1078,44 @@ msgstr "Sempre mostrar o ícone do VoiceMate na barra de tarefas"
 #: app/companion/ui/settings_window.py:516
 msgid ""
 "Shows the icon with the recording and transcription state next to the "
-"clock, instead of hiding it behind the arrow."
+"clock, instead of hiding it behind the arrow. An icon hidden in the "
+"Windows taskbar settings stays hidden until you turn this off and on "
+"again."
 msgstr ""
 "Mostra o ícone com o estado da gravação e da transcrição ao lado do "
-"relógio, em vez de escondê-lo atrás da seta."
+"relógio, em vez de escondê-lo atrás da seta. Um ícone escondido nas "
+"configurações da barra de tarefas do Windows continua escondido até você "
+"desmarcar e marcar esta opção de novo."
 
-#: app/companion/ui/settings_window.py:524 app/companion/ui/tray.py:96
+#: app/companion/ui/settings_window.py:525 app/companion/ui/tray.py:96
 msgid "Engine"
 msgstr "Motor"
 
-#: app/companion/ui/settings_window.py:531
+#: app/companion/ui/settings_window.py:532
 msgid "Mode:"
 msgstr "Modo:"
 
-#: app/companion/ui/settings_window.py:533
+#: app/companion/ui/settings_window.py:534
 msgid "Default distro"
 msgstr "Distro padrão"
 
-#: app/companion/ui/settings_window.py:534
+#: app/companion/ui/settings_window.py:535
 msgid "WSL distro:"
 msgstr "Distro do WSL:"
 
-#: app/companion/ui/settings_window.py:536
+#: app/companion/ui/settings_window.py:537
 msgid "Detect automatically"
 msgstr "Detectar automaticamente"
 
-#: app/companion/ui/settings_window.py:537
+#: app/companion/ui/settings_window.py:538
 msgid "The voice-mate folder: relative to your home folder, or absolute."
 msgstr "A pasta do voice-mate: relativa à sua pasta pessoal, ou absoluta."
 
-#: app/companion/ui/settings_window.py:538
+#: app/companion/ui/settings_window.py:539
 msgid "Engine folder:"
 msgstr "Pasta do motor:"
 
-#: app/companion/ui/settings_window.py:541
+#: app/companion/ui/settings_window.py:542
 msgid ""
 "Restarting WSL brings its audio back, but it stops every running distro, "
 "Docker included."
@@ -1119,31 +1123,31 @@ msgstr ""
 "Reiniciar o WSL traz o áudio de volta, mas para todas as distros em "
 "execução, inclusive o Docker."
 
-#: app/companion/ui/settings_window.py:543
+#: app/companion/ui/settings_window.py:544
 msgid "Restart WSL when audio fails:"
 msgstr "Reiniciar o WSL se o áudio falhar:"
 
-#: app/companion/ui/settings_window.py:557
+#: app/companion/ui/settings_window.py:558
 msgid "Mode"
 msgstr "Modo"
 
-#: app/companion/ui/settings_window.py:558
+#: app/companion/ui/settings_window.py:559
 msgid "WSL distro"
 msgstr "Distro do WSL"
 
-#: app/companion/ui/settings_window.py:559
+#: app/companion/ui/settings_window.py:560
 msgid "Engine folder"
 msgstr "Pasta do motor"
 
-#: app/companion/ui/settings_window.py:560
+#: app/companion/ui/settings_window.py:561
 msgid "Restart WSL when audio fails"
 msgstr "Reiniciar o WSL se o áudio falhar"
 
-#: app/companion/ui/settings_window.py:615
+#: app/companion/ui/settings_window.py:616
 msgid "VoiceMate Settings"
 msgstr "Configurações do VoiceMate"
 
-#: app/companion/ui/settings_window.py:623
+#: app/companion/ui/settings_window.py:624
 msgid ""
 "These settings were saved by a newer version of VoiceMate. They are shown"
 " read-only."
@@ -1151,32 +1155,32 @@ msgstr ""
 "Estas configurações foram salvas por uma versão mais nova do VoiceMate e "
 "aparecem só para leitura."
 
-#: app/companion/ui/settings_window.py:633
+#: app/companion/ui/settings_window.py:634
 msgid "General"
 msgstr "Geral"
 
-#: app/companion/ui/settings_window.py:645
+#: app/companion/ui/settings_window.py:646
 msgid "OK"
 msgstr "OK"
 
-#: app/companion/ui/settings_window.py:647
+#: app/companion/ui/settings_window.py:648
 msgid "Apply"
 msgstr "Aplicar"
 
-#: app/companion/ui/settings_window.py:718
+#: app/companion/ui/settings_window.py:719
 msgid "Saving..."
 msgstr "Salvando..."
 
-#: app/companion/ui/settings_window.py:729
+#: app/companion/ui/settings_window.py:730
 #, python-brace-format
 msgid "Unexpected error: {error}"
 msgstr "Erro inesperado: {error}"
 
-#: app/companion/ui/settings_window.py:736
+#: app/companion/ui/settings_window.py:737
 msgid "The settings were not saved:"
 msgstr "As configurações não foram salvas:"
 
-#: app/companion/ui/settings_window.py:748
+#: app/companion/ui/settings_window.py:749
 msgid "Settings saved."
 msgstr "Configurações salvas."
 

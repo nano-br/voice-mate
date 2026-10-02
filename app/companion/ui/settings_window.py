@@ -514,7 +514,8 @@ class GeneralPage(QWidget):
             self.tray_icon_visible.setToolTip(
                 _(
                     "Shows the icon with the recording and transcription state next to the clock, "
-                    "instead of hiding it behind the arrow."
+                    "instead of hiding it behind the arrow. An icon hidden in the Windows taskbar "
+                    "settings stays hidden until you turn this off and on again."
                 )
             )
             self.tray_icon_visible.toggled.connect(self.changed)
