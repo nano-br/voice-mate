@@ -378,7 +378,8 @@ Stdlib only (`tomllib` to read, a small writer of our own: `app.setup.persisted_
 cannot be reused, it imports the engine and only writes flat scalars). Invalid or
 unknown values fall back to defaults with a log line; a newer `version` opens the
 settings read-only with a warning. A file that is not readable as TOML (or UTF-8) is
-never overwritten: it is moved aside to `companion.toml.broken` before the defaults are
+never overwritten: it is moved aside to `companion.toml.broken-<YYYYmmdd-HHMMSS>` (a
+second broken file never replaces an earlier backup) before the defaults are
 written, and a "settings reset" notification says so. `engine_mode` must exist on the
 platform (`wsl2` on Windows, `local` elsewhere, `external` everywhere): another value
 falls back to the platform default when read and is rejected when applied.
