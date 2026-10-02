@@ -95,7 +95,9 @@ def _forward(lock: InstanceLock, args: argparse.Namespace, suffix: str) -> int |
         return 0  # signing in again while running: nothing to do
     command: CompanionCommand = args.command or "show"
     name = server_name(suffix)
+    _allow_foreground()
     deadline = time.monotonic() + FORWARD_TIMEOUT_S
+    quit_seen = False
     while True:
         reply = send_command(name, command, timeout_ms=1000)
         if reply == "ok":
@@ -106,13 +108,29 @@ def _forward(lock: InstanceLock, args: argparse.Namespace, suffix: str) -> int |
         if reply == "quitting":
             if args.command is not None:
                 return 0  # a command never starts VoiceMate; quit is already happening
-            deadline = max(deadline, time.monotonic() + QUIT_WAIT_S)
+            if not quit_seen:
+                # One fixed wait for the old instance to end (its controller has a 15 s cap).
+                quit_seen = True
+                deadline = time.monotonic() + QUIT_WAIT_S
         if lock.acquire():
-            return None if args.command is None else 0
+            if args.command is None:
+                return None  # the caller starts VoiceMate and releases the lock at the end
+            lock.release()
+            return 0
         if time.monotonic() >= deadline:
             log.error("VoiceMate is running but did not answer the command %r", command)
             return 1
         time.sleep(RETRY_INTERVAL_S)
+
+
+def _allow_foreground() -> None:
+    """Windows: let the running instance bring its window to the front for our command
+    (show, settings, the Restart WSL question). Without this, an instance started at
+    login may not take the foreground, and its window only flashes in the taskbar."""
+    if sys.platform == "win32":
+        from app.companion.win.single_instance import allow_any_foreground
+
+        allow_any_foreground()
 
 
 def jump_list_updater() -> Callable[[CompanionSettings], None] | None:
@@ -199,7 +217,6 @@ def _run(app: QApplication, args: argparse.Namespace, suffix: str) -> int:
     ui = CompanionUi(controller, update_jump_list=None if args.demo else jump_list_updater())
     app.aboutToQuit.connect(ui.on_about_to_quit)
     ui.quit_started.connect(server.set_quitting)
-    server.set_handler(ui.handle_command)
 
     if _has_console():
         # Ctrl+C quits like the menu does; Python only sees signals between Qt events.
@@ -212,6 +229,8 @@ def _run(app: QApplication, args: argparse.Namespace, suffix: str) -> int:
     # after us: wait for it before falling back to the window.
     ui.start(show_window=not args.autostart, wait_for_tray=args.autostart and sys.platform != "win32")
     controller.start()
+    # Last: commands that arrived during startup (a quit, say) run once everything runs.
+    server.set_handler(ui.handle_command)
     code = int(app.exec())
     server.close()
     del qt_translator

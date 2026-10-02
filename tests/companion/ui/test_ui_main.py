@@ -28,6 +28,7 @@ def keep_the_test_process_aumid(monkeypatch: pytest.MonkeyPatch, qapp: QApplicat
 
         monkeypatch.setattr(aumid, "set_app_user_model_id", lambda app_id="": True)
     monkeypatch.setattr(companion_main.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(companion_main, "_allow_foreground", lambda: None)
 
 
 class _Lock:
@@ -126,6 +127,70 @@ def test_a_command_to_a_quitting_instance_does_not_start_voicemate(monkeypatch: 
     assert companion_main.main(["--command", "settings"]) == 0
     assert replies.sent  # it did ask
     assert started == []
+
+
+def test_a_quitting_instance_is_waited_for_a_fixed_time(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every "quitting" reply must not push the deadline further: the wait is bounded."""
+    monkeypatch.setattr(companion_main, "FORWARD_TIMEOUT_S", 0.0)
+    monkeypatch.setattr(companion_main, "QUIT_WAIT_S", 0.05)
+    started = _patch(monkeypatch, _Lock(), _Replies("quitting"))
+    assert companion_main.main([]) == 1
+    assert started == []
+
+
+def test_a_command_releases_the_lock_it_got_while_forwarding(monkeypatch: pytest.MonkeyPatch) -> None:
+    lock = _Lock(free_after=1)  # taken at first, free on the next try
+    started = _patch(monkeypatch, lock, _Replies("none"))
+    assert companion_main.main(["--command", "settings"]) == 0
+    assert started == []
+    assert lock.released
+
+
+def test_forwarding_lets_the_running_instance_take_the_foreground(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[bool] = []
+    _patch(monkeypatch, _Lock(), _Replies("ok"))
+    monkeypatch.setattr(companion_main, "_allow_foreground", lambda: calls.append(True))
+    assert companion_main.main(["--command", "show"]) == 0
+    assert calls == [True]
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="AllowSetForegroundWindow is Windows-only")
+def test_allow_any_foreground_calls_windows() -> None:
+    from app.companion.win.single_instance import allow_any_foreground
+
+    assert isinstance(allow_any_foreground(), bool)
+
+
+def test_buffered_commands_run_after_everything_started(monkeypatch: pytest.MonkeyPatch, qapp: QApplication) -> None:
+    order: list[str] = []
+
+    class Server:
+        def __init__(self, name: str) -> None:
+            order.append("server")
+
+        def listen(self) -> bool:
+            order.append("listen")
+            return True
+
+        def set_quitting(self) -> None:
+            pass
+
+        def set_handler(self, handler: object) -> None:
+            order.append("handler")
+
+        def close(self) -> None:
+            pass
+
+    class Controller(FakeController):
+        def start(self) -> None:
+            order.append("controller.start")
+            super().start()
+
+    monkeypatch.setattr(companion_main, "CommandServer", Server)
+    monkeypatch.setattr(companion_main, "_create_controller", lambda demo: Controller())
+    monkeypatch.setattr(qapp, "exec", lambda: 0)
+    assert companion_main._run(qapp, companion_main.parse_args(["--autostart", "--demo"]), "-test") == 0
+    assert order == ["server", "listen", "controller.start", "handler"]
 
 
 def test_a_second_autostart_does_nothing(monkeypatch: pytest.MonkeyPatch) -> None:

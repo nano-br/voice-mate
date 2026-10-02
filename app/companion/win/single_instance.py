@@ -59,6 +59,22 @@ class NamedMutex:
             self._handle = None
 
 
+ASFW_ANY = -1
+
+
+def allow_any_foreground() -> bool:
+    """`AllowSetForegroundWindow(ASFW_ANY)`: called by a second launch (which got the
+    foreground from the shell) before it forwards a command, so the running instance may
+    bring its window to the front. False (harmless) when Windows refuses."""
+    if sys.platform != "win32":
+        return False
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    allow = user32.AllowSetForegroundWindow
+    allow.argtypes = [wintypes.DWORD]
+    allow.restype = wintypes.BOOL
+    return bool(allow(ASFW_ANY & 0xFFFFFFFF))
+
+
 def _close_handle(handle: int) -> None:
     if sys.platform != "win32":
         return
