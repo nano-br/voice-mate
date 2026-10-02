@@ -471,11 +471,11 @@ msgstr "Перезапуск (попытка {attempt})"
 #: app/companion/model.py:647
 #, python-brace-format
 msgid "Listening for {hotkey}"
-msgstr "Ожидание {hotkey}"
+msgstr "Ожидание нажатия {hotkey}"
 
 #: app/companion/model.py:647 app/companion/ui/texts.py:97
 msgid "Ready"
-msgstr "Готово"
+msgstr "Готов к работе"
 
 #: app/companion/model.py:650 app/companion/ui/texts.py:78
 #, python-brace-format
@@ -676,8 +676,7 @@ msgid ""
 "old file, with the transcriptions it held, was kept as {path}."
 msgstr ""
 "Не удалось прочитать сохранённый список «Нескопированные», поэтому он "
-"начинается с пустого. Старый файл с его расшифровками сохранён как "
-"{path}."
+"очищен. Старый файл с его расшифровками сохранён как {path}."
 
 #: app/companion/model.py:837
 msgid "Engine unreachable"
@@ -784,8 +783,8 @@ msgid ""
 "{count} transcriptions were not copied to the clipboard. Open VoiceMate "
 "to copy them."
 msgstr ""
-"Не скопировано в буфер обмена расшифровок: {count}. Откройте VoiceMate, "
-"чтобы скопировать их."
+"Расшифровок, не скопированных в буфер обмена: {count}. Откройте "
+"VoiceMate, чтобы скопировать их."
 
 #: app/companion/model.py:907
 msgid "Not copied to the clipboard"
@@ -1022,8 +1021,8 @@ msgstr "Нет сочетания"
 #: app/companion/ui/settings_window.py:141
 msgid "Click a shortcut, then press the new keys. Esc cancels, Backspace clears."
 msgstr ""
-"Щёлкните сочетание клавиш, затем нажмите новые клавиши. Esc отменяет, "
-"Backspace очищает."
+"Щёлкните поле сочетания клавиш, затем нажмите новые клавиши. Esc "
+"отменяет, Backspace очищает."
 
 #: app/companion/ui/settings_window.py:144
 msgid "The engine owns these shortcuts. Change them in the engine configuration."
@@ -1115,7 +1114,7 @@ msgstr "Выберите звуковой файл"
 
 #: app/companion/ui/settings_window.py:479
 msgid "WAV audio"
-msgstr "Звук WAV"
+msgstr "Аудиофайлы WAV"
 
 #: app/companion/ui/settings_window.py:508
 msgid "Language:"
@@ -1343,7 +1342,7 @@ msgstr "Перезапуск движка..."
 #: app/companion/ui/texts.py:96
 #, python-brace-format
 msgid "Listening for {chord}"
-msgstr "Ожидание {chord}"
+msgstr "Ожидание нажатия {chord}"
 
 #: app/companion/ui/texts.py:111
 msgid "Check the microphone"
@@ -1463,7 +1462,7 @@ msgstr "Только ошибки"
 
 #: app/companion/ui/texts.py:196
 msgid "None"
-msgstr "Никаких"
+msgstr "Не показывать"
 
 #: app/companion/ui/texts.py:202
 msgid "Available"
@@ -1626,9 +1625,9 @@ msgid ""
 "({elapsed:.0f}s for {audio_seconds:.0f}s) — the backend is probably "
 "running WITHOUT GPU. Run `make doctor` for diagnosis."
 msgstr ""
-"[VoiceMate] ⚠ Расшифровка в {ratio:.0f}× медленнее аудио ({elapsed:.0f} с"
-" на {audio_seconds:.0f} с): скорее всего, бэкенд работает БЕЗ GPU. Для "
-"диагностики выполните `make doctor`."
+"[VoiceMate] ⚠ Расшифровка в {ratio:.0f} раз медленнее аудио "
+"({elapsed:.0f} с на {audio_seconds:.0f} с): скорее всего, бэкенд работает"
+" БЕЗ GPU. Для диагностики выполните `make doctor`."
 
 #: app/core/recording_session.py:430
 msgid ""
@@ -1744,7 +1743,7 @@ msgstr "[VoiceMate] 🤖 Обращение к Claude..."
 
 #: app/features/claude/chat_handler.py:147
 msgid "[VoiceMate] ✗ Claude response discarded (cancelled)."
-msgstr "[VoiceMate] ✗ Ответ Claude отброшен (отменено)."
+msgstr "[VoiceMate] ✗ Ответ Claude отброшен (операция отменена)."
 
 #: app/features/claude/chat_handler.py:150
 msgid "[VoiceMate] Claude returned an empty response."
@@ -2031,7 +2030,7 @@ msgid ""
 "CPU (synthesis ~50-100× slower than GPU)."
 msgstr ""
 "[VoxCPMSpeaker] ⚠ PyTorch без ускорения на GPU: VoxCPM будет работать на "
-"CPU (синтез в ~50-100× медленнее, чем на GPU)."
+"CPU (синтез в ~50-100 раз медленнее, чем на GPU)."
 
 #: app/features/tts/voxcpm_speaker.py:218
 msgid ""
@@ -2740,7 +2739,7 @@ msgid ""
 "whisper/CT2-ROCm (make configure). On native Linux: install the GPU's "
 "Vulkan driver (mesa-vulkan-drivers)."
 msgstr ""
-"В WSL2 это ожидаемо: Vulkan не видит GPU, используйте openai-"
+"В WSL2 это ожидаемо: Vulkan не видит GPU, поэтому используйте openai-"
 "whisper/CT2-ROCm (make configure). В обычном Linux установите драйвер "
 "Vulkan для GPU (mesa-vulkan-drivers)."
 

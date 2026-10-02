@@ -2744,7 +2744,7 @@ msgid ""
 "whisper/CT2-ROCm (make configure). On native Linux: install the GPU's "
 "Vulkan driver (mesa-vulkan-drivers)."
 msgstr ""
-"No WSL2 isso é esperado: o Vulkan não alcança a GPU, use openai-"
+"No WSL2 isso é esperado: o Vulkan não alcança a GPU, então use openai-"
 "whisper/CT2-ROCm (make configure). No Linux nativo: instale o driver "
 "Vulkan da GPU (mesa-vulkan-drivers)."
 
