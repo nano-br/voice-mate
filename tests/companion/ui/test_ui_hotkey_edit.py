@@ -143,3 +143,19 @@ def test_field_fits_its_longest_translated_prompt(qapp: QApplication, monkeypatc
     needed = QFontMetrics(italic).horizontalAdvance(prompt)
     assert edit.minimumSizeHint().width() > needed
     assert edit.sizeHint().width() > needed
+
+
+@pytest.mark.parametrize(("catalog", "italic"), [("en", True), ("ru", True), ("zh_CN", False)])
+def test_capture_prompt_is_upright_where_the_font_has_no_italic(
+    qapp: QApplication, monkeypatch: pytest.MonkeyPatch, catalog: str, italic: bool
+) -> None:
+    """Microsoft YaHei has no italic: Chinese would get synthetically slanted glyphs."""
+    from app.companion.ui import hotkey_edit
+
+    monkeypatch.setattr(hotkey_edit, "active_language", lambda: catalog)
+    edit = HotkeyEdit("ctrl+alt+v")
+    edit.start_capture()
+    assert edit.capturing
+    assert edit.font().italic() is italic
+    edit.finish_capture(None)
+    assert not edit.font().italic()
