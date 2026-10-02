@@ -44,6 +44,7 @@ FAST = Timings(
     grace_s=3.0,
     backoff_s=(0.2, 0.4),
     hotkey_retry_s=0.3,
+    tray_promote_s=(0.1, 0.3, 0.6),
 )
 
 
@@ -690,6 +691,17 @@ class FakeDesktopParts:
     autostart: list[tuple[bool, list[str]]] = field(default_factory=list)
     autostart_state: bool | None = None
     opened: list[Path] = field(default_factory=list)
+    # Tray icon visibility (Windows 11): None = the OS has no such setting.
+    tray_supported: bool = True
+    tray_entry_after: int = 0  # calls that find no entry before Explorer "creates" it
+    tray_calls: list[bool] = field(default_factory=list)
+    tray_only_if_unset: list[bool] = field(default_factory=list)
+    taskbar_pin_tip: bool = True
+
+    def set_tray_icon_promoted(self, promoted: bool, only_if_unset: bool) -> bool:
+        self.tray_only_if_unset.append(only_if_unset)
+        self.tray_calls.append(promoted)
+        return len(self.tray_calls) > self.tray_entry_after
 
     def desktop(self) -> Desktop:
         def set_autostart(enabled: bool, command: list[str]) -> None:
@@ -704,6 +716,8 @@ class FakeDesktopParts:
             autostart_enabled=lambda: self.autostart_state,
             open_path=self.opened.append,
             hotkeys=self.hotkeys,
+            set_tray_icon_promoted=self.set_tray_icon_promoted if self.tray_supported else None,
+            taskbar_pin_tip=self.taskbar_pin_tip,
         )
 
 

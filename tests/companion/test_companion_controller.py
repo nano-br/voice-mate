@@ -538,6 +538,138 @@ def test_registry_is_the_source_of_truth_for_start_at_login(make_controller: Con
     assert parts.autostart == [(False, parts.autostart[0][1])]
 
 
+def test_tray_icon_is_promoted_at_startup_until_its_entry_exists(
+    make_controller: ControllerKit, daemon: FakeDaemon
+) -> None:
+    parts = FakeDesktopParts(tray_entry_after=1)  # Explorer creates the entry after the first try
+    controller, _parts, _backend = make_controller(daemon, parts=parts)
+    assert parts.tray_calls == []  # nothing before start()
+    controller.start()
+    assert wait_until(lambda: parts.tray_calls == [True, True])
+    threading.Event().wait(0.8)
+    assert parts.tray_calls == [True, True]  # found: no more tries
+    assert parts.tray_only_if_unset == [True, True]  # startup keeps a choice made in Windows
+
+
+def test_tray_icon_promotion_gives_up_after_the_last_try(make_controller: ControllerKit, daemon: FakeDaemon) -> None:
+    parts = FakeDesktopParts(tray_entry_after=99)  # Windows 10: never an entry
+    controller, _parts, _backend = make_controller(daemon, parts=parts)
+    controller.start()
+    assert wait_until(lambda: len(parts.tray_calls) == 3)
+    threading.Event().wait(0.8)
+    assert parts.tray_calls == [True, True, True]
+
+
+def test_tray_icon_setting_changes_promote_and_demote(make_controller: ControllerKit, daemon: FakeDaemon) -> None:
+    parts = FakeDesktopParts()
+    settings = CompanionSettings(engine_mode="wsl2", client_key="test-client-key-0001", tray_icon_visible=False)
+    controller, _parts, _backend = make_controller(daemon, parts=parts, settings=settings)
+    controller.start()
+    assert wait_until(lambda: _connected(controller, daemon))
+    assert parts.tray_calls == []  # off at startup: the user's choice in Windows stays as it is
+    assert controller.apply_settings(replace(controller.settings(), tray_icon_visible=True)) == []
+    assert wait_until(lambda: parts.tray_calls == [True])
+    assert controller.apply_settings(replace(controller.settings(), master_volume=0.4)) == []
+    assert controller.apply_settings(replace(controller.settings(), tray_icon_visible=False)) == []
+    assert wait_until(lambda: parts.tray_calls == [True, False])
+    threading.Event().wait(0.8)
+    assert parts.tray_calls == [True, False]  # an unrelated change never writes
+    assert parts.tray_only_if_unset == [False, False]  # our own checkbox forces the value
+    assert controller.settings().tray_icon_visible is False
+
+
+def test_a_newer_tray_icon_change_cancels_pending_tries(make_controller: ControllerKit, daemon: FakeDaemon) -> None:
+    parts = FakeDesktopParts(tray_entry_after=99)
+    controller, _parts, _backend = make_controller(daemon, parts=parts)
+    controller.start()
+    assert controller.apply_settings(replace(controller.settings(), tray_icon_visible=False)) == []
+    threading.Event().wait(1.2)
+    assert parts.tray_calls and parts.tray_calls[-1] is False
+    assert parts.tray_calls.count(False) == 4  # at once, then the three retries
+    assert True not in parts.tray_calls[parts.tray_calls.index(False) :]
+
+
+def test_no_tray_icon_setting_on_the_os_is_a_no_op(make_controller: ControllerKit, daemon: FakeDaemon) -> None:
+    parts = FakeDesktopParts(tray_supported=False)
+    controller, _parts, _backend = make_controller(daemon, parts=parts)
+    controller.start()
+    assert controller.apply_settings(replace(controller.settings(), tray_icon_visible=False)) == []
+    assert controller.settings().tray_icon_visible is False
+    threading.Event().wait(0.3)
+    assert parts.tray_calls == []
+
+
+def _first_run_controller(tmp_path: Path, daemon: FakeDaemon, parts: FakeDesktopParts) -> CompanionControllerImpl:
+    store = SettingsStore(tmp_path / "companion.toml", platform="win32")
+    store.save(replace(store.get(), daemon_port=daemon.port))  # never the real daemon's port
+    backend = FakeBackend(daemon=daemon)
+    return CompanionControllerImpl(
+        store,
+        desktop_factory=parts.desktop,
+        backend_factory=lambda _settings, _logs: backend,
+        cues_dir=tmp_path / "cues",
+        logs_dir=tmp_path / "logs",
+        timings=FAST,
+    )
+
+
+def _stop(controller: CompanionControllerImpl) -> None:
+    done = threading.Event()
+    controller.quit(done.set)
+    assert done.wait(6)
+
+
+def test_first_run_shows_the_pin_tip_once(tmp_path: Path, daemon: FakeDaemon) -> None:
+    parts = FakeDesktopParts()
+    controller = _first_run_controller(tmp_path, daemon, parts)
+    recorder = Recorder(controller)
+    try:
+        controller.start()
+        assert wait_until(lambda: "Pin VoiceMate to the taskbar" in recorder.titles())
+        note = next(n for n in recorder.notifications if n.title == "Pin VoiceMate to the taskbar")
+        assert note.level == "info" and note.action == "none"
+        assert note.message == "Open Start, search for VoiceMate, right-click it and choose Pin to taskbar."
+        assert wait_until(lambda: _connected(controller, daemon))
+        assert recorder.titles().count("Pin VoiceMate to the taskbar") == 1
+    finally:
+        _stop(controller)
+    # The second start finds the settings file: no tip.
+    second = CompanionControllerImpl(
+        SettingsStore(tmp_path / "companion.toml", platform="win32"),
+        desktop_factory=FakeDesktopParts().desktop,
+        backend_factory=lambda _settings, _logs: FakeBackend(daemon=daemon),
+        cues_dir=tmp_path / "cues",
+        logs_dir=tmp_path / "logs",
+        timings=FAST,
+    )
+    recorder = Recorder(second)
+    try:
+        second.start()
+        assert wait_until(lambda: _connected(second, daemon))
+        assert "Pin VoiceMate to the taskbar" not in recorder.titles()
+    finally:
+        _stop(second)
+
+
+def test_no_pin_tip_where_the_os_has_no_taskbar_pinning(tmp_path: Path, daemon: FakeDaemon) -> None:
+    controller = _first_run_controller(tmp_path, daemon, FakeDesktopParts(taskbar_pin_tip=False))
+    recorder = Recorder(controller)
+    try:
+        controller.start()
+        assert wait_until(lambda: _connected(controller, daemon))
+        assert "Pin VoiceMate to the taskbar" not in recorder.titles()
+    finally:
+        _stop(controller)
+
+
+def test_no_pin_tip_when_the_settings_file_exists(make_controller: ControllerKit, daemon: FakeDaemon) -> None:
+    controller, _parts, _backend = make_controller(daemon)
+    recorder = Recorder(controller)
+    controller.start()
+    assert wait_until(lambda: _connected(controller, daemon))
+    assert "Pin VoiceMate to the taskbar" not in recorder.titles()
+
+
 def test_engine_owned_hotkeys_in_local_mode(make_controller: ControllerKit, daemon: FakeDaemon) -> None:
     settings = CompanionSettings(engine_mode="local", client_key="test-client-key-0001")
     controller, parts, _backend = make_controller(daemon, settings=settings, platform="linux")

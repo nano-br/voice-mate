@@ -153,6 +153,9 @@ class CompanionSettings:
     wsl_restart_policy: WslRestartPolicy = "auto"
     notify_level: NotifyLevel = "warnings"
     start_at_login: bool = False
+    # Windows 11: keep the tray icon on the taskbar instead of the overflow behind the
+    # arrow next to the clock (no effect elsewhere).
+    tray_icon_visible: bool = True
 
 
 @dataclass(frozen=True)

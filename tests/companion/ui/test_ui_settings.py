@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+import threading
 from collections.abc import Callable
 from dataclasses import replace
 
@@ -9,7 +11,7 @@ pytest.importorskip("PySide6")
 
 from PySide6.QtCore import Qt  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
-from PySide6.QtWidgets import QApplication  # noqa: E402
+from PySide6.QtWidgets import QApplication, QCheckBox  # noqa: E402
 
 from app.companion.contract import (  # noqa: E402
     CompanionSettings,
@@ -19,7 +21,7 @@ from app.companion.contract import (  # noqa: E402
 )
 from app.companion.ui.app import CompanionUi  # noqa: E402
 from app.companion.ui.demo_controller import FakeController  # noqa: E402
-from app.companion.ui.settings_window import SettingsDialog  # noqa: E402
+from app.companion.ui.settings_window import GeneralPage, SettingsDialog  # noqa: E402
 
 Mod = Qt.KeyboardModifier
 
@@ -218,6 +220,7 @@ def test_settings_from_a_newer_version_are_read_only(qapp: QApplication, process
     assert not dialog.ok_button.isEnabled() and not dialog.apply_button.isEnabled()
     assert not dialog.sounds_page.isEnabled() and not dialog.general_page.isEnabled()
     assert not dialog.hotkeys_page.defaults_button.isEnabled()
+    assert dialog.hotkeys_page.isEnabled()  # the page itself stays enabled (rows refuse captures)
     QTest.mouseClick(dialog.hotkeys_page.rows[0].edit, Qt.MouseButton.LeftButton)
     assert not dialog.hotkeys_page.rows[0].edit.capturing
     dialog.hide()
@@ -362,6 +365,46 @@ def test_errors_reopen_a_dialog_closed_while_saving(
     assert dialog.general_page.engine_dir.text() == "x"  # the edit is still there
 
 
+def test_pages_are_locked_while_saving(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The reload at the end of a save would silently drop an edit made meanwhile."""
+    release = threading.Event()
+    original = fake.apply_settings
+
+    def slow_apply(settings: CompanionSettings) -> list[str]:
+        release.wait(5)
+        return original(settings)
+
+    monkeypatch.setattr(fake, "apply_settings", slow_apply)
+    dialog = _open(ui)
+    pages = (dialog.hotkeys_page, dialog.sounds_page, dialog.general_page)
+    dialog.general_page.engine_dir.setText("custom/voice-mate")
+    dialog.apply_button.click()
+    process_events()
+    assert dialog.error_text == "Saving..."
+    assert not any(page.isEnabled() for page in pages)
+    assert not dialog.apply_button.isEnabled() and not dialog.ok_button.isEnabled()
+    release.set()
+    assert process_events(lambda: dialog.error_text == "Settings saved.")
+    assert all(page.isEnabled() for page in pages)
+    assert dialog.ok_button.isEnabled() and not dialog.apply_button.isEnabled()
+    assert dialog.general_page.engine_dir.text() == "custom/voice-mate"
+    assert dialog.hotkeys_page.defaults_button.isEnabled()
+
+
+def test_a_failed_save_unlocks_the_pages_with_the_edits_kept(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    fake.apply_errors = ["Could not save the settings file."]
+    dialog = _open(ui)
+    dialog.general_page.engine_dir.setText("x")
+    dialog.apply_button.click()
+    assert process_events(lambda: "Could not save the settings file." in dialog.error_text)
+    assert dialog.general_page.isEnabled() and dialog.sounds_page.isEnabled() and dialog.hotkeys_page.isEnabled()
+    assert dialog.general_page.engine_dir.text() == "x"
+
+
 def test_volumes_off_the_slider_grid_are_not_edits(qapp: QApplication, process_events: Callable[..., bool]) -> None:
     cues = dict(CompanionSettings().cues)
     cues["start"] = CueSettings(volume=0.333)
@@ -447,3 +490,55 @@ def test_errors_do_not_reopen_the_dialog_while_quitting(
     process_events()
     assert not process_events(lambda: dialog.isVisible(), timeout=0.3)
     assert process_events(lambda: exits == [0], timeout=3.0)  # let the quit finish in this test
+
+
+def test_tray_icon_checkbox_only_on_windows(qapp: QApplication) -> None:
+    hidden = CompanionSettings(tray_icon_visible=False)
+    windows = GeneralPage(platform="win32")
+    assert windows.tray_icon_visible is not None
+    assert windows.tray_icon_visible.text() == "Always show the VoiceMate icon on the taskbar"
+    windows.load(hidden)
+    assert not windows.tray_icon_visible.isChecked()
+    edits: list[None] = []
+    windows.changed.connect(lambda: edits.append(None))
+    windows.tray_icon_visible.setChecked(True)
+    assert edits  # an edit enables Apply
+    assert windows.apply_to(hidden).tray_icon_visible is True
+
+    linux = GeneralPage(platform="linux")
+    assert linux.tray_icon_visible is None
+    assert not any(
+        box.text() == "Always show the VoiceMate icon on the taskbar" for box in linux.findChildren(QCheckBox)
+    )
+    linux.load(hidden)
+    assert linux.apply_to(hidden).tray_icon_visible is False  # kept as saved
+
+
+def test_the_settings_dialog_follows_the_running_os(ui: CompanionUi) -> None:
+    dialog = _open(ui)
+    assert (dialog.general_page.tray_icon_visible is not None) == (sys.platform == "win32")
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="the checkbox exists on Windows only")
+def test_bringing_back_the_tray_icon_takes_off_apply_then_on(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    """What the tooltip tells the user: off, Apply, on again (off and on in one edit sends nothing)."""
+    dialog = _open(ui)
+    checkbox = dialog.general_page.tray_icon_visible
+    assert checkbox is not None and checkbox.isChecked()
+    assert "turn this off, click Apply and turn it on again" in checkbox.toolTip()
+    checkbox.setChecked(False)
+    checkbox.setChecked(True)
+    assert not dialog.apply_button.isEnabled()  # back to the saved value: nothing to send
+    checkbox.setChecked(False)
+    dialog.apply_button.click()
+    assert process_events(lambda: checkbox.isEnabled())  # locked while saving, like a user sees it
+    assert fake.settings().tray_icon_visible is False
+    checkbox.setChecked(True)
+    assert dialog.apply_button.isEnabled()
+    dialog.ok_button.click()
+    assert process_events(lambda: len(fake.called("apply_settings")) == 2)
+    sent = [call[0] for call in fake.called("apply_settings")]
+    assert [s.tray_icon_visible for s in sent if isinstance(s, CompanionSettings)] == [False, True]
+    assert fake.settings().tray_icon_visible is True

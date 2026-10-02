@@ -51,6 +51,7 @@ def test_round_trip_keeps_every_field(tmp_path: Path) -> None:
         wsl_restart_policy="ask",
         notify_level="errors",
         start_at_login=True,
+        tray_icon_visible=False,
     )
     text = dump_settings(settings)
     tomllib.loads(text)  # valid TOML
@@ -68,6 +69,25 @@ def test_layout_matches_the_documented_file() -> None:
     assert "[[hotkeys]]" in lines
     assert "[cues.start]" in lines and "[cues.ai_ready]" in lines
     assert lines.index("[[hotkeys]]") > lines.index("start_at_login = false")
+    assert lines.index("tray_icon_visible = true") == lines.index("start_at_login = false") + 1
+
+
+def test_tray_icon_visible_defaults_to_true_and_is_parsed_tolerantly() -> None:
+    assert parse_settings("version = 1").settings.tray_icon_visible is True  # absent (older file)
+    assert parse_settings("tray_icon_visible = false").settings.tray_icon_visible is False
+    result = parse_settings('tray_icon_visible = "no"')
+    assert result.settings.tray_icon_visible is True
+    assert any("tray_icon_visible" in problem for problem in result.problems)
+    for visible in (True, False):
+        settings = CompanionSettings(client_key="k" * 16, tray_icon_visible=visible)
+        assert parse_settings(dump_settings(settings)).settings.tray_icon_visible is visible
+
+
+def test_first_run_is_only_flagged_without_a_settings_file(tmp_path: Path) -> None:
+    path = tmp_path / "companion.toml"
+    assert SettingsStore(path).first_run is True  # and writes the file (client key)
+    assert path.is_file()
+    assert SettingsStore(path).first_run is False
 
 
 def test_empty_hotkeys_survive_a_round_trip() -> None:

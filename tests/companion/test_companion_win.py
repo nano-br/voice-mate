@@ -380,3 +380,6 @@ def test_create_desktop_wires_the_windows_services() -> None:
     assert isinstance(desktop.sound, sound.WinSound)
     assert desktop.mic_count() >= 0
     assert desktop.autostart_enabled() in (True, False)
+    # Wired, never called here: it would write the real NotifyIconSettings.
+    assert desktop.set_tray_icon_promoted is not None
+    assert desktop.taskbar_pin_tip is True
