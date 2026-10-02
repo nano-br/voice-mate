@@ -397,3 +397,53 @@ def test_rebase_settings_merges_per_field_flow_and_cue() -> None:
     assert rebased.engine_dir == "detected"
     assert rebased.hotkeys == (HotkeyBinding("clipboard", "f9"), HotkeyBinding("notes", "ctrl+alt+n"))
     assert rebase_settings(baseline, baseline, current) == current
+
+
+def test_problem_statuses_are_drawn_at_full_opacity(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    """A status shown after a neutral one ("Checking...") must not keep the placeholder
+    role: Qt would paint the stylesheet color at half opacity (about 2:1 contrast)."""
+    from PySide6.QtGui import QColor, QImage, QPalette
+
+    from app.companion.ui.settings_window import _status_color
+
+    fake.hotkey_results = {"ctrl+alt+x": "in_use"}
+    dialog = _open(ui)
+    row = dialog.hotkeys_page.rows[0]
+    row.edit.set_chord("ctrl+alt+x")
+    row.edit.chord_changed.emit("ctrl+alt+x")  # neutral "Checking..." first, then the result
+    assert process_events(lambda: row.status.text() == "Used by another app")
+    assert row.status.foregroundRole() == QPalette.ColorRole.WindowText
+    process_events()
+    expected = QColor(_status_color(dialog.hotkeys_page, False))
+    image = row.status.grab().toImage().convertToFormat(QImage.Format.Format_ARGB32)
+    strongest = max(
+        (image.pixelColor(x, y) for y in range(image.height()) for x in range(image.width())),
+        key=lambda color: (
+            -abs(color.red() - expected.red())
+            - abs(color.green() - expected.green())
+            - abs(color.blue() - expected.blue())
+        ),
+    )
+    distance = (
+        abs(strongest.red() - expected.red())
+        + abs(strongest.green() - expected.green())
+        + abs(strongest.blue() - expected.blue())
+    )
+    assert distance <= 30, (strongest.name(), expected.name())
+
+
+def test_errors_do_not_reopen_the_dialog_while_quitting(
+    ui: CompanionUi, fake: FakeController, exits: list[int], process_events: Callable[..., bool]
+) -> None:
+    fake.apply_errors = ["Could not save the settings file."]
+    fake.quit_delay = 0.5
+    dialog = _open(ui)
+    dialog.general_page.engine_dir.setText("x")
+    dialog.apply_button.click()
+    ui.quit_app()  # hides the dialog before the answer comes back
+    assert process_events(lambda: bool(fake.called("apply_settings")))
+    process_events()
+    assert not process_events(lambda: dialog.isVisible(), timeout=0.3)
+    assert process_events(lambda: exits == [0], timeout=3.0)  # let the quit finish in this test

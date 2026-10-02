@@ -20,6 +20,10 @@ class Shell(Protocol):
     @property
     def has_tray(self) -> bool: ...
 
+    @property
+    def quitting(self) -> bool:
+        """Quit has started: no window may pop up any more."""
+
     def settings(self) -> CompanionSettings:
         """`controller.settings()`, read live every time: the UI never keeps a copy."""
 

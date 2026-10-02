@@ -218,9 +218,6 @@ class StatusWindow(QWidget):
 
         flows = displayed_flows(snapshot, settings)
         self._render_flow_buttons(snapshot, flows)
-        enabled = can_trigger(snapshot)
-        for button in self._flow_buttons:
-            button.setEnabled(enabled)
         self.cancel_button.setEnabled(state in CANCELLABLE_STATES)
 
         self.engine_value.setText(texts.supervisor_labels()[snapshot.supervisor])
@@ -291,8 +288,10 @@ class StatusWindow(QWidget):
                 QWidget.setTabOrder(first, second)
         settings = self._shell.settings()
         recording = snapshot.tray_state in RECORDING_STATES
+        enabled = can_trigger(snapshot)
         for flow, button in zip(flows, self._flow_buttons, strict=True):
             button.setText(texts.flow_stop_title(flow.kind) if recording else texts.flow_title(flow, flows))
+            button.setEnabled(enabled)
             chord = chord_for(flow, snapshot, settings)
             button.setToolTip(display_chord(chord) if chord else "")
 

@@ -126,10 +126,12 @@ class TrayIcon(QObject):
                 self._flow_actions.append(action)
         settings = self._shell.settings()  # live: the chords may have just changed
         recording = snapshot.tray_state in RECORDING_STATES
+        enabled = can_trigger(snapshot)  # also for actions just created (QAction starts enabled)
         for flow, action in zip(flows, self._flow_actions, strict=True):
             title = texts.flow_stop_title(flow.kind) if recording else texts.flow_title(flow, flows)
             chord = chord_for(flow, snapshot, settings)
             action.setText(menu_text(title) + (f"\t{display_chord(chord)}" if chord else ""))
+            action.setEnabled(enabled)
 
     # ------------------------------------------------------------------ rendering
 
@@ -142,9 +144,6 @@ class TrayIcon(QObject):
         settings = self._shell.settings()
         flows = displayed_flows(snapshot, settings)
         self._render_flow_actions(flows, snapshot)
-        enabled = can_trigger(snapshot)
-        for action in self._flow_actions:
-            action.setEnabled(enabled)
         self.cancel_action.setEnabled(snapshot.tray_state in CANCELLABLE_STATES)
         pending = snapshot.pending_unacked
         self.pending_menu.setTitle(_("Not copied ({count})").format(count=pending) if pending else _("Not copied"))

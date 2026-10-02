@@ -11,7 +11,7 @@ from dataclasses import replace
 from typing import Final, get_args
 
 from PySide6.QtCore import QCoreApplication, QObject, QTimer, Signal
-from PySide6.QtWidgets import QMessageBox, QSystemTrayIcon
+from PySide6.QtWidgets import QAbstractButton, QMessageBox, QSystemTrayIcon
 
 from app.companion.contract import (
     CompanionCommand,
@@ -139,13 +139,12 @@ class CompanionUi(QObject):
             self._wsl_box.raise_()
             self._wsl_box.activateWindow()
             return
-        box = _question(
+        box, restart = _question(
             _("Restart WSL now?"),
             _("WSL audio is not working. Restarting WSL fixes it, but it also stops every running distro."),
             _("Restart WSL"),
             _("Not now"),
         )
-        restart = box.defaultButton()
         box.finished.connect(lambda _result: self._on_wsl_answer(box, box.clickedButton() is restart))
         self._wsl_box = box
         box.show()
@@ -166,13 +165,12 @@ class CompanionUi(QObject):
             self._restart_wsl_box.raise_()
             self._restart_wsl_box.activateWindow()
             return
-        box = _question(
+        box, restart = _question(
             _("Restart WSL?"),
             _("This stops every running WSL distro, Docker included, and starts the engine again."),
             _("Restart WSL"),
             _("Cancel"),
         )
-        restart = box.defaultButton()
 
         def answered(_result: int) -> None:
             self._restart_wsl_box = None
@@ -361,11 +359,13 @@ class CompanionUi(QObject):
             log.warning("could not update the jump list", exc_info=True)
 
 
-def _question(title: str, text: str, accept: str, reject: str) -> QMessageBox:
-    """A non-modal question with our own (translated) button texts; `accept` is the default."""
+def _question(title: str, text: str, accept: str, reject: str) -> tuple[QMessageBox, QAbstractButton]:
+    """A non-modal question with our own (translated) button texts. The default (Enter) is
+    `reject`: restarting WSL stops every distro, so it must be an explicit click."""
     box = QMessageBox(QMessageBox.Icon.Question, title, text)
     box.setWindowIcon(app_icon())
     accept_button = box.addButton(accept, QMessageBox.ButtonRole.AcceptRole)
-    box.addButton(reject, QMessageBox.ButtonRole.RejectRole)
-    box.setDefaultButton(accept_button)
-    return box
+    reject_button = box.addButton(reject, QMessageBox.ButtonRole.RejectRole)
+    box.setDefaultButton(reject_button)
+    box.setEscapeButton(reject_button)
+    return box, accept_button

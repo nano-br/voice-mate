@@ -285,6 +285,9 @@ class HotkeysPage(QWidget):
             return
         row.result = result
         row.status.setText(texts.hotkey_check_labels()[result])
+        # Back to the normal text role first: with PlaceholderText (left by _show_neutral) Qt
+        # paints the stylesheet color at half opacity, which made the problems unreadable.
+        row.status.setForegroundRole(QPalette.ColorRole.WindowText)
         row.status.setStyleSheet(f"color: {_status_color(self, result == 'ok')};")
         row.status.setToolTip(texts.hotkey_rule() if result == "invalid" else "")
 
@@ -715,7 +718,7 @@ class SettingsDialog(QDialog):
             header = _escape(_("The settings were not saved:"))
             self._show_message(f"{header}<ul style='margin: 2px 0 0 -20px;'>{items}</ul>", False)
             self._update_buttons()
-            if not self.isVisible():
+            if not self.isVisible() and not self._shell.quitting:
                 self.present(reload=False)  # closed while saving: the errors must not get lost
             return
         self._shell.settings_changed()

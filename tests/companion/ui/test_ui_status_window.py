@@ -161,6 +161,8 @@ def test_wsl_restart_question_from_the_menu(
     box = ui._wsl_box
     assert box is not None and box.isVisible()
     assert box.windowTitle() == "Restart WSL now?"
+    default = box.defaultButton()
+    assert default is not None and default.text() == "Not now"
     restart = next(b for b in box.buttons() if b.text() == "Restart WSL")
     restart.click()
     assert process_events(lambda: fake.called("answer_wsl_restart") == [(True,)])

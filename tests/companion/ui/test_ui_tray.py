@@ -221,6 +221,8 @@ def test_restart_wsl_from_the_menu_asks_first(
     box = ui._restart_wsl_box
     assert box is not None and box.isVisible()
     assert "Docker" in box.text()
+    default = box.defaultButton()
+    assert default is not None and default.text() == "Cancel"  # Enter never stops every distro
     assert fake.called("restart_wsl") == []
     next(button for button in box.buttons() if button.text() == answer).click()
     assert process_events(lambda: ui._restart_wsl_box is None)
@@ -371,3 +373,20 @@ def test_quit_from_the_menu_waits_for_the_controller(
     assert process_events(lambda: exits == [0])
     _tray(ui).quit_action.trigger()  # a second Quit is ignored
     assert fake.called("quit") == [()]
+
+
+def test_rebuilt_flow_actions_stay_disabled_until_the_engine_is_ready(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    from app.companion.contract import FlowEntry
+
+    fake.publish(tray_state="starting", supervisor="starting", engine_ready=False)
+    process_events()
+    flows = (*fake.snapshot().flows, FlowEntry("notes", "clipboard", "ctrl+alt+n"))
+    fake.publish(flows=flows)  # the flows change: the actions are rebuilt
+    process_events()
+    tray = _tray(ui)
+    assert len(tray.flow_actions) == 3
+    assert not any(action.isEnabled() for action in tray.flow_actions)
+    tray.menu.aboutToShow.emit()  # the pre-show refresh must not enable them either
+    assert not any(action.isEnabled() for action in tray.flow_actions)
