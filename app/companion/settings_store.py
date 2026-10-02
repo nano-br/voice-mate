@@ -14,6 +14,7 @@ import re
 import secrets
 import sys
 import threading
+import time
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass, fields, replace
@@ -432,7 +433,7 @@ def normalized(settings: CompanionSettings) -> CompanionSettings:
 class SettingsStore:
     """Loads once, hands out immutable settings, writes atomically (temp file + replace).
 
-    A file that is not readable as TOML is moved aside to `<name>.broken` (never
+    A file that is not readable as TOML is moved aside to `<name>.broken-<timestamp>` (never
     overwritten) before the defaults are written: `broken_backup` says where it went."""
 
     def __init__(self, path: Path, *, platform: str = sys.platform) -> None:
@@ -487,7 +488,13 @@ class SettingsStore:
         return replace(result, settings=settings)
 
     def _move_aside(self) -> bool:
-        backup = self._path.with_name(self._path.name + BROKEN_SUFFIX)
+        # Timestamped, so a second broken file never replaces the first backup.
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        backup = self._path.with_name(f"{self._path.name}{BROKEN_SUFFIX}-{stamp}")
+        counter = 1
+        while backup.exists():
+            backup = self._path.with_name(f"{self._path.name}{BROKEN_SUFFIX}-{stamp}-{counter}")
+            counter += 1
         try:
             os.replace(self._path, backup)
         except OSError as exc:

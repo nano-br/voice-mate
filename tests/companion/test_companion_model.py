@@ -214,6 +214,25 @@ def test_a_standing_warning_is_not_cued_again_when_an_operation_ends() -> None:
     assert sim.cues == ["warning", "warning"]
 
 
+def test_a_warning_found_while_starting_cues_when_the_engine_is_up() -> None:
+    sim = Sim()
+    sim.feed(SupervisorUpdate("starting", 0, None, None, 0, False))
+    sim.feed(MicCountSeen(0))  # no microphone, seen before the engine is ready
+    assert sim.tray == "starting" and sim.cues == []
+    sim.feed(SupervisorUpdate("healthy", 0, None, None, 0, False))
+    assert sim.tray == "warning" and sim.cues == ["warning"]
+
+
+def test_an_outdated_engine_found_while_starting_cues() -> None:
+    sim = Sim()
+    sim.feed(SupervisorUpdate("starting", 0, None, None, 0, False))
+    v1: dict[str, object] = dict(health())
+    del v1["api_version"]
+    sim.feed(HealthSeen(cast(HealthPayload, v1)))
+    sim.feed(SupervisorUpdate("healthy", 0, None, None, 0, False))
+    assert sim.tray == "warning" and sim.cues == ["warning"]
+
+
 def test_the_mic_error_after_idle_is_diagnosed_and_a_retry_clears_it() -> None:
     """The real daemon publishes `state idle` before `error mic_unavailable`."""
     sim = Sim().healthy()

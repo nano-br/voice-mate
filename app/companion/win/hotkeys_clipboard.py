@@ -304,6 +304,11 @@ class HotkeyClipboardThread:
         """flow -> chord currently held."""
         return self._call(lambda: {flow: chord.normalized() for flow, chord in self._registered_chords.items()})
 
+    def register_missing(self) -> dict[str, HotkeyCheck]:
+        """Try only the desired chords not held yet (a retry): held ones are never released.
+        While suspended it only probes. Verdicts for the missing flows ({} = all held)."""
+        return self._call(self._register_missing)
+
     def deliver(self, text: str, done: Callable[[bool], None]) -> None:
         """Queue a verified write; `done(ok)` runs on the Win32 thread when it is settled
         (or at once, on the caller's thread, when the Win32 thread is not running)."""
@@ -479,6 +484,10 @@ class HotkeyClipboardThread:
         for flow, chord in chords.items():
             verdicts[flow] = self._probe(chord) if self._suspended else self._register_one(flow, chord)
         return verdicts
+
+    def _register_missing(self) -> dict[str, HotkeyCheck]:
+        missing = {flow: chord for flow, chord in self._desired.items() if flow not in self._registered_chords}
+        return self._register_set(missing)
 
     def _register(self, bindings: Mapping[str, str], atomic: bool) -> dict[str, HotkeyCheck]:
         parsed = {flow: parse_chord(chord) for flow, chord in bindings.items()}

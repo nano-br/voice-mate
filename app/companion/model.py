@@ -100,6 +100,10 @@ _WARNING_NOTICES: Final[dict[WarningCode, NoticeCode]] = {
     "slow_backend": "slow_backend",
 }
 _FLOW_KINDS: Final[tuple[FlowKind, ...]] = ("clipboard", "claude_chat")
+# Tray states of an operation: leaving one back into the same warning is not a new warning.
+_OPERATION_TRAYS: Final[frozenset[TrayState]] = frozenset(
+    {"recording", "transcribing", "thinking", "speaking", "ready"}
+)
 
 
 @dataclass(frozen=True)
@@ -302,8 +306,8 @@ def reduce(state: CoreState, message: ModelInput, now: Now) -> tuple[CoreState, 
     after = tray_state(step.state, now.mono)
     if isinstance(step.cue, _Unset):
         cue = _ENTER_CUE.get(after) if after != before else None
-        if cue == "warning" and _warning_cause(state) == _warning_cause(step.state):
-            cue = None  # the same warning shows again (an operation ended): no repeat
+        if cue == "warning" and before in _OPERATION_TRAYS and _warning_cause(state) == _warning_cause(step.state):
+            cue = None  # the same warning shows again because an operation ended: no repeat
     else:
         cue = step.cue
     if not step.cue_allowed or not step.state.started:
@@ -804,7 +808,7 @@ def _build(state: CoreState, note: _Note) -> tuple[NotificationLevel, str, str, 
             _(
                 "The settings file could not be read, so VoiceMate started with the default settings. "
                 "The old file was kept as {path}."
-            ).format(path=note.names[0] if note.names else "companion.toml.broken"),
+            ).format(path=note.names[0] if note.names else "companion.toml.broken-*"),
             "open_settings",
         )
     if code == "trigger_offline":

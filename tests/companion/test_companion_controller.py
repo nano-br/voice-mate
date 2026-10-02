@@ -349,16 +349,19 @@ def test_a_hotkey_taken_at_startup_is_retried_until_it_is_free(
     recorder = Recorder(controller)
     controller.start()
     assert wait_until(lambda: "Hotkey unavailable" in recorder.titles())
-    assert hotkeys.held == {"claude_chat": "ctrl+alt+shift+f22"}
-    calls = len(hotkeys.calls)
-    assert wait_until(lambda: len(hotkeys.calls) > calls + 1)  # retried every hotkey_retry_s
+    assert wait_until(lambda: hotkeys.held == {"claude_chat": "ctrl+alt+shift+f22"})
+    assert wait_until(lambda: hotkeys.missing_calls >= 2)  # retried every hotkey_retry_s
+    drops = hotkeys.drops
     # An unrelated change still applies while the chord is taken.
     assert controller.apply_settings(replace(controller.settings(), master_volume=0.5)) == []
+    assert wait_until(lambda: hotkeys.missing_calls >= 4)
+    assert hotkeys.held == {"claude_chat": "ctrl+alt+shift+f22"}
     hotkeys.taken.clear()  # the user closed the script
     assert wait_until(lambda: hotkeys.held == {"clipboard": "ctrl+alt+shift+f23", "claude_chat": "ctrl+alt+shift+f22"})
-    settled = len(hotkeys.calls)
+    assert hotkeys.drops == drops  # retries never released the chord that was held
+    settled = (len(hotkeys.calls), hotkeys.missing_calls)
     threading.Event().wait(1.0)
-    assert len(hotkeys.calls) == settled  # no more retries
+    assert (len(hotkeys.calls), hotkeys.missing_calls) == settled  # no more retries
     assert recorder.titles().count("Hotkey unavailable") == 1  # notified once
 
 
@@ -380,8 +383,9 @@ def test_a_broken_settings_file_is_kept_and_reported(tmp_path: Path, daemon: Fak
         controller.start()
         assert wait_until(lambda: "Settings reset" in recorder.titles())
         note = next(n for n in recorder.notifications if n.title == "Settings reset")
-        assert "companion.toml.broken" in note.message and note.action == "open_settings"
-        assert (tmp_path / "companion.toml.broken").read_text(encoding="utf-8") == "this = = is not toml"
+        assert "companion.toml.broken-" in note.message and note.action == "open_settings"
+        (backup,) = tmp_path.glob("companion.toml.broken-*")
+        assert backup.read_text(encoding="utf-8") == "this = = is not toml"
     finally:
         done = threading.Event()
         controller.quit(done.set)

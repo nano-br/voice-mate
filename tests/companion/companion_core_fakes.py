@@ -626,7 +626,10 @@ class FakeHotkeys:
     def __init__(self, taken: set[str] | None = None) -> None:
         self.taken = taken or set()
         self.held: dict[str, str] = {}
+        self.desired: dict[str, str] = {}
         self.calls: list[dict[str, str]] = []
+        self.drops = 0  # full registrations while something was held
+        self.missing_calls = 0
         self.suspended = False
         self.on_hotkey: Callable[[str], None] | None = None
         self.stopped = False
@@ -645,7 +648,21 @@ class FakeHotkeys:
         }
         if atomic and any(v != "ok" for v in verdicts.values()):
             return verdicts
+        if self.held:
+            self.drops += 1  # like the Win32 thread: a full register releases everything first
+        self.desired = dict(bindings)
         self.held = {flow: chord for flow, chord in bindings.items() if verdicts[flow] == "ok"}
+        return verdicts
+
+    def register_missing(self) -> dict[str, HotkeyCheck]:
+        self.missing_calls += 1
+        verdicts: dict[str, HotkeyCheck] = {}
+        for flow, chord in self.desired.items():
+            if flow in self.held:
+                continue
+            verdicts[flow] = "in_use" if chord in self.taken else "ok"
+            if verdicts[flow] == "ok":
+                self.held[flow] = chord
         return verdicts
 
     def registered(self) -> dict[str, str]:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import tomllib
 import wave
 from dataclasses import replace
@@ -130,11 +131,23 @@ def test_a_broken_file_is_moved_aside_never_overwritten(tmp_path: Path, content:
     path = tmp_path / "companion.toml"
     path.write_bytes(content)
     store = SettingsStore(path)
-    backup = tmp_path / "companion.toml.broken"
-    assert store.broken_backup == backup
+    backup = store.broken_backup
+    assert backup is not None and backup.parent == tmp_path
+    assert re.fullmatch(r"companion\.toml\.broken-\d{8}-\d{6}", backup.name)
     assert backup.read_bytes() == content  # the user's file survives
     assert store.get().client_key  # fresh defaults, written to a new file
     assert parse_settings(path.read_text(encoding="utf-8")).problems == ()
+
+
+def test_a_second_broken_file_keeps_the_first_backup(tmp_path: Path) -> None:
+    path = tmp_path / "companion.toml"
+    path.write_bytes(b"first = = broken")
+    first = SettingsStore(path).broken_backup
+    path.write_bytes(b"second = = broken")  # same second: the name must still be unique
+    second = SettingsStore(path).broken_backup
+    assert first is not None and second is not None and first != second
+    assert first.read_bytes() == b"first = = broken"
+    assert second.read_bytes() == b"second = = broken"
 
 
 def test_a_valid_file_is_not_moved(tmp_path: Path) -> None:
@@ -142,7 +155,7 @@ def test_a_valid_file_is_not_moved(tmp_path: Path) -> None:
     path.write_text('client_key = "abcdefgh12345678"\nlanguage = "klingon"\n', encoding="utf-8")
     store = SettingsStore(path)
     assert store.broken_backup is None
-    assert not (tmp_path / "companion.toml.broken").exists()
+    assert list(tmp_path.glob("companion.toml.broken*")) == []
 
 
 @pytest.mark.parametrize(

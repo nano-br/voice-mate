@@ -34,6 +34,10 @@ class HotkeyHost(Protocol):
     def registered(self) -> dict[str, str]:
         """flow -> chord actually held right now (empty while suspended)."""
 
+    def register_missing(self) -> dict[str, HotkeyCheck]:
+        """Retry only the desired chords not held yet, never releasing held ones (probe-only
+        while suspended). Verdicts for the missing flows; {} = everything is held."""
+
     def suspend(self, suspended: bool) -> None:
         """Non-blocking; later calls (register, check) see its effect."""
 

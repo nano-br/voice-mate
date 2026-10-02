@@ -629,14 +629,23 @@ class CompanionControllerImpl:
     def _register_best_effort(self, host: HotkeyHost, bindings: dict[str, str], *, notify: bool) -> None:
         """Hold what can be held; chords another app holds are retried later. Call with `_hotkey_lock`."""
         try:
-            if not notify and host.registered() == bindings:
-                self._post(lambda: self._hotkeys_settled((), notify=False))
-                return
-            verdicts = host.register(bindings)
+            if notify:
+                verdicts = host.register(bindings)
+            else:
+                held = host.registered()
+                if held == bindings:
+                    self._post(lambda: self._hotkeys_settled((), notify=False))
+                    return
+                if all(bindings.get(flow) == chord for flow, chord in held.items()):
+                    # A retry: only the missing chords, so the held ones (Ctrl+Alt+V...) never
+                    # drop for an instant while another chord is still taken.
+                    verdicts = host.register_missing()
+                else:
+                    verdicts = host.register(bindings)
         except (OSError, TimeoutError):
             log.exception("hotkey registration failed")
             return
-        taken = tuple(bindings[flow] for flow, verdict in verdicts.items() if verdict == "in_use")
+        taken = tuple(bindings[flow] for flow, verdict in verdicts.items() if verdict == "in_use" and flow in bindings)
         if taken:
             log.log(logging.INFO if notify else logging.DEBUG, "hotkeys held by another app: %s", taken)
         self._post(lambda: self._hotkeys_settled(taken, notify=notify))

@@ -137,6 +137,31 @@ def test_hotkeys_register_fire_check_and_suspend(win32_thread: Win32Thread, pres
         second.stop()
 
 
+def test_register_missing_never_releases_held_chords(win32_thread: Win32Thread) -> None:
+    other = hotkeys_clipboard.HotkeyClipboardThread()
+    other.start(lambda flow: None)
+    try:
+        assert other.register({"x": CHORD_B}) == {"x": "ok"}  # "the old script" holds B
+        verdicts = win32_thread.register({"clipboard": CHORD_A, "claude_chat": CHORD_B})
+        assert verdicts == {"clipboard": "ok", "claude_chat": "in_use"}
+        held_id = win32_thread.hotkey_id("clipboard")
+        assert win32_thread.register_missing() == {"claude_chat": "in_use"}
+        assert win32_thread.hotkey_id("clipboard") == held_id  # not re-registered
+        assert other.check(CHORD_A) == "in_use"
+        other.register({})  # the script exits
+        assert win32_thread.register_missing() == {"claude_chat": "ok"}
+        assert win32_thread.registered() == {"clipboard": CHORD_A, "claude_chat": CHORD_B}
+        assert win32_thread.hotkey_id("clipboard") == held_id
+        assert win32_thread.register_missing() == {}
+        win32_thread.suspend(True)
+        assert win32_thread.register_missing() == {"clipboard": "ok", "claude_chat": "ok"}  # probes only
+        assert win32_thread.registered() == {}
+        win32_thread.suspend(False)
+        assert win32_thread.registered() == {"clipboard": CHORD_A, "claude_chat": CHORD_B}
+    finally:
+        other.stop()
+
+
 def _until(predicate: Callable[[], object], timeout: float = 3.0) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
