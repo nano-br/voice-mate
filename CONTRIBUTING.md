@@ -65,7 +65,7 @@ The Windows installer messages live in `packaging/windows/voicemate-companion.is
 - Details belong in `docs/`. Every doc starts with a one-line purpose and a link back to the README.
 - When the code changes a behavior that a doc describes, update the doc in the same pull request.
 - After a UI change, regenerate the screenshots with `make docs-screenshots` (Windows).
-- The five diagrams in the README (inside `<details>`: system context, containers, one dictation, tray states, supervisor) are copies of sections 1, 2, 4, 5 and 6 of [docs/architecture.md](docs/architecture.md), and the copies must stay identical. Change a diagram in `docs/architecture.md` first, then paste the same block into the README in the same pull request.
+- The five diagrams in the README (inside `<details>`: system context, containers, one dictation, tray states, supervisor) are simplified overviews of sections 1, 2, 4, 5 and 6 of [docs/architecture.md](docs/architecture.md). They hide details but must never contradict the full diagrams: when the architecture changes, update both in the same pull request.
 
 ## Commits and pull requests
 

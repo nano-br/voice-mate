@@ -29,7 +29,7 @@ The installer (`VoiceMate-Setup-x.y.z.exe`) contains the companion app only. The
 
 ### 1. Prepare WSL2
 
-1. Install WSL2 with Ubuntu and update it from PowerShell: `wsl --install -d Ubuntu`, then `wsl --update`. WSLg (audio and clipboard bridge) comes with current WSL. The engine needs Python 3.12, which Ubuntu 24.04 ships: on a newer Ubuntu, install Python 3.12 yourself.
+1. Install WSL2 with Ubuntu and update it from PowerShell: `wsl --install -d Ubuntu-24.04`, then `wsl --update`. WSLg (audio and clipboard bridge) comes with current WSL. The engine needs Python 3.12, which Ubuntu 24.04 ships: on a newer Ubuntu, install Python 3.12 yourself.
 2. Inside Ubuntu, install the system packages:
    ```bash
    sudo apt install -y libportaudio2 libasound2-plugins pulseaudio-utils wl-clipboard \

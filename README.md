@@ -78,7 +78,7 @@ A second module came later: a voice conversation with Claude. You speak, Claude 
 
 The installer contains the companion app only. The engine runs inside a WSL2 distro, so set that up first (**experimental**; full guide in [docs/installation.md](docs/installation.md)).
 
-1. In PowerShell, install WSL2 with Ubuntu: `wsl --install -d Ubuntu`, then open Ubuntu. Inside it, install the audio packages; Python 3.12 (Ubuntu 24.04 ships it) and [Poetry](https://python-poetry.org/docs/#installation) must be on the `PATH` of a login shell too:
+1. In PowerShell, install WSL2 with Ubuntu: `wsl --install -d Ubuntu-24.04`, then open Ubuntu. Inside it, install the audio packages; Python 3.12 (Ubuntu 24.04 ships it) and [Poetry](https://python-poetry.org/docs/#installation) must be on the `PATH` of a login shell too:
    ```bash
    sudo apt install -y libportaudio2 libasound2-plugins pulseaudio-utils wl-clipboard git make
    ```
@@ -138,339 +138,161 @@ Every engine flag, every settings key and every environment variable: [docs/conf
 
 ## Architecture
 
-VoiceMate has two parts. The **engine** records, transcribes and runs the Claude flow; it is a Python daemon with a local HTTP API. The **companion** is a PySide6 tray app on Windows that owns the hotkeys and the clipboard and supervises the engine inside WSL2. The engine also runs alone from the command line. The five diagrams below are the same ones as in [docs/architecture.md](docs/architecture.md), which also has the component diagrams, the HTTP API and the design choices.
+VoiceMate has two parts. The **engine** records, transcribes and runs the Claude flow; it is a Python daemon with a local HTTP API. The **companion** is a PySide6 tray app on Windows that owns the hotkeys and the clipboard and supervises the engine inside WSL2. The engine also runs alone from the command line. The diagrams below are simplified overviews; each one links to the full diagram in [docs/architecture.md](docs/architecture.md), which also has the component diagrams, the HTTP API and the design choices.
 
 <details>
-<summary>System context</summary>
+<summary>System context (overview)</summary>
 
 ```mermaid
 flowchart TB
-    user(["User<br/>dictates by voice"])
-
-    subgraph pc["User PC"]
-        vm["VoiceMate<br/>local voice dictation"]
-        win["Windows desktop<br/>hotkeys, clipboard, tray, sounds"]
-        wsl["WSL2 Linux VM<br/>WSLg audio bridge"]
-        gpu["GPU<br/>AMD ROCm or NVIDIA CUDA"]
-        audio["Mic and speakers"]
-        cli["Claude Code CLI<br/>optional"]
-        tts["TTS models<br/>optional"]
+    user(["User"])
+    subgraph pc["Your PC"]
+        vm["VoiceMate<br/>local dictation"]
+        desk["Desktop<br/>hotkeys, clipboard, tray"]
+        audio["Microphone and speakers"]
+        gpu["GPU or CPU<br/>runs Whisper"]
     end
-
-    subgraph net["Internet"]
-        api["Anthropic API<br/>optional"]
-        hf["Hugging Face Hub<br/>model weights"]
-        cdn["OpenAI model CDN<br/>openai-whisper weights"]
+    subgraph net["Internet, optional"]
+        hub["Model downloads"]
+        claude["Claude<br/>through Claude Code CLI"]
     end
-
-    user -->|"Hotkeys, tray menu"| vm
-    user -->|"Pastes text"| win
-    vm -->|"Registers hotkeys, writes clipboard, shows tray"| win
-    vm -->|"Runs the engine inside"| wsl
-    wsl -->|"Captures speech, plays audio"| audio
-    vm -->|"Transcribes on"| gpu
-    vm -.->|"Sends AI questions"| cli
-    cli -.->|"HTTPS"| api
-    vm -.->|"Speaks answers with"| tts
-    vm -.->|"Downloads model weights"| hf
-    vm -.->|"Downloads STT weights"| cdn
-
-    classDef person fill:#08427b,stroke:#052e56,color:#ffffff
-    classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
-    classDef external fill:#999999,stroke:#6b6b6b,color:#ffffff
-    classDef optional fill:#999999,stroke:#6b6b6b,color:#ffffff,stroke-dasharray:5 5
-    class user person
-    class vm system
-    class win,wsl,gpu,audio,hf,cdn external
-    class cli,tts,api optional
+    user -->|"Hotkey, speech"| vm
+    user -->|"Pastes the text"| desk
+    vm -->|"Writes the clipboard, shows the tray"| desk
+    vm -->|"Records"| audio
+    vm -->|"Transcribes"| gpu
+    vm -.->|"Downloads models"| hub
+    vm -.->|"Experimental: asks"| claude
 ```
+
+Overview. Full diagram: [docs/architecture.md, System context](docs/architecture.md#1-system-context).
 
 </details>
 
 <details>
-<summary>Containers (Windows with WSL2)</summary>
+<summary>Containers, Windows with WSL2 (overview)</summary>
 
 ```mermaid
 flowchart LR
     user(["User"])
-
-    subgraph windows["Windows host"]
-        direction TB
-        installer["Installer<br/>Inno Setup, PyInstaller"]
-        subgraph companion["Companion app, VoiceMate.exe"]
-            direction TB
-            ui["Companion UI<br/>PySide6: tray, status, settings"]
-            core["Companion core<br/>Python, no Qt: supervisor, delivery, cues"]
-            w32["Win32 thread<br/>hotkeys, verified clipboard"]
-        end
-        wslexe["wsl.exe<br/>engine launcher, keepalive"]
-        desk["Windows desktop<br/>clipboard, hotkeys, sound"]
-        toml[("companion.toml<br/>settings")]
-        pending[("pending.json<br/>Not copied list")]
-        logs[("Logs<br/>companion.log, engine.log")]
+    subgraph win["Windows"]
+        ui["Companion UI<br/>tray, status, settings"]
+        core["Companion core<br/>hotkeys, supervisor, delivery"]
+        clip["Windows clipboard"]
     end
-
-    subgraph wsl2["WSL2 distro"]
-        direction TB
-        subgraph daemon["Engine daemon, supervised mode"]
-            direction TB
-            api["HTTP API v2<br/>127.0.0.1:47821, Bearer token"]
-            engine["Recording session<br/>recorder, handlers"]
-            stt["STT backend<br/>faster-whisper or openai-whisper"]
-            tts["TTS speaker<br/>OmniVoice, Kokoro, VoxCPM2, optional"]
-        end
-        wserver["whisper-server<br/>whisper.cpp, optional"]
-        claude["Claude Code CLI<br/>optional"]
-        pulse["WSLg PulseAudio<br/>mic and speakers"]
-        cfg[("config.toml<br/>engine choices")]
-        token[("api-token<br/>Bearer secret")]
-        unit["systemd unit<br/>optional"]
+    subgraph wsl["WSL2 distro"]
+        api["Engine daemon<br/>HTTP API, 127.0.0.1:47821"]
+        stt["Whisper backend"]
+        tts["TTS, optional"]
     end
-
     gpu["GPU"]
-    anthropic["Anthropic API"]
-
-    user -->|"Tray menu, settings"| ui
-    user -->|"Presses hotkey"| desk
-    installer -->|"Installs"| companion
-    ui <-->|"Commands, snapshots"| core
-    core -->|"Posts messages"| w32
-    w32 <-->|"Hotkey events, set and read back"| desk
-    core -->|"Plays cues"| desk
-    core -->|"HTTP JSON, long-poll GET /events"| api
-    core -->|"Spawns, closes stdin, shuts WSL down"| wslexe
-    wslexe -->|"bash -lc make run-engine"| daemon
-    wslexe -->|"Reads token"| token
-    core -->|"Reads, writes"| toml
-    core -->|"Saves on change"| pending
-    core -->|"Writes"| logs
-    api --> engine
-    engine -->|"Records"| pulse
-    engine --> stt
-    stt -->|"CUDA or ROCm"| gpu
-    engine -.->|"HTTP POST /inference"| wserver
-    wserver -.-> gpu
-    engine -.->|"claude-agent-sdk"| claude
-    claude -.->|"HTTPS"| anthropic
-    engine -.->|"Speaks answers"| tts
-    tts -.-> pulse
-    daemon -->|"Creates at start"| token
-    daemon -->|"Reads"| cfg
-    unit -.->|"Alternative launcher"| daemon
-
-    classDef person fill:#08427b,stroke:#052e56,color:#ffffff
-    classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
-    classDef store fill:#438dd5,stroke:#2e6295,color:#ffffff
-    classDef external fill:#999999,stroke:#6b6b6b,color:#ffffff
-    classDef optional fill:#999999,stroke:#6b6b6b,color:#ffffff,stroke-dasharray:5 5
-    class user person
-    class installer,ui,core,w32,wslexe,api,engine,stt container
-    class toml,pending,logs,cfg,token store
-    class desk,pulse,gpu,anthropic external
-    class wserver,claude,tts,unit optional
+    user -->|"Tray menu"| ui
+    user -->|"Hotkey"| core
+    ui <--> core
+    core -->|"Writes and verifies"| clip
+    core -->|"Starts with wsl.exe"| api
+    core <-->|"HTTP, token, events"| api
+    api --> stt --> gpu
+    api -.-> tts
 ```
+
+Overview. Full diagram: [docs/architecture.md, Containers](docs/architecture.md#2-containers).
 
 </details>
 
 <details>
-<summary>One dictation, step by step</summary>
+<summary>One dictation, step by step (overview)</summary>
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor U as User
-    participant W as Win32 thread
-    participant C as Companion core
-    participant A as Daemon API v2
-    participant S as Recording session
-    participant T as STT backend
-    participant CB as Windows clipboard
-
-    Note over C,A: Registered with clipboard and cues leases, GET /events long poll open
-    U->>W: Presses Ctrl+Alt+V
-    W->>C: Hotkey for flow clipboard
-    C->>A: POST /trigger flow clipboard, expect toggle
-    A->>S: toggle
-    S-->>A: state recording, mic_live false
-    A-->>C: action started, op_seq
-    S->>S: Opens the mic in the background
-    S-->>A: state recording, mic_live true
-    A-->>C: event state, needs_cue true
-    C->>U: Cue start, tray recording
-    U->>W: Presses Ctrl+Alt+V again
-    W->>C: Hotkey for flow clipboard
-    C->>A: POST /trigger flow clipboard, expect toggle
-    A->>S: toggle
-    A-->>C: action stopped
-    S-->>A: state processing, phase transcribing
-    A-->>C: event state
-    C->>U: Cue transcribing, tray transcribing
-    S->>T: transcribe audio
-    T-->>S: text
-    S->>A: publish_result transcript, final
-    Note over A: Clipboard lease held, delivery pending, the daemon does not write the clipboard
-    A-->>C: event result, needs_delivery true
-    S-->>A: state idle
-    C->>W: Deliver text
-    loop Up to 5 attempts, 60 to 300 ms apart
-        W->>CB: Open if free, set, read back, compare
-    end
+    participant C as Companion
+    participant E as Engine
+    participant CB as Clipboard
+    U->>C: Hotkey
+    C->>E: Start recording
+    E-->>C: Microphone live
+    C->>U: Start cue
+    U->>C: Hotkey again
+    C->>E: Stop recording
+    E->>E: Whisper transcribes
+    E-->>C: Text to deliver
+    C->>CB: Write, read back, compare
     alt Text verified
-        W->>CB: Set again after 250 ms for Win+V history
-        W-->>C: Delivered
-        C->>A: POST /results/ack status delivered, verified true
-        C->>U: Cue ready, tray ready for 3 s
+        C->>E: ACK delivered
+        C->>U: Ready cue
     else Clipboard locked by another app
-        W-->>C: Not delivered
-        loop Queue retries, up to 3, 1 s apart
-            C->>W: Deliver text again
-            W-->>C: Not delivered
-        end
-        C->>C: Keep the text in Not copied, save pending.json
-        C->>A: POST /results/ack status failed
-        C->>U: Cue error, notification not copied, tray idle
-    end
-    opt Every 10 s and on reconnect
-        C->>A: GET /results state unacked
-        A-->>C: Results still pending
-        alt Younger than 30 s, its event was missed
-            C->>W: Deliver text, no cue
-        else Older than 30 s
-            C->>C: Add to Not copied, notify once
-            C->>A: POST /results/ack status dismissed
-        else Already acked here, listed twice in a row
-            C->>A: POST /results/ack same status again
-        end
+        C->>C: Keep the text in Not copied
+        C->>E: ACK failed
+        C->>U: Error cue and notification
     end
 ```
+
+Overview. Full diagram: [docs/architecture.md, One dictation](docs/architecture.md#4-runtime-one-dictation).
 
 </details>
 
 <details>
-<summary>Tray states</summary>
+<summary>Tray states (overview)</summary>
 
 ```mermaid
 stateDiagram-v2
-    [*] --> stopped
-    stopped --> starting : App starts
-    starting --> healthy : Engine ready
-    starting --> restarting : Start timeout or exit
-    starting --> error : No engine folder
-    restarting --> healthy : Engine ready
-    restarting --> error : Breaker tripped
-    healthy --> restarting : Crash, no answer or WSL restart
-    error --> restarting : Manual restart
-    healthy --> stopped : Quit
-
-    state healthy {
-        [*] --> idle
-        idle --> recording : Trigger started
-        recording --> transcribing : Trigger stopped
-        recording --> idle : Cancel
-        recording --> warning : Mic unavailable
-        transcribing --> thinking : Claude flow
-        thinking --> speaking : TTS speaks
-        transcribing --> ready : Text copied
-        thinking --> ready : Answer copied
-        speaking --> ready : Answer copied
-        transcribing --> idle : No speech or failure
-        ready --> idle : After 3 s
-        idle --> warning : Audio down, no mic or missed probe
-        warning --> idle : Audio back and mic present
-        warning --> recording : Trigger started
+    [*] --> Stopped
+    Stopped --> Starting : App starts
+    Starting --> Running : Engine ready
+    Starting --> Error : No engine folder
+    Running --> Restarting : Engine failed or WSL restart
+    Restarting --> Running : Engine ready
+    Restarting --> Error : Too many failures
+    Error --> Restarting : Manual restart
+    Running --> Stopped : Quit
+    state Running {
+        [*] --> Idle
+        Idle --> Recording : Hotkey
+        Recording --> Transcribing : Hotkey again
+        Recording --> Idle : Cancel
+        Transcribing --> Ready : Text copied
+        Transcribing --> Answering : Claude flow
+        Answering --> Ready : Answer copied
+        Ready --> Idle : After 3 s
+        Idle --> Warning : No mic or audio down
+        Warning --> Idle : Audio back
     }
-
-    note right of error
-        Only the supervisor state failed
-        shows error
-    end note
 ```
+
+Overview. Full diagram: [docs/architecture.md, Tray states](docs/architecture.md#5-tray-states).
 
 </details>
 
 <details>
-<summary>Engine supervisor and WSL audio recovery</summary>
+<summary>Engine supervisor and WSL audio recovery (overview)</summary>
 
 ```mermaid
 flowchart TD
-    launch(["Launch"])
-    q_health{"GET /health answers?"}
-    attach["Attach to running daemon<br/>keepalive wsl.exe sleep infinity"]
-    q_unit{"systemd unit enabled?"}
-    unit["Attach mode<br/>notify how to disable the unit"]
-    q_dir{"Engine folder known or found?"}
-    spawn["Spawn wsl.exe bash -lc<br/>make run-engine, Job Object"]
-    starting["starting<br/>probe every 5 s"]
-    q_ready{"ready true within 240 s?"}
-    healthy["healthy<br/>probe every 5 s"]
-    degraded["degraded<br/>missed probe"]
-    q_miss{"3 missed probes or engine exited?"}
-    q_inuse{"Exit said address in use, first time?"}
-    q_breaker{"Over 5 restarts in 15 min<br/>or 3 start timeouts in a row?"}
-    backoff["backoff<br/>2, 5, 15, 30, 60, 120 s"]
-    restarting["restarting<br/>stop engine, then launch"]
-    failed["failed<br/>notify, wait for manual restart"]
-    q_audio{"audio down twice, or mic error<br/>with a mic and audio not ok?"}
-    q_mic{"Windows has a capture device?"}
-    waitmic["Wait for a mic<br/>poll every 3 s"]
-    q_policy{"wsl_restart_policy"}
-    nothing["Do nothing"]
-    ask["Ask the user<br/>pending_wsl_restart"]
-    q_others{"Other distros running?"}
-    q_idle["Wait until engine idle<br/>at most 30 s"]
-    q_wslbreaker{"Over 3 WSL restarts in 1 h?"}
-    wslrestart["POST /shutdown<br/>then wsl --shutdown"]
-    quit(["Quit"])
-    stop["POST /shutdown, wait 8 s<br/>close stdin, wait 2 s, kill job"]
-    keep["Unregister only<br/>daemon keeps running"]
-
-    launch --> q_health
-    q_health -- "Yes" --> attach --> starting
-    q_health -- "No" --> q_unit
-    q_unit -- "Yes" --> unit --> starting
-    q_unit -- "No" --> q_dir
-    q_dir -- "No" --> failed
-    q_dir -- "Yes" --> spawn --> starting
-    starting --> q_ready
-    q_ready -- "Yes" --> healthy
-    q_ready -- "No, start timeout" --> q_breaker
-    healthy --> q_miss
-    q_miss -- "Missed 1 or 2" --> degraded
-    degraded -- "Probe ok" --> healthy
-    q_miss -- "Yes" --> q_inuse
-    q_inuse -- "Yes" --> restarting
-    q_inuse -- "No" --> q_breaker
-    q_breaker -- "No" --> backoff --> restarting
+    launch(["Launch"]) --> q_health{"Engine already answers?"}
+    q_health -- "Yes" --> attach["Attach to it"] --> healthy
+    q_health -- "No" --> q_dir{"Engine folder found?"}
+    q_dir -- "No" --> failed["Error<br/>wait for a manual restart"]
+    q_dir -- "Yes" --> spawn["Start make run-engine<br/>in WSL"]
+    spawn --> q_ready{"Ready within 240 s?"}
+    q_ready -- "Yes" --> healthy["Healthy<br/>probe every 5 s"]
+    q_ready -- "No" --> q_breaker
+    healthy -->|"3 missed probes or exit"| q_breaker{"Too many restarts?"}
+    q_breaker -- "No" --> backoff["Wait 2 to 120 s"]
+    backoff --> launch
     q_breaker -- "Yes" --> failed
-    restarting --> launch
-    failed -- "Restart engine or Restart WSL" --> restarting
-
-    healthy --> q_audio
-    q_audio -- "Yes" --> q_mic
-    q_mic -- "No" --> waitmic
-    waitmic -- "Mic appears, audio not ok" --> q_policy
-    q_mic -- "Yes" --> q_policy
-    q_policy -- "never" --> nothing
-    q_policy -- "ask" --> ask
-    q_policy -- "auto" --> q_others
+    healthy -->|"WSL audio stopped"| q_policy{"Restart WSL when audio fails"}
+    q_policy -- "Never" --> nothing["Do nothing"]
+    q_policy -- "Ask first" --> ask["Ask the user"]
+    q_policy -- "Automatically" --> q_others{"Other distros running?"}
     q_others -- "Yes" --> ask
-    q_others -- "No" --> q_idle
-    ask -- "User approves" --> q_idle
-    ask -- "User declines" --> nothing
-    q_idle --> q_wslbreaker
-    q_wslbreaker -- "Yes" --> failed
-    q_wslbreaker -- "No" --> wslrestart --> restarting
-
-    quit -- "Engine we started" --> stop
-    quit -- "Attached daemon" --> keep
-
-    classDef state fill:#438dd5,stroke:#2e6295,color:#ffffff
-    classDef bad fill:#c0392b,stroke:#922b21,color:#ffffff
-    classDef term fill:#08427b,stroke:#052e56,color:#ffffff
-    class starting,healthy,degraded,backoff,restarting state
-    class failed bad
-    class launch,quit term
+    q_others -- "No" --> wslrestart["wsl --shutdown"]
+    ask -- "Restart WSL" --> wslrestart
+    wslrestart --> launch
 ```
+
+Overview. Full diagram: [docs/architecture.md, Supervisor](docs/architecture.md#6-supervisor-on-windows-and-wsl2).
 
 </details>
 
