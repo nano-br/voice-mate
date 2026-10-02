@@ -87,6 +87,7 @@ def field_label(field_name: str) -> str:
         return cue_label(cue)
     labels = {
         "language": _("Language"),
+        "dictation_language": _("Dictation language"),
         "engine_mode": _("Engine mode"),
         "wsl_restart_policy": _("WSL restart"),
         "notify_level": _("Notifications"),

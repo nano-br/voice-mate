@@ -214,6 +214,8 @@ def test_validation_names_settings_with_localized_labels() -> None:
     errors = validate_settings(CompanionSettings(cues=cues, language="tlh"))  # type: ignore[arg-type]
     assert "Invalid value for Recording started." in errors
     assert "Invalid value for Language." in errors
+    errors = validate_settings(CompanionSettings(dictation_language="tlh"))  # type: ignore[arg-type]
+    assert errors == ["Invalid value for Dictation language."]
 
 
 def test_newer_version_is_read_only(tmp_path: Path) -> None:
