@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-02 05:02-0300\n"
+"POT-Creation-Date: 2026-10-02 08:01-0300\n"
 "PO-Revision-Date: 2026-10-01 16:49-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: pt_BR\n"
@@ -249,7 +249,7 @@ msgstr ""
 "[VoiceMate] ⚠ --input-method mouse só é suportado no Windows "
 "(trigger={trigger}); usando hotkeys de teclado."
 
-#: app/companion/controller.py:607
+#: app/companion/controller.py:616
 msgid ""
 "The settings file was written by a newer version of VoiceMate, so it is "
 "read-only here."
@@ -257,41 +257,41 @@ msgstr ""
 "O arquivo de configurações foi gravado por uma versão mais nova do "
 "VoiceMate, então aqui ele fica somente para leitura."
 
-#: app/companion/controller.py:626
+#: app/companion/controller.py:635
 msgid "Could not save the settings file."
 msgstr "Não foi possível salvar o arquivo de configurações."
 
-#: app/companion/controller.py:654
+#: app/companion/controller.py:663
 #, python-brace-format
 msgid "{hotkey} is already used by another app."
 msgstr "{hotkey} já está em uso por outro aplicativo."
 
-#: app/companion/controller.py:719
+#: app/companion/controller.py:728
 msgid "Could not change the start at login setting."
 msgstr "Não foi possível alterar a opção de iniciar ao entrar no sistema."
 
-#: app/companion/cues.py:80 app/companion/ui/texts.py:150
+#: app/companion/cues.py:80 app/companion/ui/texts.py:151
 msgid "Recording started"
 msgstr "Gravação iniciada"
 
-#: app/companion/cues.py:81 app/companion/ui/texts.py:151
+#: app/companion/cues.py:81 app/companion/ui/texts.py:152
 msgid "Transcribing"
 msgstr "Transcrevendo"
 
-#: app/companion/cues.py:82 app/companion/ui/texts.py:105
-#: app/companion/ui/texts.py:152
+#: app/companion/cues.py:82 app/companion/ui/texts.py:106
+#: app/companion/ui/texts.py:153
 msgid "Copied"
 msgstr "Copiado"
 
-#: app/companion/cues.py:83 app/companion/ui/texts.py:153
+#: app/companion/cues.py:83 app/companion/ui/texts.py:154
 msgid "Claude answered"
 msgstr "Claude respondeu"
 
-#: app/companion/cues.py:84 app/companion/ui/texts.py:154
+#: app/companion/cues.py:84 app/companion/ui/texts.py:155
 msgid "Warning"
 msgstr "Aviso"
 
-#: app/companion/cues.py:85 app/companion/ui/texts.py:155
+#: app/companion/cues.py:85 app/companion/ui/texts.py:156
 msgid "Error"
 msgstr "Erro"
 
@@ -343,7 +343,7 @@ msgstr ""
 "Reiniciar o motor."
 
 #: app/companion/model.py:597 app/companion/model.py:896
-#: app/companion/ui/texts.py:108
+#: app/companion/ui/texts.py:109
 msgid "No microphone"
 msgstr "Sem microfone"
 
@@ -352,7 +352,7 @@ msgid "Connect a microphone to record."
 msgstr "Conecte um microfone para gravar."
 
 #: app/companion/model.py:600 app/companion/model.py:883
-#: app/companion/ui/demo_controller.py:333 app/companion/ui/texts.py:110
+#: app/companion/ui/demo_controller.py:333 app/companion/ui/texts.py:111
 msgid "WSL audio stopped"
 msgstr "O áudio do WSL parou"
 
@@ -447,11 +447,11 @@ msgstr ""
 " motor."
 
 #: app/companion/model.py:637 app/companion/model.py:729
-#: app/companion/ui/texts.py:86
+#: app/companion/ui/texts.py:87
 msgid "VoiceMate is stopped"
 msgstr "O VoiceMate está parado"
 
-#: app/companion/model.py:639 app/companion/ui/texts.py:88
+#: app/companion/model.py:639 app/companion/ui/texts.py:89
 msgid "Starting engine..."
 msgstr "Iniciando o motor..."
 
@@ -460,7 +460,7 @@ msgstr "Iniciando o motor..."
 msgid "Waiting for the engine on port {port}."
 msgstr "Aguardando o motor na porta {port}."
 
-#: app/companion/model.py:643 app/companion/ui/texts.py:92
+#: app/companion/model.py:643 app/companion/ui/texts.py:93
 #, python-brace-format
 msgid "Restarting (attempt {attempt})"
 msgstr "Reiniciando (tentativa {attempt})"
@@ -470,24 +470,24 @@ msgstr "Reiniciando (tentativa {attempt})"
 msgid "Listening for {hotkey}"
 msgstr "Aguardando {hotkey}"
 
-#: app/companion/model.py:647 app/companion/ui/texts.py:97
+#: app/companion/model.py:647 app/companion/ui/texts.py:98
 msgid "Ready"
 msgstr "Pronto"
 
-#: app/companion/model.py:650 app/companion/ui/texts.py:78
+#: app/companion/model.py:650 app/companion/ui/texts.py:79
 #, python-brace-format
 msgid "Recording {elapsed}"
 msgstr "Gravando {elapsed}"
 
-#: app/companion/model.py:652 app/companion/ui/texts.py:99
+#: app/companion/model.py:652 app/companion/ui/texts.py:100
 msgid "Transcribing..."
 msgstr "Transcrevendo..."
 
-#: app/companion/model.py:654 app/companion/ui/texts.py:101
+#: app/companion/model.py:654 app/companion/ui/texts.py:102
 msgid "Claude is answering..."
 msgstr "O Claude está respondendo..."
 
-#: app/companion/model.py:656 app/companion/ui/texts.py:104
+#: app/companion/model.py:656 app/companion/ui/texts.py:105
 #, python-brace-format
 msgid "Copied: {text}"
 msgstr "Copiado: {text}"
@@ -832,37 +832,41 @@ msgstr ""
 "do VoiceMate estiver rodando, feche-o e remova-o de shell:startup, ou "
 "escolha outros atalhos nas Configurações."
 
-#: app/companion/settings_store.py:88 app/companion/ui/settings_window.py:564
+#: app/companion/settings_store.py:89 app/companion/ui/settings_window.py:580
 msgid "Language"
 msgstr "Idioma"
 
-#: app/companion/settings_store.py:89
+#: app/companion/settings_store.py:90 app/companion/ui/settings_window.py:581
+msgid "Dictation language"
+msgstr "Idioma do ditado"
+
+#: app/companion/settings_store.py:91
 msgid "Engine mode"
 msgstr "Modo do motor"
 
-#: app/companion/settings_store.py:90
+#: app/companion/settings_store.py:92
 msgid "WSL restart"
 msgstr "Reinício do WSL"
 
-#: app/companion/settings_store.py:91 app/companion/ui/settings_window.py:565
+#: app/companion/settings_store.py:93 app/companion/ui/settings_window.py:582
 msgid "Notifications"
 msgstr "Notificações"
 
-#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:650
+#: app/companion/settings_store.py:94 app/companion/ui/settings_window.py:696
 msgid "Hotkeys"
 msgstr "Atalhos"
 
-#: app/companion/settings_store.py:363 app/companion/settings_store.py:385
-#: app/companion/settings_store.py:401
+#: app/companion/settings_store.py:370 app/companion/settings_store.py:392
+#: app/companion/settings_store.py:408
 #, python-brace-format
 msgid "Invalid value for {setting}."
 msgstr "Valor inválido para {setting}."
 
-#: app/companion/settings_store.py:367
+#: app/companion/settings_store.py:374
 msgid "This engine mode is not available on this system."
 msgstr "Este modo do motor não está disponível neste sistema."
 
-#: app/companion/settings_store.py:369
+#: app/companion/settings_store.py:376
 msgid ""
 "The engine folder cannot contain quotes, $, backticks, backslashes or "
 "line breaks."
@@ -870,45 +874,45 @@ msgstr ""
 "A pasta do motor não pode conter aspas, $, crases, barras invertidas ou "
 "quebras de linha."
 
-#: app/companion/settings_store.py:371
+#: app/companion/settings_store.py:378
 msgid "The WSL distribution name is not valid."
 msgstr "O nome da distribuição WSL não é válido."
 
-#: app/companion/settings_store.py:373
+#: app/companion/settings_store.py:380
 #, python-brace-format
 msgid "The port must be between {low} and {high}."
 msgstr "A porta deve estar entre {low} e {high}."
 
-#: app/companion/settings_store.py:375 app/companion/settings_store.py:397
+#: app/companion/settings_store.py:382 app/companion/settings_store.py:404
 msgid "The volume must be between 0 and 1."
 msgstr "O volume deve estar entre 0 e 1."
 
-#: app/companion/settings_store.py:382 app/companion/ui/demo_controller.py:228
+#: app/companion/settings_store.py:389 app/companion/ui/demo_controller.py:228
 #, python-brace-format
 msgid "{hotkey} is not a valid hotkey."
 msgstr "{hotkey} não é um atalho válido."
 
-#: app/companion/settings_store.py:388
+#: app/companion/settings_store.py:395
 #, python-brace-format
 msgid "The action {flow} has more than one hotkey."
 msgstr "A ação {flow} tem mais de um atalho."
 
-#: app/companion/settings_store.py:390
+#: app/companion/settings_store.py:397
 #, python-brace-format
 msgid "{hotkey} is assigned to more than one action."
 msgstr "{hotkey} está atribuído a mais de uma ação."
 
-#: app/companion/settings_store.py:408
+#: app/companion/settings_store.py:415
 #, python-brace-format
 msgid "The sound file for the {cue} cue was not found."
 msgstr "O arquivo de som do sinal {cue} não foi encontrado."
 
-#: app/companion/settings_store.py:410
+#: app/companion/settings_store.py:417
 #, python-brace-format
 msgid "The sound file for the {cue} cue must be a PCM 8 or 16-bit WAV file."
 msgstr "O arquivo de som do sinal {cue} deve ser um WAV PCM de 8 ou 16 bits."
 
-#: app/companion/settings_store.py:413
+#: app/companion/settings_store.py:420
 #, python-brace-format
 msgid "The sound file for the {cue} cue is longer than {seconds} seconds."
 msgstr "O arquivo de som do sinal {cue} passa de {seconds} segundos."
@@ -946,7 +950,7 @@ msgstr ""
 "inicia o motor de novo."
 
 #: app/companion/ui/app.py:187 app/companion/ui/app.py:286
-#: app/companion/ui/settings_window.py:665
+#: app/companion/ui/settings_window.py:711
 #: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:79
 msgid "Cancel"
 msgstr "Cancelar"
@@ -1023,130 +1027,134 @@ msgstr "Esta tecla não pode ser usada"
 msgid "No shortcut"
 msgstr "Sem atalho"
 
-#: app/companion/ui/settings_window.py:141
+#: app/companion/ui/settings_window.py:142
 msgid "Click a shortcut, then press the new keys. Esc cancels, Backspace clears."
 msgstr ""
 "Clique em um atalho e pressione as novas teclas. Esc cancela, Backspace "
 "limpa."
 
-#: app/companion/ui/settings_window.py:144
+#: app/companion/ui/settings_window.py:145
 msgid "The engine owns these shortcuts. Change them in the engine configuration."
 msgstr "Estes atalhos são do motor. Altere-os na configuração do motor."
 
-#: app/companion/ui/settings_window.py:157
+#: app/companion/ui/settings_window.py:158
 msgid "Restore defaults"
 msgstr "Restaurar padrões"
 
-#: app/companion/ui/settings_window.py:184
+#: app/companion/ui/settings_window.py:185
 #, python-brace-format
 msgid "{action}:"
 msgstr "{action}:"
 
-#: app/companion/ui/settings_window.py:186
+#: app/companion/ui/settings_window.py:187
 #, python-brace-format
 msgid "Shortcut for {action}"
 msgstr "Atalho para {action}"
 
-#: app/companion/ui/settings_window.py:259
+#: app/companion/ui/settings_window.py:260
 msgid "No shortcut: use the menu"
 msgstr "Sem atalho: use o menu"
 
-#: app/companion/ui/settings_window.py:264
+#: app/companion/ui/settings_window.py:265
 msgid "Checking..."
 msgstr "Verificando..."
 
-#: app/companion/ui/settings_window.py:346
+#: app/companion/ui/settings_window.py:347
 msgid "Play sound cues"
 msgstr "Tocar sons de aviso"
 
-#: app/companion/ui/settings_window.py:350
+#: app/companion/ui/settings_window.py:351
 msgid "Volume:"
 msgstr "Volume:"
 
-#: app/companion/ui/settings_window.py:351
+#: app/companion/ui/settings_window.py:352
 msgid "Master volume"
 msgstr "Volume geral"
 
-#: app/companion/ui/settings_window.py:363
-#: app/companion/ui/settings_window.py:651
+#: app/companion/ui/settings_window.py:364
+#: app/companion/ui/settings_window.py:697
 msgid "Sounds"
 msgstr "Sons"
 
-#: app/companion/ui/settings_window.py:380
+#: app/companion/ui/settings_window.py:381
 msgid "Custom sounds must be WAV files (PCM, 8 or 16 bit)."
 msgstr "Sons próprios devem ser arquivos WAV (PCM, 8 ou 16 bits)."
 
-#: app/companion/ui/settings_window.py:387
+#: app/companion/ui/settings_window.py:388
 #, python-brace-format
 msgid "Source: {sound}"
 msgstr "Origem: {sound}"
 
-#: app/companion/ui/settings_window.py:389
+#: app/companion/ui/settings_window.py:390
 #, python-brace-format
 msgid "Built-in sound: {sound}"
 msgstr "Som embutido: {sound}"
 
-#: app/companion/ui/settings_window.py:392
+#: app/companion/ui/settings_window.py:393
 msgid "No file chosen"
 msgstr "Nenhum arquivo escolhido"
 
-#: app/companion/ui/settings_window.py:393
+#: app/companion/ui/settings_window.py:394
 #, python-brace-format
 msgid "Sound file: {sound}"
 msgstr "Arquivo de som: {sound}"
 
-#: app/companion/ui/settings_window.py:395
+#: app/companion/ui/settings_window.py:396
 msgid "Browse..."
 msgstr "Procurar..."
 
-#: app/companion/ui/settings_window.py:396
+#: app/companion/ui/settings_window.py:397
 #, python-brace-format
 msgid "Choose a file for {sound}"
 msgstr "Escolher um arquivo para {sound}"
 
-#: app/companion/ui/settings_window.py:408
+#: app/companion/ui/settings_window.py:409
 #, python-brace-format
 msgid "Volume: {sound}"
 msgstr "Volume: {sound}"
 
-#: app/companion/ui/settings_window.py:414
+#: app/companion/ui/settings_window.py:415
 msgid "Preview"
 msgstr "Ouvir"
 
-#: app/companion/ui/settings_window.py:415
+#: app/companion/ui/settings_window.py:416
 #, python-brace-format
 msgid "Preview: {sound}"
 msgstr "Ouvir: {sound}"
 
-#: app/companion/ui/settings_window.py:479
+#: app/companion/ui/settings_window.py:480
 msgid "Choose a sound file"
 msgstr "Escolha um arquivo de som"
 
-#: app/companion/ui/settings_window.py:479
+#: app/companion/ui/settings_window.py:480
 msgid "WAV audio"
 msgstr "Áudio WAV"
 
-#: app/companion/ui/settings_window.py:508
+#: app/companion/ui/settings_window.py:509
 msgid "Language:"
 msgstr "Idioma:"
 
-#: app/companion/ui/settings_window.py:510
+#: app/companion/ui/settings_window.py:511
 msgid "Takes effect after VoiceMate restarts."
 msgstr "Passa a valer depois que o VoiceMate reiniciar."
 
-#: app/companion/ui/settings_window.py:515
+#: app/companion/ui/settings_window.py:516
+msgid "Dictation language:"
+msgstr "Idioma do ditado:"
+
+#: app/companion/ui/settings_window.py:524
 msgid "Notifications:"
 msgstr "Notificações:"
 
-#: app/companion/ui/settings_window.py:516
+#: app/companion/ui/settings_window.py:525
 msgid "Start VoiceMate when I sign in"
 msgstr "Iniciar o VoiceMate ao fazer login"
 
-#: app/companion/ui/settings_window.py:521
+#: app/companion/ui/settings_window.py:530
 msgid "Always show the VoiceMate icon on the taskbar"
 msgstr "Sempre mostrar o ícone do VoiceMate na barra de tarefas"
 
-#: app/companion/ui/settings_window.py:524
+#: app/companion/ui/settings_window.py:533
 msgid ""
 "Shows the icon with the recording and transcription state next to the "
 "clock, instead of hiding it behind the arrow. An icon hidden in the "
@@ -1158,35 +1166,35 @@ msgstr ""
 "configurações da barra de tarefas do Windows continua escondido até você "
 "desmarcar esta opção, clicar em Aplicar e marcá-la de novo."
 
-#: app/companion/ui/settings_window.py:533 app/companion/ui/tray.py:96
+#: app/companion/ui/settings_window.py:542 app/companion/ui/tray.py:96
 msgid "Engine"
 msgstr "Motor"
 
-#: app/companion/ui/settings_window.py:540
+#: app/companion/ui/settings_window.py:549
 msgid "Mode:"
 msgstr "Modo:"
 
-#: app/companion/ui/settings_window.py:542
+#: app/companion/ui/settings_window.py:551
 msgid "Default distro"
 msgstr "Distro padrão"
 
-#: app/companion/ui/settings_window.py:543
+#: app/companion/ui/settings_window.py:552
 msgid "WSL distro:"
 msgstr "Distro do WSL:"
 
-#: app/companion/ui/settings_window.py:545
+#: app/companion/ui/settings_window.py:554 app/companion/ui/texts.py:184
 msgid "Detect automatically"
 msgstr "Detectar automaticamente"
 
-#: app/companion/ui/settings_window.py:546
+#: app/companion/ui/settings_window.py:555
 msgid "The voice-mate folder: relative to your home folder, or absolute."
 msgstr "A pasta do voice-mate: relativa à sua pasta pessoal, ou absoluta."
 
-#: app/companion/ui/settings_window.py:547
+#: app/companion/ui/settings_window.py:556
 msgid "Engine folder:"
 msgstr "Pasta do motor:"
 
-#: app/companion/ui/settings_window.py:550
+#: app/companion/ui/settings_window.py:559
 msgid ""
 "Restarting WSL brings its audio back, but it stops every running distro, "
 "Docker included."
@@ -1194,31 +1202,63 @@ msgstr ""
 "Reiniciar o WSL traz o áudio de volta, mas para todas as distros em "
 "execução, inclusive o Docker."
 
-#: app/companion/ui/settings_window.py:552
+#: app/companion/ui/settings_window.py:561
 msgid "Restart WSL when audio fails:"
 msgstr "Reiniciar o WSL se o áudio falhar:"
 
-#: app/companion/ui/settings_window.py:566
+#: app/companion/ui/settings_window.py:583
 msgid "Mode"
 msgstr "Modo"
 
-#: app/companion/ui/settings_window.py:567
+#: app/companion/ui/settings_window.py:584
 msgid "WSL distro"
 msgstr "Distro do WSL"
 
-#: app/companion/ui/settings_window.py:568
+#: app/companion/ui/settings_window.py:585
 msgid "Engine folder"
 msgstr "Pasta do motor"
 
-#: app/companion/ui/settings_window.py:569
+#: app/companion/ui/settings_window.py:586
 msgid "Restart WSL when audio fails"
 msgstr "Reiniciar o WSL se o áudio falhar"
 
-#: app/companion/ui/settings_window.py:631
+#: app/companion/ui/settings_window.py:648
+msgid ""
+"Connect only: set by the engine's own\n"
+"--transcription-language and --output-lang flags."
+msgstr ""
+"Só conectar: definido pelas opções do próprio motor\n"
+"--transcription-language e --output-lang."
+
+#: app/companion/ui/settings_window.py:651
+msgid ""
+"Whisper detects the language of each recording. Claude still answers in "
+"the interface language. Changing it restarts the engine."
+msgstr ""
+"O Whisper detecta o idioma de cada gravação. O Claude continua "
+"respondendo no idioma da interface. Alterá-lo reinicia o motor."
+
+#: app/companion/ui/settings_window.py:654
+msgid "Claude still answers in the interface language."
+msgstr "O Claude continua respondendo no idioma da interface."
+
+#: app/companion/ui/settings_window.py:657
+msgid ""
+"The language you speak when dictating. It also sets the language of "
+"Claude's spoken answers. Changing it restarts the engine."
+msgstr ""
+"O idioma em que você fala ao ditar. Ele também define o idioma das "
+"respostas faladas do Claude. Alterá-lo reinicia o motor."
+
+#: app/companion/ui/settings_window.py:660
+msgid "Also sets the language of Claude's spoken answers."
+msgstr "Também define o idioma das respostas faladas do Claude."
+
+#: app/companion/ui/settings_window.py:677
 msgid "VoiceMate Settings"
 msgstr "Configurações do VoiceMate"
 
-#: app/companion/ui/settings_window.py:642
+#: app/companion/ui/settings_window.py:688
 msgid ""
 "These settings were saved by a newer version of VoiceMate. They are shown"
 " read-only."
@@ -1226,32 +1266,32 @@ msgstr ""
 "Estas configurações foram salvas por uma versão mais nova do VoiceMate e "
 "aparecem só para leitura."
 
-#: app/companion/ui/settings_window.py:652
+#: app/companion/ui/settings_window.py:698
 msgid "General"
 msgstr "Geral"
 
-#: app/companion/ui/settings_window.py:664
+#: app/companion/ui/settings_window.py:710
 msgid "OK"
 msgstr "OK"
 
-#: app/companion/ui/settings_window.py:666
+#: app/companion/ui/settings_window.py:712
 msgid "Apply"
 msgstr "Aplicar"
 
-#: app/companion/ui/settings_window.py:747
+#: app/companion/ui/settings_window.py:793
 msgid "Saving..."
 msgstr "Salvando..."
 
-#: app/companion/ui/settings_window.py:759
+#: app/companion/ui/settings_window.py:805
 #, python-brace-format
 msgid "Unexpected error: {error}"
 msgstr "Erro inesperado: {error}"
 
-#: app/companion/ui/settings_window.py:766
+#: app/companion/ui/settings_window.py:812
 msgid "The settings were not saved:"
 msgstr "As configurações não foram salvas:"
 
-#: app/companion/ui/settings_window.py:778
+#: app/companion/ui/settings_window.py:824
 msgid "Settings saved."
 msgstr "Configurações salvas."
 
@@ -1316,185 +1356,189 @@ msgstr "Copiar"
 msgid "No transcriptions yet"
 msgstr "Nenhuma transcrição ainda"
 
-#: app/companion/ui/status_window.py:349 app/companion/ui/tray.py:229
+#: app/companion/ui/status_window.py:356 app/companion/ui/tray.py:229
 msgid "Quitting..."
 msgstr "Saindo..."
 
-#: app/companion/ui/texts.py:51
+#: app/companion/ui/texts.py:52
 msgid "Dictate"
 msgstr "Ditar"
 
-#: app/companion/ui/texts.py:51
+#: app/companion/ui/texts.py:52
 msgid "Ask Claude"
 msgstr "Perguntar ao Claude"
 
-#: app/companion/ui/texts.py:58
+#: app/companion/ui/texts.py:59
 #, python-brace-format
 msgid "{title} ({flow})"
 msgstr "{title} ({flow})"
 
-#: app/companion/ui/texts.py:64
+#: app/companion/ui/texts.py:65
 msgid "Stop and copy"
 msgstr "Parar e copiar"
 
-#: app/companion/ui/texts.py:64
+#: app/companion/ui/texts.py:65
 msgid "Stop and ask Claude"
 msgstr "Parar e perguntar ao Claude"
 
-#: app/companion/ui/texts.py:76
+#: app/companion/ui/texts.py:77
 msgid "Recording"
 msgstr "Gravando"
 
-#: app/companion/ui/texts.py:93
+#: app/companion/ui/texts.py:94
 msgid "Restarting engine..."
 msgstr "Reiniciando o motor..."
 
-#: app/companion/ui/texts.py:96
+#: app/companion/ui/texts.py:97
 #, python-brace-format
 msgid "Listening for {chord}"
 msgstr "Aguardando {chord}"
 
-#: app/companion/ui/texts.py:111
+#: app/companion/ui/texts.py:112
 msgid "Check the microphone"
 msgstr "Verifique o microfone"
 
-#: app/companion/ui/texts.py:113
+#: app/companion/ui/texts.py:114
 msgid "The engine stopped working"
 msgstr "O motor parou de funcionar"
 
-#: app/companion/ui/texts.py:119
+#: app/companion/ui/texts.py:120
 msgid "Shortcuts paused"
 msgstr "Atalhos pausados"
 
-#: app/companion/ui/texts.py:126
+#: app/companion/ui/texts.py:127
 msgid "Stopped"
 msgstr "Parado"
 
-#: app/companion/ui/texts.py:127
+#: app/companion/ui/texts.py:128
 msgid "Starting"
 msgstr "Iniciando"
 
-#: app/companion/ui/texts.py:128
+#: app/companion/ui/texts.py:129
 msgid "Running"
 msgstr "Em execução"
 
-#: app/companion/ui/texts.py:129
+#: app/companion/ui/texts.py:130
 msgid "Not responding"
 msgstr "Sem resposta"
 
-#: app/companion/ui/texts.py:130
+#: app/companion/ui/texts.py:131
 msgid "Restarting"
 msgstr "Reiniciando"
 
-#: app/companion/ui/texts.py:131
+#: app/companion/ui/texts.py:132
 msgid "Waiting to restart"
 msgstr "Aguardando para reiniciar"
 
-#: app/companion/ui/texts.py:132
+#: app/companion/ui/texts.py:133
 msgid "Failed"
 msgstr "Falhou"
 
-#: app/companion/ui/texts.py:137
+#: app/companion/ui/texts.py:138
 msgid "Working"
 msgstr "Funcionando"
 
-#: app/companion/ui/texts.py:137
+#: app/companion/ui/texts.py:138
 msgid "Not working"
 msgstr "Não funciona"
 
-#: app/companion/ui/texts.py:137 app/companion/ui/texts.py:142
+#: app/companion/ui/texts.py:138 app/companion/ui/texts.py:143
 msgid "Unknown"
 msgstr "Desconhecido"
 
-#: app/companion/ui/texts.py:144
+#: app/companion/ui/texts.py:145
 msgid "None found"
 msgstr "Nenhum encontrado"
 
-#: app/companion/ui/texts.py:160
+#: app/companion/ui/texts.py:161
 msgid "Built-in"
 msgstr "Embutido"
 
-#: app/companion/ui/texts.py:160
+#: app/companion/ui/texts.py:161
 msgid "Custom file"
 msgstr "Arquivo próprio"
 
-#: app/companion/ui/texts.py:164
+#: app/companion/ui/texts.py:165
 msgid "Classic"
 msgstr "Clássico"
 
-#: app/companion/ui/texts.py:164
+#: app/companion/ui/texts.py:165
 msgid "Soft"
 msgstr "Suave"
 
-#: app/companion/ui/texts.py:164
+#: app/companion/ui/texts.py:165
 msgid "Click"
 msgstr "Clique"
 
-#: app/companion/ui/texts.py:170
+#: app/companion/ui/texts.py:171
 msgid "Automatic (system language)"
 msgstr "Automático (idioma do sistema)"
 
-#: app/companion/ui/texts.py:181
+#: app/companion/ui/texts.py:183
+msgid "Same as the interface"
+msgstr "Igual ao da interface"
+
+#: app/companion/ui/texts.py:199
 msgid "Start it in WSL"
 msgstr "Iniciar no WSL"
 
-#: app/companion/ui/texts.py:182
+#: app/companion/ui/texts.py:200
 msgid "Start it on this computer"
 msgstr "Iniciar neste computador"
 
-#: app/companion/ui/texts.py:183
+#: app/companion/ui/texts.py:201
 msgid "Connect only"
 msgstr "Só conectar"
 
-#: app/companion/ui/texts.py:188
+#: app/companion/ui/texts.py:206
 msgid "Automatically"
 msgstr "Automaticamente"
 
-#: app/companion/ui/texts.py:188
+#: app/companion/ui/texts.py:206
 msgid "Ask first"
 msgstr "Perguntar antes"
 
-#: app/companion/ui/texts.py:188
+#: app/companion/ui/texts.py:206
 msgid "Never"
 msgstr "Nunca"
 
-#: app/companion/ui/texts.py:193
+#: app/companion/ui/texts.py:211
 msgid "All"
 msgstr "Todas"
 
-#: app/companion/ui/texts.py:194
+#: app/companion/ui/texts.py:212
 msgid "Warnings and errors"
 msgstr "Avisos e erros"
 
-#: app/companion/ui/texts.py:195
+#: app/companion/ui/texts.py:213
 msgid "Errors only"
 msgstr "Só erros"
 
-#: app/companion/ui/texts.py:196
+#: app/companion/ui/texts.py:214
 msgid "None"
 msgstr "Nenhuma"
 
-#: app/companion/ui/texts.py:202
+#: app/companion/ui/texts.py:220
 msgid "Available"
 msgstr "Disponível"
 
-#: app/companion/ui/texts.py:203
+#: app/companion/ui/texts.py:221
 msgid "Used by another app"
 msgstr "Em uso por outro aplicativo"
 
-#: app/companion/ui/texts.py:204
+#: app/companion/ui/texts.py:222
 msgid "Used by another action"
 msgstr "Já usado por outra ação"
 
-#: app/companion/ui/texts.py:205
+#: app/companion/ui/texts.py:223
 msgid "Not allowed"
 msgstr "Não permitido"
 
-#: app/companion/ui/texts.py:206
+#: app/companion/ui/texts.py:224
 msgid "Set by the engine"
 msgstr "Definido pelo motor"
 
-#: app/companion/ui/texts.py:211
+#: app/companion/ui/texts.py:229
 msgid ""
 "Use Ctrl, Alt, Shift or Win with a key, or a function key alone. F12 is "
 "reserved by Windows."

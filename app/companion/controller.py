@@ -63,6 +63,7 @@ from app.companion.delivery import (
     StartDelivery,
 )
 from app.companion.desktop import Desktop, HotkeyHost, autostart_command, create_desktop
+from app.companion.dictation import EngineLanguage, engine_language
 from app.companion.model import (
     CoreState,
     DeliveryOutcome,
@@ -166,11 +167,11 @@ def default_backend(settings: CompanionSettings, logs_dir: Path) -> EngineBacken
     if settings.engine_mode == "wsl2":
         from app.companion.supervisor.wsl import WslBackend
 
-        return WslBackend(settings.wsl_distro, settings.daemon_port, log_path)
+        return WslBackend(settings.wsl_distro, settings.daemon_port, log_path, language=engine_language(settings))
     if settings.engine_mode == "local":
         from app.companion.supervisor.local import LocalBackend
 
-        return LocalBackend(settings.daemon_port, log_path)
+        return LocalBackend(settings.daemon_port, log_path, language=engine_language(settings))
     if sys.platform == "win32":
         from app.companion.supervisor.wsl import read_wsl_token
 
@@ -180,12 +181,20 @@ def default_backend(settings: CompanionSettings, logs_dir: Path) -> EngineBacken
 
 
 def _engine_settings_changed(old: CompanionSettings, new: CompanionSettings) -> bool:
-    return (old.engine_mode, old.wsl_distro, old.engine_dir, old.daemon_port) != (
+    # The dictation language only counts as the flags it resolves to (a UI language change
+    # alone restarts the engine only while dictation follows the interface), and not at all
+    # in external mode, where the engine is not ours to start.
+    return (old.engine_mode, old.wsl_distro, old.engine_dir, old.daemon_port, _spawned_language(old)) != (
         new.engine_mode,
         new.wsl_distro,
         new.engine_dir,
         new.daemon_port,
+        _spawned_language(new),
     )
+
+
+def _spawned_language(settings: CompanionSettings) -> EngineLanguage | None:
+    return None if settings.engine_mode == "external" else engine_language(settings)
 
 
 class CompanionControllerImpl:
