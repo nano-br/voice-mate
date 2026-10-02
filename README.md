@@ -107,7 +107,7 @@ make doctor                          # checks microphone, audio, hotkeys and GPU
 make run ARGS="--output-lang en"     # starts the engine with its own hotkeys (Windows native or Linux)
 ```
 
-**The engine defaults to Portuguese** (`--output-lang pt-BR`): that pins Whisper to Portuguese and sets the language of Claude's answers and of the engine messages. Without a flag, English speech comes out wrong. Use `--output-lang en` (or another code) for all three, `--transcription-language en` to pin only what Whisper hears, and the `VOICEMATE_LANG` environment variable to change only the engine messages (it wins over `--output-lang`). Set it in the shell that runs `make run`: `VOICEMATE_LANG=en make run` in bash (Linux, WSL), `$env:VOICEMATE_LANG="en"; make run` in PowerShell (engine run natively on Windows). The companion passes these flags itself, see [Usage](#usage).
+**The engine defaults to Portuguese** (`--output-lang pt-BR`), which sets the language Whisper hears, Claude's answers and the engine messages. Pass `--output-lang en` (or another code) as above; `--transcription-language` and `VOICEMATE_LANG` change one of them only ([configuration](docs/configuration.md)). The companion passes these flags itself, see [Usage](#usage).
 
 To run the companion from source on Windows, with the engine in WSL2: `make companion-venv` once, then `make run-tray`. On Linux, run `make setup` and `make run` as above; for the optional tray and status window, `poetry install --extras ui` and then `make run-tray` ([details](docs/installation.md#linux-experimental)).
 
