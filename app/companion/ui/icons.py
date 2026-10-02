@@ -13,9 +13,10 @@ framed tile: a blue-to-magenta outer square around a deep-indigo inner square.
 
 Every size is painted on its own (no scaling of a big bitmap): below 48 px the mark's
 stroke width is a whole number of pixels and its caps, joins and head land on the pixel
-grid, 16, 20 and 24 px are hand-tuned (mark and badge), so 16 px stays crisp at 100 % and
-the bigger variants serve high DPI. `tools/gen_icon.py` writes the packaged icon from
-`brand_image`.
+grid; the marks at 16, 20 and 24 px (tray and app icon) are hand-tuned, the badges at 20
+and 24 px have their own geometry and at 16 px are pixel art, so 16 px stays crisp at
+100 % and the bigger variants serve high DPI. `tools/gen_icon.py` writes the packaged
+icon from `brand_image`.
 """
 
 from __future__ import annotations
@@ -37,7 +38,6 @@ from PySide6.QtGui import (
     QLinearGradient,
     QPainter,
     QPainterPath,
-    QPainterPathStroker,
     QPen,
     QPixmap,
     QPolygonF,
@@ -199,14 +199,16 @@ def _hand(wave: tuple[Point, ...], stroke: float, head: Point, radius: float) ->
 
 # Hand-tuned on their own pixel grids where the automatic snap loses the figure: a head
 # at least as big as the stroke, raised above the shoulders with a 1 px gap, the body's
-# lowest point well below the arms. In the tray the arms end high enough that a corner
-# badge trims at most the tip of the right arm.
+# lowest point well below the arms. In the tray the V is narrow and the arms end high
+# enough that the corner badge's cut-out trims at most the tip of the right arm, never
+# the body; 24 px keeps a 3 px stroke with its axis on a pixel centre and a free edge.
 _PIXEL_MARKS: Final[dict[tuple[Layout, int], _PixelMark]] = {
     ("app", 16): _hand(((3, 10), (5, 6), (8, 12), (11, 6), (13, 10)), 2, (8, 3), 1),
     ("app", 20): _hand(((3, 13), (6, 8), (10, 16), (14, 8), (17, 13)), 2, (10, 4), 2),
     ("app", 24): _hand(((5, 15), (8, 10), (12, 18), (16, 10), (19, 15)), 2, (12, 6), 2),
-    ("tray", 16): _hand(((1, 10), (4, 6), (8, 14), (12, 6), (15, 10)), 2, (8, 3), 2),
-    ("tray", 20): _hand(((2, 12), (6, 7), (10, 17), (14, 7), (18, 12)), 2, (10, 4), 2),
+    ("tray", 16): _hand(((1, 10), (5, 6), (8, 14), (11, 6), (15, 10)), 2, (8, 3), 2),
+    ("tray", 20): _hand(((2, 12), (7, 7), (10, 17), (13, 7), (18, 12)), 2, (10, 4), 2),
+    ("tray", 24): _hand(((2.5, 13.5), (6.5, 6.5), (11.5, 18.5), (16.5, 6.5), (20.5, 13.5)), 3, (11.5, 3.5), 2.5),
 }
 
 
@@ -298,13 +300,48 @@ def glyph_image(state: TrayState, glyph: QColor, size: int) -> QImage:
         mark = _PIXEL_MARKS.get(("tray", size)) or _place_mark(_TRAY_BOX, size)
         head = glyph if state == "stopped" else CORAL  # stopped: the whole glyph is dimmed
         _paint_mark(painter, mark, glyph, head)
-        if badge != "none":
+        if badge != "none" and size not in _BADGE_ART:
             spec = _badge_spec(size)
-            _clear(painter, _badge_outline(badge, spec), spec.gap)
+            _clear(painter, spec)
+            painter.save()
+            painter.setClipPath(_disc(spec, spec.radius))  # every badge stays inside its disc
             _BADGE_PAINTERS[badge](painter, spec)
+            painter.restore()
     finally:
         painter.end()
+    if badge != "none" and size in _BADGE_ART:
+        _put_badge_art(image, badge, size)
     return image
+
+
+# At 16 px the badge is pixel art on a 6 x 6 grid in the corner (columns and rows 10 to 15):
+# vector shapes that small only blur. "." keeps the glyph's pixel (the right arm's tip may
+# show through a corner); every other cell replaces it. B = the badge's color, W = white,
+# K = dark ink. The body's V ends at column 9, so the art never touches it.
+_ART_ORIGIN: Final = 10
+_BADGE_ART: Final[dict[int, dict[Badge, tuple[QColor, tuple[str, ...]]]]] = {
+    16: {
+        "octagon": (_GREY, (".BBBB.", "BBBBBB", "BWWWWB", "BWWWWB", "BBBBBB", ".BBBB.")),
+        "ring": (_GREY, (".BBBB.", "BB..BB", "B....B", "B....B", "BB..BB", ".BBBB.")),
+        "arrows": (_GREY, (".BBBBB", "BB..BB", "B..BBB", "B.....", "BB..B.", ".BBB..")),
+        "record": (_RED, (".BBBB.", "BBBBBB", "BBBBBB", "BBBBBB", "BBBBBB", ".BBBB.")),
+        "hourglass": (_AMBER, ("BBBBBB", ".BBBB.", "..BB..", "..BB..", ".BBBB.", "BBBBBB")),
+        "bubble": (_VIOLET, (".BBBB.", "BBBBBB", "BBBBBB", ".BBBB.", ".BB...", ".B....")),
+        "speaker": (_VIOLET, ("...B..", "..BB.B", "BBBB.B", "BBBB.B", "..BB.B", "...B..")),
+        "check": (_GREEN, (".BBBB.", "BBBBWB", "BBBBWB", "BWBWBB", "BBWBBB", ".BBBB.")),
+        "triangle": (_YELLOW, ("..BB..", "..BB..", ".BKKB.", ".BKKB.", "BBBBBB", "BBKKBB")),
+        "cross": (_RED, (".BBBB.", "BWBBWB", "BBWWBB", "BBWWBB", "BWBBWB", ".BBBB.")),
+    },
+}
+
+
+def _put_badge_art(image: QImage, badge: Badge, size: int) -> None:
+    color, rows = _BADGE_ART[size][badge]
+    palette = {"B": color, "W": _WHITE, "K": _INK}
+    for y, row in enumerate(rows):
+        for x, cell in enumerate(row):
+            if cell != ".":
+                image.setPixelColor(_ART_ORIGIN + x, _ART_ORIGIN + y, palette[cell])
 
 
 # ---------------------------------------------------------------------- app icon
@@ -408,9 +445,11 @@ class _BadgeSpec:
     line: float
 
 
-# Small, in the bottom-right corner, on whole pixels: 6 px at 16, 7 px at 20, 8 px at 24.
+# Small, in the bottom-right corner: the cut-out (radius + gap) never reaches the body's V.
+# 7 px at 20 and 8 px at 24; at 16 px the pixel art (_BADGE_ART) fills this disc's 6 x 6
+# square with no ring, since one would bite the V.
 _BADGES: Final[dict[int, _BadgeSpec]] = {
-    16: _BadgeSpec(QPointF(13.0, 13.0), 3.0, 0.6, 1.0),
+    16: _BadgeSpec(QPointF(13.0, 13.0), 3.0, 0.0, 1.0),
     20: _BadgeSpec(QPointF(16.5, 16.5), 3.5, 0.6, 1.2),
     24: _BadgeSpec(QPointF(20.0, 20.0), 4.0, 0.75, 1.4),
 }
@@ -418,13 +457,13 @@ _BADGES: Final[dict[int, _BadgeSpec]] = {
 
 def _badge_spec(size: int) -> _BadgeSpec:
     unit = size / _UNITS
-    # 32-unit design: radius 6 centred at (26, 26), a 1-unit ring: low and right enough that
-    # the cut-out trims at most the tip of the right arm.
-    return _BADGES.get(size, _BadgeSpec(QPointF(26.0 * unit, 26.0 * unit), 6.0 * unit, unit, 1.9 * unit))
+    # 32-unit design: radius 5.5 centred at (26.5, 26.5), a 0.75-unit ring: low and right
+    # enough that the cut-out trims at most the tip of the right arm, never the body.
+    return _BADGES.get(size, _BadgeSpec(QPointF(26.5 * unit, 26.5 * unit), 5.5 * unit, 0.75 * unit, 1.8 * unit))
 
 
 def _octagon(spec: _BadgeSpec) -> QPolygonF:
-    reach = spec.radius / math.cos(math.radians(22.5))  # flat sides at `radius`
+    reach = spec.radius  # corners on the disc's edge
     c = spec.center
     return QPolygonF(
         [
@@ -438,16 +477,16 @@ def _triangle(spec: _BadgeSpec) -> QPolygonF:
     c, r = spec.center, spec.radius
     return QPolygonF(
         [
-            QPointF(c.x(), c.y() - 1.1 * r),
-            QPointF(c.x() + 1.1 * r, c.y() + r),
-            QPointF(c.x() - 1.1 * r, c.y() + r),
+            QPointF(c.x(), c.y() - r),
+            QPointF(c.x() + 0.95 * r, c.y() + 0.62 * r),
+            QPointF(c.x() - 0.95 * r, c.y() + 0.62 * r),
         ]
     )
 
 
 def _bubble_body(spec: _BadgeSpec) -> QRectF:
     c, r = spec.center, spec.radius
-    return QRectF(c.x() - r, c.y() - r, 2 * r, 1.55 * r)
+    return QRectF(c.x() - 0.88 * r, c.y() - 0.78 * r, 1.76 * r, 1.15 * r)
 
 
 def _badge_outline(badge: Badge, spec: _BadgeSpec) -> QPainterPath:
@@ -468,37 +507,41 @@ def _badge_outline(badge: Badge, spec: _BadgeSpec) -> QPainterPath:
         c, r = spec.center, spec.radius
         path.addRect(QRectF(c.x() + 0.2 * r, c.y() - 0.75 * r, 0.75 * r, 1.5 * r))  # the sound arc's room
     elif badge == "cross":
-        side = 1.8 * r
-        path.addRoundedRect(QRectF(c.x() - side / 2, c.y() - side / 2, side, side), 0.3 * r, 0.3 * r)
+        side = 1.5 * r
+        path.addRoundedRect(QRectF(c.x() - side / 2, c.y() - side / 2, side, side), 0.25 * r, 0.25 * r)
     elif badge == "bubble":
         body = _bubble_body(spec)
-        path.addRoundedRect(body, 0.45 * r, 0.45 * r)
+        path.addRoundedRect(body, 0.38 * r, 0.38 * r)
         tail = QPainterPath()
         tail.addPolygon(
             QPolygonF(
                 [
-                    QPointF(c.x() - 0.75 * r, body.bottom() - 0.3 * r),
-                    QPointF(c.x() - 0.85 * r, c.y() + r),
-                    QPointF(c.x() + 0.05 * r, body.bottom() - 0.3 * r),
+                    QPointF(c.x() - 0.6 * r, body.bottom() - 0.2 * r),
+                    QPointF(c.x() - 0.55 * r, c.y() + 0.82 * r),
+                    QPointF(c.x() + 0.1 * r, body.bottom() - 0.2 * r),
                 ]
             )
         )
         path = path.united(tail)
     else:
         path.addEllipse(c, r, r)
+    return path.intersected(_disc(spec, r))
+
+
+def _disc(spec: _BadgeSpec, radius: float) -> QPainterPath:
+    path = QPainterPath()
+    path.addEllipse(spec.center, radius, radius)
     return path
 
 
-def _clear(painter: QPainter, outline: QPainterPath, gap: float) -> None:
-    """Cut `outline` plus a `gap` ring out of the glyph, down to transparency."""
-    stroker = QPainterPathStroker()
-    stroker.setWidth(2 * gap)
-    stroker.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+def _clear(painter: QPainter, spec: _BadgeSpec) -> None:
+    """Cut the badge's disc plus its `gap` ring out of the glyph, down to transparency.
+    A disc whatever the badge's shape: its reach towards the figure is known."""
     painter.save()
     painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
     painter.setPen(Qt.PenStyle.NoPen)
     painter.setBrush(QColor(0, 0, 0))
-    painter.drawPath(outline.united(stroker.createStroke(outline)))
+    painter.drawPath(_disc(spec, spec.radius + spec.gap))
     painter.restore()
 
 
@@ -541,22 +584,23 @@ def _paint_ring(painter: QPainter, spec: _BadgeSpec) -> None:
 
 
 def _paint_arrows(painter: QPainter, spec: _BadgeSpec) -> None:
-    # Restarting: two thirds of the ring, open on the left, and an arrow head at the top
-    # pointing into the gap: a circular arrow, not the closed ring of "starting".
+    # Restarting: two thirds of a smaller ring, open on the left, and an arrow head at the
+    # top pointing into the gap: a circular arrow, not the closed ring of "starting".
     c, r = spec.center, spec.radius
-    rect = _ring_rect(spec)
-    painter.setPen(_line_pen(_GREY, _ring_width(spec), Qt.PenCapStyle.FlatCap))
+    width = _ring_width(spec)
+    reach = 0.62 * r  # the arc's centre line; the arrow head ends at the disc's edge
+    rect = QRectF(c.x() - reach, c.y() - reach, 2 * reach, 2 * reach)
+    painter.setPen(_line_pen(_GREY, width, Qt.PenCapStyle.FlatCap))
     painter.setBrush(Qt.BrushStyle.NoBrush)
     painter.drawArc(rect, 90 * 16, -230 * 16)  # clockwise from 12 o'clock to about 8 o'clock
-    top = rect.top()
     painter.setPen(Qt.PenStyle.NoPen)
     painter.setBrush(_GREY)
     painter.drawPolygon(
         QPolygonF(
             [
-                QPointF(c.x() - 0.7 * r, top),
-                QPointF(c.x() + 0.05 * r, top - 0.55 * r),
-                QPointF(c.x() + 0.05 * r, top + 0.55 * r),
+                QPointF(c.x() - 0.6 * r, c.y() - reach),
+                QPointF(c.x() + 0.1 * r, c.y() - r),
+                QPointF(c.x() + 0.1 * r, c.y() - reach + 0.38 * r),
             ]
         )
     )
@@ -571,12 +615,12 @@ def _hourglass(spec: _BadgeSpec) -> QPolygonF:
     c, r = spec.center, spec.radius
     return QPolygonF(
         [
-            QPointF(c.x() - 0.85 * r, c.y() - r),
-            QPointF(c.x() + 0.85 * r, c.y() - r),
-            QPointF(c.x() + 0.15 * r, c.y()),
-            QPointF(c.x() + 0.85 * r, c.y() + r),
-            QPointF(c.x() - 0.85 * r, c.y() + r),
-            QPointF(c.x() - 0.15 * r, c.y()),
+            QPointF(c.x() - 0.62 * r, c.y() - 0.78 * r),
+            QPointF(c.x() + 0.62 * r, c.y() - 0.78 * r),
+            QPointF(c.x() + 0.13 * r, c.y()),
+            QPointF(c.x() + 0.62 * r, c.y() + 0.78 * r),
+            QPointF(c.x() - 0.62 * r, c.y() + 0.78 * r),
+            QPointF(c.x() - 0.13 * r, c.y()),
         ]
     )
 
@@ -605,8 +649,8 @@ def _speaker(spec: _BadgeSpec) -> QPolygonF:
         [
             QPointF(c.x() - 0.95 * r, c.y() - 0.38 * r),
             QPointF(c.x() - 0.45 * r, c.y() - 0.38 * r),
-            QPointF(c.x() + 0.2 * r, c.y() - r),
-            QPointF(c.x() + 0.2 * r, c.y() + r),
+            QPointF(c.x() + 0.2 * r, c.y() - 0.92 * r),
+            QPointF(c.x() + 0.2 * r, c.y() + 0.92 * r),
             QPointF(c.x() - 0.45 * r, c.y() + 0.38 * r),
             QPointF(c.x() - 0.95 * r, c.y() + 0.38 * r),
         ]
@@ -639,11 +683,11 @@ def _paint_triangle(painter: QPainter, spec: _BadgeSpec) -> None:
     _fill(painter, "triangle", spec, _YELLOW)
     c, r = spec.center, spec.radius
     painter.setPen(_line_pen(_INK, spec.line, Qt.PenCapStyle.FlatCap))
-    painter.drawLine(QPointF(c.x(), c.y() - 0.45 * r), QPointF(c.x(), c.y() + 0.3 * r))
+    painter.drawLine(QPointF(c.x(), c.y() - 0.42 * r), QPointF(c.x(), c.y() + 0.08 * r))
     painter.setPen(Qt.PenStyle.NoPen)
     painter.setBrush(_INK)
     dot = spec.line / 2
-    painter.drawRect(QRectF(c.x() - dot, c.y() + 0.55 * r, 2 * dot, 2 * dot))
+    painter.drawRect(QRectF(c.x() - dot, c.y() + 0.24 * r, 2 * dot, 2 * dot))
 
 
 def _paint_cross(painter: QPainter, spec: _BadgeSpec) -> None:

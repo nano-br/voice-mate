@@ -10,9 +10,10 @@ Writes `app/companion/assets/voicemate-<size>.png` for every size and
 entries and 256 as PNG, the classic layout that every Windows tool reads
 (PyInstaller and Inno Setup included).
 
-Each size is drawn on its own pixel grid instead of being downscaled: 16, 20 and 24 px
-are hand-tuned, the other sizes snap the smooth geometry to whole pixels. The output is
-deterministic, so re-running it only changes files when the drawing changes.
+Each size is drawn on its own instead of being downscaled: 16 and 24 px are hand-tuned on
+their pixel grids, 32 px snaps the smooth geometry to whole pixels, and 48, 64 and 256 px
+use it as it is. The output is deterministic, so re-running it only changes files when the
+drawing changes.
 
 Run it from the repository root:
     Windows: .venv-companion\\Scripts\\python -m tools.gen_icon

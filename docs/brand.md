@@ -38,9 +38,13 @@ downwards):
 - Every size is painted on its own, never downscaled from a big bitmap. Below 48 px the
   stroke is a whole number of pixels, the caps and the head land on the pixel grid and
   the figure stays symmetric about its axis; the head is never narrower than the stroke.
-- At 16, 20 and 24 px (the tray at 100, 125 and 150 %) the figure is hand-tuned on its
-  own pixel grid wherever the automatic snap loses it: a 2 px stroke, the head raised
-  above the shoulders with a 1 px gap, the body's lowest point well below the arms.
+  48 px and up use the smooth geometry as it is.
+- Hand-tuned on their own pixel grids, with the head raised above the shoulders by a
+  1 px gap and the body's lowest point well below the arms: the tray at 16 and 20 px
+  (100 and 125 %; a 2 px stroke and a narrow V that keeps clear of the corner badge), the
+  tray at 24 px (150 %; a 3 px stroke on a pixel-centre axis, the arms clear of the
+  edges) and the app icon at 16, 20 and 24 px (a 2 px stroke). The tray and the app icon
+  at 32 and 40 px use the automatic snap.
 
 ### Colors
 
@@ -61,14 +65,16 @@ foreground color: white on a dark taskbar, near-black on a light one (the tray f
 
 The icon always looks the same: the mark keeps exactly its size and place in every state
 (only `stopped` dims it to grey). The STATE is told only by a small badge in the
-bottom-right corner, with a thin transparent ring cut into the mark where they overlap;
-at 16 px it may trim the tip of the right arm by about a pixel.
+bottom-right corner. A round cut-out (the badge's disc plus a thin transparent ring)
+separates it from the mark; it may trim the tip of the right arm, never the body's V.
+Every badge shape stays inside its disc. At 16 px the badge is pixel art on a 6 x 6
+grid (columns and rows 10 to 15) with no ring: the V ends at column 9.
 
 | | 32-unit grid (32 px and up) | 24 px | 20 px | 16 px |
 |---|---|---|---|---|
-| Badge centre | (26, 26) | (20, 20) | (16.5, 16.5) | (13, 13) |
-| Badge radius | 6 | 4 | 3.5 | 3 |
-| Cut-out ring | 1 | 0.75 | 0.6 | 0.6 |
+| Badge centre | (26.5, 26.5) | (20, 20) | (16.5, 16.5) | 6 x 6 pixel art at (10, 10) |
+| Badge radius | 5.5 | 4 | 3.5 | 3 |
+| Cut-out ring | 0.75 | 0.75 | 0.6 | none |
 
 | `TrayState` | Badge |
 |---|---|
@@ -87,6 +93,7 @@ at 16 px it may trim the tip of the right arm by about a pixel.
 Badges differ by SHAPE (disc, ring, open ring, octagon, triangle, rounded square, speech
 bubble, hourglass, loudspeaker) and by their symbol, never only by color. The symbols are
 simple and strong so they survive at 6 px. No animation by default.
+
 ## The app icon: the framed tile
 
 The exe, the Start menu shortcut, the installer and the windows show the mark in white

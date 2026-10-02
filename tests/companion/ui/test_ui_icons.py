@@ -151,8 +151,26 @@ def test_the_mark_is_the_same_in_every_state(qapp: QApplication, tone: icons.Gly
             continue
         image = _image(state, tone, size)
         assert all(image.pixelColor(x, y) == idle.pixelColor(x, y) for x, y in outside), state
-    # The badge stays small: it never covers more than a quarter of the icon's width.
+    # The badge stays small: under 42 % of the icon's width.
     assert 2 * spec.radius <= size * 0.42
+
+
+@pytest.mark.parametrize("size", [16, 20, 24, 32, 40, 48, 64])
+@pytest.mark.parametrize("tone", TONES)
+def test_a_badge_never_cuts_into_the_body(qapp: QApplication, tone: icons.GlyphTone, size: int) -> None:
+    """The cut-out may trim the right arm's tip, never the V (the figure's body)."""
+    mark = icons._PIXEL_MARKS.get(("tray", size)) or icons._place_mark(icons._TRAY_BOX, size)
+    body_right = mark.wave[3].x() - mark.stroke / 2  # the right arm starts past this column
+    idle = _image("idle", tone, size)
+    body = [
+        (x, y) for y in range(size) for x in range(size) if x + 1 <= body_right and idle.pixelColor(x, y).alpha() > 0
+    ]
+    for state in ALL_STATES:
+        if state in ("idle", "stopped"):
+            continue
+        image = _image(state, tone, size)
+        changed = [(x, y) for x, y in body if image.pixelColor(x, y) != idle.pixelColor(x, y)]
+        assert not changed, f"{state} at {size} px: {changed}"
 
 
 def test_tray_icon_has_every_size_and_follows_the_taskbar_tone(qapp: QApplication) -> None:
