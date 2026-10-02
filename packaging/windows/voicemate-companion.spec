@@ -15,6 +15,7 @@
 # provides when it executes this file.
 
 import re
+import sys
 import tomllib
 from pathlib import Path
 
@@ -35,6 +36,11 @@ APP_NAME = "VoiceMate"
 ROOT = Path(SPECPATH).resolve().parents[1]
 LOCALES_DIR = ROOT / "app" / "i18n" / "locales"
 ASSETS_DIR = ROOT / "app" / "companion" / "assets"
+
+# The version rules are tools/release_check.py's (one SemVer definition for the release
+# gate and the build): the spec is not importable, so this is where they are shared.
+sys.path.insert(0, str(ROOT))
+from tools.release_check import numeric_version, version_problems  # noqa: E402
 
 # The engine's stack. tests/test_import_boundary.py keeps the companion away from it;
 # excluding it here turns an accidental import into an ImportError at startup instead
@@ -117,14 +123,34 @@ QT_UNUSED_FILES = re.compile(
 
 
 def project_version() -> str:
+    """SemVer 2.0 (docs/releasing.md): a PEP 440 spelling such as 0.2.0rc1 is refused, its
+    digits would turn into the numeric version 0.2.0.1, which sorts after the final 0.2.0."""
     with (ROOT / "pyproject.toml").open("rb") as file:
-        return str(tomllib.load(file)["tool"]["poetry"]["version"])
+        version = str(tomllib.load(file)["tool"]["poetry"]["version"])
+    problems = version_problems(version)
+    if problems:
+        raise SystemExit(f"{problems[0]}: see docs/releasing.md")
+    return version
+
+
+def baked_version_file(version: str, out_dir: Path) -> list[tuple[str, str]]:
+    """app/companion/VERSION in the bundle: the frozen app has no pyproject.toml and no
+    distribution metadata, so app/companion/version.py reads the version from there."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / "VERSION"
+    path.write_bytes(version.encode("utf-8") + b"\n")
+    return [(str(path), "app/companion")]
 
 
 def version_resource(version: str) -> VSVersionInfo:
-    """Explorer's Details tab, Task Manager's process name and the installer's version."""
-    numbers = [int(part) for part in re.findall(r"\d+", version)[:4]]
-    numbers += [0] * (4 - len(numbers))
+    """Explorer's Details tab, Task Manager's process name and the installer's version.
+
+    The numeric version is MAJOR.MINOR.PATCH.0 for every build of that version, the
+    pre-releases included (0.2.0-rc.1 is 0.2.0.0, like 0.2.0): only the strings carry
+    the suffix. The installer copies its files with `ignoreversion`, so an equal
+    numeric version never keeps an older file.
+    """
+    numbers = numeric_version(version)
     strings = [
         StringStruct("CompanyName", "NanoBR"),
         StringStruct("FileDescription", APP_NAME),
@@ -136,7 +162,7 @@ def version_resource(version: str) -> VSVersionInfo:
         StringStruct("ProductVersion", version),
     ]
     return VSVersionInfo(
-        ffi=FixedFileInfo(filevers=tuple(numbers), prodvers=tuple(numbers)),
+        ffi=FixedFileInfo(filevers=numbers, prodvers=numbers),
         kids=[
             StringFileInfo([StringTable("040904B0", strings)]),
             VarFileInfo([VarStruct("Translation", [0x0409, 1200])]),
@@ -184,6 +210,7 @@ hiddenimports = collect_submodules(
 ) + collect_submodules("app.protocol")
 datas = compile_catalogs(Path(workpath) / "locales")
 datas += [(str(path), "app/companion/assets") for path in sorted(ASSETS_DIR.glob("voicemate*.*"))]
+datas += baked_version_file(VERSION, Path(workpath) / "version")
 
 a = Analysis(
     [str(Path(SPECPATH) / "voicemate_launcher.py")],

@@ -2,7 +2,7 @@
         format lint test stt-eval run run-large run-turbo run-vozes-aleatorias run-reset-voz \
         i18n-extract i18n-init-pt i18n-init-en i18n-init-es i18n-init-ru i18n-init-zh i18n-update i18n-compile i18n-mo clean \
         companion-venv companion-test companion-lint run-tray companion-build companion-installer \
-        docs-screenshots
+        docs-screenshots release-check
 
 all: format lint test
 
@@ -149,9 +149,11 @@ COMPANION_PY ?= $(if $(wildcard $(COMPANION_VENV_PY)),"$(COMPANION_VENV_PY)",$(C
 # The interpreter, or an error that stops only the target that needs it.
 companion_py = $(or $(COMPANION_PY),$(error No companion environment: run "make companion-venv" first))
 windows_only = $(if $(filter Windows_NT,$(OS)),,$(error "make $@" runs on Windows only: run it on Windows))
-COMPANION_TESTS := $(wildcard tests/companion) tests/test_import_boundary.py tests/test_companion_packaging.py
+# The release helper too: the release workflow runs it on Windows.
+COMPANION_TESTS := $(wildcard tests/companion) tests/test_import_boundary.py tests/test_companion_packaging.py \
+                   tests/test_release_check.py
 COMPANION_SOURCES := app/companion app/protocol $(COMPANION_TESTS) \
-                     tools/gen_icon.py tools/build_installer.py tools/render_screenshots.py \
+                     tools/gen_icon.py tools/build_installer.py tools/release_check.py tools/render_screenshots.py \
                      packaging/windows/voicemate_launcher.py
 
 # Pinned (requirements/companion-constraints.txt), so builds are reproducible.
@@ -187,6 +189,20 @@ companion-installer: companion-build
 # One language: make docs-screenshots ARGS="--lang pt-BR".
 docs-screenshots:
 	$(windows_only)$(companion_py) -m tools.render_screenshots $(ARGS)
+
+# ─── Release (docs/releasing.md) ─────────────────────────────────────────────
+# Before tagging: the pyproject version is SemVer, CHANGELOG.md has its dated section,
+# docs/releases/vX.Y.Z.md and its five translations exist, the companion agrees.
+# Standard library only, so no environment is needed. Check a tag too:
+#   make release-check TAG=v0.1.0
+ifeq ($(OS),Windows_NT)
+RELEASE_PY ?= py -3
+else
+RELEASE_PY ?= python3
+endif
+
+release-check:
+	$(RELEASE_PY) -m tools.release_check $(if $(TAG),--tag $(TAG))
 
 clean:
 	rm -rf .pytest_cache .ruff_cache .mypy_cache

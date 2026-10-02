@@ -26,6 +26,8 @@ def test_returns_original_when_silero_missing(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_concatenates_speech_timestamps(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The fake collect_chunks concatenates with torch, which only the GPU setup installs.
+    pytest.importorskip("torch")
     _reset()
     audio = np.arange(1000, dtype=np.float32)
 

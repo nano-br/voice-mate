@@ -1,0 +1,120 @@
+# Quality gates of every change: the same `make` targets a developer runs locally.
+#
+# - companion: the Windows tray app (Python 3.13, the pinned .venv-companion of
+#   `make companion-venv`), linted and tested like `make companion-lint companion-test`.
+# - engine: the Python 3.12 engine on Linux, installed with a plain `poetry install`.
+#   That is the core (faster-whisper on CTranslate2, sounddevice, numpy, ...) plus the
+#   dev group, about 300 MB of wheels and no PyTorch: torch is never a Poetry
+#   dependency (`make setup` picks the CUDA/ROCm/CPU build per machine) and the extras
+#   (claude, tts, kokoro, voxcpm, whisper-gpu, linux, ui) stay out. The suite mocks the
+#   hardware (microphone, GPU, hotkeys, clipboard); the tests that need an extra or
+#   Windows skip themselves (pytest.importorskip / skipif), so hosted runners run
+#   everything else.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A new push to a pull request cancels its previous run; runs on main always finish.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  companion:
+    name: Companion (Windows, Python 3.13)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      # Qt renders off screen: no window, no tray icon, no desktop session needed.
+      QT_QPA_PLATFORM: offscreen
+      MAKE_VERSION: "4.4.1"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements/companion*.txt
+
+      - name: Install GNU make (when the image has none)
+        run: |
+          if ! command -v make >/dev/null 2>&1; then
+            choco install make --version="$MAKE_VERSION" -y --no-progress
+          fi
+          make --version | head -n 1
+
+      # The venv `make companion-venv` creates, from the setup-python interpreter
+      # instead of the `py -3` launcher (which may pick another installed Python).
+      - name: Create the companion environment
+        id: setup
+        run: make companion-venv COMPANION_BOOTSTRAP=python
+
+      - name: Compile the catalogs
+        run: .venv-companion/Scripts/python.exe -m babel.messages.frontend compile -d app/i18n/locales -D voicemate
+
+      - name: Lint (ruff, ruff format, mypy)
+        run: make companion-lint
+
+      # Also after a lint failure: one run reports both.
+      - name: Test
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: make companion-test
+
+  engine:
+    name: Engine (Linux, Python 3.12)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The Poetry the lock file is maintained with (any 2.x reads lock-version 2.1).
+      POETRY_VERSION: "2.4.1"
+    steps:
+      - uses: actions/checkout@v7
+
+      # sounddevice loads the system PortAudio when app.core.recorder is imported.
+      - name: Install PortAudio
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends libportaudio2
+
+      # Before setup-python, which needs Poetry to locate the cache it saves.
+      - name: Install Poetry
+        run: pipx install "poetry==$POETRY_VERSION"
+
+      - uses: actions/setup-python@v7
+        id: python
+        with:
+          python-version: "3.12"
+          cache: poetry
+
+      - name: Install the engine (no extras)
+        id: setup
+        env:
+          PYTHON_PATH: ${{ steps.python.outputs.python-path }}
+        run: |
+          poetry env use "$PYTHON_PATH"
+          poetry install --no-interaction
+
+      - name: Compile the catalogs
+        run: make i18n-compile
+
+      - name: Lint (ruff, mypy)
+        run: make lint
+
+      # Also after a lint failure: one run reports everything.
+      - name: Format check
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: poetry run ruff format --check .
+
+      - name: Test
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: make test
