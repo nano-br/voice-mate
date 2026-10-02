@@ -303,17 +303,21 @@ they belong to:
 
 | `TrayState` | Badge | Tooltip | Cue on entering |
 |---|---|---|---|
-| `stopped` | grey mic | "VoiceMate is stopped" | none |
-| `starting` / `restarting` | grey clock / arrows | "Starting engine..." / "Restarting (attempt 2)" | none |
+| `stopped` | grey octagon, dimmed glyph | "VoiceMate is stopped" | none |
+| `starting` / `restarting` | grey ring / circular arrow | "Starting engine..." / "Restarting (attempt 2)" | none |
 | `idle` | none | "Listening for Ctrl+Alt+V" | none |
-| `recording` | red dot | "Recording 00:12" | none (`start` plays on `mic_live`) |
+| `recording` | red disc | "Recording 00:12" | none (`start` plays on `mic_live`) |
 | `transcribing` | amber hourglass | "Transcribing..." | `transcribing` |
-| `thinking` / `speaking` | violet bubble / speaker | "Claude is answering..." | none |
-| `ready` (lasts 3 s) | green check | "Copied: ..." | `ready` or `ai_ready` (see below) |
-| `warning` | yellow triangle | "No microphone" / "WSL audio is down" | `warning` |
-| `error` | red X | details | `error` |
+| `thinking` / `speaking` | violet speech bubble / loudspeaker | "Claude is answering..." | none |
+| `ready` (lasts 3 s) | green disc with a check | "Copied: ..." | `ready` or `ai_ready` (see below) |
+| `warning` | yellow triangle with "!" | "No microphone" / "WSL audio is down" | `warning` |
+| `error` | red square with an X | details | `error` |
 
-Badges differ by shape, not only color. The base glyph follows the taskbar theme
+The glyph is the VoiceMate mark (a figure with raised arms whose body is a sound wave,
+and a coral head; see [brand.md](brand.md)) with no tile, in the taskbar's foreground
+color, the same size and place in every state; only a small badge in the bottom-right
+corner changes. Badges differ by shape, not only color.
+The glyph follows the taskbar theme
 (`HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize\SystemUsesLightTheme`).
 No animation by default.
 
@@ -669,7 +673,8 @@ as "not found".
   (`winget install JRSoftware.InnoSetup`).
 - Reproducible builds: exact pins in `requirements/companion-constraints.txt`.
 - Icons: `app/companion/assets/voicemate.ico` (16 to 256 px) and
-  `voicemate-<size>.png`, drawn by `tools/gen_icon.py` (`python -m tools.gen_icon`).
+  `voicemate-<size>.png`, drawn by `tools/gen_icon.py` (`python -m tools.gen_icon`) with
+  the same code as the tray glyphs (`app/companion/ui/icons.py`, see [brand.md](brand.md)).
   The UI loads them from `Path(app.companion.__file__).parent / "assets"`; the frozen
   app ships them at the same place.
 - Limits `packaging/windows/voicemate-companion.spec` puts on the UI (the frozen app

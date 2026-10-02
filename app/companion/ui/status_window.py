@@ -256,6 +256,13 @@ class StatusWindow(QWidget):
             self._render_icon()
         super().changeEvent(event)
 
+    def event(self, event: QEvent) -> bool:
+        # Moved to a screen with another scale: repaint the header icon for it.
+        if event.type() == QEvent.Type.DevicePixelRatioChange and hasattr(self, "state_icon"):
+            self._render_icon()
+        handled: bool = super().event(event)  # annotated: without PySide6, mypy sees Any
+        return handled
+
     def _ensure_fits(self) -> None:
         """Grow (never shrink) to fit banners that just appeared. The layout's minimum size
         ignores the wrapped banner labels (height-for-width), so ask for the height at this width."""
