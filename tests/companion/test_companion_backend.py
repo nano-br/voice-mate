@@ -11,7 +11,10 @@ import pytest
 from companion_core_fakes import FakeDaemon, wait_until
 
 from app.companion.client import DaemonClient
+from app.companion.contract import CompanionSettings
+from app.companion.controller import default_backend
 from app.companion.desktop import autostart_command
+from app.companion.dictation import EngineLanguage
 from app.companion.supervisor import backend as backend_module
 from app.companion.supervisor.backend import (
     EngineLog,
@@ -45,6 +48,60 @@ def test_engine_script_quotes_the_folder_without_expanding_tilde() -> None:
         engine_script("/opt/voice mate", 5000)
         == 'cd "/opt/voice mate" && exec make run-engine ARGS="--daemon-port 5000"'
     )
+
+
+def test_engine_script_passes_the_dictation_language_flags() -> None:
+    portuguese = EngineLanguage("pt", "pt-BR")
+    assert engine_script("ai-lab/voice-mate", 47821, portuguese) == (
+        'cd "$HOME/ai-lab/voice-mate" && exec make run-engine '
+        'ARGS="--daemon-port 47821 --transcription-language pt --output-lang pt-BR"'
+    )
+    assert engine_script("/opt/voice mate", 5000, EngineLanguage("auto", "zh-CN")) == (
+        'cd "/opt/voice mate" && exec make run-engine '
+        'ARGS="--daemon-port 5000 --transcription-language auto --output-lang zh-CN"'
+    )
+
+
+def test_wsl_spawn_command_carries_the_language(tmp_path: Path) -> None:
+    wsl = WslBackend("ai-lab", 47999, tmp_path / "engine.log", language=EngineLanguage("en", "en"))
+    assert wsl.spawn_command("ai-lab/voice-mate") == [
+        "wsl.exe",
+        "-d",
+        "ai-lab",
+        "-e",
+        "bash",
+        "-lc",
+        'cd "$HOME/ai-lab/voice-mate" && exec make run-engine '
+        'ARGS="--daemon-port 47999 --transcription-language en --output-lang en"',
+    ]
+
+
+def test_local_spawn_command_carries_the_language(tmp_path: Path) -> None:
+    local = LocalBackend(47999, tmp_path / "engine.log", language=EngineLanguage("ru", "ru"))
+    assert local.spawn_command("ai-lab/voice-mate") == [
+        "bash",
+        "-lc",
+        'cd "$HOME/ai-lab/voice-mate" && exec make run-engine '
+        'ARGS="--daemon-port 47999 --transcription-language ru --output-lang ru"',
+    ]
+
+
+def test_default_backend_resolves_the_setting_for_each_spawning_mode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("app.companion.dictation.catalog_for", lambda language: "es")  # a Spanish OS
+    wsl = default_backend(CompanionSettings(engine_mode="wsl2", dictation_language="zh"), tmp_path)
+    assert isinstance(wsl, WslBackend)
+    assert wsl.spawn_command("x")[-1].endswith(
+        'ARGS="--daemon-port 47821 --transcription-language zh --output-lang zh-CN"'
+    )
+    local = default_backend(CompanionSettings(engine_mode="local"), tmp_path)  # follows the interface (Spanish)
+    assert isinstance(local, LocalBackend)
+    assert local.spawn_command("x")[-1].endswith(
+        'ARGS="--daemon-port 47821 --transcription-language es --output-lang es"'
+    )
+    wsl.close()
+    local.close()
 
 
 class FakeRunner:

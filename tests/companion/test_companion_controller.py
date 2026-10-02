@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import time
 from collections.abc import Iterator
 from dataclasses import replace
 from pathlib import Path
@@ -12,10 +13,18 @@ from pathlib import Path
 import pytest
 from companion_core_fakes import FAST, ControllerKit, FakeBackend, FakeDaemon, FakeDesktopParts, use_english, wait_until
 
+import app.i18n as i18n_module
 from app.companion import paths
-from app.companion.contract import CompanionSettings, CompanionSnapshot, HotkeyBinding, Notification
+from app.companion.contract import (
+    CompanionSettings,
+    CompanionSnapshot,
+    DictationLanguage,
+    HotkeyBinding,
+    Notification,
+)
 from app.companion.controller import CompanionControllerImpl, create_controller
-from app.companion.settings_store import SettingsStore
+from app.companion.dictation import engine_language
+from app.companion.settings_store import SettingsStore, dump_settings
 
 
 @pytest.fixture(autouse=True)
@@ -673,6 +682,139 @@ def test_apply_settings_restarts_supervision_only_for_engine_changes(
     assert backend.stops == ["restart"]
     assert wait_until(lambda: recorder.last.supervisor == "healthy" and _connected(controller, daemon))
     assert controller.settings().engine_dir == "other/voice-mate"
+
+
+class BuiltBackends:
+    """A backend factory that counts the engines the controller builds (one per supervision
+    start) and records the language flags the real factory would pass at that moment."""
+
+    def __init__(self, daemon: FakeDaemon) -> None:
+        self.daemon = daemon
+        self.backends: list[FakeBackend] = []
+        self.flags: list[str] = []
+
+    def __call__(self, settings: CompanionSettings, logs_dir: Path) -> FakeBackend:
+        self.flags.append(engine_language(settings).cli_args())
+        backend = FakeBackend(daemon=self.daemon)
+        self.backends.append(backend)
+        return backend
+
+
+def _controller_counting_builds(
+    make_controller: ControllerKit, daemon: FakeDaemon, tmp_path: Path, settings: CompanionSettings
+) -> tuple[CompanionControllerImpl, BuiltBackends]:
+    built = BuiltBackends(daemon)
+    path = tmp_path / "dictation.toml"
+    path.write_text(dump_settings(replace(settings, daemon_port=daemon.port)), encoding="utf-8")
+    controller = CompanionControllerImpl(
+        SettingsStore(path, platform="win32"),
+        desktop_factory=FakeDesktopParts().desktop,
+        backend_factory=built,
+        cues_dir=tmp_path / "cues",
+        logs_dir=tmp_path / "logs",
+        timings=FAST,
+    )
+    make_controller.built.append(controller)
+    controller.start()
+    assert wait_until(lambda: _connected(controller, daemon))
+    assert len(built.backends) == 1
+    return controller, built
+
+
+def _assert_no_rebuild(controller: CompanionControllerImpl, built: BuiltBackends, daemon: FakeDaemon) -> None:
+    """The settings change just applied did not restart the engine. `apply_settings` stores
+    synchronously but the controller reacts on its serial dispatcher, so a negative check
+    right away would run before it: force a real rebuild behind it (a different engine
+    folder) and require exactly that one."""
+    assert controller.apply_settings(replace(controller.settings(), engine_dir="barrier/voice-mate")) == []
+    assert wait_until(lambda: len(built.backends) >= 2)
+    time.sleep(0.3)
+    assert len(built.backends) == 2  # the barrier's, nothing before it
+    assert wait_until(lambda: built.backends[0].stops == ["restart"])  # stopped by the barrier only
+
+
+def test_changing_the_dictation_language_restarts_the_engine(
+    make_controller: ControllerKit, daemon: FakeDaemon, tmp_path: Path
+) -> None:
+    settings = CompanionSettings(
+        engine_mode="wsl2", client_key="test-client-key-0001", engine_dir="ai-lab/voice-mate", language="en"
+    )
+    controller, built = _controller_counting_builds(make_controller, daemon, tmp_path, settings)
+    assert controller.settings().dictation_language == "interface"
+    assert controller.apply_settings(replace(controller.settings(), dictation_language="fr")) == []
+    assert wait_until(lambda: len(built.backends) == 2)
+    assert wait_until(lambda: built.backends[0].closed)
+    assert built.backends[0].stops == ["restart"]
+    assert built.flags == [
+        "--transcription-language en --output-lang en",
+        "--transcription-language fr --output-lang fr",
+    ]
+    assert wait_until(lambda: _connected(controller, daemon))
+    assert controller.settings().dictation_language == "fr"
+
+
+def test_a_dictation_language_the_interface_already_implies_does_not_restart(
+    make_controller: ControllerKit, daemon: FakeDaemon, tmp_path: Path
+) -> None:
+    settings = CompanionSettings(
+        engine_mode="wsl2", client_key="test-client-key-0001", engine_dir="ai-lab/voice-mate", language="en"
+    )
+    controller, built = _controller_counting_builds(make_controller, daemon, tmp_path, settings)
+    # English while the interface is English: the same flags.
+    assert controller.apply_settings(replace(controller.settings(), dictation_language="en")) == []
+    assert controller.settings().dictation_language == "en"
+    _assert_no_rebuild(controller, built, daemon)
+
+
+def test_the_dictation_language_is_not_the_engines_business_in_external_mode(
+    make_controller: ControllerKit, daemon: FakeDaemon, tmp_path: Path
+) -> None:
+    settings = CompanionSettings(engine_mode="external", client_key="test-client-key-0001", language="en")
+    controller, built = _controller_counting_builds(make_controller, daemon, tmp_path, settings)
+    assert controller.apply_settings(replace(controller.settings(), dictation_language="ja")) == []
+    assert controller.settings().dictation_language == "ja"
+    _assert_no_rebuild(controller, built, daemon)
+
+
+@pytest.mark.parametrize(("dictation", "restarts"), [("interface", True), ("auto", True), ("fr", False)])
+def test_a_ui_language_change_restarts_the_engine_only_while_dictation_follows_it(
+    make_controller: ControllerKit,
+    daemon: FakeDaemon,
+    tmp_path: Path,
+    dictation: DictationLanguage,
+    restarts: bool,
+) -> None:
+    settings = CompanionSettings(
+        engine_mode="wsl2",
+        client_key="test-client-key-0001",
+        engine_dir="ai-lab/voice-mate",
+        language="en",
+        dictation_language=dictation,
+    )
+    controller, built = _controller_counting_builds(make_controller, daemon, tmp_path, settings)
+    assert controller.apply_settings(replace(controller.settings(), language="es")) == []
+    assert controller.settings().language == "es"
+    if restarts:
+        assert wait_until(lambda: len(built.backends) == 2)
+        assert wait_until(lambda: built.backends[0].closed)
+        assert built.backends[0].stops == ["restart"]
+    else:
+        _assert_no_rebuild(controller, built, daemon)
+
+
+def test_the_first_engine_gets_the_os_language_before_set_language_has_run(
+    make_controller: ControllerKit, daemon: FakeDaemon, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """main.py builds the controller BEFORE `set_language`, so with the defaults (UI on auto,
+    dictation following the interface) the first spawn must not read the not yet loaded
+    catalog (English): it resolves the OS language the way `set_language` will."""
+    monkeypatch.setattr(i18n_module, "_active_language", "en")  # nothing loaded yet
+    monkeypatch.setattr("app.companion.dictation.catalog_for", lambda language: "pt_BR")  # a Portuguese OS
+    settings = CompanionSettings(engine_mode="wsl2", client_key="test-client-key-0001", engine_dir="ai-lab/voice-mate")
+    assert settings.language == "auto" and settings.dictation_language == "interface"
+    controller, built = _controller_counting_builds(make_controller, daemon, tmp_path, settings)
+    assert built.flags == ["--transcription-language pt --output-lang pt-BR"]
+    assert controller.settings().language == "auto"
 
 
 def test_suspend_hotkeys_is_reflected_in_the_snapshot(make_controller: ControllerKit, daemon: FakeDaemon) -> None:

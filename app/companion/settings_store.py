@@ -30,6 +30,7 @@ from app.companion.contract import (
     CuePreset,
     CueSettings,
     CueSource,
+    DictationLanguage,
     EngineMode,
     HotkeyBinding,
     NotifyLevel,
@@ -248,6 +249,9 @@ def parse_settings(text: str, platform: str = sys.platform) -> LoadResult:
         version=version,
         client_key=client_key,
         language=reader.literal("language", get_args(UiLanguage), defaults.language),
+        dictation_language=reader.literal(
+            "dictation_language", get_args(DictationLanguage), defaults.dictation_language
+        ),
         engine_mode=engine_mode,
         wsl_distro=wsl_distro,
         engine_dir=engine_dir,
@@ -312,6 +316,7 @@ def dump_settings(settings: CompanionSettings) -> str:
         f"version = {_toml_value(settings.version)}",
         f"client_key = {_toml_value(settings.client_key)}",
         f"language = {_toml_value(settings.language)}",
+        f"dictation_language = {_toml_value(settings.dictation_language)}",
         f"engine_mode = {_toml_value(settings.engine_mode)}",
         f"wsl_distro = {_toml_value(settings.wsl_distro)}",
         f"engine_dir = {_toml_value(settings.engine_dir)}",
@@ -355,6 +360,7 @@ def validate_settings(
 
     for field_name, value, options in (
         ("language", settings.language, get_args(UiLanguage)),
+        ("dictation_language", settings.dictation_language, get_args(DictationLanguage)),
         ("engine_mode", settings.engine_mode, get_args(EngineMode)),
         ("wsl_restart_policy", settings.wsl_restart_policy, get_args(WslRestartPolicy)),
         ("notify_level", settings.notify_level, get_args(NotifyLevel)),

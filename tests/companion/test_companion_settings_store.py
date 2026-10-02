@@ -15,6 +15,7 @@ from app.companion.contract import (
     SETTINGS_VERSION,
     CompanionSettings,
     CueSettings,
+    DictationLanguage,
     HotkeyBinding,
     UiLanguage,
 )
@@ -48,6 +49,7 @@ def test_round_trip_keeps_every_field(tmp_path: Path) -> None:
     settings = CompanionSettings(
         client_key="abcdef0123456789",
         language="pt-BR",
+        dictation_language="ja",
         engine_mode="external",
         wsl_distro="ai-lab",
         engine_dir="/opt/voice mate",
@@ -109,6 +111,7 @@ def test_invalid_values_fall_back_to_defaults_with_log_lines() -> None:
             "version = 1",
             'client_key = "bad key with spaces"',
             'language = "klingon"',
+            'dictation_language = "klingon"',
             'engine_mode = "docker"',
             'engine_dir = "ai-lab/$(rm -rf ~)"',
             'wsl_distro = "bad name"',
@@ -135,6 +138,7 @@ def test_invalid_values_fall_back_to_defaults_with_log_lines() -> None:
     settings = result.settings
     assert settings.client_key == ""
     assert settings.language == defaults.language
+    assert settings.dictation_language == "interface"
     assert settings.engine_mode == defaults.engine_mode
     assert settings.engine_dir == ""
     assert settings.wsl_distro == ""
@@ -144,7 +148,7 @@ def test_invalid_values_fall_back_to_defaults_with_log_lines() -> None:
     assert settings.start_at_login is False
     assert settings.hotkeys == (HotkeyBinding("claude_chat", "ctrl+alt+a"),)
     assert settings.cues["start"] == CueSettings()
-    assert len(result.problems) >= 12
+    assert len(result.problems) >= 13
     assert any("mystery" in problem for problem in result.problems)
 
 
@@ -318,3 +322,30 @@ def test_normalized_cleans_chords_and_home_prefix() -> None:
     )
     assert settings.engine_dir == "ai-lab/voice-mate"
     assert settings.hotkeys == (HotkeyBinding("clipboard", "ctrl+alt+v"),)
+
+
+def test_dictation_language_defaults_to_the_interface_and_falls_back_with_a_log_line() -> None:
+    assert CompanionSettings().dictation_language == "interface"
+    assert parse_settings("version = 1").settings.dictation_language == "interface"  # an older file
+    result = parse_settings('dictation_language = "klingon"')
+    assert result.settings.dictation_language == "interface"
+    assert any("dictation_language" in problem for problem in result.problems)
+    result = parse_settings("dictation_language = 3")
+    assert result.settings.dictation_language == "interface"
+    assert any("dictation_language" in problem for problem in result.problems)
+
+
+@pytest.mark.parametrize("dictation", get_args(DictationLanguage))
+def test_every_dictation_language_round_trips(tmp_path: Path, dictation: DictationLanguage) -> None:
+    path = tmp_path / "companion.toml"
+    store = SettingsStore(path)
+    store.save(replace(store.get(), dictation_language=dictation))
+    assert f'dictation_language = "{dictation}"' in path.read_text(encoding="utf-8")
+    assert SettingsStore(path).get().dictation_language == dictation
+    assert validate_settings(replace(store.get(), dictation_language=dictation)) == []
+
+
+def test_the_dictation_language_options_are_a_subset_of_the_engines() -> None:
+    from app.core.config import TranscriptionLanguage
+
+    assert set(get_args(DictationLanguage)) - {"interface"} <= set(get_args(TranscriptionLanguage))
