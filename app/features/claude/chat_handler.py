@@ -5,14 +5,17 @@ import concurrent.futures
 import sys
 import threading
 import time
+from collections.abc import Callable
 from types import TracebackType
 
 from app.core.audio_feedback import AudioFeedback
 from app.core.chat import ChatBackend
+from app.core.session_status import OperationHandle
 from app.features.claude.sentence_buffer import SentenceBuffer
 from app.features.tts.base import TextToSpeech
 from app.i18n import _
 from app.platform.clipboard import ClipboardWriter, PyperclipWriter
+from app.protocol.models import Phase
 
 _HEARTBEAT_INTERVAL = 3.0
 
@@ -53,6 +56,20 @@ class _Heartbeat:
             print(_("[VoiceMate] ⏳ Claude processing... ({elapsed:.0f}s)").format(elapsed=elapsed))
 
 
+class _PhaseOnce:
+    """Moves an operation to `phase` the first time it is called."""
+
+    def __init__(self, op: OperationHandle, phase: Phase) -> None:
+        self._op = op
+        self._phase: Phase = phase
+        self._done = False
+
+    def __call__(self) -> None:
+        if not self._done:
+            self._done = True
+            self._op.set_phase(self._phase)
+
+
 class ClaudeChatHandler:
     """Sends the transcribed text to Claude and copies the response to the clipboard.
 
@@ -82,26 +99,51 @@ class ClaudeChatHandler:
         self._busy = False
         self._cancelled = False
 
-    def handle(self, text: str) -> None:
+    def handle(self, text: str, op: OperationHandle | None = None) -> None:
+        operation = op if op is not None else OperationHandle()
         with self._lock:
             self._busy = True
             self._cancelled = False
-        transcription_preview = text[:200] + ("..." if len(text) > 200 else "")
-        print(_("[VoiceMate] ✓ Transcription: {preview}").format(preview=transcription_preview))
-        self._clipboard.copy(text)
-        print(_("[VoiceMate] 📋 Transcription copied to clipboard."))
+        try:
+            transcription_preview = text[:200] + ("..." if len(text) > 200 else "")
+            print(_("[VoiceMate] ✓ Transcription: {preview}").format(preview=transcription_preview))
+            # A restart may have taken over between the transcription and this call: the
+            # transcript is still delivered (it is the user's words), but Claude is not
+            # called, and the transcript becomes the operation's last (final) result.
+            proceed = operation.active()
+            publication = operation.publish_result(text, "transcript", final=not proceed)
+            if publication.write_clipboard:
+                self._clipboard.copy(text)
+                print(_("[VoiceMate] 📋 Transcription copied to clipboard."))
+            elif publication.published:
+                print(_("[VoiceMate] 📋 The clipboard lease holder copies it to the clipboard."))
+            if not proceed:
+                print(_("[VoiceMate] Claude not called: the operation was cancelled or a new recording took over."))
+                return
+            self._ask(text, operation)
+        finally:
+            with self._lock:
+                self._busy = False
+                self._cancelled = False
+
+    def _ask(self, text: str, op: OperationHandle) -> None:
+        if not op.active():
+            return
+        op.set_phase("thinking")
         try:
             print(_("[VoiceMate] 🤖 Calling Claude..."))
             started = time.monotonic()
             # With TTS active: sentence-by-sentence streaming (speaks the 1st
             # sentence before the response finishes). Without TTS: full collect +
             # heartbeat (so the user isn't left without feedback while Claude thinks).
-            if self._speaker.is_active():
-                response = self._stream_and_speak(text)
+            spoken = self._speaker.is_active()
+            if spoken:
+                response = self._stream_and_speak(text, op)
+                spoken = spoken and self._speaker.is_active()  # the TTS may have died mid-answer
             else:
                 with _Heartbeat():
                     response = self._runtime.send_and_collect(text, timeout=self._timeout_seconds)
-            if self._is_cancelled():
+            if self._is_cancelled() or not op.active():
                 print(_("[VoiceMate] ✗ Claude response discarded (cancelled)."))
                 return
             if not response:
@@ -110,9 +152,13 @@ class ClaudeChatHandler:
             response_preview = response[:200] + ("..." if len(response) > 200 else "")
             print(_("[VoiceMate] 💬 Claude: {preview}").format(preview=response_preview))
             print(_("[VoiceMate] ⏱ Full response in {elapsed:.1f}s").format(elapsed=time.monotonic() - started))
-            self._clipboard.copy(response)
-            print(_("[VoiceMate] 📋 Claude response copied to clipboard."))
-            if not self._speaker.is_active():
+            publication = op.publish_result(response, "ai_response", final=True, spoken=spoken)
+            if publication.write_clipboard:
+                self._clipboard.copy(response)
+                print(_("[VoiceMate] 📋 Claude response copied to clipboard."))
+            elif publication.published:
+                print(_("[VoiceMate] 📋 The clipboard lease holder copies it to the clipboard."))
+            if publication.play_cue and not spoken:
                 self._audio.ai_response_ready()
         except asyncio.CancelledError:
             print(_("[VoiceMate] ✗ Claude call cancelled."))
@@ -124,26 +170,34 @@ class ClaudeChatHandler:
                 file=sys.stderr,
             )
             self._runtime.interrupt()
-            self._audio.error()
+            if op.publish_error(
+                "chat_failed",
+                detail=f"no answer within {self._timeout_seconds:.0f}s",
+                message=_("Claude did not answer within {timeout:.0f}s.").format(timeout=self._timeout_seconds),
+            ):
+                self._audio.error()
         except Exception as exc:  # noqa: BLE001
             print(_("[VoiceMate] ❌ Error talking to Claude: {exc}").format(exc=exc), file=sys.stderr)
-            self._audio.error()
-        finally:
-            with self._lock:
-                self._busy = False
-                self._cancelled = False
+            if op.publish_error(
+                "chat_failed",
+                detail=str(exc) or type(exc).__name__,
+                message=_("Error talking to Claude: {detail}").format(detail=exc),
+            ):
+                self._audio.error()
 
-    def _stream_and_speak(self, text: str) -> str:
+    def _stream_and_speak(self, text: str, op: OperationHandle) -> str:
         """Consume Claude's stream, speak sentence by sentence, and return the full text.
 
         `speak()` enqueues each sentence on the persistent player and returns; the
         audio plays while the next sentence is generated (pipeline, no gaps).
         `wait_done()` at the end waits for playback to finish. The full text is
-        accumulated for the clipboard.
+        accumulated for the clipboard. The phase turns to `speaking` with the
+        first sentence handed to the TTS.
         """
         buffer = SentenceBuffer()
         parts: list[str] = []
         first_token = True
+        on_speak = _PhaseOnce(op, "speaking")
         for delta in self._runtime.stream(text, timeout=self._timeout_seconds):
             if self._is_cancelled():
                 break
@@ -153,20 +207,21 @@ class ClaudeChatHandler:
                 print(_("[VoiceMate] 💬 Claude responding..."))
                 first_token = False
             parts.append(delta)
-            if not self._speak_all(buffer.feed(delta)):
+            if not self._speak_all(buffer.feed(delta), on_speak):
                 break
         if not self._is_cancelled():
             tail = buffer.flush()
             if tail:
-                self._speaker.speak(tail)
+                self._speak_all([tail], on_speak)
             self._speaker.wait_done()
         return "".join(parts)
 
-    def _speak_all(self, sentences: list[str]) -> bool:
+    def _speak_all(self, sentences: list[str], on_speak: Callable[[], None]) -> bool:
         """Speak each sentence in order; returns False if cancelled midway."""
         for sentence in sentences:
             if self._is_cancelled():
                 return False
+            on_speak()
             self._speaker.speak(sentence)
         return True
 

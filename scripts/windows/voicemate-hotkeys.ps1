@@ -660,7 +660,10 @@ function Send-Trigger([string]$Flow, [string]$Key) {
             Write-Alert (Get-LocalizedText 'daemon busy') ((Get-LocalizedText '{0}: the daemon did not answer within {1} s (busy). It is running, so it may still act on this key press: check the WSL console before pressing again.') -f $Key, $sec)
         }
         "http" {
-            if ($res.Status -ge 500) {
+            if ($res.Status -eq 503) {
+                # The daemon answers before its model is loaded (API v2 readiness gate).
+                Write-Alert (Get-LocalizedText 'daemon loading') ((Get-LocalizedText '{0}: the daemon is still loading the model, try again in a few seconds.') -f $Key)
+            } elseif ($res.Status -ge 500) {
                 Write-Alert (Get-LocalizedText 'daemon error') ((Get-LocalizedText '{0}: daemon error ({1}). See the WSL console for details.') -f $Key, $res.Detail)
             } else {
                 Write-Alert (Get-LocalizedText 'trigger rejected') ((Get-LocalizedText '{0}: the daemon rejected the trigger ({1}).') -f $Key, $res.Detail)
