@@ -51,6 +51,7 @@ from app.companion.contract import (
     CuePreset,
     CueSettings,
     CueSource,
+    DictationLanguage,
     EngineMode,
     FlowEntry,
     HotkeyBinding,
@@ -511,6 +512,14 @@ class GeneralPage(QWidget):
         self.language_hint.setWordWrap(False)  # one short line; wrapping in a form row misplaces it
         app_form.addRow("", self.language_hint)
         app_form.setRowVisible(self.language_hint, False)
+        self.dictation_language = _option_combo(texts.dictation_language_labels())
+        app_form.addRow(_("Dictation language:"), self.dictation_language)
+        # Short lines only: a wrapped label in a form row inside a tab page is clipped (the
+        # tab stack sizes the page without height-for-width), so the longer explanation is
+        # the tooltip and the visible hint never wraps.
+        self.dictation_hint = _secondary(QLabel())
+        self.dictation_hint.setWordWrap(False)
+        app_form.addRow("", self.dictation_hint)
         self.notify_level = _option_combo(texts.notify_level_labels())
         app_form.addRow(_("Notifications:"), self.notify_level)
         self.start_at_login = QCheckBox(_("Start VoiceMate when I sign in"))
@@ -554,14 +563,22 @@ class GeneralPage(QWidget):
         layout.addWidget(engine_box)
         layout.addStretch(1)
 
-        for combo in (self.language, self.notify_level, self.engine_mode, self.wsl_restart_policy):
+        for combo in (
+            self.language,
+            self.dictation_language,
+            self.notify_level,
+            self.engine_mode,
+            self.wsl_restart_policy,
+        ):
             combo.currentIndexChanged.connect(self.changed)
         self.engine_mode.currentIndexChanged.connect(lambda _index: self._sync_mode())
+        self.dictation_language.currentIndexChanged.connect(lambda _index: self._sync_dictation_hint())
         self.start_at_login.toggled.connect(self.changed)
         self.wsl_distro.textChanged.connect(self.changed)
         self.engine_dir.textChanged.connect(self.changed)
         for widget, name in (
             (self.language, _("Language")),
+            (self.dictation_language, _("Dictation language")),
             (self.notify_level, _("Notifications")),
             (self.engine_mode, _("Mode")),
             (self.wsl_distro, _("WSL distro")),
@@ -573,6 +590,7 @@ class GeneralPage(QWidget):
     def load(self, settings: CompanionSettings) -> None:
         with QSignalBlocker(self):
             _select(self.language, settings.language, texts.language_labels())
+            _select(self.dictation_language, settings.dictation_language, texts.dictation_language_labels())
             _select(self.notify_level, settings.notify_level, texts.notify_level_labels())
             self.start_at_login.setChecked(settings.start_at_login)
             if self.tray_icon_visible is not None:
@@ -592,6 +610,7 @@ class GeneralPage(QWidget):
 
     def apply_to(self, settings: CompanionSettings) -> CompanionSettings:
         language: UiLanguage = self.language.currentData()
+        dictation_language: DictationLanguage = self.dictation_language.currentData()
         notify_level: NotifyLevel = self.notify_level.currentData()
         engine_mode: EngineMode = self.engine_mode.currentData()
         policy: WslRestartPolicy = self.wsl_restart_policy.currentData()
@@ -601,6 +620,7 @@ class GeneralPage(QWidget):
         return replace(
             settings,
             language=language,
+            dictation_language=dictation_language,
             notify_level=notify_level,
             start_at_login=self.start_at_login.isChecked(),
             tray_icon_visible=tray_icon_visible,
@@ -615,6 +635,32 @@ class GeneralPage(QWidget):
         for widget in self._wsl_rows:
             widget.setEnabled(mode == "wsl2")
         self.engine_dir.setEnabled(mode != "external")
+        self._sync_dictation_hint()
+
+    def _sync_dictation_hint(self) -> None:
+        """Hint and tooltip for the chosen option. In external mode VoiceMate does not start the
+        engine, so the flags are the user's. With "Detect automatically" only the transcription
+        is detected: Claude keeps answering in the interface language."""
+        external = self.engine_mode.currentData() == "external"
+        self.dictation_language.setEnabled(not external)
+        if external:
+            tooltip = ""
+            hint = _("Connect only: set by the engine's own\n--transcription-language and --output-lang flags.")
+        elif self.dictation_language.currentData() == "auto":
+            tooltip = _(
+                "Whisper detects the language of each recording. Claude still answers in the interface language. "
+                "Changing it restarts the engine."
+            )
+            hint = _("Claude still answers in the interface language.")
+        else:
+            tooltip = _(
+                "The language you speak when dictating. It also sets the language of Claude's spoken answers. "
+                "Changing it restarts the engine."
+            )
+            hint = _("Also sets the language of Claude's spoken answers.")
+        self.dictation_language.setToolTip(tooltip)
+        self.dictation_hint.setToolTip(tooltip)
+        self.dictation_hint.setText(hint)
 
 
 # ---------------------------------------------------------------------- dialog

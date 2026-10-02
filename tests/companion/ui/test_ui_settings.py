@@ -69,6 +69,7 @@ def test_round_trip_sends_every_edit_to_apply_settings(
     # General.
     general = dialog.general_page
     _select_data(general.language, "es")
+    _select_data(general.dictation_language, "ru")
     _select_data(general.notify_level, "errors")
     general.start_at_login.setChecked(True)
     general.engine_dir.setText("  custom/voice-mate ")
@@ -88,6 +89,7 @@ def test_round_trip_sends_every_edit_to_apply_settings(
         master_volume=0.5,
         cues=cues,
         language="es",
+        dictation_language="ru",
         notify_level="errors",
         start_at_login=True,
         engine_dir="custom/voice-mate",
@@ -266,6 +268,68 @@ def test_wsl_fields_follow_the_engine_mode(ui: CompanionUi) -> None:
     assert not general.wsl_distro.isEnabled()
     assert not general.engine_dir.isEnabled()
     assert not general.wsl_restart_policy.isEnabled()
+
+
+def test_dictation_language_combo_lists_every_option_in_its_own_language(ui: CompanionUi) -> None:
+    combo = _open(ui).general_page.dictation_language
+    labels = {combo.itemData(index): combo.itemText(index) for index in range(combo.count())}
+    assert list(labels) == ["interface", "auto", "pt", "en", "es", "ru", "zh", "fr", "de", "it", "ja"]
+    assert labels["interface"] == "Same as the interface"
+    assert labels["auto"] == "Detect automatically"
+    assert labels["pt"] == "Português" and labels["zh"] == "中文" and labels["ru"] == "Русский"
+    assert combo.currentData() == "interface"  # the default
+    assert combo.accessibleName() == "Dictation language"
+
+
+def test_dictation_language_is_loaded_and_saved(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    fake.set_settings(replace(fake.settings(), dictation_language="auto"))
+    process_events()
+    dialog = _open(ui)
+    general = dialog.general_page
+    assert general.dictation_language.currentData() == "auto"
+    assert not dialog.apply_button.isEnabled()  # loading is not an edit
+    _select_data(general.dictation_language, "en")
+    assert dialog.apply_button.isEnabled()
+    dialog.apply_button.click()
+    assert process_events(lambda: fake.called("apply_settings") != [])
+    (sent,) = fake.called("apply_settings")[0]
+    assert sent.dictation_language == "en"  # type: ignore[attr-defined]
+    assert process_events(lambda: fake.settings().dictation_language == "en")
+
+
+def test_dictation_hint_says_it_sets_claudes_language_and_gives_way_in_external_mode(ui: CompanionUi) -> None:
+    general = _open(ui).general_page
+    _select_data(general.engine_mode, general.engine_mode.itemData(0))  # the mode that starts the engine
+    assert general.dictation_language.isEnabled()
+    assert "Claude's spoken answers" in general.dictation_hint.text()
+    assert "restarts the engine" in general.dictation_language.toolTip()
+    assert not general.dictation_hint.wordWrap()  # a wrapped hint is clipped inside the tab page
+    _select_data(general.engine_mode, "external")
+    assert not general.dictation_language.isEnabled()
+    assert "--transcription-language" in general.dictation_hint.text()
+    assert "--output-lang" in general.dictation_hint.text()
+    assert general.dictation_language.toolTip() == ""
+    _select_data(general.engine_mode, general.engine_mode.itemData(0))
+    assert general.dictation_language.isEnabled()
+    assert "Claude's spoken answers" in general.dictation_hint.text()
+
+
+def test_dictation_hint_does_not_claim_claudes_language_for_detect_automatically(ui: CompanionUi) -> None:
+    general = _open(ui).general_page
+    _select_data(general.engine_mode, general.engine_mode.itemData(0))
+    _select_data(general.dictation_language, "auto")
+    assert "Claude's spoken answers" not in general.dictation_hint.text()
+    assert "Claude's spoken answers" not in general.dictation_language.toolTip()
+    assert "interface language" in general.dictation_hint.text()
+    _select_data(general.dictation_language, "fr")
+    assert "Claude's spoken answers" in general.dictation_hint.text()
+    _select_data(general.dictation_language, "interface")
+    assert "Claude's spoken answers" in general.dictation_hint.text()
+    _select_data(general.dictation_language, "auto")
+    _select_data(general.engine_mode, "external")
+    assert "--output-lang" in general.dictation_hint.text()  # the external text wins
 
 
 def test_reopening_reloads_the_applied_settings(

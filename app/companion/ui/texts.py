@@ -15,6 +15,7 @@ from app.companion.contract import (
     CueName,
     CuePreset,
     CueSource,
+    DictationLanguage,
     EngineMode,
     FlowEntry,
     HotkeyCheck,
@@ -173,6 +174,23 @@ def language_labels() -> dict[UiLanguage, str]:
         "es": "Español",
         "ru": "Русский",
         "zh-CN": "中文（简体）",
+    }
+
+
+def dictation_language_labels() -> dict[DictationLanguage, str]:
+    # Same convention as the interface languages: each one in its own language.
+    return {
+        "interface": _("Same as the interface"),
+        "auto": _("Detect automatically"),
+        "pt": "Português",
+        "en": "English",
+        "es": "Español",
+        "ru": "Русский",
+        "zh": "中文",
+        "fr": "Français",
+        "de": "Deutsch",
+        "it": "Italiano",
+        "ja": "日本語",
     }
 
 

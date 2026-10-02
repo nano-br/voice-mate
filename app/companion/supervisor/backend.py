@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Final, Protocol
 
 from app.companion.client import DaemonClient, DaemonError
+from app.companion.dictation import EngineLanguage
 from app.companion.paths import home_dir
 from app.protocol.models import ShutdownReason
 
@@ -51,13 +52,16 @@ LOG_BACKUPS: Final = 3
 ExitCallback = Callable[[int, int, bool], None]
 
 
-def engine_script(engine_dir: str, port: int) -> str:
+def engine_script(engine_dir: str, port: int, language: EngineLanguage | None = None) -> str:
     """`cd` into the engine checkout and run it. Never `shlex.quote` a `~` path: relative
     paths are joined to "$HOME" inside double quotes (settings reject `"`, `$`, backtick and
-    newlines in `engine_dir`)."""
+    newlines in `engine_dir`). `language` adds the dictation language flags to ARGS (their
+    values come from closed sets, so they need no quoting); None leaves the engine's own
+    defaults."""
     directory = engine_dir.strip()
     target = f'"{directory}"' if directory.startswith("/") else f'"$HOME/{directory}"'
-    return f'cd {target} && exec make run-engine ARGS="--daemon-port {port}"'
+    args = f"--daemon-port {port}" if language is None else f"--daemon-port {port} {language.cli_args()}"
+    return f'cd {target} && exec make run-engine ARGS="{args}"'
 
 
 def env_token() -> str | None:

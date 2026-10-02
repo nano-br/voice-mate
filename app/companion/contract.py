@@ -72,6 +72,10 @@ SupervisorState = Literal["stopped", "starting", "healthy", "degraded", "restart
 EngineMode = Literal["wsl2", "local", "external"]
 WslRestartPolicy = Literal["auto", "ask", "never"]
 UiLanguage = Literal["auto", "pt-BR", "en", "es", "ru", "zh-CN"]
+# What the engine transcribes: "interface" follows the companion's UI language, "auto" lets
+# Whisper detect the language of each utterance, the rest pin one language (a subset of the
+# engine's `TranscriptionLanguage`). Resolved to engine flags by `app.companion.dictation`.
+DictationLanguage = Literal["interface", "auto", "pt", "en", "es", "ru", "zh", "fr", "de", "it", "ja"]
 NotifyLevel = Literal["all", "warnings", "errors", "none"]
 
 CueName = Literal["start", "transcribing", "ready", "ai_ready", "warning", "error"]
@@ -138,6 +142,9 @@ class CompanionSettings:
     version: int = SETTINGS_VERSION
     client_key: str = ""  # generated on first run, persisted (lease takeover after a crash)
     language: UiLanguage = "auto"  # auto = OS UI language, decided at startup
+    # Language of the dictation (and of Claude's spoken answers): passed to the engine it
+    # starts (`--transcription-language` and `--output-lang`), so changing it restarts it.
+    dictation_language: DictationLanguage = "interface"
     engine_mode: EngineMode = field(default_factory=default_engine_mode)
     wsl_distro: str = ""  # "" = WSL default distro
     engine_dir: str = ""  # relative to $HOME (or absolute); "" = detect/ask on first run

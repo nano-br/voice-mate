@@ -64,6 +64,32 @@ the Windows side is a PowerShell script. Problems this design addresses:
   Companion settings: `%APPDATA%\VoiceMate\companion.toml` (Linux:
   `~/.config/voicemate/companion.toml`); layout below. Engine settings stay in
   `~/.config/voicemate/config.toml`.
+- **Dictation language:** the engine pins one transcription language and, from the
+  same code, the language of Claude's answers and of the TTS voice, and its default is
+  Portuguese, so the companion always passes both flags. The `dictation_language`
+  setting (`DictationLanguage`, Settings > General > "Dictation language") is
+  `interface` (default: follow the UI language, `pt-BR` to `pt`, `en`, `es`, `ru`,
+  `zh-CN` to `zh`; with the UI language on `auto`, the language of the catalog the OS
+  language selects (`app.i18n.catalog_for`), English when it has none), `auto` (Whisper detects each utterance; Claude keeps
+  answering in the UI language) or one language: `pt`, `en`, `es`, `ru`, `zh`, `fr`,
+  `de`, `it`, `ja` (a subset of the engine's `TranscriptionLanguage`). The supervisor
+  resolves it (`app/companion/dictation.py`) and adds `--transcription-language <code>
+  --output-lang <BCP-47>` to the `run-engine` ARGS (`pt` gives `pt-BR`, `zh` gives
+  `zh-CN`, the others their own code), so a pinned language sets what is transcribed
+  AND the language of Claude's spoken answers. Changing it, or the UI language while
+  it follows the interface, restarts the engine like a change of mode, distro, folder
+  or port. The flags are resolved with `catalog_for`, never from the catalog already
+  loaded: the controller builds its backend before `main.py` calls `set_language`, so
+  the loaded catalog is still English at that point. In `external` mode the companion
+  does not start the engine: the combo is disabled and the engine's own
+  `--transcription-language` and `--output-lang` apply. The same holds for an engine the
+  companion attaches to without starting it (one already answering `/health` on the
+  port, or the systemd unit): it keeps its own flags, so changing the setting does not
+  change it. With `auto`, only the transcription is detected, and the engine also gives
+  `auto` to the TTS: the default OmniVoice engine then detects the voice language from
+  the text, but a saved Kokoro engine has no mapping for `auto` and uses its American
+  English voice, so it speaks Portuguese or Spanish answers with that voice. Pin a
+  language if you use Kokoro.
 - **Python:** the companion supports 3.12 and 3.13 (Windows has 3.13; the engine is
   pinned to 3.12 for the ROCm wheels). It must not import numpy, sounddevice, torch,
   `app.core`, `app.features`, `app.cli`, `app.setup` or `app.daemon`
@@ -305,7 +331,8 @@ they belong to:
 - `--api-token`: see Auth.
 - `make run-engine` = `voice-mate --supervised --api --api-token $(ARGS)` with the
   platform's default trigger (socket on WSL2, where `--api` is a no-op). The port
-  goes through `ARGS="--daemon-port <n>"`.
+  goes through `ARGS="--daemon-port <n>"`; the companion adds
+  `--transcription-language <code> --output-lang <BCP-47>` (see "Dictation language").
 
 ## Companion
 
@@ -424,8 +451,8 @@ yet) on Windows, "Pin VoiceMate to the taskbar" explains how to pin the app (cod
 
 ### Supervisor (WSL2)
 
-- Spawn: `wsl.exe -d <distro> -e bash -lc 'cd "$HOME/<engine_dir>" && exec make run-engine ARGS="--daemon-port <port>"'`
-  (absolute `engine_dir` without `$HOME`). Never `shlex.quote` a `~` path; reject
+- Spawn: `wsl.exe -d <distro> -e bash -lc 'cd "$HOME/<engine_dir>" && exec make run-engine ARGS="--daemon-port <port> --transcription-language <code> --output-lang <BCP-47>"'`
+  (the language flags come from `dictation_language`, see Decisions; absolute `engine_dir` without `$HOME`). Never `shlex.quote` a `~` path; reject
   `"`, `$`, backtick, backslash (a trailing one escapes the closing quote) and newline
   in `engine_dir` when settings are applied. Flags:
   `CREATE_NO_WINDOW`; stdin pipe held open; stdout+stderr through a pipe read by a
@@ -525,6 +552,7 @@ falls back to the platform default when read and is rejected when applied.
 version = 1
 client_key = "6f1c..."
 language = "auto"
+dictation_language = "interface"
 engine_mode = "wsl2"
 wsl_distro = "ai-lab"
 engine_dir = "ai-lab/voice-mate"
@@ -551,6 +579,9 @@ preset = "classic"
 file = ""
 volume = 1.0
 ```
+
+`dictation_language` is `interface`, `auto`, `pt`, `en`, `es`, `ru`, `zh`, `fr`, `de`, `it`
+or `ja` (see "Dictation language"); an older file without it follows the interface.
 
 `engine_dir` empty means "detect or ask" on first run (look for `Makefile` +
 `app/main.py` under common paths inside the distro).
