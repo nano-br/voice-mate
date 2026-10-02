@@ -4,6 +4,10 @@ The dialog edits a copy of `controller.settings()` and sends the whole
 `CompanionSettings` on OK/Apply (on a worker thread: applying re-registers the
 hotkeys). Errors come back localized from the controller and stay visible at the
 bottom of the window until the next apply.
+
+The UI language is picked once at startup: when an apply changes it to one that selects
+another catalog, the app asks whether to restart now, and the Language row shows a hint
+while the selected language differs from the running one.
 """
 
 from __future__ import annotations
@@ -498,11 +502,14 @@ class GeneralPage(QWidget):
 
         app_form = QFormLayout()
         app_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        self._app_form = app_form
         self.language = _option_combo(texts.language_labels())
         app_form.addRow(_("Language:"), self.language)
-        language_note = _secondary(QLabel(_("Applies the next time VoiceMate starts.")))
-        language_note.setWordWrap(False)  # one short line; wrapping in a form row misplaces it
-        app_form.addRow("", language_note)
+        # Shown by the dialog while the selected language differs from the running one.
+        self.language_hint = _secondary(QLabel(_("Takes effect after VoiceMate restarts.")))
+        self.language_hint.setWordWrap(False)  # one short line; wrapping in a form row misplaces it
+        app_form.addRow("", self.language_hint)
+        app_form.setRowVisible(self.language_hint, False)
         self.notify_level = _option_combo(texts.notify_level_labels())
         app_form.addRow(_("Notifications:"), self.notify_level)
         self.start_at_login = QCheckBox(_("Start VoiceMate when I sign in"))
@@ -559,6 +566,13 @@ class GeneralPage(QWidget):
             self.engine_dir.setText(settings.engine_dir)
             _select(self.wsl_restart_policy, settings.wsl_restart_policy, texts.wsl_restart_labels())
         self._sync_mode()
+
+    def selected_language(self) -> UiLanguage:
+        language: UiLanguage = self.language.currentData()
+        return language
+
+    def show_language_hint(self, visible: bool) -> None:
+        self._app_form.setRowVisible(self.language_hint, visible)
 
     def apply_to(self, settings: CompanionSettings) -> CompanionSettings:
         language: UiLanguage = self.language.currentData()
@@ -633,6 +647,7 @@ class SettingsDialog(QDialog):
 
         for page in (self.hotkeys_page, self.sounds_page, self.general_page):
             page.changed.connect(self._update_buttons)
+        self.general_page.language.currentIndexChanged.connect(lambda _index: self._sync_language_hint())
         self._message_timer = QTimer(self)
         self._message_timer.setSingleShot(True)
         self._message_timer.timeout.connect(self.message.hide)
@@ -655,6 +670,11 @@ class SettingsDialog(QDialog):
             page.setEnabled(not self._read_only)
         self.message.hide()
         self._update_buttons()
+        self._sync_language_hint()
+
+    def _sync_language_hint(self) -> None:
+        selected = self.general_page.selected_language()
+        self.general_page.show_language_hint(self._shell.language_needs_restart(selected))
 
     def collect(self) -> CompanionSettings:
         """The baseline with every edit of this window applied."""
@@ -699,6 +719,7 @@ class SettingsDialog(QDialog):
         self._update_buttons()
         self._show_message(_("Saving..."), None)
         controller = self._shell.controller
+        new_language = edited.language if edited.language != baseline.language else None
 
         def work() -> list[str]:
             # Only the user's edits, on top of the LIVE settings: the core may have changed
@@ -707,11 +728,11 @@ class SettingsDialog(QDialog):
 
         self._shell.bridge.run_async(
             work,
-            lambda errors: self._applied(errors, close_after),
+            lambda errors: self._applied(errors, close_after, new_language),
             lambda exc: self._applied([_("Unexpected error: {error}").format(error=exc)], False),
         )
 
-    def _applied(self, errors: list[str], close_after: bool) -> None:
+    def _applied(self, errors: list[str], close_after: bool, new_language: UiLanguage | None = None) -> None:
         self._busy = False
         if errors:
             items = "".join(f"<li>{_escape(error)}</li>" for error in errors)
@@ -725,10 +746,13 @@ class SettingsDialog(QDialog):
         if close_after:
             self.message.hide()
             self.accept()
-            return
-        self.load()  # the core normalizes what it saves (chords, "~/" in the folder...)
-        self._show_message(_escape(_("Settings saved.")), True)
-        self._message_timer.start(SAVED_MESSAGE_MS)
+        else:
+            self.load()  # the core normalizes what it saves (chords, "~/" in the folder...)
+            self._show_message(_escape(_("Settings saved.")), True)
+            self._message_timer.start(SAVED_MESSAGE_MS)
+        # Saved: a language that selects another catalog only shows after a restart.
+        if new_language is not None and self._shell.language_needs_restart(new_language):
+            self._shell.offer_language_restart()
 
     def _show_message(self, html: str, ok: bool | None) -> None:
         self._message_timer.stop()
