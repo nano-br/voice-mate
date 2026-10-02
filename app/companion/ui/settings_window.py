@@ -670,8 +670,6 @@ class SettingsDialog(QDialog):
         self.hotkeys_page.load(self._baseline, snapshot, self._read_only)
         self.sounds_page.load(self._baseline)
         self.general_page.load(self._baseline)
-        for page in (self.sounds_page, self.general_page):
-            page.setEnabled(not self._read_only)
         self.message.hide()
         self._update_buttons()
 
@@ -694,6 +692,12 @@ class SettingsDialog(QDialog):
         dirty = not self._read_only and self.is_dirty()
         self.apply_button.setEnabled(dirty and not self._busy)
         self.ok_button.setEnabled(not self._busy and not self._read_only)
+        # While saving, an edit would be reset by the reload at the end: lock the pages.
+        # (Enabling a parent never re-enables a child disabled on its own, such as the
+        # hotkeys page's Restore defaults in read-only mode.)
+        self.hotkeys_page.setEnabled(not self._busy)
+        for page in (self.sounds_page, self.general_page):
+            page.setEnabled(not self._busy and not self._read_only)
 
     # ------------------------------------------------------------------ apply
 

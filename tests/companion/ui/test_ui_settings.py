@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import threading
 from collections.abc import Callable
 from dataclasses import replace
 
@@ -219,6 +220,7 @@ def test_settings_from_a_newer_version_are_read_only(qapp: QApplication, process
     assert not dialog.ok_button.isEnabled() and not dialog.apply_button.isEnabled()
     assert not dialog.sounds_page.isEnabled() and not dialog.general_page.isEnabled()
     assert not dialog.hotkeys_page.defaults_button.isEnabled()
+    assert dialog.hotkeys_page.isEnabled()  # the page itself stays enabled (rows refuse captures)
     QTest.mouseClick(dialog.hotkeys_page.rows[0].edit, Qt.MouseButton.LeftButton)
     assert not dialog.hotkeys_page.rows[0].edit.capturing
     dialog.hide()
@@ -363,6 +365,46 @@ def test_errors_reopen_a_dialog_closed_while_saving(
     assert dialog.general_page.engine_dir.text() == "x"  # the edit is still there
 
 
+def test_pages_are_locked_while_saving(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The reload at the end of a save would silently drop an edit made meanwhile."""
+    release = threading.Event()
+    original = fake.apply_settings
+
+    def slow_apply(settings: CompanionSettings) -> list[str]:
+        release.wait(5)
+        return original(settings)
+
+    monkeypatch.setattr(fake, "apply_settings", slow_apply)
+    dialog = _open(ui)
+    pages = (dialog.hotkeys_page, dialog.sounds_page, dialog.general_page)
+    dialog.general_page.engine_dir.setText("custom/voice-mate")
+    dialog.apply_button.click()
+    process_events()
+    assert dialog.error_text == "Saving..."
+    assert not any(page.isEnabled() for page in pages)
+    assert not dialog.apply_button.isEnabled() and not dialog.ok_button.isEnabled()
+    release.set()
+    assert process_events(lambda: dialog.error_text == "Settings saved.")
+    assert all(page.isEnabled() for page in pages)
+    assert dialog.ok_button.isEnabled() and not dialog.apply_button.isEnabled()
+    assert dialog.general_page.engine_dir.text() == "custom/voice-mate"
+    assert dialog.hotkeys_page.defaults_button.isEnabled()
+
+
+def test_a_failed_save_unlocks_the_pages_with_the_edits_kept(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    fake.apply_errors = ["Could not save the settings file."]
+    dialog = _open(ui)
+    dialog.general_page.engine_dir.setText("x")
+    dialog.apply_button.click()
+    assert process_events(lambda: "Could not save the settings file." in dialog.error_text)
+    assert dialog.general_page.isEnabled() and dialog.sounds_page.isEnabled() and dialog.hotkeys_page.isEnabled()
+    assert dialog.general_page.engine_dir.text() == "x"
+
+
 def test_volumes_off_the_slider_grid_are_not_edits(qapp: QApplication, process_events: Callable[..., bool]) -> None:
     cues = dict(CompanionSettings().cues)
     cues["start"] = CueSettings(volume=0.333)
@@ -491,7 +533,7 @@ def test_bringing_back_the_tray_icon_takes_off_apply_then_on(
     assert not dialog.apply_button.isEnabled()  # back to the saved value: nothing to send
     checkbox.setChecked(False)
     dialog.apply_button.click()
-    assert process_events(lambda: dialog.error_text == "Settings saved.")  # the baseline is reloaded
+    assert process_events(lambda: checkbox.isEnabled())  # locked while saving, like a user sees it
     assert fake.settings().tray_icon_visible is False
     checkbox.setChecked(True)
     assert dialog.apply_button.isEnabled()
