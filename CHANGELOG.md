@@ -90,9 +90,11 @@ experimental voice conversation with Claude.
   (Settings > **Sounds**).
 - **Dictation language** (Settings > **General**): **Same as the interface** (the
   default), **Detect automatically** or one of Portuguese, English, Spanish, Russian,
-  Chinese, French, German, Italian and Japanese. It sets the engine's
-  `--transcription-language` and `--output-lang` (so also the language of Claude's
-  spoken answers) and restarts the engine.
+  Chinese, French, German, Italian and Japanese. For the engine VoiceMate starts, it
+  sets `--transcription-language` and `--output-lang` (so also the language of Claude's
+  spoken answers, except with **Detect automatically**, where Claude keeps answering in
+  the interface language) and restarts the engine. An engine VoiceMate only connects to
+  keeps its own flags.
 - Automatic recovery: the engine is restarted with backoff after a crash, and WSL is
   restarted when WSLg audio stops, following the **Restart WSL when audio fails**
   setting (**Automatically**, **Ask first** or **Never**).
