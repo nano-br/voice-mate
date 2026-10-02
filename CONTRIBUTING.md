@@ -25,6 +25,7 @@ How the pieces fit together: [docs/architecture.md](docs/architecture.md) and [d
 | `make run-tray` | The companion from source (`ARGS="--demo"` for the demo with a fake engine) |
 | `make companion-build` / `make companion-installer` | PyInstaller bundle / Inno Setup installer (Windows only) |
 | `make docs-screenshots` | Renders the README screenshots in every language (Windows, `tools/render_screenshots.py`) |
+| `make release-check` / `make release-check TAG=v0.1.0` | Release consistency before tagging: SemVer version, CHANGELOG section with a valid date, the six notes files, companion version (see [docs/releasing.md](docs/releasing.md)) |
 | `make stt-eval` | Speech-to-text quality gate (word error rate and split words) against local samples |
 | `make i18n-extract` / `make i18n-update` / `make i18n-compile` | Translation catalogs (see below) |
 
@@ -63,6 +64,7 @@ The Windows installer messages live in `packaging/windows/voicemate-companion.is
 - `README.md` is the English source. `README.pt-BR.md`, `README.es.md`, `README.ru.md` and `README.zh-CN.md` tell the same story in each language; keep their structure in step with the English one.
 - When the README quotes a UI label, quote it exactly as the UI shows it in that language (take it from that language's `.po`).
 - Details belong in `docs/`. Every doc starts with a one-line purpose and a link back to the README.
+- `docs/research/` holds early research notes ([OS context menu and text-to-speech](docs/research/context-menu-tts.md), [visual feedback](docs/research/visual-feedback.md)). They are kept for reference and describe nothing that ships.
 - When the code changes a behavior that a doc describes, update the doc in the same pull request.
 - After a UI change, regenerate the screenshots with `make docs-screenshots` (Windows).
 - The five diagrams in the README (inside `<details>`: system context, containers, one dictation, tray states, supervisor) are simplified overviews of sections 1, 2, 4, 5 and 6 of [docs/architecture.md](docs/architecture.md). They hide details but must never contradict the full diagrams: when the architecture changes, update both in the same pull request.

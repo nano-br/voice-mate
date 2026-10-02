@@ -150,7 +150,8 @@ experimental voice conversation with Claude.
   `voxcpm`, `whisper-gpu`, `linux`, `ui`, `all`).
 - Makefile for every workflow: setup, `format`, `lint` (Ruff and strict Mypy), `test`
   (pytest), `all`, the run targets, `i18n-*` and `companion-*` (venv, lint, test, build,
-  installer).
+  installer), `docs-screenshots` (the README images) and `release-check` (release
+  consistency before tagging).
 - `make stt-eval`: word error rate and split-word gate per speech-to-text backend
   against local samples, with a saved baseline.
 - `.gitattributes` enforces LF line endings.
@@ -241,7 +242,7 @@ Bugs found while building this release; they only affected earlier checkouts of
 
 ### Project history before 0.1.0
 
-Development happened on `main` and in six pull requests before this first release:
+Development happened on `main` and in seven pull requests before this first release:
 
 - [#1](https://github.com/nano-br/voice-mate/pull/1): reinstall the hotkey listeners
   periodically (Windows hook removal).
@@ -255,6 +256,8 @@ Development happened on `main` and in six pull requests before this first releas
   support.
 - [#6](https://github.com/nano-br/voice-mate/pull/6): Windows tray companion, installer,
   Russian and Simplified Chinese.
+- [#7](https://github.com/nano-br/voice-mate/pull/7): choose the dictation language in
+  the companion.
 
 [Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/nano-br/voice-mate/releases/tag/v0.1.0

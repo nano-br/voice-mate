@@ -1,7 +1,6 @@
 # Releasing VoiceMate
 
-How VoiceMate is versioned, where the version comes from, and the steps that turn a
-merged `main` into a GitHub release with the Windows installer.
+Purpose: how VoiceMate is versioned, where the version comes from, and the steps that turn a merged `main` into a GitHub release with the Windows installer. Back to the [README](../README.md).
 
 ## Versioning policy
 
