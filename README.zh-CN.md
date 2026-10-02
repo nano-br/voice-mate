@@ -19,7 +19,7 @@
 
 [下载](https://github.com/nano-br/voice-mate/releases/latest) · [快速开始](#快速开始) · [文档](#文档) · [更新日志](CHANGELOG.md)
 
-<img src="docs/assets/screenshots/zh-CN/hero.png" width="763" alt="VoiceMate 状态窗口，显示“未复制”和“最近”列表，旁边是托盘菜单">
+<img src="docs/assets/screenshots/zh-CN/hero.png" width="745" alt="VoiceMate 状态窗口，显示“未复制”和“最近”列表，旁边是托盘菜单">
 
 </div>
 
@@ -66,9 +66,9 @@ VoiceMate 能立刻把语音变成文字，随时交给任何 AI 工具：给编
 
 | 托盘菜单 | “重启 WSL？”和“重启 VoiceMate？” |
 |:---:|:---:|
-| <img src="docs/assets/screenshots/zh-CN/tray-menu.png" width="279" alt="托盘菜单"> | <img src="docs/assets/screenshots/zh-CN/dialog-restart-wsl.png" width="516" alt="“重启 WSL？”的询问"><br><img src="docs/assets/screenshots/zh-CN/dialog-language.png" width="466" alt="“重启 VoiceMate？”的询问"> |
+| <img src="docs/assets/screenshots/zh-CN/tray-menu.png" width="261" alt="托盘菜单"> | <img src="docs/assets/screenshots/zh-CN/dialog-restart-wsl.png" width="516" alt="“重启 WSL？”的询问"><br><img src="docs/assets/screenshots/zh-CN/dialog-language.png" width="372" alt="“重启 VoiceMate？”的询问"> |
 
-<p align="center"><img src="docs/assets/screenshots/zh-CN/settings-general.png" width="743" alt="“VoiceMate 设置”的“常规”选项卡"><br><sub>“VoiceMate 设置”，“常规”选项卡。另见：<a href="docs/assets/screenshots/zh-CN/settings-hotkeys.png">“快捷键”</a>和<a href="docs/assets/screenshots/zh-CN/settings-sounds.png">“声音”</a>选项卡。</sub></p>
+<p align="center"><img src="docs/assets/screenshots/zh-CN/settings-general.png" width="724" alt="“VoiceMate 设置”的“常规”选项卡"><br><sub>“VoiceMate 设置”，“常规”选项卡。另见：<a href="docs/assets/screenshots/zh-CN/settings-hotkeys.png">“快捷键”</a>和<a href="docs/assets/screenshots/zh-CN/settings-sounds.png">“声音”</a>选项卡。</sub></p>
 
 <p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="托盘图标在各个状态下的样子，分别显示在深色和浅色任务栏上"><br><sub>托盘图标用角标显示状态。每个角标的含义：<a href="docs/usage.md#tray-icon-and-menu">Usage, tray icon and menu</a>（英文）。</sub></p>
 

@@ -19,7 +19,7 @@
 
 [Descargar](https://github.com/nano-br/voice-mate/releases/latest) · [Inicio rápido](#inicio-rápido) · [Documentación](#documentación) · [Changelog](CHANGELOG.md)
 
-<img src="docs/assets/screenshots/es/hero.png" width="763" alt="La ventana de estado de VoiceMate con las listas No copiadas y Recientes, junto al menú de la bandeja">
+<img src="docs/assets/screenshots/es/hero.png" width="762" alt="La ventana de estado de VoiceMate con las listas No copiadas y Recientes, junto al menú de la bandeja">
 
 </div>
 
@@ -66,9 +66,9 @@ Más tarde llegó un segundo módulo: una conversación por voz con Claude. Habl
 
 | El menú de la bandeja | "¿Reiniciar WSL?" y "¿Reiniciar VoiceMate?" |
 |:---:|:---:|
-| <img src="docs/assets/screenshots/es/tray-menu.png" width="279" alt="El menú de la bandeja"> | <img src="docs/assets/screenshots/es/dialog-restart-wsl.png" width="516" alt="La pregunta ¿Reiniciar WSL?"><br><img src="docs/assets/screenshots/es/dialog-language.png" width="466" alt="La pregunta ¿Reiniciar VoiceMate?"> |
+| <img src="docs/assets/screenshots/es/tray-menu.png" width="268" alt="El menú de la bandeja"> | <img src="docs/assets/screenshots/es/dialog-restart-wsl.png" width="516" alt="La pregunta ¿Reiniciar WSL?"><br><img src="docs/assets/screenshots/es/dialog-language.png" width="498" alt="La pregunta ¿Reiniciar VoiceMate?"> |
 
-<p align="center"><img src="docs/assets/screenshots/es/settings-general.png" width="743" alt="La pestaña General de Configuración de VoiceMate"><br><sub>"Configuración de VoiceMate", pestaña "General". Mira también las pestañas <a href="docs/assets/screenshots/es/settings-hotkeys.png">"Atajos"</a> y <a href="docs/assets/screenshots/es/settings-sounds.png">"Sonidos"</a>.</sub></p>
+<p align="center"><img src="docs/assets/screenshots/es/settings-general.png" width="766" alt="La pestaña General de Configuración de VoiceMate"><br><sub>"Configuración de VoiceMate", pestaña "General". Mira también las pestañas <a href="docs/assets/screenshots/es/settings-hotkeys.png">"Atajos"</a> y <a href="docs/assets/screenshots/es/settings-sounds.png">"Sonidos"</a>.</sub></p>
 
 <p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="El icono de la bandeja en cada estado, sobre una barra de tareas oscura y una clara"><br><sub>El icono de la bandeja muestra el estado con una insignia. Qué significa cada insignia: <a href="docs/usage.md#tray-icon-and-menu">Uso, icono y menú de la bandeja</a>.</sub></p>
 

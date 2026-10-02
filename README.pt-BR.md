@@ -66,9 +66,9 @@ Um segundo módulo veio depois: uma conversa por voz com o Claude. Você fala, o
 
 | O menu da bandeja | "Reiniciar o WSL?" e "Reiniciar o VoiceMate?" |
 |:---:|:---:|
-| <img src="docs/assets/screenshots/pt-BR/tray-menu.png" width="279" alt="O menu da bandeja"> | <img src="docs/assets/screenshots/pt-BR/dialog-restart-wsl.png" width="516" alt="A pergunta Reiniciar o WSL?"><br><img src="docs/assets/screenshots/pt-BR/dialog-language.png" width="466" alt="A pergunta Reiniciar o VoiceMate?"> |
+| <img src="docs/assets/screenshots/pt-BR/tray-menu.png" width="279" alt="O menu da bandeja"> | <img src="docs/assets/screenshots/pt-BR/dialog-restart-wsl.png" width="516" alt="A pergunta Reiniciar o WSL?"><br><img src="docs/assets/screenshots/pt-BR/dialog-language.png" width="479" alt="A pergunta Reiniciar o VoiceMate?"> |
 
-<p align="center"><img src="docs/assets/screenshots/pt-BR/settings-general.png" width="743" alt="A aba Geral de Configurações do VoiceMate"><br><sub>"Configurações do VoiceMate", aba "Geral". Veja também as abas <a href="docs/assets/screenshots/pt-BR/settings-hotkeys.png">"Atalhos"</a> e <a href="docs/assets/screenshots/pt-BR/settings-sounds.png">"Sons"</a>.</sub></p>
+<p align="center"><img src="docs/assets/screenshots/pt-BR/settings-general.png" width="770" alt="A aba Geral de Configurações do VoiceMate"><br><sub>"Configurações do VoiceMate", aba "Geral". Veja também as abas <a href="docs/assets/screenshots/pt-BR/settings-hotkeys.png">"Atalhos"</a> e <a href="docs/assets/screenshots/pt-BR/settings-sounds.png">"Sons"</a>.</sub></p>
 
 <p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="O ícone da bandeja em cada estado, numa barra de tarefas escura e numa clara"><br><sub>O ícone da bandeja mostra o estado com um selo. O que cada selo significa: <a href="docs/usage.md#tray-icon-and-menu">Uso, ícone e menu da bandeja</a>.</sub></p>
 

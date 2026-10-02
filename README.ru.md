@@ -19,7 +19,7 @@
 
 [Скачать](https://github.com/nano-br/voice-mate/releases/latest) · [Быстрый старт](#быстрый-старт) · [Документация](#документация) · [История изменений](CHANGELOG.md)
 
-<img src="docs/assets/screenshots/ru/hero.png" width="763" alt="Окно состояния VoiceMate со списками «Нескопированные» и «Недавние» рядом с меню в области уведомлений">
+<img src="docs/assets/screenshots/ru/hero.png" width="866" alt="Окно состояния VoiceMate со списками «Нескопированные» и «Недавние» рядом с меню в области уведомлений">
 
 </div>
 
@@ -66,9 +66,9 @@ VoiceMate мгновенно превращает речь в текст, гот
 
 | Меню в области уведомлений | «Перезапустить WSL?» и «Перезапустить VoiceMate?» |
 |:---:|:---:|
-| <img src="docs/assets/screenshots/ru/tray-menu.png" width="279" alt="Меню в области уведомлений"> | <img src="docs/assets/screenshots/ru/dialog-restart-wsl.png" width="516" alt="Вопрос «Перезапустить WSL?»"><br><img src="docs/assets/screenshots/ru/dialog-language.png" width="466" alt="Вопрос «Перезапустить VoiceMate?»"> |
+| <img src="docs/assets/screenshots/ru/tray-menu.png" width="320" alt="Меню в области уведомлений"> | <img src="docs/assets/screenshots/ru/dialog-restart-wsl.png" width="516" alt="Вопрос «Перезапустить WSL?»"><br><img src="docs/assets/screenshots/ru/dialog-language.png" width="516" alt="Вопрос «Перезапустить VoiceMate?»"> |
 
-<p align="center"><img src="docs/assets/screenshots/ru/settings-general.png" width="743" alt="Вкладка «Общие» окна «Настройки VoiceMate»"><br><sub>«Настройки VoiceMate», вкладка «Общие». Также: вкладки <a href="docs/assets/screenshots/ru/settings-hotkeys.png">«Горячие клавиши»</a> и <a href="docs/assets/screenshots/ru/settings-sounds.png">«Звуки»</a>.</sub></p>
+<p align="center"><img src="docs/assets/screenshots/ru/settings-general.png" width="752" alt="Вкладка «Общие» окна «Настройки VoiceMate»"><br><sub>«Настройки VoiceMate», вкладка «Общие». Также: вкладки <a href="docs/assets/screenshots/ru/settings-hotkeys.png">«Горячие клавиши»</a> и <a href="docs/assets/screenshots/ru/settings-sounds.png">«Звуки»</a>.</sub></p>
 
 <p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="Значок в области уведомлений в каждом состоянии, на тёмной и светлой панели задач"><br><sub>Состояние показывает значок с бейджем. Что означает каждый бейдж: <a href="docs/usage.md#tray-icon-and-menu">Usage, tray icon and menu</a> (на английском).</sub></p>
 
