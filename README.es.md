@@ -25,11 +25,11 @@
 
 ## Por qué VoiceMate
 
-Creé VoiceMate porque creo en algo sencillo: cuanto más rápido y fácil es expresarle una idea a una IA, y cuanto más detalle le das, mejor es el resultado. Hablar es mucho más rápido que escribir. Cuando piensas en voz alta, explicas una idea como se la explicarías a otra persona, con mucho más contexto del que escribirías jamás.
+Construí VoiceMate porque creo en algo sencillo: cuanto más rápido y fácil es expresarle una idea a una IA, y cuanto más detalle le das, mejor es el resultado. Hablar es mucho más rápido que escribir. Cuando piensas en voz alta, explicas una idea como se la explicarías a otra persona, con mucho más contexto del que escribirías jamás.
 
-VoiceMate convierte el habla en texto al instante, listo para cualquier herramienta de IA: un prompt para un asistente de programación, un mensaje en un chat, cualquier cosa que puedas pegar. Presiona un atajo, habla con naturalidad, vuelve a presionarlo y pega. Whisper funciona en local, así que tu audio se queda en tu computadora. El dictado no necesita ningún servicio en la nube ni cuota.
+VoiceMate convierte el habla en texto al instante, listo para cualquier herramienta de IA: un prompt para un asistente de programación, un mensaje en un chat, cualquier cosa que puedas pegar. Presiona un atajo, habla con naturalidad, vuelve a presionarlo y pega. Whisper funciona en local, así que tu audio se queda en tu computadora. El dictado no necesita ningún servicio en la nube ni suscripción.
 
-El dictado al portapapeles es el núcleo de VoiceMate. Lo uso en mi trabajo de verdad prácticamente todos los días laborables desde marzo de 2026. Nació y se probó a fondo en Windows con una GPU NVIDIA. Cuando cambié mi GPU por una AMD, adapté VoiceMate a AMD mediante WSL2 y Linux, y ahora también se prueba ahí. Ese camino sigue siendo **experimental**.
+El dictado al portapapeles es el núcleo de VoiceMate. Lo uso para trabajar de verdad, prácticamente todos los días laborables, desde marzo de 2026. Nació y se probó a fondo en Windows con una GPU NVIDIA. Cuando cambié mi GPU por una AMD, adapté VoiceMate a AMD mediante WSL2 y Linux, y ahora también se prueba ahí. Ese camino sigue siendo **experimental**.
 
 Más tarde llegó un segundo módulo: una conversación por voz con Claude. Hablas, Claude responde y la respuesta se lee en voz alta con síntesis de voz (TTS). Este módulo es opcional y **experimental**.
 
@@ -46,7 +46,7 @@ Más tarde llegó un segundo módulo: una conversación por voz con Claude. Habl
 - Sonidos de aviso para inicio, transcripción, copiado, advertencia y error. Una grabación se detiene sola a los 10 minutos (configurable).
 
 **Aplicación companion para Windows**
-- Un icono en la bandeja que muestra el estado de un vistazo, una ventana de estado con las transcripciones recientes y ajustes para atajos, sonidos de aviso, notificaciones, idioma y el motor.
+- Un icono en la bandeja que muestra el estado de un vistazo, una ventana de estado con las transcripciones recientes y la configuración de atajos, sonidos de aviso, notificaciones, idioma y el motor.
 - Entrega verificada al portapapeles: la aplicación escribe el texto, lo vuelve a leer y lo compara. Un texto que no consigue llegar al portapapeles se queda en **No copiadas**, incluso después de reiniciar.
 - Un supervisor que inicia el motor dentro de WSL2, lo reinicia cuando falla y reinicia WSL cuando se detiene su audio.
 - Un instalador por usuario (sin pedir permisos de administrador) en 5 idiomas.
@@ -56,7 +56,7 @@ Más tarde llegó un segundo módulo: una conversación por voz con Claude. Habl
 <a id="plataformas-y-gpus"></a>**Plataformas y GPUs**
 - Windows 10/11 con NVIDIA (CUDA): el camino original, probado a fondo. El motor funciona de forma nativa desde la línea de comandos.
 - **Experimental:** el motor dentro de WSL2 (la configuración del companion), GPUs AMD (ROCm, Vulkan) en WSL2, Linux y Windows, y Linux (X11, Wayland) con un companion opcional.
-- CPU como alternativa en todas partes. `make setup` detecta la plataforma y la GPU e instala la versión de PyTorch y el backend de reconocimiento de voz que corresponden.
+- En todas las plataformas hay respaldo en CPU. `make setup` detecta la plataforma y la GPU e instala la compilación de PyTorch y el backend de reconocimiento de voz que corresponden.
 
 **Conversación por voz con Claude (experimental)**
 - `Ctrl+Alt+A` envía tu voz a Claude mediante la CLI de Claude Code (con tu propio inicio de sesión: el texto transcrito va a Anthropic, el audio no). La respuesta se copia al portapapeles y se lee en voz alta.
@@ -78,7 +78,7 @@ Más tarde llegó un segundo módulo: una conversación por voz con Claude. Habl
 
 El instalador incluye solo la aplicación companion. El motor funciona dentro de una distro de WSL2, así que configura eso primero (**experimental**; guía completa en [docs/installation.md](docs/installation.md)).
 
-1. En PowerShell, instala WSL2 con Ubuntu: `wsl --install -d Ubuntu-24.04`, y luego abre Ubuntu (si ya tenías otra distro de WSL, ejecuta también `wsl --set-default Ubuntu-24.04`, o define "Distro de WSL:" en Configuración más adelante). Dentro de ella, instala los paquetes de audio; Python 3.12 (Ubuntu 24.04 lo trae) y [Poetry](https://python-poetry.org/docs/#installation) deben estar también en el `PATH` de un shell de login:
+1. En PowerShell, instala WSL2 con Ubuntu: `wsl --install -d Ubuntu-24.04`, y luego abre Ubuntu (si ya tenías otra distro de WSL, ejecuta también `wsl --set-default Ubuntu-24.04`, o define "Distro de WSL:" en Configuración más adelante). Dentro de Ubuntu, instala los paquetes de audio; Python 3.12 (Ubuntu 24.04 lo trae) y [Poetry](https://python-poetry.org/docs/#installation) deben estar también en el `PATH` de un shell de login:
    ```bash
    sudo apt install -y libportaudio2 libasound2-plugins pulseaudio-utils wl-clipboard git make
    ```
@@ -89,8 +89,8 @@ El instalador incluye solo la aplicación companion. El motor funciona dentro de
    make setup    # solo para dictado, responde 1 (clipboard) en "¿Qué flujo principal?"
    make doctor   # todas las comprobaciones deben mostrar ✓
    ```
-   El companion busca el motor en `~/voice-mate` y en algunas otras carpetas habituales ([la lista](docs/installation.md#2-install-the-engine)); en cualquier otro sitio, define "Carpeta del motor:" en Configuración. Con una GPU AMD, instala también el controlador de AMD y ROCm para WSL ([docs/wsl2.md](docs/wsl2.md)).
-3. Recomendado: aún en `~/voice-mate`, ejecuta `make run` una vez y deténlo con `Ctrl+C` cuando termine de cargar. El primer inicio descarga el modelo Whisper, y el companion le da a un inicio del motor solo 240 segundos (deja de reintentar tras 3 tiempos de espera seguidos), algo que una conexión lenta puede superar.
+   El companion busca el motor en `~/voice-mate` y en algunas otras carpetas habituales ([la lista](docs/installation.md#2-install-the-engine)); en cualquier otro lugar, define "Carpeta del motor:" en Configuración. Con una GPU AMD, instala también el controlador de AMD y ROCm para WSL ([docs/wsl2.md](docs/wsl2.md)).
+3. Recomendado: aún en `~/voice-mate`, ejecuta `make run` una vez y deténlo con `Ctrl+C` cuando termine de cargar. El primer inicio descarga el modelo Whisper, y el companion le da solo 240 segundos al motor para iniciar (deja de reintentar tras 3 tiempos de espera agotados seguidos), algo que una conexión lenta puede superar.
 4. Descarga `VoiceMate-Setup-x.y.z.exe` desde la [última versión](https://github.com/nano-br/voice-mate/releases/latest) y ejecútalo. El instalador no tiene firma de código, así que Windows SmartScreen puede avisarte: elige **Más información** y luego **Ejecutar de todas formas**. Se instala solo para tu usuario, sin pedir permisos de administrador.
 5. Abre VoiceMate. La bandeja muestra "Iniciando el motor..." mientras carga el modelo (de 10 a 60 segundos una vez descargado el modelo) y luego "Esperando Ctrl+Alt+V".
 6. Opcional: ancla la aplicación a la barra de tareas. Abre Inicio, busca VoiceMate, haz clic derecho sobre él y elige **Anclar a la barra de tareas**.
@@ -118,9 +118,9 @@ Para ejecutar el companion desde el código fuente en Windows, con el motor en W
 | `Ctrl+Alt+V` | "Dictar" | Voz a texto, copiado al portapapeles |
 | `Ctrl+Alt+A` | "Preguntar a Claude" | Voz a Claude, respuesta copiada y leída en voz alta (**experimental**) |
 
-Presiona `Ctrl+Alt+V`, habla tras el aviso de inicio, vuelve a presionar `Ctrl+Alt+V` y pega con `Ctrl+V` donde quieras. El atajo que detiene la grabación decide adónde va el texto. Un texto que no pudo llegar al portapapeles espera en **No copiadas** (menú de la bandeja y ventana de estado), donde un clic lo copia. Para salir, elige **Salir de VoiceMate** en el menú de la bandeja; un motor que el companion no inició sigue en ejecución.
+Presiona `Ctrl+Alt+V`, habla tras la señal de inicio, vuelve a presionar `Ctrl+Alt+V` y pega con `Ctrl+V` donde quieras. El atajo que detiene la grabación decide adónde va el texto. Un texto que no pudo llegar al portapapeles espera en **No copiadas** (menú de la bandeja y ventana de estado), donde un clic lo copia. Para salir, elige **Salir de VoiceMate** en el menú de la bandeja; un motor que el companion no inició sigue en ejecución.
 
-**Idioma de dictado.** En Configuración > **General**, "Idioma de dictado:" decide el idioma que hablas. Por defecto es "Igual que la interfaz"; "Detectar automáticamente" deja que Whisper detecte cada grabación (Claude sigue respondiendo en el idioma de la interfaz; con Kokoro, fija un idioma); o elige un idioma. El companion se lo pasa al motor que inicia como `--transcription-language` y `--output-lang`, y cambiarlo reinicia el motor. Un motor al que el companion solo se conecta (una unidad de systemd, o uno iniciado a mano) conserva sus propias opciones.
+**Idioma de dictado.** En Configuración > **General**, "Idioma de dictado:" decide el idioma que hablas. Por defecto es "Igual que la interfaz"; "Detectar automáticamente" deja que Whisper detecte cada grabación (Claude sigue respondiendo en el idioma de la interfaz; con Kokoro, fija un idioma); o elige un idioma. El companion se lo pasa al motor que inicia, mediante `--transcription-language` y `--output-lang`, y cambiarlo reinicia el motor. Un motor al que el companion solo se conecta (una unidad de systemd, o uno iniciado a mano) conserva sus propias opciones.
 
 La conversación por voz con Claude necesita la CLI de Claude Code instalada y con la sesión iniciada, y el módulo `claude` elegido en `make setup`. Mira [docs/usage.md](docs/usage.md#claude-flow-experimental).
 
@@ -128,17 +128,17 @@ La conversación por voz con Claude necesita la CLI de Claude Code instalada y c
 
 | Qué | Dónde |
 |---|---|
-| Ajustes del companion | Windows `%APPDATA%\VoiceMate\companion.toml`, Linux `~/.config/voicemate/companion.toml` |
+| Configuración del companion | Windows `%APPDATA%\VoiceMate\companion.toml`, Linux `~/.config/voicemate/companion.toml` |
 | Elecciones del motor hechas con `make setup`, token de la API | `~/.config/voicemate/` (dentro de WSL para el companion; `%USERPROFILE%\.config\voicemate\` para un motor ejecutado de forma nativa en Windows) |
 | API HTTP del motor | `127.0.0.1:47821` |
-| Logs (`companion.log`, `engine.log`) | Windows `%LOCALAPPDATA%\VoiceMate\logs`, Linux `~/.local/state/voicemate/logs` |
+| Registros (`companion.log`, `engine.log`) | Windows `%LOCALAPPDATA%\VoiceMate\logs`, Linux `~/.local/state/voicemate/logs` |
 | Lista **No copiadas** | `pending.json`, junto a la carpeta `logs` |
 
-Todas las opciones del motor, todas las claves de ajustes y todas las variables de entorno: [docs/configuration.md](docs/configuration.md).
+Todas las opciones del motor, todas las claves de configuración y todas las variables de entorno: [docs/configuration.md](docs/configuration.md).
 
 ## Arquitectura
 
-VoiceMate tiene dos partes. El **motor** graba, transcribe y ejecuta el flujo de Claude; es un daemon en Python con una API HTTP local. El **companion** es una aplicación de bandeja en PySide6 para Windows que se encarga de los atajos y del portapapeles y supervisa el motor dentro de WSL2. El motor también funciona solo desde la línea de comandos. Los diagramas de abajo son vistas generales simplificadas; cada uno enlaza al diagrama completo en [docs/architecture.md](docs/architecture.md), que incluye además los diagramas de componentes, la API HTTP y las decisiones de diseño.
+VoiceMate tiene dos partes. El **motor** graba, transcribe y ejecuta el flujo de Claude; es un daemon en Python con una API HTTP local. El **companion** es una aplicación de bandeja en PySide6 para Windows que se encarga de los atajos y del portapapeles y supervisa el motor dentro de WSL2. El motor también puede ejecutarse por sí solo desde la línea de comandos. Los diagramas de abajo son vistas generales simplificadas; cada uno enlaza al diagrama completo en [docs/architecture.md](docs/architecture.md), que incluye además los diagramas de componentes, la API HTTP y las decisiones de diseño.
 
 <details>
 <summary>Contexto del sistema (vista general)</summary>
@@ -176,7 +176,7 @@ Vista general. Diagrama completo: [docs/architecture.md, Contexto del sistema](d
 flowchart LR
     user(["Usuario"])
     subgraph win["Windows"]
-        ui["Interfaz del companion<br/>bandeja, estado, ajustes"]
+        ui["Interfaz del companion<br/>bandeja, estado, configuración"]
         core["Núcleo del companion<br/>atajos, supervisor, entrega"]
         clip["Portapapeles de Windows"]
     end
@@ -213,7 +213,7 @@ sequenceDiagram
     U->>C: Atajo
     C->>E: Iniciar grabación
     E-->>C: Micrófono activo
-    C->>U: Aviso de inicio
+    C->>U: Señal de inicio
     U->>C: Atajo otra vez
     C->>E: Detener grabación
     E->>E: Whisper transcribe
@@ -221,11 +221,11 @@ sequenceDiagram
     C->>CB: Escribir, volver a leer, comparar
     alt Texto verificado
         C->>E: ACK entregado
-        C->>U: Aviso de listo
+        C->>U: Señal de listo
     else Portapapeles bloqueado por otra aplicación
         C->>C: Guardar el texto en No copiadas
         C->>E: ACK fallido
-        C->>U: Aviso de error y notificación
+        C->>U: Señal de error y notificación
     end
 ```
 
@@ -240,17 +240,17 @@ Vista general. Diagrama completo: [docs/architecture.md, Un dictado](docs/archit
 stateDiagram-v2
     state "Detenido" as Stopped
     state "Iniciando" as Starting
-    state "En marcha" as Running
+    state "En ejecución" as Running
     state "Reiniciando" as Restarting
     state "Error" as Error
-    state "En espera" as Idle
+    state "Esperando" as Idle
     state "Grabando" as Recording
     state "Transcribiendo" as Transcribing
     state "Respondiendo" as Answering
     state "Listo" as Ready
     state "Advertencia" as Warning
     [*] --> Stopped
-    Stopped --> Starting : La app inicia
+    Stopped --> Starting : La aplicación inicia
     Starting --> Running : Motor listo
     Starting --> Error : Sin carpeta del motor
     Running --> Restarting : Falla del motor o reinicio de WSL
@@ -267,7 +267,7 @@ stateDiagram-v2
         Transcribing --> Answering : Flujo de Claude
         Answering --> Ready : Respuesta copiada
         Ready --> Idle : A los 3 s
-        Idle --> Warning : Sin micrófono o audio caído
+        Idle --> Warning : Sin micrófono o audio detenido
         Warning --> Idle : Audio recuperado
     }
 ```
@@ -287,9 +287,9 @@ flowchart TD
     q_dir -- "No" --> failed["Error<br/>esperar un reinicio manual"]
     q_dir -- "Sí" --> spawn["Iniciar make run-engine<br/>en WSL"]
     spawn --> q_ready{"¿Listo en 240 s?"}
-    q_ready -- "Sí" --> healthy["Sano<br/>comprobar cada 5 s"]
+    q_ready -- "Sí" --> healthy["En buen estado<br/>comprobar cada 5 s"]
     q_ready -- "No" --> q_breaker
-    healthy -->|"3 comprobaciones sin respuesta o salida"| q_breaker{"¿Demasiados reinicios?"}
+    healthy -->|"3 comprobaciones sin respuesta o el motor se cerró"| q_breaker{"¿Demasiados reinicios?"}
     q_breaker -- "No" --> backoff["Esperar de 2 a 120 s"]
     backoff --> launch
     q_breaker -- "Sí" --> failed
@@ -325,8 +325,8 @@ Más problemas y los mensajes exactos: [docs/troubleshooting.md](docs/troublesho
 
 - [Installation](docs/installation.md) (en inglés): todas las vías de instalación, actualización y desinstalación.
 - [Usage](docs/usage.md): flujos, atajos, icono de la bandeja, modelos y opciones de voz.
-- [Configuration](docs/configuration.md): opciones del motor, archivos de ajustes, variables de entorno.
-- [Troubleshooting](docs/troubleshooting.md): `make doctor`, audio de WSL, logs, mensajes conocidos.
+- [Configuration](docs/configuration.md): opciones del motor, archivos de configuración, variables de entorno.
+- [Troubleshooting](docs/troubleshooting.md): `make doctor`, audio de WSL, registros, mensajes conocidos.
 - [Architecture](docs/architecture.md): diagramas y decisiones de diseño.
 - [WSL2 and AMD](docs/wsl2.md) (experimental), [Companion design](docs/companion-app.md), [Brand](docs/brand.md), [Releasing](docs/releasing.md).
 

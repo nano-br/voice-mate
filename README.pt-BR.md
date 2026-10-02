@@ -56,7 +56,7 @@ Um segundo módulo veio depois: uma conversa por voz com o Claude. Você fala, o
 <a id="plataformas-e-gpus"></a>**Plataformas e GPUs**
 - Windows 10/11 com NVIDIA (CUDA): o caminho original, testado a fundo. O motor roda nativamente pela linha de comando.
 - **Experimental:** o motor dentro do WSL2 (a configuração do companion), GPUs AMD (ROCm, Vulkan) no WSL2, no Linux e no Windows, e Linux (X11, Wayland) com um companion opcional.
-- CPU como alternativa em qualquer lugar. O `make setup` detecta a plataforma e a GPU e instala o build do PyTorch e o backend de reconhecimento de fala correspondentes.
+- Em qualquer plataforma, a CPU serve de alternativa. O `make setup` detecta a plataforma e a GPU e instala o build do PyTorch e o backend de reconhecimento de fala correspondentes.
 
 **Conversa por voz com o Claude (experimental)**
 - `Ctrl+Alt+A` envia a sua fala ao Claude pela CLI do Claude Code (com o seu próprio login: o texto transcrito vai para a Anthropic, o áudio não). A resposta é copiada para a área de transferência e lida em voz alta.
@@ -86,11 +86,11 @@ O instalador traz só o aplicativo companion. O motor roda dentro de uma distro 
    ```bash
    git clone https://github.com/nano-br/voice-mate.git ~/voice-mate
    cd ~/voice-mate
-   make setup    # só para ditado, responda 1 (clipboard) em "Qual flow principal?"
+   make setup    # só para ditado, responda 1 (clipboard) em "Qual fluxo principal?"
    make doctor   # todas as verificações devem mostrar ✓
    ```
    O companion procura o motor em `~/voice-mate` e em algumas outras pastas comuns ([a lista](docs/installation.md#2-install-the-engine)); em qualquer outro lugar, defina "Pasta do motor:" em Configurações. Com uma GPU AMD, instale também o driver da AMD e o ROCm para WSL ([docs/wsl2.md](docs/wsl2.md)).
-3. Recomendado: ainda em `~/voice-mate`, rode `make run` uma vez e pare com `Ctrl+C` quando ele terminar de carregar. A primeira inicialização baixa o modelo Whisper, e o companion dá a uma inicialização do motor só 240 segundos (ele para de tentar depois de 3 estouros de tempo seguidos), o que uma conexão lenta pode ultrapassar.
+3. Recomendado: ainda em `~/voice-mate`, rode `make run` uma vez e pare com `Ctrl+C` quando ele terminar de carregar. A primeira inicialização baixa o modelo Whisper, e o companion dá só 240 segundos para o motor iniciar (ele para de tentar depois de 3 estouros de tempo seguidos), o que uma conexão lenta pode ultrapassar.
 4. Baixe o `VoiceMate-Setup-x.y.z.exe` da [última versão](https://github.com/nano-br/voice-mate/releases/latest) e execute. O instalador não tem assinatura de código, então o Windows SmartScreen pode avisar: escolha **Mais informações** e depois **Executar assim mesmo**. Ele instala só para o seu usuário, sem pedir permissão de administrador.
 5. Abra o VoiceMate. A bandeja mostra "Iniciando o motor..." enquanto o modelo carrega (de 10 a 60 segundos depois que o modelo foi baixado), e então "Aguardando Ctrl+Alt+V".
 6. Opcional: fixe na barra de tarefas. Abra o Iniciar, pesquise VoiceMate, clique nele com o botão direito e escolha **Fixar na barra de tarefas**.
@@ -107,7 +107,7 @@ make doctor                          # verifica microfone, áudio, atalhos e GPU
 make run ARGS="--output-lang en"     # inicia o motor com os próprios atalhos (Windows nativo ou Linux)
 ```
 
-**O motor usa português por padrão** (`--output-lang pt-BR`), o que define o idioma que o Whisper escuta, as respostas do Claude e as mensagens do motor. Passe `--output-lang en` (ou outro código) como acima; `--transcription-language` e `VOICEMATE_LANG` mudam só um deles ([configuração](docs/configuration.md)). O companion passa essas flags sozinho, veja [Uso](#uso).
+**O motor usa português por padrão** (`--output-lang pt-BR`), o que define o idioma que o Whisper escuta, as respostas do Claude e as mensagens do motor. Passe `--output-lang en` (ou outro código) como acima; `--transcription-language` e `VOICEMATE_LANG` mudam só um deles ([configuração](docs/configuration.md)). O companion passa essas opções sozinho, veja [Uso](#uso).
 
 Para rodar o companion a partir do código-fonte no Windows, com o motor no WSL2: `make companion-venv` uma vez, depois `make run-tray`. No Linux, rode `make setup` e `make run` como acima; para a bandeja e a janela de status opcionais, `poetry install --extras ui` e depois `make run-tray` ([detalhes](docs/installation.md#linux-experimental)).
 
@@ -120,7 +120,7 @@ Para rodar o companion a partir do código-fonte no Windows, com o motor no WSL2
 
 Aperte `Ctrl+Alt+V`, fale depois do sinal de início, aperte `Ctrl+Alt+V` de novo e cole com `Ctrl+V` em qualquer lugar. O atalho que para a gravação decide para onde o texto vai. Um texto que não conseguiu chegar à área de transferência espera em **Não copiadas** (menu da bandeja e janela de status), onde um clique o copia. Para sair, escolha **Sair do VoiceMate** no menu da bandeja; um motor que o companion não iniciou continua rodando.
 
-**Idioma do ditado.** Em Configurações > **Geral**, "Idioma do ditado:" define o idioma que você fala. O padrão é "Igual ao da interface"; "Detectar automaticamente" deixa o Whisper detectar cada gravação (o Claude continua respondendo no idioma da interface; com o Kokoro, fixe um idioma); ou escolha um idioma. O companion repassa a escolha ao motor que ele inicia como `--transcription-language` e `--output-lang`, e mudar o idioma reinicia o motor. Um motor ao qual o companion só se conecta (uma unidade do systemd, ou um iniciado à mão) mantém as próprias flags.
+**Idioma do ditado.** Em Configurações > **Geral**, "Idioma do ditado:" define o idioma que você fala. O padrão é "Igual ao da interface"; "Detectar automaticamente" deixa o Whisper detectar cada gravação (o Claude continua respondendo no idioma da interface; com o Kokoro, fixe um idioma); ou escolha um idioma. O companion repassa a escolha ao motor que ele inicia, usando `--transcription-language` e `--output-lang`, e mudar o idioma reinicia o motor. Um motor ao qual o companion só se conecta (uma unidade do systemd, ou um iniciado à mão) mantém as próprias opções.
 
 A conversa por voz com o Claude precisa da CLI do Claude Code instalada e com login feito, e do módulo `claude` escolhido no `make setup`. Veja [docs/usage.md](docs/usage.md#claude-flow-experimental).
 
@@ -134,7 +134,7 @@ A conversa por voz com o Claude precisa da CLI do Claude Code instalada e com lo
 | Logs (`companion.log`, `engine.log`) | Windows `%LOCALAPPDATA%\VoiceMate\logs`, Linux `~/.local/state/voicemate/logs` |
 | Lista **Não copiadas** | `pending.json`, ao lado da pasta `logs` |
 
-Todas as flags do motor, todas as chaves de configurações e todas as variáveis de ambiente: [docs/configuration.md](docs/configuration.md).
+Todas as opções do motor, todas as chaves de configurações e todas as variáveis de ambiente: [docs/configuration.md](docs/configuration.md).
 
 ## Arquitetura
 
@@ -240,17 +240,17 @@ Visão geral. Diagrama completo: [docs/architecture.md, Um ditado](docs/architec
 stateDiagram-v2
     state "Parado" as Stopped
     state "Iniciando" as Starting
-    state "Rodando" as Running
+    state "Em execução" as Running
     state "Reiniciando" as Restarting
     state "Erro" as Error
-    state "Ocioso" as Idle
+    state "Aguardando" as Idle
     state "Gravando" as Recording
     state "Transcrevendo" as Transcribing
     state "Respondendo" as Answering
     state "Pronto" as Ready
-    state "Alerta" as Warning
+    state "Aviso" as Warning
     [*] --> Stopped
-    Stopped --> Starting : App inicia
+    Stopped --> Starting : O aplicativo inicia
     Starting --> Running : Motor pronto
     Starting --> Error : Sem pasta do motor
     Running --> Restarting : Motor falhou ou reinício do WSL
@@ -267,7 +267,7 @@ stateDiagram-v2
         Transcribing --> Answering : Fluxo do Claude
         Answering --> Ready : Resposta copiada
         Ready --> Idle : Após 3 s
-        Idle --> Warning : Sem microfone ou áudio fora
+        Idle --> Warning : Sem microfone ou áudio parado
         Warning --> Idle : Áudio de volta
     }
 ```
@@ -289,7 +289,7 @@ flowchart TD
     spawn --> q_ready{"Pronto em até 240 s?"}
     q_ready -- "Sim" --> healthy["Saudável<br/>verificar a cada 5 s"]
     q_ready -- "Não" --> q_breaker
-    healthy -->|"3 verificações sem resposta ou saída"| q_breaker{"Reinícios demais?"}
+    healthy -->|"3 verificações sem resposta ou o motor encerrou"| q_breaker{"Reinícios demais?"}
     q_breaker -- "Não" --> backoff["Esperar de 2 a 120 s"]
     backoff --> launch
     q_breaker -- "Sim" --> failed
@@ -325,7 +325,7 @@ Mais problemas e as mensagens exatas: [docs/troubleshooting.md](docs/troubleshoo
 
 - [Installation](docs/installation.md) (em inglês): todos os caminhos de instalação, atualização e desinstalação.
 - [Usage](docs/usage.md): fluxos, atalhos, ícone da bandeja, modelos e opções de voz.
-- [Configuration](docs/configuration.md): flags do motor, arquivos de configurações, variáveis de ambiente.
+- [Configuration](docs/configuration.md): opções do motor, arquivos de configurações, variáveis de ambiente.
 - [Troubleshooting](docs/troubleshooting.md): `make doctor`, áudio do WSL, logs, mensagens conhecidas.
 - [Architecture](docs/architecture.md): diagramas e decisões de projeto.
 - [WSL2 and AMD](docs/wsl2.md) (experimental), [Companion design](docs/companion-app.md), [Brand](docs/brand.md), [Releasing](docs/releasing.md).
