@@ -42,20 +42,20 @@ VoiceMate 能立刻把语音变成文字，随时交给任何 AI 工具：给编
 **听写（核心）**
 - 一个快捷键即可开始和停止录音（默认 `Ctrl+Alt+V`）。文本进入剪贴板，随时可以粘贴。
 - 本地 Whisper 模型，默认 `large-v3-turbo`。音频不会离开你的电脑。
-- 听写语言是固定指定的，以保证结果稳定；在其他语言中夹杂的英文技术术语也依然能被转写。
+- 听写语言是固定的，以保证结果稳定；在其他语言中夹杂的英文技术术语也依然能被转写。
 - 开始、转写、已复制、警告和错误都有各自的提示音。录音在 10 分钟后自动停止（可配置）。
 
 **Windows 配套应用**
 - 托盘图标让你一眼看清当前状态，状态窗口列出最近的转写，设置中可以调整快捷键、提示音、通知、语言和引擎。
-- 经过验证的剪贴板交付：应用写入文本，再读回来进行比对。无法进入剪贴板的文本会保留在“未复制”列表中，即使重启后也不会丢失。
-- 配套应用会自己照看引擎：在 WSL2 内启动引擎，引擎失败时重启它，WSL 的音频中断时重启 WSL。
-- 按用户安装的安装程序（不会弹出管理员权限提示），提供 5 种语言。
+- 经过校验的剪贴板写入：应用写入文本，再读回来进行比对。无法进入剪贴板的文本会保留在“未复制”列表中，即使重启后也不会丢失。
+- 配套应用会负责监管引擎：在 WSL2 内启动引擎，引擎失败时重启它，WSL 的音频中断时重启 WSL。
+- 只为当前用户安装的安装程序（无需管理员权限），提供 5 种语言。
 
 <a id="languages"></a>**语言**：配套应用、引擎消息和安装程序支持英语、巴西葡萄牙语、西班牙语、俄语和简体中文。
 
 <a id="platforms-and-gpus"></a>**平台与 GPU**
 - Windows 10/11 搭配 NVIDIA（CUDA）：最初的路径，经过实战检验。引擎可以在命令行中原生运行。
-- **实验性：** 引擎运行在 WSL2 内（配套应用的部署方式），WSL2、Linux 和 Windows 上的 AMD GPU（ROCm、Vulkan），以及搭配可选配套应用的 Linux（X11、Wayland）。
+- **实验性：** 引擎运行在 WSL2 内（配套应用采用的方式），WSL2、Linux 和 Windows 上的 AMD GPU（ROCm、Vulkan），以及搭配可选配套应用的 Linux（X11、Wayland）。
 - 各平台都可以回退到 CPU。`make setup` 会检测平台和 GPU，并安装匹配的 PyTorch 版本和语音转文字后端。
 
 **与 Claude 的语音对话（实验性）**
@@ -120,7 +120,7 @@ make run ARGS="--output-lang en"     # 用引擎自带的快捷键启动引擎�
 
 按下 `Ctrl+Alt+V`，在开始提示音之后说话，再按一次 `Ctrl+Alt+V`，然后在任何地方用 `Ctrl+V` 粘贴。文本的去向由用来停止录音的那个快捷键决定。无法进入剪贴板的文本会留在 **未复制** 列表中（托盘菜单和状态窗口里都有），单击一下就能复制。要退出，请在托盘菜单中选择 **退出 VoiceMate**；不是由配套应用启动的引擎会继续运行。
 
-**听写语言。** 在设置 > **常规** 中，“听写语言：”决定你说话的语言。默认是“与界面相同”；选择“自动检测”则让 Whisper 检测每一段录音的语言（Claude 仍然用界面语言回答；使用 Kokoro 时，请改为固定一种语言）；也可以只选一种语言。配套应用会把它以 `--transcription-language` 和 `--output-lang` 的形式传给它启动的引擎，更改后会重启引擎。配套应用只是连接上的引擎（systemd 单元，或手动启动的引擎）则保留它自己的参数。
+**听写语言。** 在设置 > **常规** 中，“听写语言：”决定你说话的语言。默认是“与界面相同”；选择“自动检测”则让 Whisper 检测每一段录音的语言（Claude 仍然用界面语言回答；使用 Kokoro 时，请改为固定一种语言）；也可以只选一种语言。配套应用会把它以 `--transcription-language` 和 `--output-lang` 的形式传给它启动的引擎，更改后会重启引擎。配套应用仅连接、而非由它启动的引擎（systemd 单元，或手动启动的引擎）会沿用它自己的参数。
 
 与 Claude 的语音对话需要安装并登录 Claude Code CLI，并且在 `make setup` 中选择了 `claude` 模块。参见 [docs/usage.md](docs/usage.md#claude-flow-experimental)。
 
@@ -129,7 +129,7 @@ make run ARGS="--output-lang en"     # 用引擎自带的快捷键启动引擎�
 | 内容 | 位置 |
 |---|---|
 | 配套应用设置 | Windows `%APPDATA%\VoiceMate\companion.toml`，Linux `~/.config/voicemate/companion.toml` |
-| `make setup` 中的引擎选择、API 令牌 | `~/.config/voicemate/`（对配套应用来说在 WSL 内；对在 Windows 上原生运行的引擎则是 `%USERPROFILE%\.config\voicemate\`） |
+| `make setup` 中为引擎选定的设置、API 令牌 | `~/.config/voicemate/`（对配套应用来说在 WSL 内；对在 Windows 上原生运行的引擎则是 `%USERPROFILE%\.config\voicemate\`） |
 | 引擎 HTTP API | `127.0.0.1:47821` |
 | 日志（`companion.log`、`engine.log`） | Windows `%LOCALAPPDATA%\VoiceMate\logs`，Linux `~/.local/state/voicemate/logs` |
 | **未复制** 列表 | `logs` 文件夹旁边的 `pending.json` |
@@ -138,7 +138,7 @@ make run ARGS="--output-lang en"     # 用引擎自带的快捷键启动引擎�
 
 ## 架构
 
-VoiceMate 由两部分组成。**引擎**负责录音、转写并运行 Claude 流程；它是一个带本地 HTTP API 的 Python 守护进程。**配套应用**是 Windows 上基于 PySide6 的托盘应用，掌管快捷键和剪贴板，并在 WSL2 内照看引擎。引擎也可以脱离配套应用，单独从命令行运行。下面的图都是简化的概览；每张图都链接到 [docs/architecture.md](docs/architecture.md)（英文）中的完整图，那里还有组件图、HTTP API 和设计取舍。
+VoiceMate 由两部分组成。**引擎**负责录音、转写并运行 Claude 流程；它是一个带本地 HTTP API 的 Python 守护进程。**配套应用**是 Windows 上基于 PySide6 的托盘应用，负责处理快捷键和剪贴板，并在 WSL2 内监管引擎。引擎也可以脱离配套应用，单独从命令行运行。下面的图都是简化的概览；每张图都链接到 [docs/architecture.md](docs/architecture.md)（英文）中的完整图，那里还有组件图、HTTP API 和设计取舍。
 
 <details>
 <summary>系统上下文（概览）</summary>
@@ -177,7 +177,7 @@ flowchart LR
     user(["用户"])
     subgraph win["Windows"]
         ui["配套应用界面<br/>托盘、状态、设置"]
-        core["配套应用核心<br/>快捷键、监管、交付"]
+        core["配套应用核心<br/>快捷键、监管、写入剪贴板"]
         clip["Windows 剪贴板"]
     end
     subgraph wsl["WSL2 发行版"]
@@ -217,7 +217,7 @@ sequenceDiagram
     U->>C: 再次按下快捷键
     C->>E: 停止录音
     E->>E: Whisper 转写
-    E-->>C: 待交付的文本
+    E-->>C: 待写入剪贴板的文本
     C->>CB: 写入，读回，比对
     alt 文本校验通过
         C->>E: ACK delivered
@@ -267,7 +267,7 @@ stateDiagram-v2
         Transcribing --> Answering : Claude 流程
         Answering --> Ready : 回答已复制
         Ready --> Idle : 3 秒后
-        Idle --> Warning : 没有麦克风或音频中断
+        Idle --> Warning : 麦克风或音频故障
         Warning --> Idle : 音频恢复
     }
 ```
@@ -281,22 +281,22 @@ stateDiagram-v2
 
 ```mermaid
 flowchart TD
-    launch(["启动"]) --> q_health{"引擎已经在响应？"}
+    launch(["启动"]) --> q_health{"引擎已经在响应?"}
     q_health -- "是" --> attach["连接上它，等待就绪"] --> healthy
-    q_health -- "否" --> q_dir{"找到引擎文件夹？"}
+    q_health -- "否" --> q_dir{"找到引擎文件夹?"}
     q_dir -- "否" --> failed["错误<br/>等待手动重启"]
     q_dir -- "是" --> spawn["在 WSL 中<br/>启动 make run-engine"]
-    spawn --> q_ready{"240 秒内就绪？"}
+    spawn --> q_ready{"240 秒内就绪?"}
     q_ready -- "是" --> healthy["运行正常<br/>每 5 秒探测一次"]
     q_ready -- "否" --> q_breaker
-    healthy -->|"连续 3 次探测无响应或进程退出"| q_breaker{"重启次数过多？"}
+    healthy -->|"3 次探测无响应或退出"| q_breaker{"重启次数过多?"}
     q_breaker -- "否" --> backoff["等待 2 到 120 秒"]
     backoff --> launch
     q_breaker -- "是" --> failed
     healthy -->|"WSL 音频已停止"| q_policy{"音频故障时重启 WSL"}
     q_policy -- "从不" --> nothing["什么也不做"]
     q_policy -- "先询问" --> ask["询问用户"]
-    q_policy -- "自动" --> q_others{"其他发行版在运行？"}
+    q_policy -- "自动" --> q_others{"其他发行版在运行?"}
     q_others -- "是" --> ask
     q_others -- "否" --> wslrestart["wsl --shutdown"]
     ask -- "重启 WSL" --> wslrestart
@@ -342,4 +342,4 @@ VoiceMate 建立在许多项目的成果之上：OpenAI 的 [Whisper](https://gi
 
 ## 许可证
 
-[MIT](LICENSE) © Álli Terhorst。属于 [NanoBR](https://github.com/nano-br)：服务于日常效率的开源工具。
+[MIT](LICENSE) © Álli Terhorst。[NanoBR](https://github.com/nano-br) 旗下项目：服务于日常效率的开源工具。
