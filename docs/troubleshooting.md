@@ -16,10 +16,10 @@ In this order: the detected platform; on WSL2 only, the WSLg PulseAudio socket, 
 
 | Message (notification title) | Meaning | What to do |
 |---|---|---|
-| "VoiceMate is starting" | A hotkey was pressed while the engine still loads the model (10 to 60 seconds on the first start) | Wait and press again |
+| "VoiceMate is starting" | A hotkey was pressed while the engine still loads the model (10 to 60 seconds, much longer on the very first start, which downloads the model) | Wait and press again |
 | "Engine folder not found" | No engine checkout in the folders the companion searches | Clone the engine into one of them ([installation.md](installation.md#2-install-the-engine)) or set "Engine folder:" in Settings > **General** |
 | "Could not start the engine" | `wsl.exe` or `make run-engine` failed | Check `engine.log`; check that `make` and `poetry` work in a login shell (`wsl -e bash -lc "make --version && poetry --version"`) |
-| "VoiceMate stopped retrying" | The engine failed too often (more than 5 restarts in 15 minutes, 3 start timeouts in a row, or more than 3 WSL restarts in 1 hour) | Read `engine.log`, fix the cause, then use **Restart engine** |
+| "VoiceMate stopped retrying" | The engine failed too often (more than 5 restarts in 15 minutes, 3 start timeouts in a row, or more than 3 WSL restarts in 1 hour) | Read `engine.log`, fix the cause, then use **Restart engine**. On the very first start a slow model download can use up the 240 seconds of an engine start three times in a row: run `make run` once in the engine folder (inside WSL), stop it with `Ctrl+C` when it has loaded, then use **Restart engine** |
 | "Engine is outdated" / "The engine is older than this app. Restart or update it." | The engine checkout is older than the companion | Update it (`git pull`, then `make setup`), then **Restart engine** |
 | "Engine run by systemd" | The `voicemate` systemd service runs the engine, so the companion attaches to it | Keep it, or run `systemctl --user disable --now voicemate` in WSL to let VoiceMate manage the engine |
 | "Engine access denied" | The engine refused the API token | VoiceMate reads `~/.config/voicemate/api-token` again every 30 seconds; if it persists, restart the engine |
@@ -64,12 +64,15 @@ Without the companion: run `wsl --shutdown` in PowerShell, then `make run` again
 
 ## Engine problems
 
+The engine messages quoted in this guide are English. The engine prints them in the language of `--output-lang`, whose default is Portuguese (`pt-BR`), or of `VOICEMATE_LANG`, which wins. An engine you start with a plain `make run` therefore logs in Portuguese: add `ARGS="--output-lang en"` (or `VOICEMATE_LANG=en`) to read the English text. The companion passes the flag itself, from "Dictation language:" in Settings.
+
 | Symptom | Cause | Fix |
 |---|---|---|
 | "Could not open the HTTP API on 127.0.0.1:{port}" in the engine log | The port is taken, often by another engine | Stop the other engine, or choose another port (`--daemon-port`, and `daemon_port` in `companion.toml`) |
 | "Claude flow disabled: extra 'claude' not installed." | The `claude` extra is missing | `poetry install --extras claude`, or `make configure` |
 | "Failed to start Claude (run `claude login`)" | The Claude CLI is missing or signed out | Install it and sign in ([installation.md](installation.md#claude-code-cli-for-the-claude-flow)) |
 | "TTS disabled: engine '{engine}' packages not installed." | The extra of the TTS engine is missing | Install the extra named in the next log line, or run with `--no-tts` |
+| English speech is transcribed wrongly (as if it were Portuguese) | An engine started by hand pins Whisper to Portuguese by default | `make run ARGS="--output-lang en"` or `--transcription-language en`. With the companion, set "Dictation language:" in Settings > **General** |
 | Transcription is 10 to 50 times slower than expected | The backend fell back to the CPU | `make doctor` (PyTorch with GPU); on AMD, `rocminfo` must list the GPU |
 | CTranslate2-ROCm failed to build | Incomplete ROCm development packages | `make doctor`; install the ROCm HIP SDK; `make configure` tries again |
 | The interface language is not the one you chose | The language changes after a restart | Answer "Restart now" in "Restart VoiceMate?" |

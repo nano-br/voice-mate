@@ -41,7 +41,7 @@ This second module turns VoiceMate into a voice conversation with Claude. It is 
 Details:
 - Because both the transcription and the answer pass through the clipboard, `Win+V` on Windows shows both.
 - Any hotkey pressed while Claude answers or while TTS speaks interrupts the answer and starts a new recording. The conversation is kept.
-- Claude answers in the language of `--output-lang` (default `pt-BR`), for example `make run ARGS="--output-lang en"`.
+- Claude answers in the language of `--output-lang` (default `pt-BR`), for example `make run ARGS="--output-lang en"`. The companion sets it from "Dictation language:" ([Dictation language](#dictation-language)).
 - The default model is `claude-haiku-4-5` with effort `low` and thinking off, for low latency. See [configuration.md](configuration.md#claude-flow-experimental) for the flags.
 - Requirements: the Claude Code CLI installed and signed in, and the `claude` extra ([installation.md](installation.md#claude-code-cli-for-the-claude-flow)). Without them the Claude flow is disabled with a warning in the engine log, and the clipboard flow keeps working.
 
@@ -49,8 +49,8 @@ Details:
 
 | Engine | Extra | Notes |
 |---|---|---|
-| `omnivoice` (default) | `tts` | Can clone a voice (voice seed modes below). Heavy on the GPU; can crackle on WSL2 |
-| `kokoro` | `kokoro` | Light, runs on the CPU in real time, fixed voices (`--tts-kokoro-voice`). Needs `espeak-ng`. `make setup` proposes it by default |
+| `omnivoice` (used when nothing is saved) | `tts` | Can clone a voice (voice seed modes below). Heavy on the GPU; can crackle on WSL2 |
+| `kokoro` | `kokoro` | Light, runs on the CPU in real time, fixed voices (`--tts-kokoro-voice`). Needs `espeak-ng`. `make setup` proposes it (it offers Kokoro or OmniVoice) |
 | `voxcpm` | `voxcpm` | VoxCPM2, heavier. Designs a voice from a text description (`--tts-voice`) |
 | `none` | | No spoken answer (same as `--no-tts`) |
 
@@ -95,14 +95,47 @@ Choose a model with `--model` (default `large-v3-turbo`), or `make run-large` (`
 
 Whisper gets one pinned language for stable results; foreign terms inside the speech (for example English technical terms in Portuguese) still come out right.
 
-- With the companion: Settings > **General** > "Dictation language". By default it follows the interface language.
-- From the command line: `--transcription-language {auto,pt,en,es,fr,de,it,ja,ru,zh}`, or `--output-lang`, from which the default is derived (`pt-BR` gives `pt`). `auto` detects the language for each recording, which is less stable for short recordings.
+**With the companion:** Settings > **General** > "Dictation language:". The options are:
+
+- "Same as the interface" (the default): the language of the companion (`pt-BR`, `en`, `es`, `ru` or `zh-CN`).
+- "Detect automatically": Whisper detects the language of each recording, which is less stable for short recordings. Claude keeps answering in the interface language.
+- One language, each named in its own language: "Português", "English", "Español", "Русский", "中文", "Français", "Deutsch", "Italiano" or "日本語". A pinned language also sets the language of Claude's spoken answers.
+
+The companion passes the choice to the engine it starts as `--transcription-language` and `--output-lang`, and changing it restarts the engine. An engine the companion only connects to keeps its own flags: with the mode "Connect only" the setting is disabled, and a systemd unit or an engine you started by hand is attached to, not started, so it follows its own `--transcription-language` and `--output-lang`.
+
+**From the command line:** the engine defaults to Portuguese. `--output-lang` defaults to `pt-BR`, and from it the transcription language is derived (`pt-BR` gives `pt`), so a run without flags pins Whisper to Portuguese and English speech comes out wrong. Pass `--output-lang en` (also the language of Claude's answers and of the engine messages), or pin only the transcription with `--transcription-language {auto,pt,en,es,fr,de,it,ja,ru,zh}`:
+
+```bash
+make run ARGS="--output-lang en"
+make run ARGS="--transcription-language en"
+VOICEMATE_LANG=en make run          # engine messages only (pt-BR, en, es, ru or zh-CN)
+```
+
+`VOICEMATE_LANG` changes the language of the engine messages and wins over `--output-lang` there; it does not change what Whisper hears. The companion ignores it.
 
 ## Companion app
 
 ### Tray icon and menu
 
-The tray icon is the VoiceMate figure; a small badge in its corner shows the state (the table is in the [README](../README.md#screenshots)). A left click opens the status window. The menu has:
+The tray icon is the VoiceMate figure; a small badge in its corner shows the state. A left click opens the status window.
+
+<p align="center"><img src="assets/screenshots/tray-states.png" width="584" alt="The tray icon in each state, on a dark and a light taskbar"></p>
+
+| Badge (left to right) | State | What the menu and tooltip say |
+|---|---|---|
+| No badge | Idle | "Listening for Ctrl+Alt+V" |
+| Red dot | Recording | "Recording 00:12" |
+| Hourglass | Transcribing | "Transcribing..." |
+| Speech bubble | Thinking (Claude) | "Claude is answering..." |
+| Speaker | Speaking (Claude) | "Claude is answering..." |
+| Check mark | Ready, for 3 seconds | "Copied: ..." |
+| Ring | Starting | "Starting engine..." |
+| Circular arrow | Restarting | "Restarting (attempt 2)" |
+| Triangle | Warning | "No microphone" or "WSL audio stopped" |
+| Cross | Error | "The engine stopped working" |
+| Grey octagon, icon dimmed | Stopped | "VoiceMate is stopped" |
+
+The menu has:
 
 - The status line, then "Open VoiceMate".
 - "Dictate" and "Ask Claude" with their hotkeys ("Stop and copy" and "Stop and ask Claude" while recording), and "Cancel".

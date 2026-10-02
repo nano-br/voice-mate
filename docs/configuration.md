@@ -9,7 +9,7 @@ Purpose: every engine flag, settings key, environment variable and file location
 | Engine | Command-line flags of `voice-mate` (`make run ARGS="..."`) and `~/.config/voicemate/config.toml` (written by `make setup` and `make configure`) | Flag, then `config.toml`, then detection or the built-in default |
 | Companion | `companion.toml`, edited through Settings | The file; invalid values fall back to the default |
 
-Flags reach the engine through the Makefile with `ARGS`, for example `make run ARGS="--model medium --no-tts"`. Without `ARGS`, `make` ignores extra words on its command line.
+Flags reach the engine through the Makefile with `ARGS`, for example `make run ARGS="--model medium --no-tts"`. `make` does not forward words placed after the target, so always use `ARGS`.
 
 ## Engine flags
 
@@ -28,7 +28,7 @@ Flags reach the engine through the Makefile with `ARGS`, for example `make run A
 | `--input-method {keyboard,mouse}` | `keyboard` | `mouse` works on Windows only (`keyboard-hooks` trigger) and only for the clipboard flow; it disables the Claude flow |
 | `--mouse-button` | `x` | Mouse button for `--input-method mouse` (`x` is a side button) |
 | `--max-recording-seconds` | `600` | Recording limit. A warning plays at 80 %; at the limit the recording stops and is transcribed |
-| `--output-lang` | `pt-BR` | BCP-47 code. The language of Claude's answers, the default transcription language (`pt-BR` gives `pt`, `en` gives `en`, `zh-CN` gives `zh`) and the default language of the engine messages |
+| `--output-lang` | `pt-BR` | BCP-47 code. The language of Claude's answers, the default transcription language (`pt-BR` gives `pt`, `en` gives `en`, `zh-CN` gives `zh`) and the default language of the engine messages. The default pins Whisper to Portuguese: pass `--output-lang en` (or `--transcription-language en`) when you dictate in English. The companion passes it for the engine it starts, from the "Dictation language:" setting |
 
 ### Platform, trigger and API
 
@@ -110,6 +110,7 @@ Location: Windows `%APPDATA%\VoiceMate\companion.toml`; Linux `${XDG_CONFIG_HOME
 | `version` | `1` | integer | |
 | `client_key` | generated on first run | string | |
 | `language` | `auto` | `auto`, `pt-BR`, `en`, `es`, `ru`, `zh-CN` | General > "Language:" |
+| `dictation_language` | `interface` | `interface` (follow `language`), `auto` (Whisper detects each recording), or one language: `pt`, `en`, `es`, `ru`, `zh`, `fr`, `de`, `it`, `ja` | General > "Dictation language:" ("Same as the interface", "Detect automatically", then one language) |
 | `engine_mode` | `wsl2` on Windows, `local` on Linux | Windows: `wsl2`, `external`; Linux: `local`, `external` | General > "Mode:" ("Start it in WSL", "Start it on this computer", "Connect only") |
 | `wsl_distro` | `""` (the default WSL distro) | distro name | General > "WSL distro:" |
 | `engine_dir` | `""` (detect) | path relative to `$HOME`, or absolute; `"`, `$`, backtick, backslash and newline are rejected | General > "Engine folder:" |
@@ -127,13 +128,13 @@ The language change asks "Restart VoiceMate?" ("Restart now" or "Later"); until 
 
 ### Dictation language
 
-The dictation (transcription) language is chosen in Settings > **General** ("Dictation language"). By default it follows the interface language. When you run the engine yourself, use `--transcription-language` or `--output-lang` (see [Engine flags](#speech-to-text-and-input)).
+The companion turns `dictation_language` into two flags for the engine it starts: `--transcription-language <code>` and `--output-lang <BCP-47>` (`pt` gives `pt-BR`, `zh` gives `zh-CN`, the others their own code). `interface` uses the interface language; `auto` passes `--transcription-language auto` and keeps `--output-lang` on the interface language, so Claude still answers in it. Changing the key restarts the engine. In the mode "Connect only" the key is ignored and the engine keeps its own flags, and so does an engine the companion attaches to (a systemd unit, or one started by hand). More in [usage.md](usage.md#dictation-language).
 
 ## Environment variables
 
 | Variable | Read by | Effect |
 |---|---|---|
-| `VOICEMATE_LANG` | engine | Language of the engine messages (`pt-BR`, `en`, `es`, `ru`, `zh-CN`). Wins over `--output-lang`. The companion ignores it |
+| `VOICEMATE_LANG` | engine | Language of the engine messages only (`pt-BR`, `en`, `es`, `ru`, `zh-CN`); without it the messages follow `--output-lang`, whose default is Portuguese. Wins over `--output-lang`. It does not change what Whisper hears or the language of Claude's answers. The companion ignores it |
 | `VOICEMATE_API_TOKEN` | engine, companion | Replaces the token file. For tests only |
 | `PULSE_LATENCY_MSEC` | engine (Linux, WSL2) | Audio buffer of PulseAudio; set to `200` when absent |
 | `CT2_CUDA_ALLOCATOR` | engine (CTranslate2-ROCm) | Set to `cub_caching` when absent (workaround for a memory fault on gfx1201) |
@@ -157,8 +158,8 @@ The dictation (transcription) language is chosen in Settings > **General** ("Dic
 | `companion.log`, `engine.log` (rotated, 5 MB, 3 backups) | `%LOCALAPPDATA%\VoiceMate\logs\` | `${XDG_STATE_HOME:-~/.local/state}/voicemate/logs/` |
 | `pending.json` (the **Not copied** list; holds transcription text) | `%LOCALAPPDATA%\VoiceMate\` | `${XDG_STATE_HOME:-~/.local/state}/voicemate/` |
 | Rendered sound cues | `%LOCALAPPDATA%\VoiceMate\cues\` | `${XDG_CACHE_HOME:-~/.cache}/voicemate/cues/` |
-| Engine choices and API token | `~/.config/voicemate/config.toml` and `api-token`, inside WSL | same paths |
-| Engine caches (whisper.cpp binaries and models, voice seeds, AMD caches) | `~/.cache/voicemate/`, inside WSL | same path |
+| Engine choices and API token | inside WSL: `~/.config/voicemate/config.toml` and `api-token` (native Windows engine: `%USERPROFILE%\.config\voicemate\`) | `~/.config/voicemate/` |
+| Engine caches (whisper.cpp binaries and models, voice seeds, AMD caches) | inside WSL: `~/.cache/voicemate/` (native Windows engine: `%USERPROFILE%\.cache\voicemate\`) | `~/.cache/voicemate/` |
 | systemd service log | `journalctl --user -u voicemate -f`, inside WSL | same command |
 
 Tray menu > **Engine** > **Open logs** opens the logs folder.

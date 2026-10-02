@@ -50,7 +50,7 @@ flowchart TB
 
 The user presses a global hotkey on Windows and pastes the text wherever the cursor is. VoiceMate is a local system split across the two halves of the same PC. The Windows desktop provides the hotkeys, the clipboard, the tray and the sound output for the cues. The engine runs inside the WSL2 Linux VM because there an AMD GPU is reachable through ROCm ([wsl2.md](wsl2.md)). Microphone and speakers reach the engine through the WSLg PulseAudio bridge, which the engine probes with `pactl info` every 20 seconds (`app/platform/audio_probe.py`).
 
-Everything optional sits behind dashed arrows. The Claude flow runs the local Claude Code CLI through `claude-agent-sdk` (`app/features/claude/runtime.py`), which calls the Anthropic API (default model `claude-haiku-4-5`). The TTS libraries speak the answer (default engine `omnivoice`). Model weights come from the internet on first use:
+Everything optional sits behind dashed arrows. The Claude flow runs the local Claude Code CLI through `claude-agent-sdk` (`app/features/claude/runtime.py`), which calls the Anthropic API (default model `claude-haiku-4-5`). The TTS libraries speak the answer (`omnivoice` is the engine used when nothing is saved; `make setup` proposes `kokoro`). Model weights come from the internet on first use:
 
 | What | Source | When |
 |---|---|---|

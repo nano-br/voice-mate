@@ -17,8 +17,8 @@ The companion app on Windows always talks to an engine inside WSL2 (mode "Start 
 
 | Piece | Requirement |
 |---|---|
-| Engine | Python 3.12 exactly (`>=3.12,<3.13`: the AMD ROCm wheels are built for 3.12 only), [Poetry](https://python-poetry.org/docs/#installation), GNU `make`, `git` |
-| Companion from source | Python 3.12 or 3.13 |
+| Engine | Python 3.12 exactly (`>=3.12,<3.13`: the AMD ROCm wheels are built for 3.12 only), [Poetry](https://python-poetry.org/docs/#installation), GNU `make`, `git`. On Windows, install GNU `make` first, for example with Chocolatey (`choco install make`) or Scoop (`scoop install make`) |
+| Companion from source | Python 3.12 or 3.13. `make companion-venv` uses `py -3`, the newest Python installed: if that is another version, run `make companion-venv COMPANION_BOOTSTRAP="py -3.12"` |
 | Windows installer | Windows 10 version 1809 or newer, 64-bit |
 | GPU | Optional. NVIDIA (CUDA), AMD (ROCm or Vulkan, **experimental**) or CPU |
 | Claude flow (**experimental**) | The Claude Code CLI installed and signed in (see [Claude Code CLI](#claude-code-cli-for-the-claude-flow)) |
@@ -29,7 +29,7 @@ The installer (`VoiceMate-Setup-x.y.z.exe`) contains the companion app only. The
 
 ### 1. Prepare WSL2
 
-1. Install WSL2 with Ubuntu and update it from PowerShell: `wsl --install`, then `wsl --update`. WSLg (audio and clipboard bridge) comes with current WSL.
+1. Install WSL2 with Ubuntu and update it from PowerShell: `wsl --install -d Ubuntu`, then `wsl --update`. WSLg (audio and clipboard bridge) comes with current WSL. The engine needs Python 3.12, which Ubuntu 24.04 ships: on a newer Ubuntu, install Python 3.12 yourself.
 2. Inside Ubuntu, install the system packages:
    ```bash
    sudo apt install -y libportaudio2 libasound2-plugins pulseaudio-utils wl-clipboard \
@@ -65,7 +65,7 @@ The first match is saved in the settings. Any other place works too: set "Engine
 
 ### 4. First run
 
-- The tray shows "Starting engine..." while the model loads (10 to 60 seconds), then "Listening for Ctrl+Alt+V".
+- The tray shows "Starting engine..." while the model loads (10 to 60 seconds), then "Listening for Ctrl+Alt+V". The very first start also downloads the Whisper model, because `make setup` does not prefetch it. The companion gives an engine start 240 seconds and stops retrying ("VoiceMate stopped retrying") after 3 start timeouts in a row, so with a slow connection run `make run` once in the engine folder inside WSL before the first start, and stop it with `Ctrl+C` when it has loaded.
 - If the engine folder is not found, a notification says "Engine folder not found". Set the folder in Settings and VoiceMate tries again.
 - On Windows 11, VoiceMate keeps its tray icon visible on the taskbar ("Always show the VoiceMate icon on the taskbar"), unless you hid it yourself in the Windows taskbar settings.
 - A notification "Pin VoiceMate to the taskbar" repeats the pinning steps once.
@@ -81,8 +81,10 @@ git clone https://github.com/nano-br/voice-mate.git
 cd voice-mate
 make setup
 make doctor
-make run
+make run ARGS="--output-lang en"
 ```
+
+The engine defaults to Portuguese (`--output-lang pt-BR`): without a flag Whisper is pinned to Portuguese, and Claude's answers and the engine messages are in Portuguese too. Use `--output-lang en` (or another code), `--transcription-language en` to pin only what Whisper hears, or `VOICEMATE_LANG=en make run` for the engine messages only. The engine messages quoted in these guides are the English ones. See [usage.md](usage.md#dictation-language).
 
 ### What `make setup` does
 
@@ -90,7 +92,7 @@ make run
 
 1. Detects the platform (`windows`, `linux-x11`, `linux-wayland` or `wsl2`) and the GPU (`nvidia-smi` first, then AMD tools, else CPU).
 2. Asks for the GPU vendor (NVIDIA, AMD or CPU), with the detected one as default.
-3. Asks for the main flow: `clipboard` (dictation only) or `claude_chat` (also the Claude flow). For `claude_chat` it asks whether to enable TTS and which engine: `kokoro` (light, CPU, fixed voices; the default proposed here) or `omnivoice` (voice cloning, heavy on the GPU).
+3. Asks for the main flow: `clipboard` (dictation only) or `claude_chat` (also the Claude flow). The default answer (Enter) is `claude_chat`: choose `clipboard` (answer `1`) if you only want dictation, otherwise `make doctor` later fails the "Claude CLI (claude_chat flow)" check. For `claude_chat` it asks whether to enable TTS and which engine: `kokoro` (light, CPU, fixed voices; the default proposed here) or `omnivoice` (voice cloning, heavy on the GPU).
 4. Installs the matching Poetry extras, then the PyTorch build for your GPU (table below).
 5. AMD only: installs whisper.cpp with Vulkan, and on Linux or WSL2 offers to build CTranslate2-ROCm (slow build from source; optional).
 6. Saves your choices in `~/.config/voicemate/config.toml`.
@@ -115,7 +117,7 @@ PyTorch is not declared in `pyproject.toml` on purpose: `make setup` installs th
 | Extra | Installs | For |
 |---|---|---|
 | `claude` | `claude-agent-sdk` | The Claude flow |
-| `tts` | `omnivoice`, `soundfile` | TTS with OmniVoice (the default engine) |
+| `tts` | `omnivoice`, `soundfile` | TTS with OmniVoice (the engine used when nothing is saved) |
 | `kokoro` | `kokoro`, `soundfile` | TTS with Kokoro (needs `espeak-ng`) |
 | `voxcpm` | `voxcpm`, `soundfile` | TTS with VoxCPM2 |
 | `whisper-gpu` | `openai-whisper`, `silero-vad` | Speech-to-text on AMD through PyTorch ROCm |
@@ -196,4 +198,4 @@ The entry runs `make -C "<checkout>" run-tray`. Starting at sign-in is a compani
 ## Uninstalling
 
 - **Companion (Windows):** uninstall VoiceMate from the Windows settings (Apps). The uninstaller closes VoiceMate, removes the logs, the rendered sound cues, the **Not copied** list (`pending.json`) and the sign-in entry. It keeps your settings in `%APPDATA%\VoiceMate\companion.toml`; delete that folder by hand to remove them too.
-- **Engine:** if you installed the systemd service, run `systemctl --user disable --now voicemate` and delete `~/.config/systemd/user/voicemate.service`. Remove the Poetry environment (`poetry env remove --all` in the engine folder), then delete the engine folder, `~/.config/voicemate` and `~/.cache/voicemate` (models, voice seeds and caches).
+- **Engine:** if you installed the systemd service, run `systemctl --user disable --now voicemate` and delete `~/.config/systemd/user/voicemate.service`. Remove the Poetry environment (`poetry env remove --all` in the engine folder), then delete the engine folder, `~/.config/voicemate` and `~/.cache/voicemate` (whisper.cpp files, voice seeds and AMD caches). The downloaded model weights live in the Hugging Face and openai-whisper caches (`~/.cache/huggingface` and `~/.cache/whisper`), the multi-gigabyte part: delete them too if nothing else uses them.
