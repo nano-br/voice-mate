@@ -365,6 +365,8 @@ Pelo código-fonte: `make run-tray ARGS="--command quit"`. Um `--command` nunca 
 
 Menu do ícone na bandeja > **Configurações...**, em três abas: **Atalhos**; **Sons** (sons embutidos ou seus próprios arquivos WAV, volume); **Geral**: idioma, notificações, **Iniciar o VoiceMate ao fazer login** e o motor (modo, distro do WSL, pasta do motor e **Reiniciar o WSL se o áudio falhar**: **Automaticamente**, **Perguntar antes** ou **Nunca**). As configurações ficam salvas em `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) e sobrevivem a uma desinstalação. Os logs ficam em `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); menu do ícone na bandeja > **Motor** > **Abrir logs** abre a pasta.
 
+Um novo idioma só passa a valer depois de reiniciar, então o VoiceMate pergunta **Reiniciar o VoiceMate?**: **Reiniciar agora** reinicia o aplicativo (o motor também, cerca de 10 segundos); **Depois** mantém a escolha, e a aba **Geral** mostra "Passa a valer depois que o VoiceMate reiniciar." até lá.
+
 ### Linux (opcional)
 
 A CLI continua funcionando como antes. Para o ícone na bandeja e a janela de status, no repositório:

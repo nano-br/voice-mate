@@ -331,6 +331,8 @@ Desde el código fuente: `make run-tray ARGS="--command quit"`. Un `--command` n
 
 Menú del icono de la bandeja > **Configuración...**, en tres pestañas: **Atajos**; **Sonidos** (sonidos integrados o tus propios archivos WAV, volumen); **General**: idioma, notificaciones, **Iniciar VoiceMate al iniciar sesión** y el motor (modo, distro de WSL, carpeta del motor y **Reiniciar WSL si falla el audio**: **Automáticamente**, **Preguntar antes** o **Nunca**). La configuración se guarda en `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) y se conserva al desinstalar. Los logs están en `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); menú del icono de la bandeja > **Motor** > **Abrir registros** abre la carpeta.
 
+Un idioma nuevo solo se aplica tras reiniciar, así que VoiceMate pregunta **¿Reiniciar VoiceMate?**: **Reiniciar ahora** reinicia la aplicación (también el motor, unos 10 segundos); **Más tarde** conserva la elección, y la pestaña **General** muestra "Se aplica cuando VoiceMate se reinicie." hasta entonces.
+
 ### Linux (opcional)
 
 La CLI sigue funcionando como antes. Para el icono de la bandeja y la ventana de estado, en el repositorio:
