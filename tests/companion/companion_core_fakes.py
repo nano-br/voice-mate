@@ -695,9 +695,11 @@ class FakeDesktopParts:
     tray_supported: bool = True
     tray_entry_after: int = 0  # calls that find no entry before Explorer "creates" it
     tray_calls: list[bool] = field(default_factory=list)
+    tray_only_if_unset: list[bool] = field(default_factory=list)
     taskbar_pin_tip: bool = True
 
-    def set_tray_icon_promoted(self, promoted: bool) -> bool:
+    def set_tray_icon_promoted(self, promoted: bool, only_if_unset: bool) -> bool:
+        self.tray_only_if_unset.append(only_if_unset)
         self.tray_calls.append(promoted)
         return len(self.tray_calls) > self.tray_entry_after
 

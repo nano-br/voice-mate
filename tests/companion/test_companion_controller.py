@@ -548,6 +548,7 @@ def test_tray_icon_is_promoted_at_startup_until_its_entry_exists(
     assert wait_until(lambda: parts.tray_calls == [True, True])
     threading.Event().wait(0.8)
     assert parts.tray_calls == [True, True]  # found: no more tries
+    assert parts.tray_only_if_unset == [True, True]  # startup keeps a choice made in Windows
 
 
 def test_tray_icon_promotion_gives_up_after_the_last_try(make_controller: ControllerKit, daemon: FakeDaemon) -> None:
@@ -573,6 +574,7 @@ def test_tray_icon_setting_changes_promote_and_demote(make_controller: Controlle
     assert wait_until(lambda: parts.tray_calls == [True, False])
     threading.Event().wait(0.8)
     assert parts.tray_calls == [True, False]  # an unrelated change never writes
+    assert parts.tray_only_if_unset == [False, False]  # our own checkbox forces the value
     assert controller.settings().tray_icon_visible is False
 
 

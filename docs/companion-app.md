@@ -295,10 +295,13 @@ in the overflow) and applies `IsPromoted` changes live. Only the subkeys whose
 process image, compared after `normcase(abspath())`; a known-folder prefix such as
 `{6D809377-...}\` for Program Files is resolved first). Explorer creates the subkey
 asynchronously after the icon first shows, so the core tries 2 s, 10 s and 30 s
-after start and stops at the first try that finds an entry. It writes only at
-startup (when the setting is true) and when the setting changes (true promotes,
-false sets `IsPromoted` to 0 at once), so a choice made later in the Windows
-settings is not fought until the next start. Windows 10 has no such key: nothing
+after start and stops at the first try that finds an entry. Explorer creates the
+entry WITHOUT `IsPromoted` (absent = nobody decided yet), so at startup the core
+writes 1 only where the value is absent (`only_if_unset`): an icon the user hid
+in the Windows taskbar settings (`IsPromoted` = 0) stays hidden. A change of our
+setting is the user's explicit choice and forces the value (true writes 1, false
+writes 0 at once, whatever is there). Turning the setting off hides the icon for
+good: with it off, startup writes nothing. Windows 10 has no such key: nothing
 happens there. Errors are logged, never raised.
 
 An event's cue REPLACES the cue on entering the tray state (never two cues). A

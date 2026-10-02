@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+import uuid
 from dataclasses import dataclass, field
 
 import pytest
@@ -79,6 +80,37 @@ def test_demote_writes_zero_and_skips_values_already_set() -> None:
     assert registry.writes == [("300", 0)]  # "301" was already 0: no write
     assert set_tray_icon_promoted(False, executables=[OURS], registry=registry, resolve_folder=_resolve)
     assert registry.writes == [("300", 0)]
+
+
+def test_only_if_unset_keeps_a_choice_made_in_the_windows_settings() -> None:
+    registry = FakeRegistry(
+        {
+            "fresh": {"ExecutablePath": OURS},  # created by Explorer: no IsPromoted yet
+            "hidden": {"ExecutablePath": OURS, "IsPromoted": 0},  # the user hid it in Windows
+            "shown": {"ExecutablePath": OURS, "IsPromoted": 1},
+        }
+    )
+    assert set_tray_icon_promoted(
+        True, only_if_unset=True, executables=[OURS], registry=registry, resolve_folder=_resolve
+    )
+    assert registry.writes == [("fresh", 1)]
+    assert registry.entries is not None and registry.entries["hidden"]["IsPromoted"] == 0
+
+
+def test_only_if_unset_still_reports_an_entry_already_decided() -> None:
+    """Found means "stop retrying", also when nothing was written."""
+    registry = FakeRegistry({"hidden": {"ExecutablePath": OURS, "IsPromoted": 0}})
+    assert set_tray_icon_promoted(
+        True, only_if_unset=True, executables=[OURS], registry=registry, resolve_folder=_resolve
+    )
+    assert registry.writes == []
+
+
+def test_forcing_overrides_a_choice_made_in_the_windows_settings() -> None:
+    """Our own checkbox changed: the value is written whatever is there."""
+    registry = FakeRegistry({"hidden": {"ExecutablePath": OURS, "IsPromoted": 0}, "fresh": {"ExecutablePath": OURS}})
+    assert set_tray_icon_promoted(True, executables=[OURS], registry=registry, resolve_folder=_resolve)
+    assert sorted(registry.writes) == [("fresh", 1), ("hidden", 1)]
 
 
 def test_every_entry_of_our_executable_is_updated() -> None:
@@ -162,3 +194,42 @@ def test_known_folder_path_resolves_the_windows_folder() -> None:
 def test_process_image_path_is_this_interpreter() -> None:
     image = tray_visibility.process_image_path()
     assert image is not None and image.lower().endswith(".exe") and os.path.isfile(image)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows registry")
+def test_winreg_adapter_against_a_scratch_key() -> None:
+    """The real adapter, under a throwaway HKCU key (never the real NotifyIconSettings)."""
+    import winreg
+
+    key_path = rf"Software\VoiceMateCompanionTest-{uuid.uuid4().hex}"
+    registry = tray_visibility.WinregNotifyIconRegistry(key_path)
+    try:
+        with pytest.raises(FileNotFoundError):
+            registry.subkeys()
+        assert not set_tray_icon_promoted(True, executables=[OURS], registry=registry, resolve_folder=_resolve)
+        with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, rf"{key_path}\123", 0, winreg.KEY_SET_VALUE) as key:
+            winreg.SetValueEx(key, "ExecutablePath", 0, winreg.REG_SZ, OURS)
+        with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, rf"{key_path}\456", 0, winreg.KEY_SET_VALUE) as key:
+            winreg.SetValueEx(key, "ExecutablePath", 0, winreg.REG_SZ, r"C:\Other\app.exe")
+        assert sorted(registry.subkeys()) == ["123", "456"]
+        assert registry.executable_path("123") == OURS
+        assert registry.is_promoted("123") is None
+        assert set_tray_icon_promoted(
+            True, only_if_unset=True, executables=[OURS], registry=registry, resolve_folder=_resolve
+        )
+        assert registry.is_promoted("123") == 1
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, rf"{key_path}\123", 0, winreg.KEY_QUERY_VALUE) as key:
+            assert winreg.QueryValueEx(key, "IsPromoted") == (1, winreg.REG_DWORD)
+        assert set_tray_icon_promoted(False, executables=[OURS], registry=registry, resolve_folder=_resolve)
+        assert registry.is_promoted("123") == 0
+        assert set_tray_icon_promoted(
+            True, only_if_unset=True, executables=[OURS], registry=registry, resolve_folder=_resolve
+        )
+        assert registry.is_promoted("123") == 0  # a decided entry is left alone at startup
+        assert registry.is_promoted("456") is None  # another executable: never written
+    finally:
+        for path in (rf"{key_path}\123", rf"{key_path}\456", key_path):
+            try:
+                winreg.DeleteKey(winreg.HKEY_CURRENT_USER, path)
+            except FileNotFoundError:
+                pass

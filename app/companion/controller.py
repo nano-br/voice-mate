@@ -365,9 +365,9 @@ class CompanionControllerImpl:
         if self._store.first_run and self._desktop.taskbar_pin_tip:
             self._input(NoticeRequested("pin_taskbar"))
         if self._store.get().tray_icon_visible:
-            # Only at startup and on a change of our setting: never fight the user's choice
-            # in the Windows settings in between.
-            self._promote_tray_icon(True, self._timings.tray_promote_s)
+            # Startup: only an entry nobody decided on yet (Explorer creates it without
+            # IsPromoted); hiding the icon in the Windows taskbar settings is respected.
+            self._promote_tray_icon(True, self._timings.tray_promote_s, only_if_unset=True)
         self._io.submit(self._start_desktop)
         self._poller.start()
         self._run(self._policy.start(time.monotonic()))
@@ -720,8 +720,9 @@ class CompanionControllerImpl:
         self._input(SettingsSeen(new, hotkeys_owned_by_engine(new.engine_mode)))
         self._io.submit(lambda: self._cues.configure(new))
         if new.tray_icon_visible != old.tray_icon_visible and self._started and not self._quitting:
-            # The icon is showing already, so its entry most likely exists: try at once.
-            self._promote_tray_icon(new.tray_icon_visible, (0.0, *self._timings.tray_promote_s))
+            # The user's own change in our settings: force the value. The icon is showing
+            # already, so its entry most likely exists: try at once.
+            self._promote_tray_icon(new.tray_icon_visible, (0.0, *self._timings.tray_promote_s), only_if_unset=False)
         if _engine_settings_changed(old, new) and not self._quitting:
             self._restart_supervision(new)
             return
@@ -1042,49 +1043,50 @@ class CompanionControllerImpl:
 
     # --- tray icon visibility ----------------------------------------------------------------------------------
 
-    def _promote_tray_icon(self, promoted: bool, offsets: tuple[float, ...]) -> None:
+    def _promote_tray_icon(self, promoted: bool, offsets: tuple[float, ...], *, only_if_unset: bool) -> None:
         """Dispatcher: set the tray icon's taskbar visibility, trying at each offset (seconds
-        from now) until the OS has an entry for it; a newer request cancels this one."""
+        from now) until the OS has an entry for it; a newer request cancels this one.
+        `only_if_unset`: leave entries the user already decided on in the Windows settings."""
         promote = self._desktop.set_tray_icon_promoted
         if promote is None or not offsets:
             return
         self._tray_promotion += 1
         generation = self._tray_promotion
         waits = tuple(max(0.0, offset - previous) for previous, offset in zip((0.0, *offsets), offsets, strict=False))
-        self._schedule_tray_promote(promote, promoted, waits, generation)
 
-    def _schedule_tray_promote(
-        self, promote: Callable[[bool], bool], promoted: bool, waits: tuple[float, ...], generation: int
-    ) -> None:
+        def attempt() -> bool:
+            return promote(promoted, only_if_unset)
+
+        self._schedule_tray_promote(attempt, waits, generation)
+
+    def _schedule_tray_promote(self, attempt: Callable[[], bool], waits: tuple[float, ...], generation: int) -> None:
         wait, rest = waits[0], waits[1:]
-        self._schedule("tray_promote", wait, lambda: self._tray_promote_try(promote, promoted, rest, generation))
+        self._schedule("tray_promote", wait, lambda: self._tray_promote_try(attempt, rest, generation))
 
-    def _tray_promote_try(
-        self, promote: Callable[[bool], bool], promoted: bool, rest: tuple[float, ...], generation: int
-    ) -> None:
+    def _tray_promote_try(self, attempt: Callable[[], bool], rest: tuple[float, ...], generation: int) -> None:
         if self._quitting or generation != self._tray_promotion:
             return
         self._timers.pop("tray_promote", None)
 
         def job() -> None:
             try:
-                found = promote(promoted)
+                found = attempt()
             except Exception:  # noqa: BLE001 - cosmetic: never break the io worker
                 log.exception("changing the tray icon visibility failed")
                 found = False
-            self._post(lambda: self._tray_promote_done(promote, promoted, rest, generation, found))
+            self._post(lambda: self._tray_promote_done(attempt, rest, generation, found))
 
         self._io.submit(job)
 
     def _tray_promote_done(
-        self, promote: Callable[[bool], bool], promoted: bool, rest: tuple[float, ...], generation: int, found: bool
+        self, attempt: Callable[[], bool], rest: tuple[float, ...], generation: int, found: bool
     ) -> None:
         if found or self._quitting or generation != self._tray_promotion:
             return
         if not rest:
             log.info("no taskbar entry for the tray icon (Windows 10, or Explorer has not created it)")
             return
-        self._schedule_tray_promote(promote, promoted, rest, generation)
+        self._schedule_tray_promote(attempt, rest, generation)
 
     # --- hotkeys --------------------------------------------------------------------------------------------
 

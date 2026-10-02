@@ -76,9 +76,11 @@ class Desktop:
     open_path: Callable[[Path], None] = _no_open
     hotkeys: HotkeyHost | None = None
     # Windows 11: keep (True) or stop keeping (False) the tray icon on the taskbar instead
-    # of the overflow. Returns True once the OS has an entry for our icon (stop retrying).
-    # None: the OS has no such setting (Linux; Windows 10 just never finds an entry).
-    set_tray_icon_promoted: Callable[[bool], bool] | None = None
+    # of the overflow; the second argument (only_if_unset) leaves entries the user already
+    # decided on in the Windows settings alone. Returns True once the OS has an entry for
+    # our icon (stop retrying). None: the OS has no such setting (Linux; Windows 10 just
+    # never finds an entry).
+    set_tray_icon_promoted: Callable[[bool, bool], bool] | None = None
     # The OS lets the user pin the app from the Start menu (Windows): first-run tip.
     taskbar_pin_tip: bool = False
 
@@ -141,7 +143,9 @@ def create_desktop() -> Desktop:
             autostart_enabled=lambda: windows_autostart_enabled(),
             open_path=_open_path,
             hotkeys=thread,
-            set_tray_icon_promoted=lambda promoted: set_tray_icon_promoted(promoted),
+            set_tray_icon_promoted=lambda promoted, only_if_unset: set_tray_icon_promoted(
+                promoted, only_if_unset=only_if_unset
+            ),
             taskbar_pin_tip=True,
         )
     from app.companion.linux.audio_devices import active_capture_count as linux_mic_count

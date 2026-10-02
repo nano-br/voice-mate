@@ -169,13 +169,18 @@ def own_executables() -> tuple[str, ...]:
 def set_tray_icon_promoted(
     promoted: bool,
     *,
+    only_if_unset: bool = False,
     executables: Iterable[str] | None = None,
     registry: NotifyIconRegistry | None = None,
     resolve_folder: Callable[[str], str | None] = known_folder_path,
 ) -> bool:
     """Set `IsPromoted` on the entries of our executable. True when at least one entry of
     ours exists (then the caller stops retrying), False when none exists yet, the key is
-    missing (Windows 10) or anything failed (logged, never raised)."""
+    missing (Windows 10) or anything failed (logged, never raised).
+
+    `only_if_unset`: write only entries without `IsPromoted`. Explorer creates entries
+    without the value ("nobody decided yet"); a 0 or 1 there is a choice the user made in
+    the Windows taskbar settings (or ours from an earlier change), which startup keeps."""
     try:
         wanted = {_canonical(path) for path in (executables if executables is not None else own_executables())}
         if not wanted:
@@ -195,9 +200,11 @@ def set_tray_icon_promoted(
                 if expanded is None or _canonical(expanded) not in wanted:
                     continue
                 found = True
-                if source.is_promoted(name) != value:
-                    source.set_promoted(name, value)
-                    log.info("tray icon entry %s: IsPromoted=%s", name, value)
+                current = source.is_promoted(name)
+                if current == value or (only_if_unset and current is not None):
+                    continue  # already set, or a choice made in the Windows settings
+                source.set_promoted(name, value)
+                log.info("tray icon entry %s: IsPromoted=%s", name, value)
             except OSError as exc:
                 log.warning("tray icon entry %s could not be updated: %s", name, exc)
         if not found:
