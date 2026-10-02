@@ -75,13 +75,35 @@ def exits() -> list[int]:
 
 
 @pytest.fixture
+def relaunches() -> list[int]:
+    """One entry per new instance the UI asked for (a restart); never a real process."""
+    return []
+
+
+# A deterministic `catalog_for`: "auto" reads as an English Windows, every catalog exists.
+TEST_CATALOGS: dict[str, str] = {"auto": "en", "pt-BR": "pt_BR", "en": "en", "es": "es"}
+
+
+@pytest.fixture
 def ui(
-    qapp: QApplication, fake: FakeController, exits: list[int], process_events: Callable[..., bool]
+    qapp: QApplication,
+    fake: FakeController,
+    exits: list[int],
+    relaunches: list[int],
+    process_events: Callable[..., bool],
 ) -> Iterator[CompanionUi]:
-    """A CompanionUi with a tray (not shown), attached and started, rendered."""
+    """A CompanionUi with a tray (not shown), attached and started, rendered. Its UI runs
+    in English; a restart only records itself in `relaunches`."""
     from app.companion.ui.app import CompanionUi
 
-    companion = CompanionUi(fake, tray_available=True, exit_app=lambda: exits.append(0))
+    companion = CompanionUi(
+        fake,
+        tray_available=True,
+        exit_app=lambda: exits.append(0),
+        relaunch=lambda: relaunches.append(0),
+        language_catalog=TEST_CATALOGS.__getitem__,
+        running_catalog="en",
+    )
     companion.bridge.attach()
     fake.start()
     process_events()
@@ -89,6 +111,8 @@ def ui(
     companion.bridge.detach()
     if companion.settings_dialog is not None:
         companion.settings_dialog.hide()
+    if companion._language_box is not None:
+        companion._language_box.close()
     companion.status_window.hide()
     if companion.tray is not None:
         companion.tray.hide()

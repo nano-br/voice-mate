@@ -4,7 +4,9 @@ Startup order (app/companion/contract.py, docs/companion-app.md):
 1. AUMID, before any window exists (taskbar grouping with the pinned shortcut).
 2. QApplication, then the single-instance lock. A second launch forwards its command
    (retrying while the first one starts up) and exits; if the first one is quitting,
-   a plain launch waits for it to end and then starts.
+   a plain launch waits for it to end and then starts. `--after-restart` (the new
+   process of a restart, `app/companion/relaunch.py`) never forwards: it waits for the
+   lock the quitting instance releases, bounded by `RESTART_WAIT_S`.
 3. The command channel listens at once; commands wait until the UI exists.
 4. The controller (lazy import, so a forwarded command never loads the core;
    `--demo` uses the fake controller) -> `settings()` -> `app.i18n.set_language`
@@ -26,6 +28,7 @@ from PySide6.QtCore import QLibraryInfo, QLocale, QTimer, QTranslator
 from PySide6.QtWidgets import QApplication
 
 from app.companion.contract import CompanionCommand, CompanionController, CompanionSettings
+from app.companion.relaunch import AFTER_RESTART_FLAG, relaunch_companion
 from app.companion.ui.icons import app_icon
 from app.companion.ui.single_instance import (
     CommandServer,
@@ -45,6 +48,9 @@ FORWARD_TIMEOUT_S: Final = 10.0
 # It answered "quitting": wait this long for it to end (its controller has a 15 s cap).
 QUIT_WAIT_S: Final = 25.0
 RETRY_INTERVAL_S: Final = 0.25
+# A restart: the old instance quits within its UI's 20 s safety net (the controller's own
+# cap is 15 s), then releases the lock. Past this, start like a plain launch would.
+RESTART_WAIT_S: Final = 40.0
 # Qt's own strings (context menus, file dialogs) come from these catalogs.
 _QT_CATALOGS: Final = ("pt_BR", "es")
 
@@ -58,6 +64,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--autostart", action="store_true", help="Started at sign-in: stay in the tray.")
     parser.add_argument("--demo", action="store_true", help="Fake engine that cycles through every state.")
+    # Internal: added by a restart (app/companion/relaunch.py), never typed by users.
+    parser.add_argument(AFTER_RESTART_FLAG, dest="after_restart", action="store_true", help=argparse.SUPPRESS)
     return parser.parse_args(argv)
 
 
@@ -83,6 +91,19 @@ def _create_controller(demo: bool) -> CompanionController:
 
     controller: CompanionController = create_controller()
     return controller
+
+
+def _wait_for_restart(lock: InstanceLock) -> bool:
+    """`--after-restart`: the instance that started us is quitting; take the lock once it
+    has exited. False when it is still held after `RESTART_WAIT_S`."""
+    deadline = time.monotonic() + RESTART_WAIT_S
+    while True:
+        if lock.acquire():
+            return True
+        if time.monotonic() >= deadline:
+            log.warning("the previous VoiceMate did not exit within %.0f s", RESTART_WAIT_S)
+            return False
+        time.sleep(RETRY_INTERVAL_S)
 
 
 def _forward(lock: InstanceLock, args: argparse.Namespace, suffix: str) -> int | None:
@@ -183,9 +204,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     suffix = _DEMO_SUFFIX if args.demo else ""
     lock = create_instance_lock(suffix)
     if not lock.acquire():
-        code = _forward(lock, args, suffix)
-        if code is not None:
-            return code
+        # A restart never forwards "show" to the instance that is quitting: it waits for it.
+        # If that one is still there after the wait, behave like any second launch.
+        if not (args.after_restart and args.command is None and _wait_for_restart(lock)):
+            code = _forward(lock, args, suffix)
+            if code is not None:
+                return code
     try:
         if args.command is not None:
             # Nothing runs: a command never starts VoiceMate (the uninstaller sends quit,
@@ -214,7 +238,12 @@ def _run(app: QApplication, args: argparse.Namespace, suffix: str) -> int:
     controller = _create_controller(args.demo)
     set_language(controller.settings().language)
     qt_translator = install_qt_translations(app)
-    ui = CompanionUi(controller, update_jump_list=None if args.demo else jump_list_updater())
+    launch_args = sys.argv[1:]
+    ui = CompanionUi(
+        controller,
+        update_jump_list=None if args.demo else jump_list_updater(),
+        relaunch=lambda: relaunch_companion(launch_args),
+    )
     app.aboutToQuit.connect(ui.on_about_to_quit)
     ui.quit_started.connect(server.set_quitting)
 

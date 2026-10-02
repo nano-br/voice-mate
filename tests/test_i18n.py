@@ -15,7 +15,7 @@ from babel.messages.mofile import write_mo
 from babel.messages.pofile import read_po
 
 import app.i18n as i18n_module
-from app.i18n import _, active_language, set_language, setup_locale
+from app.i18n import _, active_language, catalog_for, set_language, setup_locale
 
 _SOURCE_LOCALES_DIR = Path(i18n_module.__file__).parent / "locales"
 _DOMAIN = "voicemate"
@@ -225,6 +225,21 @@ def test_set_language_auto_follows_the_os_ui_language(
     monkeypatch.setattr(i18n_module, "_os_ui_language", lambda: os_language)
     set_language("auto")
     assert active_language() == expected_lang
+    assert catalog_for("auto") == expected_lang
+
+
+@pytest.mark.parametrize("language", ["pt-BR", "en", "es"])
+def test_catalog_for_names_the_catalog_set_language_loads(language: Literal["pt-BR", "en", "es"]) -> None:
+    """The companion compares it with active_language() to decide on a restart."""
+    set_language(language)
+    assert catalog_for(language) == active_language()
+
+
+def test_catalog_for_is_english_without_a_compiled_catalog(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(i18n_module, "_LOCALES_DIR", tmp_path)
+    assert catalog_for("es") == "en"
+    set_language("es")
+    assert active_language() == "en"
 
 
 @pytest.mark.parametrize(

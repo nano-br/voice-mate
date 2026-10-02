@@ -333,6 +333,8 @@ From source: `make run-tray ARGS="--command quit"`. A `--command` never starts V
 
 Tray icon menu > **Settings...**, in three tabs: **Hotkeys**; **Sounds** (built-in sounds or your own WAV files, volume); **General**: language, notifications, **Start VoiceMate when I sign in**, **Always show the VoiceMate icon on the taskbar** (Windows only) and the engine (mode, WSL distro, engine folder, and **Restart WSL when audio fails**: **Automatically**, **Ask first** or **Never**). The settings are saved in `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) and survive an uninstall. Logs live in `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); tray icon menu > **Engine** > **Open logs** opens them.
 
+A new language takes effect after a restart, so VoiceMate asks **Restart VoiceMate?**: **Restart now** restarts it (the engine too, about 10 seconds); **Later** keeps the choice, and the **General** tab shows "Takes effect after VoiceMate restarts." until then.
+
 ### Linux (optional)
 
 The CLI keeps working as before. For the tray icon and status window, in the repository:

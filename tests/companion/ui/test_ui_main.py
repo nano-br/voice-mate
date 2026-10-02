@@ -276,3 +276,74 @@ def test_the_core_controller_is_imported_lazily() -> None:
     probe = "import sys, app.companion.main\nprint('app.companion.controller' in sys.modules)\n"
     result = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, check=True, cwd=_ROOT)
     assert result.stdout.strip() == "False"
+
+
+def test_after_restart_waits_for_the_lock_instead_of_forwarding(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The instance that restarted us is quitting: never send it "show", take over once it exits."""
+    lock = _Lock(free_after=5)
+    replies = _Replies("ok")
+    started = _patch(monkeypatch, lock, replies)
+    assert companion_main.main(["--after-restart"]) == 7
+    assert replies.sent == []
+    assert lock.attempts == 6
+    assert started[0].after_restart and not started[0].autostart
+    assert lock.released
+
+
+def test_after_restart_gives_up_waiting_like_a_plain_launch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The old instance never went away: show it, as any second launch does."""
+    monkeypatch.setattr(companion_main, "RESTART_WAIT_S", 0.0)
+    replies = _Replies("ok")
+    started = _patch(monkeypatch, _Lock(), replies)
+    assert companion_main.main(["--after-restart"]) == 0
+    assert [command for _name, command in replies.sent] == ["show"]
+    assert started == []
+
+
+def test_after_restart_is_hidden_from_the_help(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        companion_main.parse_args(["--help"])
+    assert "--after-restart" not in capsys.readouterr().out
+    assert not companion_main.parse_args([]).after_restart
+
+
+def test_run_gives_the_ui_a_relauncher_with_the_launch_arguments(
+    monkeypatch: pytest.MonkeyPatch, qapp: QApplication
+) -> None:
+    from app.companion.ui.app import CompanionUi
+
+    relaunched: list[list[str]] = []
+    started: list[CompanionUi] = []
+
+    class Server:
+        def __init__(self, name: str) -> None:
+            pass
+
+        def listen(self) -> bool:
+            return True
+
+        def set_quitting(self) -> None:
+            pass
+
+        def set_handler(self, handler: object) -> None:
+            pass
+
+        def close(self) -> None:
+            pass
+
+    def start(self: CompanionUi, show_window: bool, wait_for_tray: bool = False) -> None:
+        started.append(self)
+
+    monkeypatch.setattr(companion_main, "CommandServer", Server)
+    monkeypatch.setattr(companion_main, "_create_controller", lambda demo: FakeController())
+    monkeypatch.setattr(companion_main, "relaunch_companion", lambda args: relaunched.append(list(args)))
+    monkeypatch.setattr(companion_main.sys, "argv", ["VoiceMate.exe", "--autostart", "--demo"])
+    monkeypatch.setattr(CompanionUi, "start", start)
+    monkeypatch.setattr(qapp, "exec", lambda: 0)
+    assert companion_main._run(qapp, companion_main.parse_args(["--autostart", "--demo"]), "-test") == 0
+    (companion,) = started
+    assert companion._relaunch is not None
+    companion._relaunch()  # not restart_app(): that would quit the test's QApplication
+    assert relaunched == [["--autostart", "--demo"]]  # relaunch_argv drops --autostart itself
+    companion.bridge.detach()
+    companion.deleteLater()

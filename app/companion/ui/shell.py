@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from app.companion.contract import CompanionController, CompanionSettings, RecentItem
+from app.companion.contract import CompanionController, CompanionSettings, RecentItem, UiLanguage
 from app.companion.ui.bridge import ControllerBridge
 
 
@@ -45,3 +45,9 @@ class Shell(Protocol):
     def copy_result(self, item: RecentItem) -> None: ...
 
     def quit_app(self) -> None: ...
+
+    def language_needs_restart(self, language: UiLanguage) -> bool:
+        """True when `language` selects another catalog than the running UI uses."""
+
+    def offer_language_restart(self) -> None:
+        """The saved language needs a restart: ask whether to restart VoiceMate now."""

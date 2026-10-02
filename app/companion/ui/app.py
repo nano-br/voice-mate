@@ -1,5 +1,5 @@
 """`CompanionUi`: wires the controller to the tray, the status window, the settings window
-and the notifications, and owns the app-level flows (commands, quit)."""
+and the notifications, and owns the app-level flows (commands, quit, restart)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from collections.abc import Callable
 from dataclasses import replace
 from typing import Final, get_args
 
-from PySide6.QtCore import QCoreApplication, QObject, QTimer, Signal
+from PySide6.QtCore import QCoreApplication, QObject, Qt, QTimer, Signal
 from PySide6.QtWidgets import QAbstractButton, QMessageBox, QSystemTrayIcon
 
 from app.companion.contract import (
@@ -20,6 +20,7 @@ from app.companion.contract import (
     CompanionSnapshot,
     Notification,
     RecentItem,
+    UiLanguage,
 )
 from app.companion.ui.bridge import ControllerBridge
 from app.companion.ui.icons import app_icon
@@ -27,7 +28,7 @@ from app.companion.ui.notifications import NotificationPresenter
 from app.companion.ui.settings_window import SettingsDialog
 from app.companion.ui.status_window import StatusWindow
 from app.companion.ui.tray import TrayIcon
-from app.i18n import _
+from app.i18n import _, active_language, catalog_for
 
 log = logging.getLogger(__name__)
 
@@ -44,6 +45,11 @@ COMMANDS: Final[tuple[CompanionCommand, ...]] = get_args(CompanionCommand)
 
 # Reads the applied settings to rebuild the taskbar jump list (main.py passes it on Windows).
 JumpListUpdater = Callable[[CompanionSettings], None]
+# Starts a new detached companion that takes over once this one quits (main.py passes
+# `app.companion.relaunch.relaunch_companion`); raises when it cannot start.
+Relauncher = Callable[[], None]
+# The catalog a language setting selects (`app.i18n.catalog_for`).
+LanguageCatalog = Callable[[UiLanguage], str]
 
 
 class CompanionUi(QObject):
@@ -60,6 +66,9 @@ class CompanionUi(QObject):
         tray_probe: Callable[[], bool] = QSystemTrayIcon.isSystemTrayAvailable,
         exit_app: Callable[[], None] = QCoreApplication.quit,
         update_jump_list: JumpListUpdater | None = None,
+        relaunch: Relauncher | None = None,
+        language_catalog: LanguageCatalog = catalog_for,
+        running_catalog: str | None = None,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
@@ -67,11 +76,16 @@ class CompanionUi(QObject):
         self._exit_app = exit_app
         self._tray_probe = tray_probe
         self._update_jump_list = update_jump_list
+        self._relaunch = relaunch
+        self._language_catalog = language_catalog
+        # The catalog this UI was built with (main.py calls set_language before the UI).
+        self._running_catalog = running_catalog if running_catalog is not None else active_language()
         self._bridge = ControllerBridge(controller, self)
         self._quitting = False
         self._quit_done = False
         self._wsl_box: QMessageBox | None = None
         self._restart_wsl_box: QMessageBox | None = None
+        self._language_box: QMessageBox | None = None
         self._jump_list_mode: str | None = None
 
         self.tray: TrayIcon | None = None
@@ -199,6 +213,62 @@ class CompanionUi(QObject):
     def copy_result(self, item: RecentItem) -> None:
         self._controller.copy_result(item.instance, item.record["result_seq"])
 
+    def language_needs_restart(self, language: UiLanguage) -> bool:
+        return self._language_catalog(language) != self._running_catalog
+
+    def offer_language_restart(self) -> None:
+        if self._quitting:
+            return
+        if self._language_box is not None:
+            self._language_box.raise_()
+            self._language_box.activateWindow()
+            return
+        box, restart = _question(
+            _("Restart VoiceMate?"),
+            _("VoiceMate needs to restart to change the language. Restart now?"),
+            _("Restart now"),
+            _("Later"),
+        )
+        box.setWindowModality(Qt.WindowModality.ApplicationModal)
+
+        def answered(_result: int) -> None:
+            current = self._language_box
+            if current is None or current is not box:
+                return  # closed by quit, not answered
+            self._language_box = None
+            current.deleteLater()
+            if current.clickedButton() is restart:
+                self.restart_app()
+
+        box.finished.connect(answered)
+        self._language_box = box
+        box.show()
+        box.raise_()
+        box.activateWindow()
+
+    def restart_app(self) -> None:
+        """Restart VoiceMate: start the new instance first, then quit like "Quit VoiceMate"
+        (the engine this instance started stops and starts again with the new one). When
+        the new instance cannot start, say so and keep running."""
+        if self._quitting:
+            return
+        try:
+            if self._relaunch is None:
+                raise OSError("restarting is not available here")
+            self._relaunch()
+        except Exception:
+            log.exception("could not start a new instance; not restarting")
+            self._present_notification(
+                Notification(
+                    "error",
+                    _("Could not restart VoiceMate"),
+                    _("Quit VoiceMate and start it again to change the language."),
+                )
+            )
+            return
+        log.info("restarting: the new instance takes over once this one has quit")
+        self.quit_app()
+
     # ------------------------------------------------------------------ lifecycle
 
     def start(self, show_window: bool, wait_for_tray: bool = False) -> None:
@@ -274,7 +344,7 @@ class CompanionUi(QObject):
         if self.settings_dialog is not None:
             self.settings_dialog.hotkeys_page.cancel_capture()
             self.settings_dialog.hide()
-        for attribute in ("_wsl_box", "_restart_wsl_box"):
+        for attribute in ("_wsl_box", "_restart_wsl_box", "_language_box"):
             box = getattr(self, attribute)
             if box is not None:
                 setattr(self, attribute, None)
@@ -363,8 +433,9 @@ class CompanionUi(QObject):
 
 
 def _question(title: str, text: str, accept: str, reject: str) -> tuple[QMessageBox, QAbstractButton]:
-    """A non-modal question with our own (translated) button texts. The default (Enter) is
-    `reject`: restarting WSL stops every distro, so it must be an explicit click."""
+    """A question shown with show() (never exec()), with our own (translated) button texts;
+    the caller picks the modality. The default (Enter) is `reject`: restarting stops things
+    (every WSL distro, the engine), so it must be an explicit click."""
     box = QMessageBox(QMessageBox.Icon.Question, title, text)
     box.setWindowIcon(app_icon())
     accept_button = box.addButton(accept, QMessageBox.ButtonRole.AcceptRole)
