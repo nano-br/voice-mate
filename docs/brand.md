@@ -1,5 +1,7 @@
 # VoiceMate brand: the mark, the tray glyph and the app icon
 
+Purpose: the design rules of the VoiceMate mark, the tray glyph per state and the app icon, for contributors. Back to the [README](../README.md).
+
 VoiceMate turns your voice into text ready to paste. Its icon has two jobs: be
 recognizable as VoiceMate (Start menu, taskbar, installer, windows) and, in the tray,
 tell at a glance what the companion is doing, the way the Windows microphone-in-use

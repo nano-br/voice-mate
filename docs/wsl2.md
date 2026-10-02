@@ -57,7 +57,7 @@ On WSL2 the WSLg clipboard bridge (and `clip.exe` through interop) is not reliab
 
 ### Missing microphone or stuck WSLg audio
 
-Opening the microphone never blocks the hotkey: it runs in the background and the trigger answers at once. If the microphone does not open within 6 seconds (no microphone on Windows, or WSLg PulseAudio stuck), the engine reports "Microphone unavailable", plays the error cue, returns to idle and publishes a `mic_unavailable` event. The next hotkey tries to open the microphone again; while an earlier attempt is still stuck in the audio server, it fails at once (without piling up another stuck attempt). The start cue only plays once the microphone is really open.
+Opening the microphone never blocks the hotkey: it runs in the background and the trigger answers at once. If the microphone does not open within 6 seconds (no microphone on Windows, or WSLg PulseAudio stuck), the engine reports "Microphone unavailable", plays the error cue, returns to idle and publishes a `mic_unavailable` event. The next hotkey tries to open the microphone again; while an earlier attempt is still stuck in the audio server, it fails at once (without piling up another stuck attempt) and asks for `wsl --shutdown`. The start cue only plays once the microphone is really open.
 
 Warning: when Windows loses its microphone, WSLg PulseAudio often **gets stuck for good** and does not recover even after the microphone is back (`pactl info` gives `Connection failure: Timeout`). Only `wsl --shutdown` fixes it. The companion detects this (the engine probes the audio every 20 seconds) and restarts WSL as set in "Restart WSL when audio fails:" ([troubleshooting.md](troubleshooting.md#wsl-audio-and-the-microphone)). Without the companion: run `wsl --shutdown`, then `make run` again.
 
@@ -130,10 +130,10 @@ The app already sets `PYTORCH_TUNABLEOP_*` and `MIOPEN_*` (cache in `~/.cache/vo
 
 | Engine | Voice | Runs on | Real-time factor measured on an RX 9070 XT |
 |---|---|---|---|
-| `omnivoice` (default) | clones a voice (diffusion) | GPU | about 0.7 (saturates the GPU while it synthesizes) |
+| `omnivoice` (used when nothing is saved) | clones a voice (diffusion) | GPU | about 0.7 (saturates the GPU while it synthesizes) |
 | `kokoro` | fixed (about 82M parameters) | **CPU** by default | **about 0.24 (real time, GPU left free)** |
 
-On WSL2 with AMD, **Kokoro runs on the CPU** on purpose: at a real-time factor of about 0.24 the synthesis **does not compete with transcription for the GPU**, which is what caused crackling. (On ROCm the Kokoro kernels are still slow, about 1.8 on the GPU; the CPU is better in both respects.) To switch:
+On WSL2 with AMD, **Kokoro runs on the CPU** on purpose: at a real-time factor of about 0.24 the synthesis **does not compete with transcription for the GPU**, which is what caused crackling. (On ROCm the Kokoro kernels are still slow, a real-time factor of about 1.8 on the GPU; the CPU is better in both respects.) To switch:
 
 ```bash
 make run ARGS="--tts-engine kokoro --tts-kokoro-voice pf_dora"

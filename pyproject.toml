@@ -12,7 +12,7 @@ packages = [{ include = "app" }]
 
 [tool.poetry.scripts]
 voice-mate = "app.main:main"
-# Companion (tray app): needs the `ui` extra (PySide6), see README "Companion app".
+# Companion (tray app): needs the `ui` extra (PySide6), see docs/installation.md "Companion from source (Windows)".
 voice-mate-tray = "app.companion.main:main"
 
 [tool.poetry.dependencies]
