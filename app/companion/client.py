@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from typing import Final, Literal, cast
 from urllib.parse import urlencode
 
+from app.companion.version import companion_version
 from app.protocol.models import (
     AckRequest,
     AckResponse,
@@ -44,7 +45,8 @@ from app.protocol.models import (
 log = logging.getLogger(__name__)
 
 COMPANION_NAME: Final = "voicemate-companion"
-COMPANION_VERSION: Final = "0.1.0"
+# Derived from pyproject.toml (app/companion/version.py), never written here a second time.
+COMPANION_VERSION: Final = companion_version()
 DEFAULT_HOST: Final = "127.0.0.1"
 PROBE_TIMEOUT_S: Final = 0.5
 HEALTH_TIMEOUT_S: Final = 2.0

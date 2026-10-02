@@ -116,15 +116,40 @@ QT_UNUSED_FILES = re.compile(
 )
 
 
+# SemVer 2.0 (docs/releasing.md): MAJOR.MINOR.PATCH, then an optional -pre-release and
+# +build. A PEP 440 spelling such as 0.2.0rc1 is refused: its digits would turn into
+# the numeric version 0.2.0.1, which sorts after the final 0.2.0 (0.2.0.0).
+SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$")
+
+
 def project_version() -> str:
     with (ROOT / "pyproject.toml").open("rb") as file:
-        return str(tomllib.load(file)["tool"]["poetry"]["version"])
+        version = str(tomllib.load(file)["tool"]["poetry"]["version"])
+    if not SEMVER.match(version):
+        raise SystemExit(f"pyproject.toml version {version!r} is not SemVer (MAJOR.MINOR.PATCH[-pre]): see docs/releasing.md")
+    return version
+
+
+def baked_version_file(version: str, out_dir: Path) -> list[tuple[str, str]]:
+    """app/companion/VERSION in the bundle: the frozen app has no pyproject.toml and no
+    distribution metadata, so app/companion/version.py reads the version from there."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / "VERSION"
+    path.write_bytes(version.encode("utf-8") + b"\n")
+    return [(str(path), "app/companion")]
 
 
 def version_resource(version: str) -> VSVersionInfo:
-    """Explorer's Details tab, Task Manager's process name and the installer's version."""
-    numbers = [int(part) for part in re.findall(r"\d+", version)[:4]]
-    numbers += [0] * (4 - len(numbers))
+    """Explorer's Details tab, Task Manager's process name and the installer's version.
+
+    The numeric version is MAJOR.MINOR.PATCH.0 for every build of that version, the
+    pre-releases included (0.2.0-rc.1 is 0.2.0.0, like 0.2.0): only the strings carry
+    the suffix. The installer copies its files with `ignoreversion`, so an equal
+    numeric version never keeps an older file.
+    """
+    match = SEMVER.match(version)
+    assert match, version
+    numbers = [int(part) for part in match.groups()] + [0]
     strings = [
         StringStruct("CompanyName", "NanoBR"),
         StringStruct("FileDescription", APP_NAME),
@@ -184,6 +209,7 @@ hiddenimports = collect_submodules(
 ) + collect_submodules("app.protocol")
 datas = compile_catalogs(Path(workpath) / "locales")
 datas += [(str(path), "app/companion/assets") for path in sorted(ASSETS_DIR.glob("voicemate*.*"))]
+datas += baked_version_file(VERSION, Path(workpath) / "version")
 
 a = Analysis(
     [str(Path(SPECPATH) / "voicemate_launcher.py")],
