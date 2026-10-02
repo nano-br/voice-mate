@@ -1,439 +1,343 @@
 [English](README.md) | [Português](README.pt-BR.md) | **Español** | [Русский](README.ru.md) | [简体中文](README.zh-CN.md)
 
-# VoiceMate
+<div align="center">
 
-> Presiona un atajo, habla, pega. Transcripción local con Whisper directo a tu portapapeles, o pasada por Claude y leída de vuelta con tu propia voz.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/banner-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/brand/banner-light.png">
+  <img alt="VoiceMate" src="docs/assets/brand/banner-light.png" width="640">
+</picture>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![Code style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
-[![Type checked: mypy](https://img.shields.io/badge/types-mypy-blue.svg)](https://mypy-lang.org/)
-[![Tests: pytest](https://img.shields.io/badge/tests-pytest-0A9EDC.svg)](https://docs.pytest.org/)
+**Presiona un atajo, habla, pega. Dictado por voz local al portapapeles, con Whisper funcionando en tu propia computadora.**
 
-## Por qué
+[![CI](https://github.com/nano-br/voice-mate/actions/workflows/ci.yml/badge.svg)](https://github.com/nano-br/voice-mate/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/nano-br/voice-mate?include_prereleases&sort=semver&style=flat)](https://github.com/nano-br/voice-mate/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?style=flat&logo=python&logoColor=white)](pyproject.toml)
+[![Platforms](https://img.shields.io/badge/platforms-Windows%2010%2F11%20%7C%20Linux%20%26%20WSL2%20(experimental)-0078D6?style=flat)](#plataformas-y-gpus)
+[![Languages](https://img.shields.io/badge/languages-en%20%7C%20pt--BR%20%7C%20es%20%7C%20ru%20%7C%20zh--CN-2EA44F?style=flat)](#idiomas)
 
-El dictado en la nube es rápido, hasta que deja de serlo. VoiceMate ejecuta Whisper **localmente** en tu GPU, así que tu audio nunca sale de tu máquina y no hay latencia de red, cuota mensual ni concesiones en privacidad. Presiona un atajo, habla y pega donde quieras.
+[Descargar](https://github.com/nano-br/voice-mate/releases/latest) · [Inicio rápido](#inicio-rápido) · [Documentación](#documentación) · [Changelog](CHANGELOG.md)
 
-## Características
+<img src="docs/assets/screenshots/es/hero.png" width="763" alt="La ventana de estado de VoiceMate con las listas No copiadas y Recientes, junto al menú de la bandeja">
 
-- **Atajo en modo alternancia**: presiona una vez para empezar y otra vez para detener y transcribir
-- **Dos flujos, un micrófono**: `Ctrl+Alt+V` deja la transcripción en el portapapeles; `Ctrl+Alt+A` la envía a Claude (multiturno) y lee la respuesta de la IA en voz alta mediante TTS
-- **Transcripción local**: `faster-whisper` (CTranslate2) en NVIDIA/CPU, o `whisper.cpp` + Vulkan en GPUs AMD (~1.6 GB de VRAM, large-v3-turbo); el backend se elige automáticamente según la GPU
-- **Aceleración por GPU, independiente del fabricante**: NVIDIA (CUDA) **y** AMD (Vulkan + ROCm) son compatibles, con alternativa automática a la CPU. VRAM en reposo ≈ 0 (el STT se ejecuta como subproceso; el TTS se carga bajo demanda en la primera locución)
-- **TTS intercambiable**: la respuesta de Claude se lee en voz alta con [VoxCPM2](https://github.com/OpenBMB/VoxCPM) (2B parámetros, diseño de voz a partir de una descripción textual, streaming). La arquitectura aísla cada motor de TTS para que puedas cambiarlo o quitarlo sin tocar el resto
-- **Doble portapapeles con Win+V**: el flujo de IA copia primero la transcripción y luego la respuesta, así que el historial del portapapeles de Windows muestra ambas una junto a la otra para revisarlas
-- **Detener decide el destino**: empieza con cualquier atajo; el atajo que presionas para *detener* elige el handler (portapapeles o Claude)
-- **Cancelación en pleno vuelo**: presionar cualquier atajo mientras Claude responde (o mientras el TTS habla) cancela al instante e inicia una nueva grabación, preservando la conversación
-- **Listener autorreparable**: reinstala el atajo global periódicamente para recuperarse de la eliminación silenciosa del hook que hace Windows bajo carga
-- **Watchdog**: monitor de salud a nivel de proceso con reinicio automático ante bloqueos
-- **Grabación máxima configurable**: protege contra sesiones olvidadas (predeterminado: 10 min)
-- **Feedback sonoro**: pitidos distintos para inicio, aviso, transcripción completada y respuesta de la IA lista
-- **Soporte para disparo con mouse**: usa un botón lateral en lugar del teclado, si lo prefieres (solo flujo de portapapeles)
+</div>
 
-## Requisitos
+## Por qué VoiceMate
 
-- Uno de los entornos compatibles (la capa de plataforma elige las integraciones adecuadas automáticamente):
-  - **Windows 10/11** nativo (se recomienda NVIDIA): el objetivo original, sin cambios
-  - **Linux** nativo, X11 o Wayland
-  - **WSL2** (Ubuntu) en Windows 11: la app se ejecuta **completamente dentro de WSL**, con un pequeño
-    script de atajos del lado de Windows; es el camino recomendado para **GPUs AMD** (ROCm). Consulta [docs/wsl2.md](docs/wsl2.md)
-- Python 3.12 (el flujo de TTS con VoxCPM2 todavía no es compatible con 3.13)
-- [Poetry](https://python-poetry.org/docs/#installation)
-- La GPU es opcional, pero muy recomendable (necesaria para un TTS con latencia aceptable):
-  - **NVIDIA** con CUDA, **o**
-  - **AMD** (RDNA, p. ej. RX 7000/9000) mediante ROCm (Linux/WSL2) o ROCm-on-Windows (Adrenalin ≥ 26.2.2)
-  - ¿Sin GPU? Igual funciona en la CPU (más lento; considera `--no-tts`)
-- **Solo para el flujo de Claude:** Node.js 18+ y el [Claude Code CLI](https://docs.claude.com/en/docs/claude-code) autenticado localmente
+Creé VoiceMate porque creo en algo sencillo: cuanto más rápido y fácil es expresarle una idea a una IA, y cuanto más detalle le das, mejor es el resultado. Hablar es mucho más rápido que escribir. Cuando piensas en voz alta, explicas una idea como se la explicarías a otra persona, con mucho más contexto del que escribirías jamás.
 
-## Instalación
+VoiceMate convierte el habla en texto al instante, listo para cualquier herramienta de IA: un prompt para un asistente de programación, un mensaje en un chat, cualquier cosa que puedas pegar. Presiona un atajo, habla con naturalidad, vuelve a presionarlo y pega. Whisper funciona en local, así que tu audio se queda en tu computadora. El dictado no necesita ningún servicio en la nube ni cuota.
+
+El dictado al portapapeles es el núcleo de VoiceMate. Lo uso en mi trabajo de verdad prácticamente todos los días laborables desde marzo de 2026. Nació y se probó a fondo en Windows con una GPU NVIDIA. Cuando cambié mi GPU por una AMD, adapté VoiceMate a AMD mediante WSL2 y Linux, y ahora también se prueba ahí. Ese camino sigue siendo **experimental**.
+
+Más tarde llegó un segundo módulo: una conversación por voz con Claude. Hablas, Claude responde y la respuesta se lee en voz alta con síntesis de voz (TTS). Este módulo es opcional y **experimental**.
+
+## Contenido
+
+[Funciones](#funciones) · [Capturas de pantalla](#capturas-de-pantalla) · [Inicio rápido](#inicio-rápido) · [Uso](#uso) · [Configuración](#configuración) · [Arquitectura](#arquitectura) · [Solución de problemas](#solución-de-problemas) · [Documentación](#documentación) · [Cómo contribuir](#cómo-contribuir) · [Licencia](#licencia)
+
+## Funciones
+
+**Dictado (el núcleo)**
+- Un solo atajo inicia y detiene la grabación (`Ctrl+Alt+V` por defecto). El texto llega al portapapeles, listo para pegar.
+- Modelos Whisper locales, `large-v3-turbo` por defecto. Ningún audio sale de tu computadora.
+- El idioma del dictado queda fijado para obtener resultados estables, y los términos técnicos en inglés dentro de otros idiomas se siguen transcribiendo.
+- Sonidos de aviso para inicio, transcripción, copiado, advertencia y error. Una grabación se detiene sola a los 10 minutos (configurable).
+
+**Aplicación companion para Windows**
+- Un icono en la bandeja que muestra el estado de un vistazo, una ventana de estado con las transcripciones recientes y ajustes para atajos, sonidos de aviso, notificaciones, idioma y el motor.
+- Entrega verificada al portapapeles: la aplicación escribe el texto, lo vuelve a leer y lo compara. Un texto que no consigue llegar al portapapeles se queda en **No copiadas**, incluso después de reiniciar.
+- Un supervisor que inicia el motor dentro de WSL2, lo reinicia cuando falla y reinicia WSL cuando se detiene su audio.
+- Un instalador por usuario (sin pedir permisos de administrador) en 5 idiomas.
+
+<a id="idiomas"></a>**Idiomas**: el companion, los mensajes del motor y el instalador hablan inglés, portugués de Brasil, español, ruso y chino simplificado.
+
+<a id="plataformas-y-gpus"></a>**Plataformas y GPUs**
+- Windows 10/11 con NVIDIA (CUDA): el camino original, probado a fondo. El motor funciona de forma nativa desde la línea de comandos.
+- **Experimental:** el motor dentro de WSL2 (la configuración del companion), GPUs AMD (ROCm, Vulkan) en WSL2, Linux y Windows, y Linux (X11, Wayland) con un companion opcional.
+- CPU como alternativa en todas partes. `make setup` detecta la plataforma y la GPU e instala la versión de PyTorch y el backend de reconocimiento de voz que corresponden.
+
+**Conversación por voz con Claude (experimental)**
+- `Ctrl+Alt+A` envía tu voz a Claude mediante la CLI de Claude Code (con tu propio inicio de sesión: el texto transcrito va a Anthropic, el audio no). La respuesta se copia al portapapeles y se lee en voz alta.
+- Motores de TTS: OmniVoice (el que se usa cuando no hay nada guardado), Kokoro (el que propone `make setup`) y VoxCPM2. La conversación continúa entre turnos; cualquier atajo interrumpe la respuesta e inicia una nueva grabación.
+
+## Capturas de pantalla
+
+| El menú de la bandeja | "¿Reiniciar WSL?" y "¿Reiniciar VoiceMate?" |
+|:---:|:---:|
+| <img src="docs/assets/screenshots/es/tray-menu.png" width="279" alt="El menú de la bandeja"> | <img src="docs/assets/screenshots/es/dialog-restart-wsl.png" width="516" alt="La pregunta ¿Reiniciar WSL?"><br><img src="docs/assets/screenshots/es/dialog-language.png" width="466" alt="La pregunta ¿Reiniciar VoiceMate?"> |
+
+<p align="center"><img src="docs/assets/screenshots/es/settings-general.png" width="743" alt="La pestaña General de Configuración de VoiceMate"><br><sub>"Configuración de VoiceMate", pestaña "General". Mira también las pestañas <a href="docs/assets/screenshots/es/settings-hotkeys.png">"Atajos"</a> y <a href="docs/assets/screenshots/es/settings-sounds.png">"Sonidos"</a>.</sub></p>
+
+<p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="El icono de la bandeja en cada estado, sobre una barra de tareas oscura y una clara"><br><sub>El icono de la bandeja muestra el estado con una insignia. Qué significa cada insignia: <a href="docs/usage.md#tray-icon-and-menu">Uso, icono y menú de la bandeja</a>.</sub></p>
+
+## Inicio rápido
+
+### Windows, con el instalador
+
+El instalador incluye solo la aplicación companion. El motor funciona dentro de una distro de WSL2, así que configura eso primero (**experimental**; guía completa en [docs/installation.md](docs/installation.md)).
+
+1. En PowerShell, instala WSL2 con Ubuntu: `wsl --install -d Ubuntu-24.04`, y luego abre Ubuntu (si ya tenías otra distro de WSL, ejecuta también `wsl --set-default Ubuntu-24.04`, o define "Distro de WSL:" en Configuración más adelante). Dentro de ella, instala los paquetes de audio; Python 3.12 (Ubuntu 24.04 lo trae) y [Poetry](https://python-poetry.org/docs/#installation) deben estar también en el `PATH` de un shell de login:
+   ```bash
+   sudo apt install -y libportaudio2 libasound2-plugins pulseaudio-utils wl-clipboard git make
+   ```
+2. Clona el motor y ejecuta la configuración guiada:
+   ```bash
+   git clone https://github.com/nano-br/voice-mate.git ~/voice-mate
+   cd ~/voice-mate
+   make setup    # solo para dictado, responde 1 (clipboard) en "¿Qué flujo principal?"
+   make doctor   # todas las comprobaciones deben mostrar ✓
+   ```
+   El companion busca el motor en `~/voice-mate` y en algunas otras carpetas habituales ([la lista](docs/installation.md#2-install-the-engine)); en cualquier otro sitio, define "Carpeta del motor:" en Configuración. Con una GPU AMD, instala también el controlador de AMD y ROCm para WSL ([docs/wsl2.md](docs/wsl2.md)).
+3. Recomendado: aún en `~/voice-mate`, ejecuta `make run` una vez y deténlo con `Ctrl+C` cuando termine de cargar. El primer inicio descarga el modelo Whisper, y el companion le da a un inicio del motor solo 240 segundos (deja de reintentar tras 3 tiempos de espera seguidos), algo que una conexión lenta puede superar.
+4. Descarga `VoiceMate-Setup-x.y.z.exe` desde la [última versión](https://github.com/nano-br/voice-mate/releases/latest) y ejecútalo. El instalador no tiene firma de código, así que Windows SmartScreen puede avisarte: elige **Más información** y luego **Ejecutar de todas formas**. Se instala solo para tu usuario, sin pedir permisos de administrador.
+5. Abre VoiceMate. La bandeja muestra "Iniciando el motor..." mientras carga el modelo (de 10 a 60 segundos una vez descargado el modelo) y luego "Esperando Ctrl+Alt+V".
+6. Opcional: ancla la aplicación a la barra de tareas. Abre Inicio, busca VoiceMate, haz clic derecho sobre él y elige **Anclar a la barra de tareas**.
+
+### Desde el código fuente
+
+Necesitas Python 3.12, [Poetry](https://python-poetry.org/docs/#installation), `make` de GNU (en Windows, instálalo antes, por ejemplo con Chocolatey o Scoop) y `git`.
 
 ```bash
 git clone https://github.com/nano-br/voice-mate.git
 cd voice-mate
-make setup
+make setup                           # detecta plataforma y GPU, instala PyTorch y los módulos que elijas
+make doctor                          # comprueba micrófono, audio, atajos y GPU, e imprime una solución para cada problema
+make run ARGS="--output-lang en"     # inicia el motor con sus propios atajos (Windows nativo o Linux)
 ```
 
-`make setup` **detecta tu GPU** (NVIDIA / AMD / ninguna), lo confirma contigo, instala la versión de PyTorch correspondiente (CUDA `cu128` para NVIDIA, ROCm para AMD, o CPU) junto con los módulos que elijas, y recuerda todo en `~/.config/voicemate/config.toml`. Vuelve a ejecutar el selector cuando quieras con **`make configure`** (p. ej. después de cambiar de GPU).
+**El motor usa portugués por defecto** (`--output-lang pt-BR`), lo que fija el idioma que escucha Whisper, las respuestas de Claude y los mensajes del motor. Pasa `--output-lang en` (u otro código) como arriba; `--transcription-language` y `VOICEMATE_LANG` cambian solo uno de ellos ([configuración](docs/configuration.md)). El companion pasa estas opciones por sí solo, mira [Uso](#uso).
 
-> **Nota para AMD:** `make setup` instala el PyTorch ROCm (para VoxCPM/TTS) y descarga **whisper.cpp + Vulkan** (para la transcripción). Los wheels de ROCm **no** están en PyPI y el driver AMD Adrenalin (≥ 26.2.2) ya debe estar instalado; el setup avisa si parece que falta el driver. Consulta "Backends de GPU" más abajo.
-
-### Instalación modular (extras)
-
-`make setup` pregunta qué módulos quieres. Si prefieres instalar de forma no interactiva, los targets granulares siguen funcionando (nota: estos no instalan la versión de PyTorch para GPU; ejecuta `make configure` después, o usa `make setup`):
-
-| Comando                                        | Qué instala                                                               |
-| ---------------------------------------------- | ------------------------------------------------------------------------- |
-| `make setup_env_minimal`                       | Solo el **core**: voz → transcripción → portapapeles.                     |
-| `make setup_env_claude`                        | Core + `claude-agent-sdk` (habilita el flujo de Claude con `Ctrl+Alt+A`). |
-| `make setup_env_tts`                           | Core + `voxcpm` + `soundfile` (TTS, pesado: ~5 GB de pesos del modelo).   |
-| `make setup_env` *(legado, asume NVIDIA)*      | Core + Claude + TTS + PyTorch CUDA (`--extras all`).                      |
-| `make setup_env_custom EXTRAS="claude tts"`    | Combinación libre de extras.                                              |
-
-Extras (se pasan a `poetry install --extras`): `claude`, `tts`, `whisper-gpu` (transcripción en GPU AMD mediante `openai-whisper`), `all`.
-
-Si falta un extra, la app arranca de todos modos y simplemente desactiva el flujo correspondiente con una advertencia instructiva (`el extra 'claude' no está instalado`), nunca con un fallo fatal.
-
-### Idiomas
-
-Claude responde en PT-BR de forma predeterminada. Para cambiarlo:
-
-```bash
-# Cambiar el asistente a inglés
-make run ARGS="--output-lang en"
-```
-
-Internamente, el prompt canónico (escrito en inglés) tiene un placeholder `{output_lang}` que se completa en tiempo de ejecución; no se mantienen copias traducidas del prompt.
-
-**Los mensajes de la propia app** (logs, textos de ayuda del CLI) también están localizados mediante `gettext` + Babel. El idioma predeterminado es PT-BR; cámbialo con una variable de entorno:
-
-```bash
-# Logs de la app en inglés (o `es`, `ru`, `zh-CN`)
-VOICEMATE_LANG=en make run
-```
-
-Catálogos disponibles: `pt_BR`, `en`, `es`, `ru` y `zh_CN`. Todo texto que ve el usuario debe existir en todos; todos menos `en` lo traducen, y `en` deja el `msgstr` vacío (el msgid en inglés ya es el texto).
-
-Para editar / regenerar el catálogo de traducciones:
-
-```bash
-make i18n-extract     # extrae las cadenas _() a voicemate.pot
-make i18n-update      # propaga las claves nuevas a los .po existentes
-make i18n-compile     # compila .po → .mo (gettext carga el .mo en tiempo de ejecución)
-```
-
-Los catálogos están en `app/i18n/locales/{pt_BR,en,es,ru,zh_CN}/LC_MESSAGES/voicemate.po`.
-
-### Convenciones de código
-
-- **Identificadores, claves de configuración, docstrings, comentarios nuevos**: inglés (PEP 8).
-- **Prompts de LLM**: inglés canónico con el placeholder `{output_lang}`. Sin copias traducidas del prompt.
-- **Cadenas visibles para el usuario** (logs, mensajes, ayudas): inglés como `msgid`, traducciones en `app/i18n/locales/<lang>/LC_MESSAGES/voicemate.po`. PT-BR es el predeterminado. Agrega nuevas traducciones marcándolas con `_()` en el código + `make i18n-extract && make i18n-compile`.
-
-### Configurar Claude Code (opcional, solo para el flujo de IA)
-
-Si solo quieres el flujo de portapapeles (`Ctrl+Alt+V`), puedes saltarte esta sección y ejecutar con `--no-claude-chat`.
-
-Para el flujo de IA (`Ctrl+Alt+A`), VoiceMate se comunica con Claude a través de `claude-agent-sdk`, que **reutiliza el CLI `claude` local y sus credenciales**; no necesitas ninguna API key adicional.
-
-1. **Instala Node.js 18+** (sáltalo si ya lo tienes). Descárgalo desde [nodejs.org](https://nodejs.org/) o usa un gestor como `nvm-windows` / `fnm`.
-
-2. **Instala Claude Code globalmente:**
-   ```bash
-   npm install -g @anthropic-ai/claude-code
-   ```
-
-3. **Autentícate.** Ejecuta el CLI una vez y sigue el inicio de sesión interactivo (abre un navegador):
-   ```bash
-   claude
-   ```
-   Elige el método de autenticación que uses (cuenta de Anthropic o Claude Pro/Max). Una vez dentro, escribe `/exit` para salir del chat; las credenciales quedan guardadas localmente.
-
-4. **Verifica que funciona:**
-   ```bash
-   claude --version
-   claude -p "ping"
-   ```
-   Si `ping` devuelve una respuesta de Claude, ya está todo listo.
-
-Una vez que Claude está autenticado, el flujo de IA de VoiceMate lo detecta automáticamente con `poetry run voice-mate`. Si `claude` no está instalado o no tiene la sesión iniciada, el flujo de IA se omite silenciosamente y el flujo de portapapeles sigue funcionando.
-
-### Configurar el TTS (VoxCPM2)
-
-De forma predeterminada, la respuesta de Claude se lee en voz alta con [VoxCPM2](https://github.com/OpenBMB/VoxCPM), un modelo multilingüe de 2B parámetros (compatible con PT-BR) que recibe una descripción textual de la voz en lugar de un audio de referencia.
-
-- El paquete `voxcpm` se instala automáticamente cuando tu entorno usa Python 3.12. En la primera ejecución, los pesos del modelo se descargan de Hugging Face (algunos GB; tarda un poco).
-- La voz predeterminada es "una mujer brasileña joven, natural y cálida, de ritmo tranquilo"; personalízala con `--tts-voice "..."`.
-- Para desactivar el TTS, ejecuta con `--no-tts` (la respuesta igual llega al portapapeles y vuelve a sonar el pitido triple).
-- Si VoxCPM2 no logra iniciarse (sin CUDA, poco espacio en disco, etc.), la app pasa silenciosamente a un estado sin TTS; no tienes que hacer nada.
-
-#### Backends de GPU (NVIDIA / AMD / CPU)
-
-`torch`/`torchaudio` **no** están fijados en `pyproject.toml`: la versión correcta depende de tu tarjeta y de tu sistema operativo. `make setup` (mediante `app.setup.gpu_bootstrap`) detecta la plataforma + GPU e instala la versión correcta:
-
-| Plataforma × GPU     | Versión de PyTorch         | Transcripción (la mejor disponible primero)               | TTS (OmniVoice/VoxCPM) |
-| -------------------- | -------------------------- | --------------------------------------------------------- | ---------------------- |
-| Windows + NVIDIA     | CUDA `cu128`               | `faster-whisper` (CUDA)                                   | GPU (CUDA)             |
-| Windows + AMD        | ROCm (`repo.radeon.com`)   | **whisper.cpp + Vulkan**                                  | GPU (ROCm)             |
-| Linux/WSL2 + AMD     | ROCm (pytorch.org)         | **faster-whisper vía CTranslate2-ROCm** → whisper.cpp + Vulkan → openai-whisper | GPU (ROCm) |
-| Linux + NVIDIA       | CUDA `cu128`               | `faster-whisper` (CUDA)                                   | GPU (CUDA)             |
-| cualquiera, sin GPU  | CPU                        | `faster-whisper` (int8)                                   | CPU (lento)            |
-
-**AMD en Linux/WSL2 (recomendado para AMD):** el setup ofrece compilar el
-[fork CTranslate2-ROCm](https://github.com/arlo-phoenix/CTranslate2-rocm); con él, la transcripción usa
-exactamente el mismo motor `faster-whisper` que en NVIDIA (calidad idéntica). Si lo omites (o la compilación falla), la
-cadena recurre automáticamente a **whisper.cpp** compilado con Vulkan (el modo servidor mantiene el modelo cargado en
-caliente, con arranque rápido) con silero-VAD, y luego a `openai-whisper`. La elección se recuerda (`ct2_rocm_ok` en la
-configuración); `make configure` lo reintenta y `make stt-eval` mide la calidad de forma objetiva (WER + detector de palabras partidas).
-
-**AMD en Windows:** la transcripción usa **whisper.cpp + Vulkan**, un pequeño binario nativo más un modelo GGUF
-(large-v3-turbo fp16) descargado en `~/.cache/voicemate/whispercpp/` (verificado con SHA-256). El stack de PyTorch ROCm
-se sigue instalando, pero solo para el TTS.
-
-Para confirmar que la aceleración por GPU está activa:
-
-```bash
-poetry run python -c "import torch; print('GPU:', torch.cuda.is_available())"
-```
-
-Debe imprimir `GPU: True` (en ROCm, el HIP de AMD se reporta como `cuda`, así que `True` también es lo correcto en AMD). Si imprime `False`:
-
-- **NVIDIA:** actualiza tu driver (`nvidia-smi`); los drivers recientes (≥ 545) cubren CUDA 12.8.
-- **AMD:** instala/actualiza el driver Adrenalin (≥ 26.2.2) y luego ejecuta `make configure`.
-
-Si no tienes GPU y solo quieres el flujo de portapapeles, ejecuta con `--no-tts`. VoxCPMSpeaker también muestra al iniciar una advertencia específica según el fabricante cuando detecta PyTorch sin aceleración.
-
-Puedes forzar la detección en cada ejecución con `--gpu-backend {auto,nvidia,amd,cpu}`, `--whisper-backend {faster-whisper,whispercpp,openai-whisper}` y `--stt-strategy {auto,faster-whisper-rocm,whispercpp,openai-whisper}`.
-
-### Plataformas y disparadores
-
-La capa de plataforma (`app/platform/`) detecta dónde estás y elige el mecanismo de atajos y la integración
-con el portapapeles adecuados; puedes forzarlos con `--platform` / `--trigger`:
-
-| Plataforma      | Disparador de atajos (predeterminado)     | Portapapeles         | Notas |
-| --------------- | ----------------------------------------- | -------------------- | ----- |
-| `windows`       | `keyboard-hooks` (libs keyboard/mouse)    | pyperclip            | El mismo comportamiento de siempre (incl. listener keepalive) |
-| `linux-x11`     | `pynput` (GlobalHotKeys)                  | pyperclip (xclip)    | `poetry install --extras linux` |
-| `linux-wayland` | `evdev` (/dev/input, requiere el grupo `input`) | pyperclip (wl-copy) | `sudo usermod -aG input $USER` |
-| `wsl2`          | `socket`: daemon HTTP local + un pequeño script de atajos del lado de Windows | sincronización de WSLg (alternativa `clip.exe`) | Consulta [docs/wsl2.md](docs/wsl2.md) |
-
-Los atajos predeterminados son idénticos en todas partes: `Ctrl+Alt+V` (portapapeles) y `Ctrl+Alt+A` (Claude). En WSL2
-los registra `scripts/windows/voicemate-hotkeys.ahk` (o `.ps1`), que hace POST al daemon, con la misma
-semántica de "el atajo de detener elige el handler". Ejecuta `make doctor` para validar
-micrófono/audio/disparador/GPU con correcciones concretas. En Windows, la [aplicación companion](#aplicación-companion-bandeja) reemplaza estos scripts.
+Para ejecutar el companion desde el código fuente en Windows, con el motor en WSL2: `make companion-venv` una vez y luego `make run-tray`. En Linux, ejecuta `make setup` y `make run` como arriba; para la bandeja y la ventana de estado opcionales, `poetry install --extras ui` y luego `make run-tray` ([detalles](docs/installation.md#linux-experimental)).
 
 ## Uso
 
-```bash
-make run
-```
+| Atajo | Acción en el menú de la bandeja | Qué ocurre |
+|---|---|---|
+| `Ctrl+Alt+V` | "Dictar" | Voz a texto, copiado al portapapeles |
+| `Ctrl+Alt+A` | "Preguntar a Claude" | Voz a Claude, respuesta copiada y leída en voz alta (**experimental**) |
 
-Atajos predeterminados:
+Presiona `Ctrl+Alt+V`, habla tras el aviso de inicio, vuelve a presionar `Ctrl+Alt+V` y pega con `Ctrl+V` donde quieras. El atajo que detiene la grabación decide adónde va el texto. Un texto que no pudo llegar al portapapeles espera en **No copiadas** (menú de la bandeja y ventana de estado), donde un clic lo copia. Para salir, elige **Salir de VoiceMate** en el menú de la bandeja; un motor que el companion no inició sigue en ejecución.
 
-- **`Ctrl+Alt+V`**: flujo de portapapeles (transcripción → portapapeles)
-- **`Ctrl+Alt+A`**: flujo de Claude (transcripción → Claude → respuesta de la IA en el portapapeles + TTS)
+**Idioma de dictado.** En Configuración > **General**, "Idioma de dictado:" decide el idioma que hablas. Por defecto es "Igual que la interfaz"; "Detectar automáticamente" deja que Whisper detecte cada grabación (Claude sigue respondiendo en el idioma de la interfaz; con Kokoro, fija un idioma); o elige un idioma. El companion se lo pasa al motor que inicia como `--transcription-language` y `--output-lang`, y cambiarlo reinicia el motor. Un motor al que el companion solo se conecta (una unidad de systemd, o uno iniciado a mano) conserva sus propias opciones.
 
-### Flujo de portapapeles
+La conversación por voz con Claude necesita la CLI de Claude Code instalada y con la sesión iniciada, y el módulo `claude` elegido en `make setup`. Mira [docs/usage.md](docs/usage.md#claude-flow-experimental).
 
-1. Presiona `Ctrl+Alt+V` para empezar a grabar (pitido de inicio)
-2. Habla con naturalidad
-3. Presiona `Ctrl+Alt+V` de nuevo para detener
-4. La transcripción se copia a tu portapapeles (pitido doble)
-5. Pégala con `Ctrl+V` donde quieras
+## Configuración
 
-### Flujo de Claude (multiturno con voz)
+| Qué | Dónde |
+|---|---|
+| Ajustes del companion | Windows `%APPDATA%\VoiceMate\companion.toml`, Linux `~/.config/voicemate/companion.toml` |
+| Elecciones del motor hechas con `make setup`, token de la API | `~/.config/voicemate/` (dentro de WSL para el companion; `%USERPROFILE%\.config\voicemate\` para un motor ejecutado de forma nativa en Windows) |
+| API HTTP del motor | `127.0.0.1:47821` |
+| Logs (`companion.log`, `engine.log`) | Windows `%LOCALAPPDATA%\VoiceMate\logs`, Linux `~/.local/state/voicemate/logs` |
+| Lista **No copiadas** | `pending.json`, junto a la carpeta `logs` |
 
-1. Presiona `Ctrl+Alt+A` para empezar a grabar
-2. Di tu prompt
-3. Presiona `Ctrl+Alt+A` de nuevo para detener: VoiceMate transcribe, copia la transcripción al portapapeles y la envía a Claude
-4. La respuesta de la IA reemplaza el contenido del portapapeles y VoxCPM2 empieza a leerla en voz alta (en PT-BR de forma predeterminada)
-5. Presiona `Ctrl+Alt+A` otra vez para hacer una pregunta de seguimiento; la conversación continúa en la misma sesión
-
-**Detener decide el destino:** puedes empezar con `Ctrl+Alt+V` y detener con `Ctrl+Alt+A` (o al revés). El atajo que presionas para *detener* elige el handler.
-
-**Cancela mientras Claude piensa o habla:** presionar cualquier atajo mientras la IA responde (o mientras el TTS lee en voz alta) cancela al instante e inicia una nueva grabación. El contexto de la conversación se conserva.
-
-**Historial de Win+V:** como tanto la transcripción como la respuesta de la IA pasan por el portapapeles, el historial del portapapeles de Windows (`Win+V`) muestra ambas; es útil cuando quieres comparar lo que dijiste con lo que respondió Claude.
-
-### Opciones
-
-```bash
-# Elegir otro modelo de Whisper
-poetry run voice-mate --model medium
-
-# Atajos personalizados
-poetry run voice-mate --hotkey "ctrl+shift+r" --claude-chat-hotkey "ctrl+shift+c"
-
-# Desactivar el flujo de Claude (solo portapapeles)
-poetry run voice-mate --no-claude-chat
-
-# Darle un system prompt a Claude
-poetry run voice-mate --claude-system-prompt "Eres un asistente de productividad conciso."
-
-# Limitar la sesión multiturno
-poetry run voice-mate --claude-max-turns 20
-
-# Desactivar el TTS (la respuesta va solo al portapapeles + pitido)
-poetry run voice-mate --no-tts
-
-# Personalizar el perfil de voz del TTS
-poetry run voice-mate --tts-voice "Un hombre brasileño, de voz grave y pausada."
-
-# Forzar la CPU para el TTS (más lento, pero funciona sin GPU)
-poetry run voice-mate --tts-device cpu
-
-# Guardar el audio generado por el TTS en un directorio
-poetry run voice-mate --tts-save-dir ./tts_logs
-
-# Forzar la CPU para la transcripción con Whisper (sin GPU disponible)
-poetry run voice-mate --cpu
-
-# Forzar la detección de GPU / backend de transcripción en esta ejecución
-poetry run voice-mate --gpu-backend amd                       # fuerza AMD (ROCm)
-poetry run voice-mate --gpu-backend nvidia --whisper-backend faster-whisper
-
-# Usar un botón lateral del mouse (solo flujo de portapapeles)
-poetry run voice-mate --input-method mouse --mouse-button x
-
-# Ajustar el watchdog y el keepalive del listener
-poetry run voice-mate --listener-refresh-seconds 30 --watchdog-timeout 60
-```
-
-### Modelos
-
-| Modelo             | VRAM (GPU) | Velocidad    | Calidad    |
-| ------------------ | ---------- | ------------ | ---------- |
-| `tiny`             | ~75 MB     | Muy rápida   | Básica     |
-| `base`             | ~140 MB    | Rápida       | Buena      |
-| `small`            | ~460 MB    | Moderada     | Muy buena  |
-| `medium`           | ~1.0 GB    | Moderada     | Muy alta   |
-| `large-v3-turbo`   | ~1.5 GB    | Rápida       | Excelente  |
-| `large-v3`         | ~3.0 GB    | Lenta        | Máxima     |
-
-El predeterminado es `large-v3-turbo`: el mejor equilibrio entre velocidad y calidad, especialmente para audio con mezcla de idiomas.
-
-## Aplicación companion (bandeja)
-
-El companion es una pequeña aplicación de escritorio (PySide6) que vive en la bandeja del sistema. Inicia y supervisa el motor, registra los atajos, reproduce los sonidos de aviso, escribe cada transcripción en el portapapeles y comprueba que haya llegado, y reúne en un solo lugar el estado y el botón para salir de todo. En Windows reemplaza el script de PowerShell/AutoHotkey y controla el motor dentro de WSL2; en Linux es una interfaz opcional. El motor en sí no cambia: `make run` sigue funcionando sin el companion.
-
-### Instalación en Windows
-
-**Con el instalador (recomendado).** Ejecuta `VoiceMate-Setup-<versión>.exe`. Instala solo para tu usuario (sin pedir administrador) en `%LOCALAPPDATA%\Programs\VoiceMate` y agrega VoiceMate al menú Inicio; un acceso directo en el escritorio e iniciar junto con Windows son opcionales (la primera instalación ofrece lo segundo; después lo controla **Iniciar VoiceMate al iniciar sesión**, en la Configuración). El instalador habla español, inglés, portugués, ruso y chino simplificado. Para generarlo tú mismo (Python 3.12+ e Inno Setup 6.3+, `winget install JRSoftware.InnoSetup`):
-
-```powershell
-make companion-venv        # una vez: .venv-companion con PySide6 y PyInstaller en las versiones fijadas
-make companion-installer   # dist\VoiceMate (PyInstaller), luego dist\installer\VoiceMate-Setup-<versión>.exe
-```
-
-**Desde el código fuente.** Con Python 3.12+ en Windows:
-
-```powershell
-make companion-venv   # una vez
-make run-tray
-```
-
-En ambos casos el motor sigue en WSL2 (instálalo como en [docs/wsl2.md](docs/wsl2.md)): el companion lo inicia por ti, o se conecta a uno que ya esté en ejecución (por ejemplo el servicio de systemd). Si uno de los scripts antiguos de atajos (PowerShell o AutoHotkey) sigue en ejecución, ciérralo y quita su acceso directo de `shell:startup`: ahora quien registra `Ctrl+Alt+V` y `Ctrl+Alt+A` es el companion.
-
-### Anclar a la barra de tareas
-
-Windows no permite que los instaladores anclen aplicaciones. Abre Inicio, busca VoiceMate, haz clic derecho sobre él y elige **Anclar a la barra de tareas**. Hacer clic en el icono anclado con VoiceMate en ejecución abre la ventana de estado; el clic derecho ofrece **Configuración**, **Reiniciar el motor**, **Reiniciar WSL...** y **Salir de VoiceMate**. Anclar usa el acceso directo del menú Inicio, así que aplica a la aplicación instalada. En la primera ejecución, una notificación **Ancla VoiceMate a la barra de tareas** recuerda estos pasos.
-
-El icono de la bandeja (la figura de VoiceMate, cuya pequeña insignia en la esquina muestra grabando, transcribiendo y listo, como el indicador de micrófono en uso de Windows) es otra cosa: Windows 11 oculta los iconos nuevos de la bandeja detrás de la flecha junto al reloj, así que VoiceMate mantiene su icono en la barra de tareas de forma predeterminada. Solo lo hace mientras nadie haya decidido nada: si ocultas el icono en la configuración de la barra de tareas de Windows, VoiceMate lo respeta y no lo vuelve a mostrar. Para ocultarlo definitivamente, desmarca **Mostrar siempre el icono de VoiceMate en la barra de tareas** en Configuración > **General**. Para recuperar un icono que ocultaste en Windows, desmarca esa opción, haz clic en **Aplicar**, vuelve a marcarla y haz clic en **Aceptar**: el icono vuelve a mostrarse, diga lo que diga la configuración de Windows.
-
-### Salir
-
-Menú del icono de la bandeja > **Salir de VoiceMate** (también es un botón en la ventana de estado y una opción del menú de clic derecho del icono anclado). Salir detiene el motor que inició el companion; un motor al que solo se conectó (por ejemplo el servicio de systemd) sigue en ejecución. Desde una terminal, para la aplicación instalada (PowerShell):
-
-```powershell
-& "$env:LOCALAPPDATA\Programs\VoiceMate\VoiceMate.exe" --command quit
-```
-
-Desde el código fuente: `make run-tray ARGS="--command quit"`. Un `--command` nunca inicia VoiceMate: si no está en ejecución, no pasa nada.
-
-### Configuración
-
-Menú del icono de la bandeja > **Configuración...**, en tres pestañas: **Atajos**; **Sonidos** (sonidos integrados o tus propios archivos WAV, volumen); **General**: idioma, notificaciones, **Iniciar VoiceMate al iniciar sesión**, **Mostrar siempre el icono de VoiceMate en la barra de tareas** (solo en Windows) y el motor (modo, distro de WSL, carpeta del motor y **Reiniciar WSL si falla el audio**: **Automáticamente**, **Preguntar antes** o **Nunca**). La configuración se guarda en `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) y se conserva al desinstalar. Los logs están en `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); menú del icono de la bandeja > **Motor** > **Abrir registros** abre la carpeta. Las transcripciones que no llegaron al portapapeles se guardan en `%LOCALAPPDATA%\VoiceMate\pending.json` (Linux: `~/.local/state/voicemate/pending.json`) hasta que las copies o vacíes la lista (**No copiadas** > **Vaciar lista** en el menú de la bandeja, o **Vaciar** en la ventana de estado), así que siguen en **No copiadas** después de reiniciar la aplicación o de un cierre inesperado. Los resultados que todavía esperaban el portapapeles al salir también se guardan allí. Ese archivo guarda el texto de las transcripciones: queda en tu perfil de usuario, se borra cuando la lista queda vacía y el desinstalador lo elimina junto con los logs. Si no se puede leer, VoiceMate lo guarda aparte como `pending.json.broken-<fecha>`, empieza con la lista vacía y te avisa.
-
-Un idioma nuevo solo se aplica tras reiniciar, así que VoiceMate pregunta **¿Reiniciar VoiceMate?**: **Reiniciar ahora** reinicia la aplicación (también el motor, unos 10 segundos); **Más tarde** conserva la elección, y la pestaña **General** muestra "Se aplica cuando VoiceMate se reinicie." hasta entonces.
-
-### Linux (opcional)
-
-La CLI sigue funcionando como antes. Para el icono de la bandeja y la ventana de estado, en el repositorio:
-
-```bash
-poetry install --extras ui
-make run-tray
-```
-
-En Linux el motor mantiene sus propios atajos (la pestaña **Atajos** los muestra solo para lectura). Sin bandeja del sistema (por ejemplo GNOME sin la extensión AppIndicator), la ventana de estado es la ventana principal. Para agregar VoiceMate al menú de aplicaciones:
-
-```bash
-mkdir -p ~/.local/share/applications &&
-  sed "s|@VOICEMATE_DIR@|$PWD|g" packaging/linux/voicemate-companion.desktop \
-  > ~/.local/share/applications/voicemate-companion.desktop
-```
-
-### Solución de problemas
-
-| Síntoma | Solución |
-| ------- | -------- |
-| "Iniciando el motor..." durante mucho tiempo | La primera carga del modelo tarda de 10 a 60 s. Revisa el `engine.log` (**Motor** > **Abrir registros**) y la distro de WSL y la carpeta del motor en la Configuración |
-| Un atajo muestra "En uso por otra aplicación" en la primera ejecución | Un script antiguo de atajos (PowerShell o AutoHotkey) sigue en ejecución: ciérralo y quítalo de `shell:startup` |
-| "El audio de WSL se detuvo" o "Sin micrófono" | Conecta un micrófono. WSL se reinicia según **Reiniciar WSL si falla el audio**; a mano: **Motor** > **Reiniciar WSL...** |
-| "El motor es más antiguo que esta aplicación. Reinícialo o actualízalo." | Actualiza el checkout en WSL (`git pull`) y usa **Reiniciar el motor** |
-| Una transcripción no se copió | Queda en **No copiadas**, en el menú de la bandeja (haz clic para copiarla) y en la ventana de estado (**Copiar**), incluso después de reiniciar VoiceMate. **Vaciar lista** (bandeja) o **Vaciar** (ventana de estado) la vacía después de confirmar |
-| SmartScreen advierte sobre el instalador | El instalador no tiene firma de código: **Más información** > **Ejecutar de todas formas** |
-
-## Makefile
-
-| Comando            | Descripción                                   |
-| ------------------ | --------------------------------------------- |
-| `make setup`       | Detecta plataforma + GPU, instala el PyTorch correspondiente + módulos y recuerda la elección |
-| `make configure`   | Vuelve a ejecutar el selector de GPU/módulos (p. ej. tras cambiar de GPU) |
-| `make doctor`      | Diagnóstico del entorno (micrófono/audio, disparador, whisper.cpp, GPU) con correcciones |
-| `make stt-eval`    | Control de calidad del STT: WER + detector de palabras partidas contra muestras locales |
-| `make setup_env`   | Instalación legada (asume NVIDIA + todos los extras) |
-| `make lock`        | Regenera `poetry.lock` (tras editar el pyproject) |
-| `make run`         | Ejecuta con el modelo predeterminado (`large-v3-turbo`) |
-| `make run-large`   | Ejecuta con `large-v3`                        |
-| `make run-turbo`   | Ejecuta con `large-v3-turbo`                  |
-| `make format`      | Formatea el código con Ruff                   |
-| `make lint`        | Lint con Ruff + verificación de tipos con Mypy |
-| `make test`        | Ejecuta la suite de pytest                    |
-| `make run-tray`    | Ejecuta la aplicación companion (bandeja); `ARGS="..."` pasa flags |
-| `make companion-venv` | Crea `.venv-companion` (entorno del companion en Windows, versiones fijadas) |
-| `make companion-test` / `make companion-lint` | Tests / lint del companion |
-| `make companion-build` | Congela el companion con PyInstaller (`dist\VoiceMate`) |
-| `make companion-installer` | Genera el instalador de Windows con Inno Setup (`dist\installer`) |
-| `make clean`       | Elimina las cachés                            |
+Todas las opciones del motor, todas las claves de ajustes y todas las variables de entorno: [docs/configuration.md](docs/configuration.md).
 
 ## Arquitectura
 
+VoiceMate tiene dos partes. El **motor** graba, transcribe y ejecuta el flujo de Claude; es un daemon en Python con una API HTTP local. El **companion** es una aplicación de bandeja en PySide6 para Windows que se encarga de los atajos y del portapapeles y supervisa el motor dentro de WSL2. El motor también funciona solo desde la línea de comandos. Los diagramas de abajo son vistas generales simplificadas; cada uno enlaza al diagrama completo en [docs/architecture.md](docs/architecture.md), que incluye además los diagramas de componentes, la API HTTP y las decisiones de diseño.
+
+<details>
+<summary>Contexto del sistema (vista general)</summary>
+
+```mermaid
+flowchart TB
+    user(["Usuario"])
+    subgraph pc["Tu PC"]
+        vm["VoiceMate<br/>dictado local"]
+        desk["Escritorio<br/>atajos, portapapeles, bandeja"]
+        audio["Micrófono y altavoces"]
+        gpu["GPU o CPU<br/>ejecuta Whisper"]
+    end
+    subgraph net["Internet, opcional"]
+        hub["Descarga de modelos"]
+        claude["Claude<br/>mediante la CLI de Claude Code"]
+    end
+    user -->|"Atajo, voz"| vm
+    user -->|"Pega el texto"| desk
+    vm -->|"Escribe en el portapapeles, muestra la bandeja"| desk
+    vm -->|"Graba"| audio
+    vm -->|"Transcribe"| gpu
+    vm -.->|"Descarga modelos"| hub
+    vm -.->|"Experimental: pregunta"| claude
 ```
-app/
-├── main.py                          # Punto de entrada + parseo del CLI + conexión de los flujos
-├── core/
-│   └── config.py                    # Dataclass de configuración + FlowConfig + TTSConfig
-└── services/
-    ├── recorder.py                  # Captura del micrófono (sounddevice)
-    ├── transcriber.py               # Inferencia de Whisper (faster-whisper)
-    ├── audio_feedback.py            # Pitidos multiplataforma
-    ├── audio_player.py              # Reproductor de audio con cola para el streaming del TTS
-    ├── recording_session.py         # Máquina de estados: idle → recording → processing
-    ├── transcription_handler.py     # Protocol + ClipboardHandler
-    ├── claude_chat_handler.py       # Flujo de Claude: envío + doble portapapeles + TTS + cancelación
-    ├── claude_runtime.py            # Puente sync ↔ asyncio para claude-agent-sdk
-    ├── tts.py                       # Protocol TextToSpeech + NullSpeaker
-    ├── voxcpm_speaker.py            # Speaker de VoxCPM2 (streaming + cancelación)
-    ├── input_listener.py            # Abstracción del disparador de teclado / mouse
-    ├── multi_hotkey_listener.py     # Varios atajos globales con callbacks distintos
-    ├── listener_keepalive.py        # Reinstalación periódica del hook (corrección para Windows)
-    └── watchdog.py                  # Monitor de salud a nivel de proceso
+
+Vista general. Diagrama completo: [docs/architecture.md, Contexto del sistema](docs/architecture.md#1-system-context).
+
+</details>
+
+<details>
+<summary>Contenedores, Windows con WSL2 (vista general)</summary>
+
+```mermaid
+flowchart LR
+    user(["Usuario"])
+    subgraph win["Windows"]
+        ui["Interfaz del companion<br/>bandeja, estado, ajustes"]
+        core["Núcleo del companion<br/>atajos, supervisor, entrega"]
+        clip["Portapapeles de Windows"]
+    end
+    subgraph wsl["Distro de WSL2"]
+        api["Daemon del motor<br/>API HTTP, 127.0.0.1:47821"]
+        stt["Backend de Whisper"]
+        tts["TTS, opcional"]
+    end
+    gpu["GPU"]
+    user -->|"Menú de la bandeja"| ui
+    user -->|"Atajo"| core
+    ui <--> core
+    core -->|"Escribe y verifica"| clip
+    core -->|"Inicia con wsl.exe"| api
+    core <-->|"HTTP, token, eventos"| api
+    api --> stt --> gpu
+    api -.-> tts
 ```
 
-### ¿Por qué el listener-keepalive?
+Vista general. Diagrama completo: [docs/architecture.md, Contenedores](docs/architecture.md#2-containers).
 
-En Windows, los hooks de bajo nivel (`WH_KEYBOARD_LL` / `WH_MOUSE_LL`) que usan las bibliotecas de atajos globales son **eliminados silenciosamente** por el sistema operativo si el callback del hook supera `LowLevelHooksTimeout` (máximo de 1000 ms en Windows 10+). Con la CPU bajo carga alta, esto ocurre sin ninguna notificación ([Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelkeyboardproc)). VoiceMate vuelve a registrar el atajo cada 60 s de forma predeterminada, así que, aunque el sistema operativo haya eliminado el hook, el siguiente ciclo lo reinstala.
+</details>
 
-### ¿Por qué un TTS intercambiable?
+<details>
+<summary>Un dictado, paso a paso (vista general)</summary>
 
-La arquitectura separa el **orquestador** (Protocol `TextToSpeech` en `tts.py`) de la **implementación concreta** (`VoxCPMSpeaker`). Esto facilita probar otras bibliotecas de TTS más adelante (edge-tts, ElevenLabs, Piper, etc.): basta con crear una nueva implementación del Protocol y conectarla mediante la configuración. Si una biblioteca no encaja, puedes borrar solo su archivo.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Usuario
+    participant C as Companion
+    participant E as Motor
+    participant CB as Portapapeles
+    U->>C: Atajo
+    C->>E: Iniciar grabación
+    E-->>C: Micrófono activo
+    C->>U: Aviso de inicio
+    U->>C: Atajo otra vez
+    C->>E: Detener grabación
+    E->>E: Whisper transcribe
+    E-->>C: Texto para entregar
+    C->>CB: Escribir, volver a leer, comparar
+    alt Texto verificado
+        C->>E: ACK entregado
+        C->>U: Aviso de listo
+    else Portapapeles bloqueado por otra aplicación
+        C->>C: Guardar el texto en No copiadas
+        C->>E: ACK fallido
+        C->>U: Aviso de error y notificación
+    end
+```
 
-## Stack
+Vista general. Diagrama completo: [docs/architecture.md, Un dictado](docs/architecture.md#4-runtime-one-dictation).
 
-- **[faster-whisper](https://github.com/SYSTRAN/faster-whisper)**: Whisper optimizado con CTranslate2
-- **[sounddevice](https://python-sounddevice.readthedocs.io/)**: captura del micrófono
-- **[keyboard](https://github.com/boppreh/keyboard)** / **[mouse](https://github.com/boppreh/mouse)**: hooks globales de entrada
-- **[pyperclip](https://github.com/asweigart/pyperclip)**: acceso al portapapeles
-- **[claude-agent-sdk](https://github.com/anthropics/claude-agent-sdk-python)**: flujo de Claude, sobre el CLI `claude` local
-- **[voxcpm](https://github.com/OpenBMB/VoxCPM)**: TTS multilingüe con diseño de voz a partir de una descripción textual
-- **[soundfile](https://github.com/bastibe/python-soundfile)**: lectura/escritura de WAV (opcional, solo se usa al guardar el audio del TTS)
+</details>
 
-## Contribuir
+<details>
+<summary>Estados de la bandeja (vista general)</summary>
 
-Los issues y PRs son bienvenidos. Ejecuta `make all` (format + lint + test) antes de abrir un PR.
+```mermaid
+stateDiagram-v2
+    state "Detenido" as Stopped
+    state "Iniciando" as Starting
+    state "En marcha" as Running
+    state "Reiniciando" as Restarting
+    state "Error" as Error
+    state "En espera" as Idle
+    state "Grabando" as Recording
+    state "Transcribiendo" as Transcribing
+    state "Respondiendo" as Answering
+    state "Listo" as Ready
+    state "Advertencia" as Warning
+    [*] --> Stopped
+    Stopped --> Starting : La app inicia
+    Starting --> Running : Motor listo
+    Starting --> Error : Sin carpeta del motor
+    Running --> Restarting : Falla del motor o reinicio de WSL
+    Restarting --> Running : Motor listo
+    Restarting --> Error : Demasiados fallos
+    Error --> Restarting : Reinicio manual
+    Running --> Stopped : Salir
+    state Running {
+        [*] --> Idle
+        Idle --> Recording : Atajo
+        Recording --> Transcribing : Atajo otra vez
+        Recording --> Idle : Cancelar
+        Transcribing --> Ready : Texto copiado
+        Transcribing --> Answering : Flujo de Claude
+        Answering --> Ready : Respuesta copiada
+        Ready --> Idle : A los 3 s
+        Idle --> Warning : Sin micrófono o audio caído
+        Warning --> Idle : Audio recuperado
+    }
+```
+
+Vista general. Diagrama completo: [docs/architecture.md, Estados de la bandeja](docs/architecture.md#5-tray-states).
+
+</details>
+
+<details>
+<summary>Supervisor del motor y recuperación del audio de WSL (vista general)</summary>
+
+```mermaid
+flowchart TD
+    launch(["Inicio"]) --> q_health{"¿El motor ya responde?"}
+    q_health -- "Sí" --> attach["Conectarse a él, esperar a que esté listo"] --> healthy
+    q_health -- "No" --> q_dir{"¿Se encontró la carpeta del motor?"}
+    q_dir -- "No" --> failed["Error<br/>esperar un reinicio manual"]
+    q_dir -- "Sí" --> spawn["Iniciar make run-engine<br/>en WSL"]
+    spawn --> q_ready{"¿Listo en 240 s?"}
+    q_ready -- "Sí" --> healthy["Sano<br/>comprobar cada 5 s"]
+    q_ready -- "No" --> q_breaker
+    healthy -->|"3 comprobaciones sin respuesta o salida"| q_breaker{"¿Demasiados reinicios?"}
+    q_breaker -- "No" --> backoff["Esperar de 2 a 120 s"]
+    backoff --> launch
+    q_breaker -- "Sí" --> failed
+    healthy -->|"El audio de WSL se detuvo"| q_policy{"Reiniciar WSL si falla el audio"}
+    q_policy -- "Nunca" --> nothing["No hacer nada"]
+    q_policy -- "Preguntar antes" --> ask["Preguntar al usuario"]
+    q_policy -- "Automáticamente" --> q_others{"¿Hay otras distros en ejecución?"}
+    q_others -- "Sí" --> ask
+    q_others -- "No" --> wslrestart["wsl --shutdown"]
+    ask -- "Reiniciar WSL" --> wslrestart
+    wslrestart --> launch
+```
+
+Vista general. Diagrama completo: [docs/architecture.md, Supervisor](docs/architecture.md#6-supervisor-on-windows-and-wsl2).
+
+</details>
+
+## Solución de problemas
+
+| Síntoma | Qué hacer |
+|---|---|
+| "Iniciando el motor..." durante mucho tiempo | El primer inicio descarga el modelo, lo que puede tardar minutos (ejecuta `make run` una vez en WSL, mira [Inicio rápido](#windows-con-el-instalador)). Los siguientes tardan de 10 a 60 segundos. Abre **Motor** > **Abrir registros** y lee `engine.log`. |
+| "No se encontró la carpeta del motor" | Clona el motor en una de las [carpetas habituales](docs/installation.md#2-install-the-engine), o define "Carpeta del motor:" en Configuración > **General**. |
+| Un atajo dice "En uso por otra aplicación" | Puede que un script antiguo de atajos de VoiceMate siga en ejecución. Ciérralo y quítalo de `shell:startup`, o elige otros atajos. |
+| "El audio de WSL se detuvo" o "Sin micrófono" | Conecta un micrófono. VoiceMate reinicia WSL según lo definido en "Reiniciar WSL si falla el audio:"; para hacerlo a mano, usa **Motor** > **Reiniciar WSL...**. |
+| Un texto no llegó al portapapeles | Está en **No copiadas** (menú de la bandeja y ventana de estado). Haz clic en él para copiarlo de nuevo. |
+| El habla en inglés sale mal, o los mensajes del motor están en portugués | Un motor iniciado a mano usa portugués por defecto: añade `ARGS="--output-lang en"` a `make run`. |
+| Otro problema del lado del motor | Ejecuta `make doctor` en la carpeta del motor. Imprime una solución para cada comprobación fallida. |
+
+Más problemas y los mensajes exactos: [docs/troubleshooting.md](docs/troubleshooting.md).
+
+## Documentación
+
+- [Installation](docs/installation.md) (en inglés): todas las vías de instalación, actualización y desinstalación.
+- [Usage](docs/usage.md): flujos, atajos, icono de la bandeja, modelos y opciones de voz.
+- [Configuration](docs/configuration.md): opciones del motor, archivos de ajustes, variables de entorno.
+- [Troubleshooting](docs/troubleshooting.md): `make doctor`, audio de WSL, logs, mensajes conocidos.
+- [Architecture](docs/architecture.md): diagramas y decisiones de diseño.
+- [WSL2 and AMD](docs/wsl2.md) (experimental), [Companion design](docs/companion-app.md), [Brand](docs/brand.md), [Releasing](docs/releasing.md).
+
+## Cómo contribuir
+
+Las issues y los pull requests son bienvenidos. Todo comando de desarrollo pasa por el Makefile: `make format lint test` para el motor (Ruff y mypy estricto) y `make companion-lint companion-test` para el companion. Todo texto visible para el usuario existe en 5 idiomas mediante gettext. Los commits siguen Conventional Commits y explican el contexto. Lee primero [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Agradecimientos
+
+VoiceMate se apoya en el trabajo de muchos proyectos: [Whisper](https://github.com/openai/whisper) de OpenAI, [faster-whisper](https://github.com/SYSTRAN/faster-whisper), [whisper.cpp](https://github.com/ggml-org/whisper.cpp), [CTranslate2-ROCm](https://github.com/arlo-phoenix/CTranslate2-rocm), [PySide6](https://doc.qt.io/qtforpython-6/), [OmniVoice](https://huggingface.co/k2-fsa/OmniVoice), [Kokoro](https://github.com/hexgrad/kokoro), [VoxCPM](https://github.com/OpenBMB/VoxCPM), el [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-python) con [Claude Code](https://docs.claude.com/en/docs/claude-code), [Inno Setup](https://jrsoftware.org/isinfo.php) y [PyInstaller](https://pyinstaller.org/).
 
 ## Licencia
 
-[MIT](LICENSE) © Álli Terhorst
-
-Parte de [NanoBR](https://github.com/nano-br): utilidades de código abierto para la productividad diaria.
+[MIT](LICENSE) © Álli Terhorst. Parte de [NanoBR](https://github.com/nano-br): utilidades de código abierto para la productividad del día a día.
