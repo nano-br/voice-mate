@@ -17,6 +17,7 @@ import threading
 from pathlib import Path
 
 from app.companion.client import DaemonClient
+from app.companion.paths import home_dir
 from app.companion.supervisor.backend import (
     ENGINE_DIR_CANDIDATES,
     EngineLog,
@@ -96,7 +97,9 @@ class LocalBackend:
         return result.stdout.strip() in ("enabled", "enabled-runtime")
 
     def detect_engine_dir(self) -> str | None:
-        home = Path.home()
+        home = home_dir()
+        if home is None:
+            return None  # no home directory: the user sets the engine folder in Settings
         for candidate in ENGINE_DIR_CANDIDATES:
             root = home / candidate
             if (root / "Makefile").is_file() and (root / "app" / "main.py").is_file():

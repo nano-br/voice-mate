@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.companion.contract import RecentItem
 from app.companion.delivery import (
     IN_FLIGHT_TIMEOUT_S,
     PENDING_LIMIT,
@@ -248,3 +249,146 @@ def test_recent_and_pending_are_bounded() -> None:
     q.on_unacked(INSTANCE, [record(seq, 99.0) for seq in range(100, 100 + PENDING_LIMIT + 5)], 0.0)
     assert len(q.pending()) == PENDING_LIMIT
     assert q.pending()[0].record["result_seq"] == 105  # oldest dropped first
+
+
+def restored(seq: int, instance: str = INSTANCE, delivery: str = "failed") -> RecentItem:
+    """A pending item read back from pending.json (age_s is not stored)."""
+    return RecentItem(instance, record(seq, 0.0, delivery))
+
+
+def test_restored_pending_items_are_offered_for_a_manual_copy() -> None:
+    q = DeliveryQueue()
+    q.restore_pending([restored(3, "inst-old"), restored(4, "inst-old", "dismissed"), restored(3, "inst-old")])
+    assert [(i.instance, i.record["result_seq"]) for i in q.pending()] == [("inst-old", 3), ("inst-old", 4)]
+    assert q.set_instance("inst-new", 0.0) == []  # nothing queued: no "not copied" again
+    assert started(q.on_result("inst-new", result(3), 0.0, 0.0)) == [3]  # same seq, new instance: another result
+    q.on_delivery_done(("inst-new", 3), True, 0.5)
+    effects = q.copy("inst-old", 4, 1.0)
+    (job,) = [e.job for e in effects if isinstance(e, StartDelivery)]
+    assert job.manual and job.text == "old 4"
+    effects = q.on_delivery_done(("inst-old", 4), True, 1.2)
+    assert acks(effects) == []  # its instance is gone: copied only
+    assert [(i.instance, i.record["result_seq"]) for i in q.pending()] == [("inst-old", 3)]
+
+
+def test_restored_items_respect_the_pending_limit() -> None:
+    q = DeliveryQueue()
+    q.restore_pending([restored(seq) for seq in range(PENDING_LIMIT + 3)])
+    assert len(q.pending()) == PENDING_LIMIT
+    assert q.pending()[0].record["result_seq"] == 3
+
+
+def test_a_restored_item_the_daemon_still_reports_is_acked_again_not_delivered() -> None:
+    q = DeliveryQueue()
+    q.restore_pending([restored(7)])  # the old run quit before its ACK went out
+    q.set_instance(INSTANCE, 0.0)  # the same daemon is still running
+    effects = q.on_unacked(INSTANCE, [record(7, 1.0)], 0.5)  # fresh, but already offered
+    assert started(effects) == []
+    assert acks(effects) == [(7, "dismissed")]
+    assert not any(isinstance(e, NotCopied) for e in effects)  # the user already sees it
+    assert [i.record["result_seq"] for i in q.pending()] == [7]
+    assert q.on_unacked(INSTANCE, [record(7, 11.0)], 10.0) == []  # only once
+
+
+def test_clear_pending_empties_the_list_without_acks_and_for_good() -> None:
+    q = queue()
+    q.on_unacked(INSTANCE, [record(1, 60.0), record(2, 60.0)], 0.0)  # dismissed: pending
+    q.restore_pending([restored(9, "inst-old")])
+    assert len(q.pending()) == 3
+    assert q.clear_pending(keys(q.pending())) == (3, [])  # already ACKed (or another instance)
+    assert q.pending() == []
+    # Reconciliation still sees them (say the ACK is slow): never offered again.
+    assert q.on_unacked(INSTANCE, [record(1, 61.0), record(2, 61.0)], 1.0) == []
+    assert q.pending() == []
+    assert q.clear_pending([(INSTANCE, 1)]) == (0, [])
+
+
+def test_a_cleared_restored_item_is_still_acked_when_the_daemon_reports_it() -> None:
+    q = DeliveryQueue()
+    q.restore_pending([restored(7)])  # its ACK was lost with the old run
+    assert q.clear_pending([(INSTANCE, 7)]) == (1, [])  # no daemon instance yet: ACKed later
+    q.set_instance(INSTANCE, 0.0)
+    effects = q.on_unacked(INSTANCE, [record(7, 1.0)], 0.5)
+    assert acks(effects) == [(7, "dismissed")]
+    assert started(effects) == [] and q.pending() == []
+    assert q.on_unacked(INSTANCE, [record(7, 2.0)], 1.0) == []  # only once
+
+
+def keys(items: list[RecentItem]) -> list[tuple[str, int]]:
+    return [(item.instance, item.record["result_seq"]) for item in items]
+
+
+def test_clear_pending_removes_only_the_given_items() -> None:
+    q = queue()
+    q.on_unacked(INSTANCE, [record(1, 60.0), record(2, 60.0)], 0.0)
+    seen = keys(q.pending())
+    q.on_unacked(INSTANCE, [record(3, 60.0)], 1.0)  # failed while the question was open
+    assert q.clear_pending([*seen, ("inst-x", 99)]) == (2, [])
+    assert keys(q.pending()) == [(INSTANCE, 3)]
+
+
+def test_clearing_a_restored_item_of_the_current_instance_acks_it_at_once() -> None:
+    q = DeliveryQueue()
+    q.restore_pending([restored(7), restored(8, "inst-old")])
+    q.set_instance(INSTANCE, 0.0)
+    count, effects = q.clear_pending([(INSTANCE, 7), ("inst-old", 8)])
+    assert count == 2
+    assert acks(effects) == [(7, "dismissed")]  # inst-old is gone: nothing to ACK there
+    assert [e.instance for e in effects if isinstance(e, SendAck)] == [INSTANCE]
+    assert q.on_unacked(INSTANCE, [record(7, 1.0)], 0.5) == []  # not twice
+
+
+def test_abandon_queue_keeps_undelivered_results_for_the_next_run() -> None:
+    q = queue()
+    q.on_result(INSTANCE, result(1), 0.0, 0.0)  # in flight
+    q.on_delivery_done((INSTANCE, 1), False, 0.1)  # retrying: blocks the next ones
+    q.on_result(INSTANCE, result(2), 0.0, 0.2)
+    q.on_unacked(INSTANCE, [record(5, 60.0)], 0.3)  # already pending (dismissed)
+    q.copy(INSTANCE, 5, 0.4)  # a manual copy waiting too
+    assert q.abandon_queue() == 2
+    assert keys(q.pending()) == [(INSTANCE, 5), (INSTANCE, 1), (INSTANCE, 2)]
+    assert q.next_wakeup() is None and q.queued_keys() == []
+    assert q.on_delivery_done((INSTANCE, 1), True, 1.0) == []  # a late verdict changes nothing
+    assert q.abandon_queue() == 0
+
+    # Next run, same daemon still running: they are ACKed, never delivered late.
+    again = DeliveryQueue()
+    again.restore_pending(q.pending())
+    again.set_instance(INSTANCE, 10.0)
+    effects = again.on_unacked(INSTANCE, [record(1, 5.0), record(2, 5.0)], 10.0)
+    assert started(effects) == []
+    assert sorted(acks(effects)) == [(1, "dismissed"), (2, "dismissed")]
+    assert keys(again.pending()) == [(INSTANCE, 5), (INSTANCE, 1), (INSTANCE, 2)]
+
+
+def test_an_ack_the_daemon_never_got_is_sent_again_with_the_same_status() -> None:
+    q = queue()
+    q.on_unacked(INSTANCE, [record(1, 60.0)], 0.0)  # stale: ACKed dismissed
+    q.on_result(INSTANCE, result(2), 0.0, 0.0)
+    q.on_delivery_done((INSTANCE, 2), True, 0.1)  # ACKed delivered
+    # First listing after the ACKs: they may still be in transit, nothing is doubled.
+    assert q.on_unacked(INSTANCE, [record(1, 70.0), record(2, 10.0)], 10.0) == []
+    # Listed again by the next round: those ACKs were dropped. Same status, once per round.
+    effects = q.on_unacked(INSTANCE, [record(1, 80.0), record(2, 20.0)], 20.0)
+    assert sorted(acks(effects)) == [(1, "dismissed"), (2, "delivered")]
+    assert started(effects) == [] and not any(isinstance(e, NotCopied) for e in effects)
+    assert acks(q.on_unacked(INSTANCE, [record(1, 90.0)], 30.0)) == [(1, "dismissed")]
+    assert [i.record["result_seq"] for i in q.pending()] == [1]  # still offered, never delivered
+
+
+def test_an_ack_in_transit_is_not_sent_twice() -> None:
+    q = queue()
+    q.on_unacked(INSTANCE, [record(1, 60.0)], 0.0)
+    assert q.on_unacked(INSTANCE, [record(1, 70.0)], 10.0) == []  # the ACK had not landed yet
+    assert q.on_unacked(INSTANCE, [], 20.0) == []  # it did
+    assert q.on_unacked(INSTANCE, [record(1, 90.0)], 30.0) == []  # a fresh suspicion, not a resend
+
+
+def test_a_queued_result_is_never_acked_by_reconciliation() -> None:
+    q = queue()
+    q.on_result(INSTANCE, result(1), 0.0, 0.0)  # in flight
+    q.on_delivery_done((INSTANCE, 1), False, 0.1)  # retrying
+    q.on_unacked(INSTANCE, [record(7, 60.0)], 0.2)
+    q.copy(INSTANCE, 7, 0.3)  # a manual copy of an ACKed result, queued
+    for now in (10.0, 20.0, 30.0):
+        assert acks(q.on_unacked(INSTANCE, [record(1, now), record(7, now)], now)) == []

@@ -542,3 +542,26 @@ def test_bringing_back_the_tray_icon_takes_off_apply_then_on(
     sent = [call[0] for call in fake.called("apply_settings")]
     assert [s.tray_icon_visible for s in sent if isinstance(s, CompanionSettings)] == [False, True]
     assert fake.settings().tray_icon_visible is True
+
+
+def test_the_sound_file_picker_works_without_a_home_folder(ui: CompanionUi, monkeypatch: pytest.MonkeyPatch) -> None:
+    from pathlib import Path
+
+    from app.companion.ui import settings_window
+
+    def no_home(cls: type[Path]) -> Path:
+        raise RuntimeError("Could not determine home directory.")
+
+    starts: list[str] = []
+
+    def pick(parent: object, caption: str, start: str, filters: str) -> tuple[str, str]:
+        starts.append(start)
+        return "", ""
+
+    monkeypatch.setattr(Path, "home", classmethod(no_home))
+    monkeypatch.setattr(settings_window.QFileDialog, "getOpenFileName", pick)
+    sounds = _open(ui).sounds_page
+    row = sounds.rows["ready"]
+    row.file.setText("")
+    sounds._choose_file(row)
+    assert starts == [""]  # the dialog opens where Qt wants instead of failing

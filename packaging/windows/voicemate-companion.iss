@@ -116,9 +116,12 @@ Root: HKCU; Subkey: "{#RunKey}"; ValueType: string; ValueName: "{#RunValueName}"
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
-; Caches the companion regenerates; the settings in %APPDATA%\VoiceMate are kept.
+; Caches the companion regenerates, and the Not copied list (pending.json, plus its
+; .tmp and .broken-* copies), which holds transcription text: nothing of it may stay
+; in the profile. The settings in %APPDATA%\VoiceMate are kept.
 Type: filesandordirs; Name: "{localappdata}\{#AppName}\cues"
 Type: filesandordirs; Name: "{localappdata}\{#AppName}\logs"
+Type: files; Name: "{localappdata}\{#AppName}\pending.json*"
 Type: dirifempty; Name: "{localappdata}\{#AppName}"
 
 [Code]

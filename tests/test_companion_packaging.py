@@ -12,6 +12,7 @@ from typing import Any
 
 import pytest
 
+from app.companion import paths
 from app.companion.contract import (
     APP_USER_MODEL_ID,
     AUTOSTART_RUN_VALUE,
@@ -99,6 +100,32 @@ def test_installer_shares_the_app_identity() -> None:
     assert _iss_define("AppMutex") == INSTALLER_APP_MUTEX
     assert SINGLE_INSTANCE_MUTEX == "Local\\" + INSTALLER_APP_MUTEX
     assert _iss_define("RunValueName") == AUTOSTART_RUN_VALUE
+
+
+def _iss_section(name: str) -> list[str]:
+    """The non-comment lines of an .iss section."""
+    lines: list[str] = []
+    inside = False
+    for raw in _ISS.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if line.startswith("["):
+            inside = line == f"[{name}]"
+            continue
+        if inside and line and not line.startswith(";"):
+            lines.append(line)
+    return lines
+
+
+def test_uninstaller_removes_the_not_copied_list() -> None:
+    # pending.json holds transcription text (app/companion/pending_store.py): it, its temp
+    # file and its .broken-* backups must not outlive the app in the user profile.
+    assert paths.PENDING_FILE_NAME == "pending.json"
+    entries = _iss_section("UninstallDelete")
+    assert r'Type: files; Name: "{localappdata}\{#AppName}\pending.json*"' in entries
+    # Before the folder itself, which only goes when it is empty.
+    pending = next(i for i, line in enumerate(entries) if "pending.json" in line)
+    folder = entries.index(r'Type: dirifempty; Name: "{localappdata}\{#AppName}"')
+    assert pending < folder
 
 
 def test_icon_has_every_size() -> None:

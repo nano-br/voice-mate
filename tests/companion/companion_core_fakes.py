@@ -26,6 +26,7 @@ import app.i18n as i18n_module
 from app.companion.contract import CompanionSettings, HotkeyBinding, HotkeyCheck
 from app.companion.controller import CompanionControllerImpl, Timings
 from app.companion.desktop import Desktop
+from app.companion.pending_store import PendingStore
 from app.companion.settings_store import SettingsStore, dump_settings
 from app.companion.supervisor.backend import ExitCallback, ManagedProcess
 from app.protocol.models import ShutdownReason
@@ -810,6 +811,8 @@ class ControllerKit:
     def __init__(self, tmp_path: Path) -> None:
         self.tmp_path = tmp_path
         self.built: list[CompanionControllerImpl] = []
+        # The Not copied list of every controller built here (a restart reads it back).
+        self.pending_path = tmp_path / "pending.json"
 
     def __call__(
         self,
@@ -847,6 +850,7 @@ class ControllerKit:
             cues_dir=self.tmp_path / "cues",
             logs_dir=self.tmp_path / "logs",
             timings=timings,
+            pending_store=PendingStore(self.pending_path),
         )
         self.built.append(controller)
         return controller, desktop_parts, fake_backend

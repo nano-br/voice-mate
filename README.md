@@ -331,7 +331,7 @@ From source: `make run-tray ARGS="--command quit"`. A `--command` never starts V
 
 ### Settings
 
-Tray icon menu > **Settings...**, in three tabs: **Hotkeys**; **Sounds** (built-in sounds or your own WAV files, volume); **General**: language, notifications, **Start VoiceMate when I sign in**, **Always show the VoiceMate icon on the taskbar** (Windows only) and the engine (mode, WSL distro, engine folder, and **Restart WSL when audio fails**: **Automatically**, **Ask first** or **Never**). The settings are saved in `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) and survive an uninstall. Logs live in `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); tray icon menu > **Engine** > **Open logs** opens them.
+Tray icon menu > **Settings...**, in three tabs: **Hotkeys**; **Sounds** (built-in sounds or your own WAV files, volume); **General**: language, notifications, **Start VoiceMate when I sign in**, **Always show the VoiceMate icon on the taskbar** (Windows only) and the engine (mode, WSL distro, engine folder, and **Restart WSL when audio fails**: **Automatically**, **Ask first** or **Never**). The settings are saved in `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) and survive an uninstall. Logs live in `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); tray icon menu > **Engine** > **Open logs** opens them. Transcriptions that did not reach the clipboard are kept in `%LOCALAPPDATA%\VoiceMate\pending.json` (Linux: `~/.local/state/voicemate/pending.json`) until you copy them or empty the list (**Not copied** > **Clear list** in the tray menu, or **Clear** in the status window), so they are still under **Not copied** after a restart or a crash. Results still waiting for the clipboard when you quit are kept there too. That file holds the transcription text: it stays in your user profile, is deleted once the list is empty, and the uninstaller removes it together with the logs. If it cannot be read, VoiceMate keeps it aside as `pending.json.broken-<date>`, starts with an empty list and tells you.
 
 A new language takes effect after a restart, so VoiceMate asks **Restart VoiceMate?**: **Restart now** restarts it (the engine too, about 10 seconds); **Later** keeps the choice, and the **General** tab shows "Takes effect after VoiceMate restarts." until then.
 
@@ -360,7 +360,7 @@ mkdir -p ~/.local/share/applications &&
 | A hotkey shows "Used by another app" on first run | An old hotkey script (PowerShell or AutoHotkey) is still running: close it and remove it from `shell:startup` |
 | "WSL audio stopped" or "No microphone" | Connect a microphone. WSL is restarted as set in **Restart WSL when audio fails**; by hand: **Engine** > **Restart WSL...** |
 | "The engine is older than this app. Restart or update it." | Update the checkout in WSL (`git pull`), then **Restart engine** |
-| A transcription was not copied | It stays under **Not copied**, in the tray menu (click it to copy) and in the status window (**Copy**) |
+| A transcription was not copied | It stays under **Not copied**, in the tray menu (click it to copy) and in the status window (**Copy**), even after VoiceMate restarts. **Clear list** (tray) or **Clear** (status window) empties it after asking |
 | SmartScreen warns about the installer | The installer is not code-signed: **More info** > **Run anyway** |
 
 ## Makefile

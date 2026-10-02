@@ -25,9 +25,10 @@ from collections.abc import Callable, Sequence
 from typing import Final, get_args
 
 from PySide6.QtCore import QLibraryInfo, QLocale, QTimer, QTranslator
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from app.companion.contract import CompanionCommand, CompanionController, CompanionSettings
+from app.companion.paths import DataDirError
 from app.companion.relaunch import AFTER_RESTART_FLAG, relaunch_companion
 from app.companion.ui.icons import app_icon
 from app.companion.ui.single_instance import (
@@ -104,6 +105,24 @@ def _wait_for_restart(lock: InstanceLock) -> bool:
             log.warning("the previous VoiceMate did not exit within %.0f s", RESTART_WAIT_S)
             return False
         time.sleep(RETRY_INTERVAL_S)
+
+
+def _report_missing_data_dir(app: QApplication, error: DataDirError) -> None:
+    """No settings can be read without the data folder: say what to set, in the OS
+    language, Qt's own button included (a windowed build has no console for the traceback)."""
+    log.error("%s", error)
+    set_language("auto")
+    qt_translator = install_qt_translations(app)
+    QMessageBox.critical(
+        None,
+        "VoiceMate",
+        _(
+            "VoiceMate cannot find its data folder: {variable} is not set and the home folder is unknown. "
+            "Set {variable} or {home_variable} for your user and start VoiceMate again."
+        ).format(variable=error.variable, home_variable=error.home_variable),
+    )
+    if qt_translator is not None:
+        app.removeTranslator(qt_translator)
 
 
 def _forward(lock: InstanceLock, args: argparse.Namespace, suffix: str) -> int | None:
@@ -235,7 +254,12 @@ def _run(app: QApplication, args: argparse.Namespace, suffix: str) -> int:
     app.setQuitOnLastWindowClosed(False)
     app.setWindowIcon(app_icon())
 
-    controller = _create_controller(args.demo)
+    try:
+        controller = _create_controller(args.demo)
+    except DataDirError as exc:
+        _report_missing_data_dir(app, exc)
+        server.close()
+        return 1
     set_language(controller.settings().language)
     qt_translator = install_qt_translations(app)
     launch_args = sys.argv[1:]

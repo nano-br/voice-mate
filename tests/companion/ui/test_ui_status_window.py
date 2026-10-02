@@ -224,3 +224,43 @@ def test_flow_buttons_come_before_cancel_in_the_tab_order(ui: CompanionUi) -> No
     first, second = window.flow_buttons
     assert first.nextInFocusChain() is second
     assert second.nextInFocusChain() is window.cancel_button
+
+
+def test_pending_clear_button_asks_then_empties_the_list(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    window = ui.status_window
+    window.show()
+    seen = [fake.add_pending("lost text"), fake.add_pending("another one")]
+    process_events()
+    assert window.pending_clear.text() == "Clear" and window.pending_clear.isVisible()
+    window.pending_clear.click()
+    box = ui._clear_pending_box
+    assert box is not None and box.isVisible()
+    assert fake.called("clear_pending") == []
+    late = fake.add_pending("failed while the question was open")
+    process_events()
+    next(button for button in box.buttons() if button.text() == "Clear list").click()
+    assert process_events(lambda: ui._clear_pending_box is None)
+    # Only what the user saw when the question opened: the late one is not wiped unseen.
+    assert fake.called("clear_pending") == [(tuple((i.instance, i.record["result_seq"]) for i in seen),)]
+    assert fake.pending_results() == [late]
+    assert process_events(lambda: window.pending_list.count() == 1)
+
+
+def test_pending_clear_is_ignored_while_quitting(
+    ui: CompanionUi, fake: FakeController, exits: list[int], process_events: Callable[..., bool]
+) -> None:
+    fake.add_pending("lost text")
+    process_events()
+    ui.confirm_clear_pending()
+    box = ui._clear_pending_box
+    assert box is not None and box.isVisible()
+    fake.quit_delay = 0.3
+    ui.quit_app()
+    assert ui._clear_pending_box is None and not box.isVisible()  # closed with the other questions
+    assert not ui.status_window.pending_clear.isEnabled()
+    ui.confirm_clear_pending()
+    assert ui._clear_pending_box is None
+    assert fake.called("clear_pending") == []
+    assert process_events(lambda: exits == [0], timeout=3.0)

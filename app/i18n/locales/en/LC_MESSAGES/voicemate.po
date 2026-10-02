@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-02 03:14-0300\n"
+"POT-Creation-Date: 2026-10-02 03:27-0300\n"
 "PO-Revision-Date: 2026-05-21 14:42-0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -232,22 +232,22 @@ msgid ""
 "(trigger={trigger}); using keyboard hotkeys."
 msgstr ""
 
-#: app/companion/controller.py:582
+#: app/companion/controller.py:607
 msgid ""
 "The settings file was written by a newer version of VoiceMate, so it is "
 "read-only here."
 msgstr ""
 
-#: app/companion/controller.py:601
+#: app/companion/controller.py:626
 msgid "Could not save the settings file."
 msgstr ""
 
-#: app/companion/controller.py:629
+#: app/companion/controller.py:654
 #, python-brace-format
 msgid "{hotkey} is already used by another app."
 msgstr ""
 
-#: app/companion/controller.py:694
+#: app/companion/controller.py:719
 msgid "Could not change the start at login setting."
 msgstr ""
 
@@ -276,451 +276,470 @@ msgstr ""
 msgid "Error"
 msgstr ""
 
-#: app/companion/main.py:164
+#: app/companion/main.py:120
+#, python-brace-format
+msgid ""
+"VoiceMate cannot find its data folder: {variable} is not set and the home"
+" folder is unknown. Set {variable} or {home_variable} for your user and "
+"start VoiceMate again."
+msgstr ""
+
+#: app/companion/main.py:183
 msgid "Settings"
 msgstr ""
 
-#: app/companion/main.py:164 app/companion/ui/status_window.py:122
-#: app/companion/ui/status_window.py:173 app/companion/ui/tray.py:97
+#: app/companion/main.py:183 app/companion/ui/status_window.py:122
+#: app/companion/ui/status_window.py:177 app/companion/ui/tray.py:97
 msgid "Restart engine"
 msgstr ""
 
-#: app/companion/main.py:166 app/companion/ui/tray.py:99
+#: app/companion/main.py:185 app/companion/ui/tray.py:99
 msgid "Restart WSL..."
 msgstr ""
 
-#: app/companion/main.py:167 app/companion/ui/status_window.py:177
+#: app/companion/main.py:186 app/companion/ui/status_window.py:181
 #: app/companion/ui/tray.py:107
 msgid "Quit VoiceMate"
 msgstr ""
 
-#: app/companion/model.py:591
+#: app/companion/model.py:592
 msgid "Engine not responding"
 msgstr ""
 
-#: app/companion/model.py:591
+#: app/companion/model.py:592
 msgid "No answer from the engine. VoiceMate restarts it if this continues."
 msgstr ""
 
-#: app/companion/model.py:593 app/companion/model.py:789
+#: app/companion/model.py:594 app/companion/model.py:790
 msgid "Engine is outdated"
 msgstr ""
 
-#: app/companion/model.py:593
+#: app/companion/model.py:594
 msgid "The engine is older than this app. Update it, then use Restart engine."
 msgstr ""
 
-#: app/companion/model.py:596 app/companion/model.py:885
+#: app/companion/model.py:597 app/companion/model.py:896
 #: app/companion/ui/texts.py:108
 msgid "No microphone"
 msgstr ""
 
-#: app/companion/model.py:596
+#: app/companion/model.py:597
 msgid "Connect a microphone to record."
 msgstr ""
 
-#: app/companion/model.py:599 app/companion/model.py:872
-#: app/companion/ui/demo_controller.py:325 app/companion/ui/texts.py:110
+#: app/companion/model.py:600 app/companion/model.py:883
+#: app/companion/ui/demo_controller.py:333 app/companion/ui/texts.py:110
 msgid "WSL audio stopped"
 msgstr ""
 
-#: app/companion/model.py:599
+#: app/companion/model.py:600
 msgid "WSL lost its audio bridge. Restarting WSL brings it back."
 msgstr ""
 
-#: app/companion/model.py:600 app/companion/model.py:878
+#: app/companion/model.py:601 app/companion/model.py:889
 msgid "Audio server is down"
 msgstr ""
 
-#: app/companion/model.py:600
+#: app/companion/model.py:601
 msgid "The engine cannot reach the audio server."
 msgstr ""
 
-#: app/companion/model.py:602 app/companion/model.py:606
-#: app/companion/model.py:607 app/companion/model.py:858
+#: app/companion/model.py:603 app/companion/model.py:607
+#: app/companion/model.py:608 app/companion/model.py:869
 msgid "Microphone unavailable"
 msgstr ""
 
-#: app/companion/model.py:603
+#: app/companion/model.py:604
 msgid ""
 "Check the privacy settings for microphone access by desktop apps, and "
 "close any app that holds the microphone."
 msgstr ""
 
-#: app/companion/model.py:606
+#: app/companion/model.py:607
 msgid "WSL cannot open the microphone. Restarting WSL fixes it."
 msgstr ""
 
-#: app/companion/model.py:607
+#: app/companion/model.py:608
 msgid "The engine cannot open the microphone."
 msgstr ""
 
-#: app/companion/model.py:612
+#: app/companion/model.py:613
 msgid "The engine stopped unexpectedly."
 msgstr ""
 
-#: app/companion/model.py:613
+#: app/companion/model.py:614
 msgid "The engine stopped answering."
 msgstr ""
 
-#: app/companion/model.py:614
+#: app/companion/model.py:615
 msgid "The engine took too long to start."
 msgstr ""
 
-#: app/companion/model.py:615
+#: app/companion/model.py:616
 msgid "Restarting WSL to recover the audio."
 msgstr ""
 
-#: app/companion/model.py:616
+#: app/companion/model.py:617
 msgid "Restart requested."
 msgstr ""
 
-#: app/companion/model.py:617
+#: app/companion/model.py:618
 msgid "Restarting WSL."
 msgstr ""
 
-#: app/companion/model.py:618
+#: app/companion/model.py:619
 msgid "The engine is restarting."
 msgstr ""
 
-#: app/companion/model.py:625 app/companion/model.py:751
+#: app/companion/model.py:626 app/companion/model.py:752
 msgid "Engine folder not found"
 msgstr ""
 
-#: app/companion/model.py:625
+#: app/companion/model.py:626
 msgid "Set the engine folder in Settings."
 msgstr ""
 
-#: app/companion/model.py:627 app/companion/model.py:630
+#: app/companion/model.py:628 app/companion/model.py:631
 msgid "Engine failed"
 msgstr ""
 
-#: app/companion/model.py:628
+#: app/companion/model.py:629
 msgid ""
 "Restarting WSL did not help. Check the engine log, then use Restart "
 "WSL... in the Engine menu."
 msgstr ""
 
-#: app/companion/model.py:630 app/companion/model.py:736
+#: app/companion/model.py:631 app/companion/model.py:737
 msgid ""
 "The engine failed too many times. Check the engine log, then use Restart "
 "engine."
 msgstr ""
 
-#: app/companion/model.py:636 app/companion/model.py:728
+#: app/companion/model.py:637 app/companion/model.py:729
 #: app/companion/ui/texts.py:86
 msgid "VoiceMate is stopped"
 msgstr ""
 
-#: app/companion/model.py:638 app/companion/ui/texts.py:88
+#: app/companion/model.py:639 app/companion/ui/texts.py:88
 msgid "Starting engine..."
 msgstr ""
 
-#: app/companion/model.py:640
+#: app/companion/model.py:641
 #, python-brace-format
 msgid "Waiting for the engine on port {port}."
 msgstr ""
 
-#: app/companion/model.py:642 app/companion/ui/texts.py:92
+#: app/companion/model.py:643 app/companion/ui/texts.py:92
 #, python-brace-format
 msgid "Restarting (attempt {attempt})"
 msgstr ""
 
-#: app/companion/model.py:646
+#: app/companion/model.py:647
 #, python-brace-format
 msgid "Listening for {hotkey}"
 msgstr ""
 
-#: app/companion/model.py:646 app/companion/ui/texts.py:97
+#: app/companion/model.py:647 app/companion/ui/texts.py:97
 msgid "Ready"
 msgstr ""
 
-#: app/companion/model.py:649 app/companion/ui/texts.py:78
+#: app/companion/model.py:650 app/companion/ui/texts.py:78
 #, python-brace-format
 msgid "Recording {elapsed}"
 msgstr ""
 
-#: app/companion/model.py:651 app/companion/ui/texts.py:99
+#: app/companion/model.py:652 app/companion/ui/texts.py:99
 msgid "Transcribing..."
 msgstr ""
 
-#: app/companion/model.py:653 app/companion/ui/texts.py:101
+#: app/companion/model.py:654 app/companion/ui/texts.py:101
 msgid "Claude is answering..."
 msgstr ""
 
-#: app/companion/model.py:655 app/companion/ui/texts.py:104
+#: app/companion/model.py:656 app/companion/ui/texts.py:104
 #, python-brace-format
 msgid "Copied: {text}"
 msgstr ""
 
-#: app/companion/model.py:661
+#: app/companion/model.py:662
 msgid ""
 "WSL needs a restart to recover the audio. Use Restart WSL now... in the "
 "menu."
 msgstr ""
 
-#: app/companion/model.py:698
+#: app/companion/model.py:699
 msgid "No microphone is connected. Connect one and try again."
 msgstr ""
 
-#: app/companion/model.py:702
+#: app/companion/model.py:703
 msgid ""
 "The engine could not open the microphone. Allow desktop apps to use the "
 "microphone in the Windows privacy settings, and close any app that holds "
 "it exclusively."
 msgstr ""
 
-#: app/companion/model.py:705
+#: app/companion/model.py:706
 msgid ""
 "The engine could not open the microphone. Close any app that holds it "
 "exclusively."
 msgstr ""
 
-#: app/companion/model.py:707
+#: app/companion/model.py:708
 msgid ""
 "The engine could not open the microphone: the audio server is not "
 "responding."
 msgstr ""
 
-#: app/companion/model.py:710
+#: app/companion/model.py:711
 msgid ""
 "Windows has a microphone, but WSL cannot open it: its audio bridge is "
 "stuck. Restarting WSL fixes it."
 msgstr ""
 
-#: app/companion/model.py:712
+#: app/companion/model.py:713
 msgid ""
 "WSL cannot open the microphone. If one is connected, restarting WSL fixes"
 " it."
 msgstr ""
 
-#: app/companion/model.py:721
+#: app/companion/model.py:722
 msgid "VoiceMate is starting"
 msgstr ""
 
-#: app/companion/model.py:722
+#: app/companion/model.py:723
 msgid "The engine is still loading. Try again in a moment."
 msgstr ""
 
-#: app/companion/model.py:729
+#: app/companion/model.py:730
 msgid "The engine is not running. Use Restart engine in the menu."
 msgstr ""
 
-#: app/companion/model.py:735 app/companion/model.py:742
+#: app/companion/model.py:736 app/companion/model.py:743
 msgid "VoiceMate stopped retrying"
 msgstr ""
 
-#: app/companion/model.py:744
+#: app/companion/model.py:745
 msgid ""
 "Restarting WSL did not bring the audio back. Check the engine log, then "
 "use Restart WSL... in the Engine menu."
 msgstr ""
 
-#: app/companion/model.py:752
+#: app/companion/model.py:753
 msgid "VoiceMate could not find the engine. Set the engine folder in Settings."
 msgstr ""
 
-#: app/companion/model.py:758
+#: app/companion/model.py:759
 msgid "Could not start the engine"
 msgstr ""
 
-#: app/companion/model.py:759
+#: app/companion/model.py:760
 msgid ""
 "Starting the engine failed. VoiceMate will try again; the engine log has "
 "the details."
 msgstr ""
 
-#: app/companion/model.py:765
+#: app/companion/model.py:766
 msgid "Restarting WSL"
 msgstr ""
 
-#: app/companion/model.py:766
+#: app/companion/model.py:767
 msgid ""
 "WSL lost its audio, so VoiceMate is restarting it. This takes a few "
 "seconds."
 msgstr ""
 
-#: app/companion/model.py:772 app/companion/model.py:779
+#: app/companion/model.py:773 app/companion/model.py:780
 msgid "WSL needs a restart"
 msgstr ""
 
-#: app/companion/model.py:773
+#: app/companion/model.py:774
 msgid "WSL lost its audio. Choose Restart WSL now... in the VoiceMate menu."
 msgstr ""
 
-#: app/companion/model.py:781
+#: app/companion/model.py:782
 #, python-brace-format
 msgid ""
 "WSL lost its audio, but restarting it also stops {distros}. Choose "
 "Restart WSL now... in the VoiceMate menu when convenient."
 msgstr ""
 
-#: app/companion/model.py:790
+#: app/companion/model.py:791
 msgid ""
 "The engine is older than this app. Update it, then use Restart engine in "
 "the menu."
 msgstr ""
 
-#: app/companion/model.py:796
+#: app/companion/model.py:797
 msgid "Engine run by systemd"
 msgstr ""
 
-#: app/companion/model.py:798
+#: app/companion/model.py:799
 msgid ""
 "A systemd service runs the engine, so VoiceMate attaches to it. To let "
 "VoiceMate manage it, run `systemctl --user disable --now voicemate` in "
 "WSL."
 msgstr ""
 
-#: app/companion/model.py:806
+#: app/companion/model.py:807
 msgid "Engine access denied"
 msgstr ""
 
-#: app/companion/model.py:808
+#: app/companion/model.py:809
 msgid ""
 "The engine refused VoiceMate's access token. VoiceMate reads "
 "`~/.config/voicemate/api-token` again every 30 seconds; the engine log "
 "has the details."
 msgstr ""
 
-#: app/companion/model.py:816
+#: app/companion/model.py:817
 msgid "Settings reset"
 msgstr ""
 
-#: app/companion/model.py:818
+#: app/companion/model.py:819
 #, python-brace-format
 msgid ""
 "The settings file could not be read, so VoiceMate started with the "
 "default settings. The old file was kept as {path}."
 msgstr ""
 
-#: app/companion/model.py:826
+#: app/companion/model.py:827
+msgid "\"Not copied\" list reset"
+msgstr ""
+
+#: app/companion/model.py:829
+#, python-brace-format
+msgid ""
+"The saved \"Not copied\" list could not be read, so it starts empty. The "
+"old file, with the transcriptions it held, was kept as {path}."
+msgstr ""
+
+#: app/companion/model.py:837
 msgid "Engine unreachable"
 msgstr ""
 
-#: app/companion/model.py:827
+#: app/companion/model.py:838
 msgid "The engine did not answer. VoiceMate keeps trying to reconnect."
 msgstr ""
 
-#: app/companion/model.py:833
+#: app/companion/model.py:844
 msgid "Engine busy"
 msgstr ""
 
-#: app/companion/model.py:834
+#: app/companion/model.py:845
 msgid "The engine did not answer in time. It may still act on this key press."
 msgstr ""
 
-#: app/companion/model.py:840
+#: app/companion/model.py:851
 msgid "Request rejected"
 msgstr ""
 
-#: app/companion/model.py:841
+#: app/companion/model.py:852
 #, python-brace-format
 msgid "The engine rejected the request (HTTP {status})."
 msgstr ""
 
-#: app/companion/model.py:845
+#: app/companion/model.py:856
 msgid "Engine error"
 msgstr ""
 
-#: app/companion/model.py:845
+#: app/companion/model.py:856
 msgid "The engine reported an internal error. See the engine log."
 msgstr ""
 
-#: app/companion/model.py:847
+#: app/companion/model.py:858
 msgid "Nothing transcribed"
 msgstr ""
 
-#: app/companion/model.py:847
+#: app/companion/model.py:858
 msgid "No speech was detected in the recording."
 msgstr ""
 
-#: app/companion/model.py:849
+#: app/companion/model.py:860
 msgid "Nothing recorded"
 msgstr ""
 
-#: app/companion/model.py:849
+#: app/companion/model.py:860
 msgid "The recording captured no audio."
 msgstr ""
 
-#: app/companion/model.py:853
+#: app/companion/model.py:864
 msgid "Slow transcription"
 msgstr ""
 
-#: app/companion/model.py:854
+#: app/companion/model.py:865
 msgid ""
 "Transcription is running slower than usual. The engine log has the "
 "details."
 msgstr ""
 
-#: app/companion/model.py:862
+#: app/companion/model.py:873
 msgid "Transcription failed"
 msgstr ""
 
-#: app/companion/model.py:863
+#: app/companion/model.py:874
 msgid "The engine could not transcribe the recording. See the engine log."
 msgstr ""
 
-#: app/companion/model.py:867
+#: app/companion/model.py:878
 msgid "Claude did not answer"
 msgstr ""
 
-#: app/companion/model.py:867
+#: app/companion/model.py:878
 msgid "The request to Claude failed. See the engine log."
 msgstr ""
 
-#: app/companion/model.py:873
+#: app/companion/model.py:884
 msgid "The engine cannot reach the WSL audio server, so recording will fail."
 msgstr ""
 
-#: app/companion/model.py:879
+#: app/companion/model.py:890
 msgid "The engine cannot reach the audio server, so recording will fail."
 msgstr ""
 
-#: app/companion/model.py:886
+#: app/companion/model.py:897
 msgid "No microphone is connected. Recording will fail until you connect one."
 msgstr ""
 
-#: app/companion/model.py:891
+#: app/companion/model.py:902
 msgid ""
 "A transcription was not copied to the clipboard. Open VoiceMate to copy "
 "it."
 msgstr ""
 
-#: app/companion/model.py:893
+#: app/companion/model.py:904
 #, python-brace-format
 msgid ""
 "{count} transcriptions were not copied to the clipboard. Open VoiceMate "
 "to copy them."
 msgstr ""
 
-#: app/companion/model.py:896
+#: app/companion/model.py:907
 msgid "Not copied to the clipboard"
 msgstr ""
 
-#: app/companion/model.py:898
+#: app/companion/model.py:909
 msgid "Copy failed"
 msgstr ""
 
-#: app/companion/model.py:898
+#: app/companion/model.py:909
 msgid "The text could not be copied to the clipboard. Try again."
 msgstr ""
 
-#: app/companion/model.py:902
+#: app/companion/model.py:913
 msgid "Pin VoiceMate to the taskbar"
 msgstr ""
 
-#: app/companion/model.py:903
+#: app/companion/model.py:914
 msgid ""
 "Open Start, search for VoiceMate, right-click it and choose Pin to "
 "taskbar."
 msgstr ""
 
-#: app/companion/model.py:909
+#: app/companion/model.py:920
 msgid "Hotkey unavailable"
 msgstr ""
 
-#: app/companion/model.py:911
+#: app/companion/model.py:922
 #, python-brace-format
 msgid ""
 "Already used by another app: {hotkeys}. If the old VoiceMate hotkeys "
@@ -728,7 +747,7 @@ msgid ""
 "other hotkeys in Settings."
 msgstr ""
 
-#: app/companion/settings_store.py:88 app/companion/ui/settings_window.py:563
+#: app/companion/settings_store.py:88 app/companion/ui/settings_window.py:564
 msgid "Language"
 msgstr ""
 
@@ -740,11 +759,11 @@ msgstr ""
 msgid "WSL restart"
 msgstr ""
 
-#: app/companion/settings_store.py:91 app/companion/ui/settings_window.py:564
+#: app/companion/settings_store.py:91 app/companion/ui/settings_window.py:565
 msgid "Notifications"
 msgstr ""
 
-#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:646
+#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:647
 msgid "Hotkeys"
 msgstr ""
 
@@ -807,65 +826,80 @@ msgstr ""
 msgid "The sound file for the {cue} cue is longer than {seconds} seconds."
 msgstr ""
 
-#: app/companion/ui/app.py:157
+#: app/companion/ui/app.py:158
 msgid "Restart WSL now?"
 msgstr ""
 
-#: app/companion/ui/app.py:158 app/companion/ui/status_window.py:128
+#: app/companion/ui/app.py:159 app/companion/ui/status_window.py:128
 msgid ""
 "WSL audio is not working. Restarting WSL fixes it, but it also stops "
 "every running distro."
 msgstr ""
 
-#: app/companion/ui/app.py:159 app/companion/ui/app.py:185
+#: app/companion/ui/app.py:160 app/companion/ui/app.py:186
 msgid "Restart WSL"
 msgstr ""
 
-#: app/companion/ui/app.py:160 app/companion/ui/status_window.py:132
+#: app/companion/ui/app.py:161 app/companion/ui/status_window.py:132
 msgid "Not now"
 msgstr ""
 
-#: app/companion/ui/app.py:183
+#: app/companion/ui/app.py:184
 msgid "Restart WSL?"
 msgstr ""
 
-#: app/companion/ui/app.py:184
+#: app/companion/ui/app.py:185
 msgid ""
 "This stops every running WSL distro, Docker included, and starts the "
 "engine again."
 msgstr ""
 
-#: app/companion/ui/app.py:186 app/companion/ui/settings_window.py:661
+#: app/companion/ui/app.py:187 app/companion/ui/app.py:286
+#: app/companion/ui/settings_window.py:662
 #: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:79
 msgid "Cancel"
 msgstr ""
 
-#: app/companion/ui/app.py:210
+#: app/companion/ui/app.py:211
 msgid "Could not change the sounds"
 msgstr ""
 
-#: app/companion/ui/app.py:227
+#: app/companion/ui/app.py:228
 msgid "Restart VoiceMate?"
 msgstr ""
 
-#: app/companion/ui/app.py:228
+#: app/companion/ui/app.py:229
 msgid "VoiceMate needs to restart to change the language. Restart now?"
 msgstr ""
 
-#: app/companion/ui/app.py:229
+#: app/companion/ui/app.py:230
 msgid "Restart now"
 msgstr ""
 
-#: app/companion/ui/app.py:230
+#: app/companion/ui/app.py:231
 msgid "Later"
 msgstr ""
 
-#: app/companion/ui/app.py:264
+#: app/companion/ui/app.py:265
 msgid "Could not restart VoiceMate"
 msgstr ""
 
-#: app/companion/ui/app.py:265
+#: app/companion/ui/app.py:266
 msgid "Quit VoiceMate and start it again to change the language."
+msgstr ""
+
+#: app/companion/ui/app.py:283
+msgid "Clear the \"Not copied\" list?"
+msgstr ""
+
+#: app/companion/ui/app.py:284
+msgid ""
+"These transcriptions never reached the clipboard. Once cleared, they "
+"cannot be copied any more."
+msgstr ""
+
+#: app/companion/ui/app.py:285 app/companion/ui/tray.py:199
+msgid "Clear list"
 msgstr ""
 
 #: app/companion/ui/demo_controller.py:145
@@ -876,7 +910,7 @@ msgstr ""
 msgid "Nothing is recorded: the states change by themselves."
 msgstr ""
 
-#: app/companion/ui/demo_controller.py:326
+#: app/companion/ui/demo_controller.py:334
 msgid "Restart WSL to bring the microphone back."
 msgstr ""
 
@@ -896,123 +930,123 @@ msgstr ""
 msgid "No shortcut"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:140
+#: app/companion/ui/settings_window.py:141
 msgid "Click a shortcut, then press the new keys. Esc cancels, Backspace clears."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:143
+#: app/companion/ui/settings_window.py:144
 msgid "The engine owns these shortcuts. Change them in the engine configuration."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:156
+#: app/companion/ui/settings_window.py:157
 msgid "Restore defaults"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:185
+#: app/companion/ui/settings_window.py:186
 #, python-brace-format
 msgid "Shortcut for {action}"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:258
+#: app/companion/ui/settings_window.py:259
 msgid "No shortcut: use the menu"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:263
+#: app/companion/ui/settings_window.py:264
 msgid "Checking..."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:345
+#: app/companion/ui/settings_window.py:346
 msgid "Play sound cues"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:349
+#: app/companion/ui/settings_window.py:350
 msgid "Volume:"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:350
+#: app/companion/ui/settings_window.py:351
 msgid "Master volume"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:362
-#: app/companion/ui/settings_window.py:647
+#: app/companion/ui/settings_window.py:363
+#: app/companion/ui/settings_window.py:648
 msgid "Sounds"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:379
+#: app/companion/ui/settings_window.py:380
 msgid "Custom sounds must be WAV files (PCM, 8 or 16 bit)."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:386
+#: app/companion/ui/settings_window.py:387
 #, python-brace-format
 msgid "Source: {sound}"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:388
+#: app/companion/ui/settings_window.py:389
 #, python-brace-format
 msgid "Built-in sound: {sound}"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:391
+#: app/companion/ui/settings_window.py:392
 msgid "No file chosen"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:392
+#: app/companion/ui/settings_window.py:393
 #, python-brace-format
 msgid "Sound file: {sound}"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:394
+#: app/companion/ui/settings_window.py:395
 msgid "Browse..."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:395
+#: app/companion/ui/settings_window.py:396
 #, python-brace-format
 msgid "Choose a file for {sound}"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:407
+#: app/companion/ui/settings_window.py:408
 #, python-brace-format
 msgid "Volume: {sound}"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:413
+#: app/companion/ui/settings_window.py:414
 msgid "Preview"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:414
+#: app/companion/ui/settings_window.py:415
 #, python-brace-format
 msgid "Preview: {sound}"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:478
+#: app/companion/ui/settings_window.py:479
 msgid "Choose a sound file"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:478
+#: app/companion/ui/settings_window.py:479
 msgid "WAV audio"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:507
+#: app/companion/ui/settings_window.py:508
 msgid "Language:"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:509
+#: app/companion/ui/settings_window.py:510
 msgid "Takes effect after VoiceMate restarts."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:514
+#: app/companion/ui/settings_window.py:515
 msgid "Notifications:"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:515
+#: app/companion/ui/settings_window.py:516
 msgid "Start VoiceMate when I sign in"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:520
+#: app/companion/ui/settings_window.py:521
 msgid "Always show the VoiceMate icon on the taskbar"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:523
+#: app/companion/ui/settings_window.py:524
 msgid ""
 "Shows the icon with the recording and transcription state next to the "
 "clock, instead of hiding it behind the arrow. An icon hidden in the "
@@ -1020,96 +1054,96 @@ msgid ""
 "Apply and turn it on again."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:532 app/companion/ui/tray.py:96
+#: app/companion/ui/settings_window.py:533 app/companion/ui/tray.py:96
 msgid "Engine"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:539
+#: app/companion/ui/settings_window.py:540
 msgid "Mode:"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:541
+#: app/companion/ui/settings_window.py:542
 msgid "Default distro"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:542
+#: app/companion/ui/settings_window.py:543
 msgid "WSL distro:"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:544
+#: app/companion/ui/settings_window.py:545
 msgid "Detect automatically"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:545
+#: app/companion/ui/settings_window.py:546
 msgid "The voice-mate folder: relative to your home folder, or absolute."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:546
+#: app/companion/ui/settings_window.py:547
 msgid "Engine folder:"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:549
+#: app/companion/ui/settings_window.py:550
 msgid ""
 "Restarting WSL brings its audio back, but it stops every running distro, "
 "Docker included."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:551
+#: app/companion/ui/settings_window.py:552
 msgid "Restart WSL when audio fails:"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:565
+#: app/companion/ui/settings_window.py:566
 msgid "Mode"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:566
+#: app/companion/ui/settings_window.py:567
 msgid "WSL distro"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:567
+#: app/companion/ui/settings_window.py:568
 msgid "Engine folder"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:568
+#: app/companion/ui/settings_window.py:569
 msgid "Restart WSL when audio fails"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:630
+#: app/companion/ui/settings_window.py:631
 msgid "VoiceMate Settings"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:638
+#: app/companion/ui/settings_window.py:639
 msgid ""
 "These settings were saved by a newer version of VoiceMate. They are shown"
 " read-only."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:648
+#: app/companion/ui/settings_window.py:649
 msgid "General"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:660
+#: app/companion/ui/settings_window.py:661
 msgid "OK"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:662
+#: app/companion/ui/settings_window.py:663
 msgid "Apply"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:743
+#: app/companion/ui/settings_window.py:744
 msgid "Saving..."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:755
+#: app/companion/ui/settings_window.py:756
 #, python-brace-format
 msgid "Unexpected error: {error}"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:762
+#: app/companion/ui/settings_window.py:763
 msgid "The settings were not saved:"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:774
+#: app/companion/ui/settings_window.py:775
 msgid "Settings saved."
 msgstr ""
 
@@ -1150,27 +1184,31 @@ msgstr ""
 msgid "Transcriptions that never reached the clipboard. Copy them from here."
 msgstr ""
 
-#: app/companion/ui/status_window.py:166 app/companion/ui/tray.py:83
+#: app/companion/ui/status_window.py:165
+msgid "Clear"
+msgstr ""
+
+#: app/companion/ui/status_window.py:170 app/companion/ui/tray.py:83
 msgid "Recent"
 msgstr ""
 
-#: app/companion/ui/status_window.py:171 app/companion/ui/tray.py:104
+#: app/companion/ui/status_window.py:175 app/companion/ui/tray.py:104
 msgid "Settings..."
 msgstr ""
 
-#: app/companion/ui/status_window.py:175 app/companion/ui/tray.py:102
+#: app/companion/ui/status_window.py:179 app/companion/ui/tray.py:102
 msgid "Open logs"
 msgstr ""
 
-#: app/companion/ui/status_window.py:195
+#: app/companion/ui/status_window.py:200
 msgid "Copy"
 msgstr ""
 
-#: app/companion/ui/status_window.py:234 app/companion/ui/tray.py:192
+#: app/companion/ui/status_window.py:239 app/companion/ui/tray.py:192
 msgid "No transcriptions yet"
 msgstr ""
 
-#: app/companion/ui/status_window.py:344 app/companion/ui/tray.py:224
+#: app/companion/ui/status_window.py:349 app/companion/ui/tray.py:229
 msgid "Quitting..."
 msgstr ""
 
@@ -1371,11 +1409,11 @@ msgstr ""
 msgid "Not copied ({count})"
 msgstr ""
 
-#: app/companion/ui/tray.py:195
+#: app/companion/ui/tray.py:196
 msgid "Nothing to copy"
 msgstr ""
 
-#: app/companion/ui/tray.py:237
+#: app/companion/ui/tray.py:242
 #, python-brace-format
 msgid "Claude: {text}"
 msgstr ""

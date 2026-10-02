@@ -5,7 +5,8 @@ Threads (docs/companion-app.md and the contract's "Threading"):
   and publishes snapshots and notifications, in order, without holding locks;
 - serial workers do the slow parts: `probe` (TCP probe + /health, Core Audio), `io`
   (ACKs, reconciliation, rendering cues, hotkey registration), `commands` (trigger,
-  cancel) and `supervisor` (spawn, stop, WSL restart);
+  cancel), `supervisor` (spawn, stop, WSL restart) and `pending` (writes the Not
+  copied list to disk, so a slow or failing disk never holds up a delivery);
 - the `/events` long-poll thread, the engine log/exit threads, and on Windows the Win32
   hotkey/clipboard thread.
 Workers never touch state: they post results back to the dispatcher.
@@ -83,6 +84,7 @@ from app.companion.model import (
     reduce,
     to_snapshot,
 )
+from app.companion.pending_store import PendingStore
 from app.companion.runtime import Dispatcher, SerialExecutor, TimerHandle
 from app.companion.settings_store import SettingsStore, normalized, validate_settings
 from app.companion.supervisor.backend import EngineBackend, ExternalBackend, read_local_token
@@ -118,6 +120,8 @@ log = logging.getLogger(__name__)
 ACK_RETRIES: Final = 5
 ATTACHED_STOP_WAIT_S: Final = 8.0
 QUIT_UNREGISTER_TIMEOUT_S: Final = 1.0
+# Quit waits this long for the last write of the Not copied list.
+PENDING_FLUSH_TIMEOUT_S: Final = 2.0
 HOTKEY_RETRY_S: Final = 10.0
 TRAY_PROMOTE_S: Final = (2.0, 10.0, 30.0)
 
@@ -195,8 +199,12 @@ class CompanionControllerImpl:
         logs_dir: Path | None = None,
         timings: Timings | None = None,
         host: str = DEFAULT_HOST,
+        pending_store: PendingStore | None = None,
     ) -> None:
+        """`pending_store`: where the Not copied list survives a restart (None = memory
+        only; `create_controller` passes the per-user file)."""
         self._store = store
+        self._pending_store = pending_store
         self._backend_factory = backend_factory
         self._timings = timings or Timings()
         self._host = host
@@ -208,6 +216,7 @@ class CompanionControllerImpl:
         self._commands = SerialExecutor("companion-commands")
         self._supervisor = SerialExecutor("companion-supervisor")
         self._prober = SerialExecutor("companion-probe")
+        self._pending_writer = SerialExecutor("companion-pending")
         self._spawn_lock = threading.Lock()
         self._hotkey_lock = threading.Lock()
         self._generations = itertools.count(1)
@@ -224,13 +233,19 @@ class CompanionControllerImpl:
             CoreState(), SettingsSeen(settings, hotkeys_owned_by_engine(settings.engine_mode)), self._now()
         )
         self._delivery = DeliveryQueue()
+        if pending_store is not None:
+            # Results the previous run could not copy: back in the Not copied list.
+            self._delivery.restore_pending(pending_store.load())
+        restored = tuple(self._delivery.pending())
+        if restored:
+            self._core, _effects = reduce(self._core, PendingCount(len(restored)), self._now())
         self._rev = 0
         self._snapshot: CompanionSnapshot = to_snapshot(self._core, 0, self._now())
         self._listeners: list[SnapshotListener] = []
         self._notification_listeners: list[NotificationListener] = []
         self._outbox: list[Notification] = []
         self._recent: tuple[RecentItem, ...] = ()
-        self._pending: tuple[RecentItem, ...] = ()
+        self._pending: tuple[RecentItem, ...] = restored
         self._generation = 0
         self._hotkey_flows: tuple[str, ...] | None = None
         self._timers: dict[str, TimerHandle] = {}
@@ -368,6 +383,9 @@ class CompanionControllerImpl:
             # Startup: only an entry nobody decided on yet (Explorer creates it without
             # IsPromoted); hiding the icon in the Windows taskbar settings is respected.
             self._promote_tray_icon(True, self._timings.tray_promote_s, only_if_unset=True)
+        pending_backup = self._pending_store.broken_backup if self._pending_store is not None else None
+        if pending_backup is not None:
+            self._input(NoticeRequested("pending_reset", (str(pending_backup),)))
         self._io.submit(self._start_desktop)
         self._poller.start()
         self._run(self._policy.start(time.monotonic()))
@@ -449,6 +467,12 @@ class CompanionControllerImpl:
         for timer in self._timers.values():
             timer.cancel()
         self._timers.clear()
+        # What this run will not deliver goes to the Not copied list, saved before the
+        # quit sequence flushes it: the engine may stop with us and take the results along.
+        abandoned = self._delivery.abandon_queue()
+        if abandoned:
+            log.info("quitting: %s undelivered result(s) kept in the Not copied list", abandoned)
+            self._apply_delivery([])
         self._policy.quit()
         self._sync_supervisor()
         self._poller.stop()
@@ -467,10 +491,11 @@ class CompanionControllerImpl:
                 self._backend.stop(self._client, "user_quit")
                 self._backend.close()
             self._desktop.stop()
+            self._flush_pending()
         except Exception:  # noqa: BLE001 - quitting must always finish
             log.exception("quit sequence failed")
         finally:
-            for executor in (self._io, self._commands, self._supervisor, self._prober):
+            for executor in (self._io, self._commands, self._supervisor, self._prober, self._pending_writer):
                 executor.stop()
             self._finish_quit()
             self._post(self._dispatcher.stop)
@@ -793,6 +818,16 @@ class CompanionControllerImpl:
 
     def copy_result(self, instance: str, result_seq: int) -> None:
         self._post(lambda: self._apply_delivery(self._delivery.copy(instance, result_seq, time.monotonic())))
+
+    def clear_pending(self, keys: Sequence[tuple[str, int]]) -> None:
+        chosen = tuple(keys)
+
+        def run() -> None:
+            cleared, effects = self._delivery.clear_pending(chosen)
+            log.info("Not copied list: %s item(s) cleared", cleared)
+            self._apply_delivery(effects)  # saves what is left (an empty list deletes pending.json)
+
+        self._post(run)
 
     def open_logs(self) -> None:
         directory = self._logs_dir
@@ -1201,7 +1236,10 @@ class CompanionControllerImpl:
             elif isinstance(effect, NotCopied):
                 self._input(NotCopiedSeen(effect.count))
         self._recent = tuple(self._delivery.recent())
-        self._pending = tuple(self._delivery.pending())
+        pending = tuple(self._delivery.pending())
+        if pending != self._pending:
+            self._pending = pending
+            self._save_pending(pending)
         if len(self._pending) != self._core.pending_unacked:
             self._input(PendingCount(len(self._pending)))
         wakeup = self._delivery.next_wakeup()
@@ -1211,6 +1249,27 @@ class CompanionControllerImpl:
                 max(0.0, wakeup - time.monotonic()),
                 lambda: self._apply_delivery(self._delivery.tick(time.monotonic())),
             )
+
+    def _save_pending(self, items: tuple[RecentItem, ...]) -> None:
+        """Write the Not copied list in the background, in order (the store never raises
+        on I/O errors: it logs them and the list stays in memory)."""
+        store = self._pending_store
+        if store is None:
+            return
+
+        def write() -> None:
+            store.save(items)
+
+        self._pending_writer.submit(write)
+
+    def _flush_pending(self) -> None:
+        """Quit: let the last write of the Not copied list finish (bounded)."""
+        if self._pending_store is None:
+            return
+        written = threading.Event()
+        self._pending_writer.submit(written.set)
+        if not written.wait(PENDING_FLUSH_TIMEOUT_S):
+            log.warning("the Not copied list was still being written when quitting")
 
     def _start_delivery(self, key: tuple[str, int], text: str) -> None:
         def done(ok: bool) -> None:
@@ -1281,10 +1340,15 @@ _LOG_HANDLER_NAME: Final = "voicemate-companion-file"
 
 
 def setup_file_logging(log_path: Path | None = None) -> None:
-    """companion.log (rotating) for the `app` loggers; idempotent, never raises."""
-    target = log_path or paths.companion_log_path()
+    """companion.log (rotating) for the `app` loggers; idempotent, never raises (without a
+    data folder, `paths.DataDirError`, or a folder it cannot write, it logs and returns)."""
     app_logger = logging.getLogger("app")
     if any(handler.get_name() == _LOG_HANDLER_NAME for handler in app_logger.handlers):
+        return
+    try:
+        target = log_path or paths.companion_log_path()
+    except paths.DataDirError as exc:
+        log.warning("companion log unavailable: %s", exc)
         return
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -1301,9 +1365,14 @@ def setup_file_logging(log_path: Path | None = None) -> None:
 
 
 def create_controller(settings_path: Path | None = None) -> CompanionController:
-    """The production controller: settings from `settings_path` (default: the per-user file).
+    """The production controller: settings from `settings_path` (default: the per-user file),
+    the Not copied list in `paths.pending_path()`.
 
-    Also starts companion.log (the UI only logs to stderr)."""
+    Also starts companion.log (the UI only logs to stderr). Raises `paths.DataDirError`
+    when the per-user folders cannot be located (main.py reports it)."""
     setup_file_logging()
-    controller: CompanionController = CompanionControllerImpl(SettingsStore(settings_path or paths.settings_path()))
+    controller: CompanionController = CompanionControllerImpl(
+        SettingsStore(settings_path or paths.settings_path()),
+        pending_store=PendingStore(paths.pending_path()),
+    )
     return controller

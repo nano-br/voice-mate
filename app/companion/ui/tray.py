@@ -192,7 +192,12 @@ class TrayIcon(QObject):
         self._fill_results(self.recent_menu, self._shell.controller.recent_results(), _("No transcriptions yet"))
 
     def _fill_pending(self) -> None:
-        self._fill_results(self.pending_menu, self._shell.controller.pending_results(), _("Nothing to copy"))
+        items = self._shell.controller.pending_results()
+        self._fill_results(self.pending_menu, items, _("Nothing to copy"))
+        if items:
+            self.pending_menu.addSeparator()
+            clear = self.pending_menu.addAction(_("Clear list"))
+            clear.triggered.connect(lambda _checked=False: self._shell.confirm_clear_pending())
 
     def _fill_results(self, menu: QMenu, items: list[RecentItem], empty_text: str) -> None:
         menu.clear()

@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Final, Protocol
 
 from app.companion.client import DaemonClient, DaemonError
+from app.companion.paths import home_dir
 from app.protocol.models import ShutdownReason
 
 log = logging.getLogger(__name__)
@@ -252,7 +253,10 @@ class EngineBackend(Protocol):
 
 
 def read_local_token() -> str | None:
-    path = Path.home() / TOKEN_RELATIVE_PATH
+    home = home_dir()
+    if home is None:
+        return None
+    path = home / TOKEN_RELATIVE_PATH
     try:
         token = path.read_text(encoding="utf-8").strip()
     except OSError:

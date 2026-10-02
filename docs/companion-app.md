@@ -247,9 +247,34 @@ they belong to:
   instance, otherwise it only copies; the last status wins). Never overwrite the
   user's clipboard with stale text automatically. A result delivered by
   reconciliation (its event was missed) plays no cue: its `needs_cue` is unknown.
+- An ACK can be dropped (the controller gives up after 5 attempts): a result the
+  companion already ACKed that two reconciliations in a row still list as unacked
+  gets the same status again, at most once per reconciliation, unless it is queued
+  or in flight. One listing alone does nothing (that ACK may still be in transit),
+  so a normal ACK in transit is rarely sent twice (and a duplicate is harmless: the
+  daemon just sets the same status). Without this, a lost `failed` or
+  `dismissed` ACK left the result pending in the daemon, and it came back as stale
+  on the next start (also after the user had cleared it).
 - Results still queued when the daemon instance changes cannot be ACKed any more:
   they go to the pending list (with the "not copied" notification) instead of being
   written late.
+- The pending list (Not copied) survives a Quit or a crash of the companion: once a
+  result is in it, the daemon has its ACK and will never offer it again, so the
+  companion is the only one left that knows about it. It is saved to `pending.json`
+  (see "Local files") on every change and restored at startup, before `start()`, so
+  the tray badge and the status window show it at once. A manual copy removes the
+  entry (from memory and from the file); "Clear list" (`clear_pending`) empties it,
+  see "Tray states, cues and reactions". A restored result the daemon still reports
+  as unacked (the old run quit or crashed before its ACK went out) is ACKed
+  `dismissed` again and stays in the list; it is never delivered automatically.
+- Quit: results still queued or in flight (e.g. a delivery retrying while another app
+  holds the clipboard) will not be delivered by this run, and the engine may stop
+  with the app and take them along. They move to the pending list before the quit
+  sequence flushes `pending.json` (no notification while quitting), without an ACK:
+  if the same daemon still reports them on the next start, they are ACKed `dismissed`
+  then (as above) and stay in the list. A write that was in flight may still have
+  reached the clipboard: listing it anyway is the safe side. Manual copies waiting in
+  the queue are dropped (their result is already in the list, or was delivered).
 
 ### Other endpoints and flags
 
@@ -354,6 +379,22 @@ click copies) and Not copied (never delivered, click copies); Mute sounds; Engin
 Restart engine / Restart WSL... / Open logs; a "Restart WSL now..." item while
 `pending_wsl_restart`; Settings...; Quit VoiceMate. Left click opens the status
 window, which shows the same information and a "Quit VoiceMate" button.
+
+Emptying Not copied: the submenu ends with a separator and "Clear list"; the status
+window's Not copied group has "Clear" next to "Copy". Both ask first, with a
+non-modal question ('Clear the "Not copied" list?', buttons "Clear list" and
+"Cancel", Cancel being the default for Enter and Esc): the texts cannot be copied
+afterwards, and since the list now survives restarts it holds the only copy of them.
+The question remembers the items listed when it opened, and answering "Clear list"
+calls `clear_pending(keys)` with exactly those: a delivery that fails while the
+question is open is not wiped unseen. They are dropped from memory and the file is
+rewritten (deleted when nothing is left). Nothing is ACKed again (those results were
+ACKed when they became pending) and cleared results stay known, so reconciliation
+never offers them again. The exception is a restored result whose ACK the daemon
+never got: it is ACKed `dismissed` at once when it belongs to the current daemon
+instance, otherwise when the daemon reports it. Quit closes the question unanswered.
+There is no per-item removal: an item leaves the list when it is copied or when the
+list is cleared.
 
 ### Notifications
 
@@ -500,6 +541,82 @@ volume = 1.0
 `engine_dir` empty means "detect or ask" on first run (look for `Makefile` +
 `app/main.py` under common paths inside the distro).
 
+### Local files
+
+`app/companion/paths.py` decides where everything goes:
+
+| File | Windows | Linux |
+|---|---|---|
+| Settings (`companion.toml`) | `%APPDATA%\VoiceMate\` | `${XDG_CONFIG_HOME:-~/.config}/voicemate/` |
+| Logs (`companion.log`, `engine.log`) | `%LOCALAPPDATA%\VoiceMate\logs\` | `${XDG_STATE_HOME:-~/.local/state}/voicemate/logs/` |
+| Not copied list (`pending.json`) | `%LOCALAPPDATA%\VoiceMate\` | `${XDG_STATE_HOME:-~/.local/state}/voicemate/` |
+| Rendered cues | `%LOCALAPPDATA%\VoiceMate\cues\` | `${XDG_CACHE_HOME:-~/.cache}/voicemate/cues/` |
+
+The environment variable always wins, and the home directory is looked up only when
+it is missing: a process started without `USERPROFILE`/`HOME` (PowerShell
+`Start-Process -UseNewEnvironment`) still finds `%APPDATA%` and `%LOCALAPPDATA%`.
+When neither the variable nor a home directory is available, `paths` raises
+`DataDirError` (a `RuntimeError` with `variable` and `home_variable`): it never
+guesses a folder (settings written to a temporary folder would be lost silently).
+`main.py` catches it, logs it, shows a critical message box in the OS language
+("VoiceMate cannot find its data folder: APPDATA is not set...", built from a msgid
+with the variable names, since the exception text is English; Qt's translations are
+installed first, so its OK button speaks the same language) and exits with code 1;
+`setup_file_logging` skips companion.log in that case instead of raising. Helpers that only look for optional things under the home directory (the
+Linux engine folder detection, the local API token) treat a missing home directory
+as "not found".
+
+`pending.json` (`app/companion/pending_store.py`), UTF-8 with LF, items oldest first:
+
+```json
+{
+  "version": 1,
+  "items": [
+    {
+      "instance": "6c0f...",
+      "result_seq": 42,
+      "op_seq": 41,
+      "kind": "transcript",
+      "flow": "clipboard",
+      "text": "the transcription",
+      "final": true,
+      "created_ts": 1727800000.0,
+      "delivery": "failed"
+    }
+  ]
+}
+```
+
+- `instance` + `result_seq` are the identity `copy_result` and the delivery queue use
+  (after a daemon restart the old instance only means "copy, do not ACK"); `age_s` is
+  not stored (the daemon computes it per response).
+- At most `PENDING_LIMIT` (50) items, the same cap as the list in memory, so a
+  restart never drops what the user could see; the oldest go first.
+- Written whole on every change (a result added, copied or capped, the list
+  cleared), on the `pending` worker thread (temp file + `fsync` +
+  `os.replace`; on Windows a `PermissionError` from `os.replace`, an antivirus or the
+  search indexer briefly holding the file, is retried up to 5 times, 50 ms more each
+  time); Quit waits up to 2 s for the last write. An empty list deletes the file and
+  any `pending.json.tmp`. A write that fails is logged (once, until a write works
+  again) and the list stays in memory: disk errors never block the UI or a delivery.
+  A lone surrogate in a text (JSON can carry one) is written as a `\u` escape, so the
+  file stays valid UTF-8.
+- Loading never raises (it runs in the controller's constructor, at every start). A
+  leftover `pending.json.tmp` (a write cut short by a crash; `pending.json` itself is
+  always whole) is deleted first. A file that is missing starts an empty list. One
+  that is not readable (not UTF-8, not JSON, an integer over Python's digit limit,
+  nesting too deep, another `version`, `items` not a list) is moved aside to
+  `pending.json.broken-<YYYYmmdd-HHMMSS>`, never overwritten, logged once, and a
+  warning notification ("pending_reset": '"Not copied" list reset', with the backup
+  path) tells the user, like "settings reset" does; if it cannot even be moved,
+  nothing is written to it for the rest of the session. An item with a missing field
+  or a wrong type (a list where a string belongs, a timestamp too large for a float)
+  is skipped with a log line, the valid ones are restored.
+- Privacy: the file holds transcription text. It stays in the user's profile, only
+  holds what is waiting for a manual copy, goes away when the list is empty (also
+  after "Clear list", with its `.tmp`), and the Windows uninstaller deletes it (with
+  its `.tmp` and `.broken-*` copies). The text is never written to the logs.
+
 ### Single instance, taskbar, autostart
 
 - Lock: named mutex `SINGLE_INSTANCE_MUTEX` (`CreateMutexW` + `ERROR_ALREADY_EXISTS`).
@@ -545,7 +662,9 @@ volume = 1.0
   `app/i18n/locales/*/LC_MESSAGES/voicemate.mo`; exclude everything the engine uses.
 - Inno Setup per user (`PrivilegesRequired=lowest`, `{localappdata}\Programs\VoiceMate`),
   `AppMutex=` `INSTALLER_APP_MUTEX`, Start menu shortcut with the AUMID, optional
-  autostart, uninstaller runs `--command quit` first. ISCC is not installed by
+  autostart, uninstaller runs `--command quit` first, then deletes the logs, the
+  rendered cues and `pending.json*` from `%LOCALAPPDATA%\VoiceMate` (the settings in
+  `%APPDATA%\VoiceMate` are kept). ISCC is not installed by
   default: `make companion-installer` explains how to get it
   (`winget install JRSoftware.InnoSetup`).
 - Reproducible builds: exact pins in `requirements/companion-constraints.txt`.

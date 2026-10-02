@@ -86,6 +86,7 @@ class CompanionUi(QObject):
         self._wsl_box: QMessageBox | None = None
         self._restart_wsl_box: QMessageBox | None = None
         self._language_box: QMessageBox | None = None
+        self._clear_pending_box: QMessageBox | None = None
         self._jump_list_mode: str | None = None
 
         self.tray: TrayIcon | None = None
@@ -269,6 +270,32 @@ class CompanionUi(QObject):
         log.info("restarting: the new instance takes over once this one has quit")
         self.quit_app()
 
+    def confirm_clear_pending(self) -> None:
+        if self._quitting:
+            return
+        if self._clear_pending_box is not None:
+            self._clear_pending_box.raise_()
+            self._clear_pending_box.activateWindow()
+            return
+        # What the user sees now: an item that fails meanwhile is not cleared unseen.
+        keys = tuple((item.instance, item.record["result_seq"]) for item in self._controller.pending_results())
+        box, clear = _question(
+            _('Clear the "Not copied" list?'),
+            _("These transcriptions never reached the clipboard. Once cleared, they cannot be copied any more."),
+            _("Clear list"),
+            _("Cancel"),
+        )
+
+        def answered(_result: int) -> None:
+            self._clear_pending_box = None
+            box.deleteLater()
+            if box.clickedButton() is clear and not self._quitting:
+                self._controller.clear_pending(keys)
+
+        box.finished.connect(answered)
+        self._clear_pending_box = box
+        box.show()
+
     # ------------------------------------------------------------------ lifecycle
 
     def start(self, show_window: bool, wait_for_tray: bool = False) -> None:
@@ -344,7 +371,7 @@ class CompanionUi(QObject):
         if self.settings_dialog is not None:
             self.settings_dialog.hotkeys_page.cancel_capture()
             self.settings_dialog.hide()
-        for attribute in ("_wsl_box", "_restart_wsl_box", "_language_box"):
+        for attribute in ("_wsl_box", "_restart_wsl_box", "_language_box", "_clear_pending_box"):
             box = getattr(self, attribute)
             if box is not None:
                 setattr(self, attribute, None)
@@ -435,7 +462,8 @@ class CompanionUi(QObject):
 def _question(title: str, text: str, accept: str, reject: str) -> tuple[QMessageBox, QAbstractButton]:
     """A question shown with show() (never exec()), with our own (translated) button texts;
     the caller picks the modality. The default (Enter) is `reject`: restarting stops things
-    (every WSL distro, the engine), so it must be an explicit click."""
+    (every WSL distro, the engine) and clearing the Not copied list cannot be undone, so they
+    must be an explicit click."""
     box = QMessageBox(QMessageBox.Icon.Question, title, text)
     box.setWindowIcon(app_icon())
     accept_button = box.addButton(accept, QMessageBox.ButtonRole.AcceptRole)

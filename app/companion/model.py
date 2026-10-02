@@ -73,6 +73,7 @@ NoticeCode = Literal[
     "systemd_attached",
     "auth_failed",
     "settings_reset",
+    "pending_reset",
     "trigger_offline",
     "trigger_timeout",
     "trigger_rejected",
@@ -819,6 +820,16 @@ def _build(state: CoreState, note: _Note) -> tuple[NotificationLevel, str, str, 
                 "The old file was kept as {path}."
             ).format(path=note.names[0] if note.names else "companion.toml.broken-*"),
             "open_settings",
+        )
+    if code == "pending_reset":
+        return (
+            "warning",
+            _('"Not copied" list reset'),
+            _(
+                'The saved "Not copied" list could not be read, so it starts empty. '
+                "The old file, with the transcriptions it held, was kept as {path}."
+            ).format(path=note.names[0] if note.names else "pending.json.broken-*"),
+            "none",
         )
     if code == "trigger_offline":
         return (

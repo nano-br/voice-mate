@@ -274,7 +274,11 @@ def test_pending_and_wsl_restart_items_follow_the_snapshot(
     assert tray.wsl_restart_action.isVisible()
     tray.pending_menu.aboutToShow.emit()
     entries = tray.pending_menu.actions()
-    assert [action.text() for action in entries] == ["never reached the clipboard"]
+    assert [action.text() for action in entries if not action.isSeparator()] == [
+        "never reached the clipboard",
+        "Clear list",
+    ]
+    assert entries[1].isSeparator()
     entries[0].trigger()
     assert fake.called("copy_result") == [(item.instance, item.record["result_seq"])]
     process_events()
@@ -390,3 +394,30 @@ def test_rebuilt_flow_actions_stay_disabled_until_the_engine_is_ready(
     assert not any(action.isEnabled() for action in tray.flow_actions)
     tray.menu.aboutToShow.emit()  # the pre-show refresh must not enable them either
     assert not any(action.isEnabled() for action in tray.flow_actions)
+
+
+@pytest.mark.parametrize(("answer", "cleared"), [("Clear list", True), ("Cancel", False)])
+def test_clear_list_in_the_not_copied_submenu_asks_first(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool], answer: str, cleared: bool
+) -> None:
+    first = fake.add_pending("first")
+    second = fake.add_pending("second")
+    process_events()
+    seen = tuple((item.instance, item.record["result_seq"]) for item in (first, second))
+    clears = [(seen,)] if cleared else []
+    tray = _tray(ui)
+    tray.pending_menu.aboutToShow.emit()
+    _action(tray.pending_menu, "Clear list").trigger()
+    box = ui._clear_pending_box
+    assert box is not None and box.isVisible()
+    assert box.windowTitle() == 'Clear the "Not copied" list?'
+    default = box.defaultButton()
+    assert default is not None and default.text() == "Cancel"  # Enter never deletes the texts
+    _action(tray.pending_menu, "Clear list").trigger()  # a second click raises the same question
+    assert ui._clear_pending_box is box
+    assert fake.called("clear_pending") == []
+    next(button for button in box.buttons() if button.text() == answer).click()
+    assert process_events(lambda: ui._clear_pending_box is None)
+    assert fake.called("clear_pending") == clears
+    process_events()
+    assert tray.pending_menu.menuAction().isVisible() is not cleared
