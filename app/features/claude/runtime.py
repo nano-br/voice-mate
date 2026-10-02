@@ -1,18 +1,35 @@
 from __future__ import annotations
 
 import asyncio
+import queue
 import sys
 import threading
-from typing import Any
+import time
+from collections.abc import Iterator
+from typing import Any, cast
+
+# End-of-stream sentinel placed on the queue by the producer coroutine.
+_STREAM_END = object()
+
+
+def _model_supports_effort(model: str | None) -> bool:
+    """The `effort` parameter is rejected by Haiku 4.5 (returns 400).
+
+    Sonnet/Opus accept it. When the model is unknown (None → SDK default), we
+    assume it supports it (the historical default was Sonnet).
+    """
+    if not model:
+        return True
+    return "haiku" not in model.lower()
 
 
 class ClaudeRuntime:
-    """Ponte sync↔asyncio para falar com o claude-agent-sdk.
+    """Sync↔asyncio bridge for talking to the claude-agent-sdk.
 
-    Mantém um event loop dedicado em thread daemon e um `ClaudeSDKClient`
-    vivo durante toda a vida do app (sessão multi-turn preservada). Métodos
-    síncronos `send_and_collect`/`interrupt`/`stop` são chamados de outras
-    threads e despacham para o loop via `run_coroutine_threadsafe`.
+    Keeps a dedicated event loop on a daemon thread and a `ClaudeSDKClient`
+    alive for the whole life of the app (multi-turn session preserved). The
+    synchronous `send_and_collect`/`interrupt`/`stop` methods are called from
+    other threads and dispatch to the loop via `run_coroutine_threadsafe`.
     """
 
     def __init__(
@@ -34,10 +51,10 @@ class ClaudeRuntime:
         self._lock = threading.Lock()
 
     def start(self) -> None:
-        """Sobe a thread + loop e abre o ClaudeSDKClient.
+        """Spin up the thread + loop and open the ClaudeSDKClient.
 
-        Levanta a exceção original se o bootstrap do client falhar (ex: claude
-        CLI não autenticado). Chamadores devem capturar e exibir orientação.
+        Re-raises the original exception if the client bootstrap fails (e.g.
+        claude CLI not authenticated). Callers should catch it and show guidance.
         """
         if self._thread is not None:
             return
@@ -52,25 +69,56 @@ class ClaudeRuntime:
             raise
 
     def send_and_collect(self, prompt: str, timeout: float | None = None) -> str:
-        """Envia um turno e retorna a resposta textual completa.
+        """Send one turn and return the full textual response.
 
-        Bloqueia a thread chamadora até o `receive_response` esgotar (ou ser
-        cancelado via `interrupt`). Pode levantar `asyncio.CancelledError` se
-        cancelado durante o aguardar.
+        Blocks the calling thread until `receive_response` is exhausted (or it is
+        cancelled via `interrupt`). May raise `asyncio.CancelledError` if cancelled
+        while waiting.
         """
         if self._loop is None or self._client is None:
-            raise RuntimeError("ClaudeRuntime não iniciado")
+            raise RuntimeError("ClaudeRuntime not started")
         future = asyncio.run_coroutine_threadsafe(self._send(prompt), self._loop)
         return future.result(timeout=timeout)
 
+    def stream(self, prompt: str, timeout: float | None = None) -> Iterator[str]:
+        """Yield the response text deltas as they arrive (realtime).
+
+        The producer coroutine runs on the dedicated loop and pushes each
+        `TextBlock.text` onto a `queue.Queue`; this generator (running on the
+        calling thread) consumes the queue. Async-side exceptions are propagated;
+        `interrupt()` ends the stream naturally (`receive_response` runs dry).
+        Blocking in `speak()` between `yield`s is what overlaps speech with the
+        generation that keeps filling the queue.
+        """
+        if self._loop is None or self._client is None:
+            raise RuntimeError("ClaudeRuntime not started")
+        bridge: queue.Queue[object] = queue.Queue()
+        future = asyncio.run_coroutine_threadsafe(self._send_stream(prompt, bridge), self._loop)
+        deadline = None if timeout is None else time.monotonic() + timeout
+        try:
+            while True:
+                remaining = None if deadline is None else max(0.0, deadline - time.monotonic())
+                try:
+                    item = bridge.get(timeout=remaining)
+                except queue.Empty as exc:
+                    raise TimeoutError(f"Claude exceeded timeout ({timeout:.0f}s) on the stream.") from exc
+                if item is _STREAM_END:
+                    break
+                if isinstance(item, BaseException):
+                    raise item
+                yield cast(str, item)
+        finally:
+            if not future.done():
+                future.cancel()
+
     def interrupt(self) -> None:
-        """Pede ao client para abortar o turno atual (fire-and-forget)."""
+        """Ask the client to abort the current turn (fire-and-forget)."""
         if self._loop is None or self._client is None:
             return
         asyncio.run_coroutine_threadsafe(self._safe_interrupt(), self._loop)
 
     def stop(self) -> None:
-        """Fecha o client e desmonta loop + thread."""
+        """Close the client and tear down loop + thread."""
         with self._lock:
             if self._loop is None or self._thread is None:
                 return
@@ -79,7 +127,7 @@ class ClaudeRuntime:
         try:
             asyncio.run_coroutine_threadsafe(self._shutdown(), loop).result(timeout=10.0)
         except Exception as exc:  # noqa: BLE001
-            print(f"[ClaudeRuntime] Falha ao fechar client: {exc}", file=sys.stderr)
+            print(f"[ClaudeRuntime] Failed to close client: {exc}", file=sys.stderr)
         loop.call_soon_threadsafe(loop.stop)
         thread.join(timeout=5.0)
         try:
@@ -106,8 +154,13 @@ class ClaudeRuntime:
             options_kwargs["max_turns"] = self._max_turns
         if self._model is not None:
             options_kwargs["model"] = self._model
-        if self._effort is not None:
+        if self._effort is not None and _model_supports_effort(self._model):
             options_kwargs["effort"] = self._effort
+        elif self._effort is not None:
+            print(
+                f"[ClaudeRuntime] effort='{self._effort}' ignored: {self._model} does not support the parameter.",
+                file=sys.stderr,
+            )
         if not self._thinking_enabled:
             from claude_agent_sdk import ThinkingConfigDisabled
 
@@ -130,13 +183,29 @@ class ClaudeRuntime:
                         chunks.append(block.text)
         return "".join(chunks)
 
+    async def _send_stream(self, prompt: str, bridge: queue.Queue[object]) -> None:
+        from claude_agent_sdk import AssistantMessage, TextBlock
+
+        assert self._client is not None
+        try:
+            await self._client.query(prompt)
+            async for msg in self._client.receive_response():
+                if isinstance(msg, AssistantMessage):
+                    for block in msg.content:
+                        if isinstance(block, TextBlock) and block.text:
+                            bridge.put(block.text)
+        except BaseException as exc:  # noqa: BLE001 — propagated to the consumer via the queue
+            bridge.put(exc)
+        finally:
+            bridge.put(_STREAM_END)
+
     async def _safe_interrupt(self) -> None:
         if self._client is None:
             return
         try:
             await self._client.interrupt()
         except Exception as exc:  # noqa: BLE001
-            print(f"[ClaudeRuntime] interrupt falhou: {exc}", file=sys.stderr)
+            print(f"[ClaudeRuntime] interrupt failed: {exc}", file=sys.stderr)
 
     async def _shutdown(self) -> None:
         if self._client is None:

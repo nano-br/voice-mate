@@ -1,0 +1,10 @@
+# Projeto Linux-first: LF em todo lugar (inclusive no checkout Windows).
+# Evita CRLF que quebra os .sh e polui diffs/rsync entre Windows e WSL.
+* text=auto eol=lf
+
+# Binários: nunca normalizar.
+*.png binary
+*.jpg binary
+*.wav binary
+*.bin binary
+*.mo binary

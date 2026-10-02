@@ -1,5 +1,7 @@
+import sys
 import threading
-from typing import Literal
+import time
+import traceback
 
 import numpy as np
 from numpy.typing import NDArray
@@ -7,34 +9,40 @@ from numpy.typing import NDArray
 from app.core.audio_feedback import AudioFeedback
 from app.core.config import Config
 from app.core.recorder import Recorder
-from app.core.transcriber import Transcriber
+from app.core.session_status import SessionState, SessionStatus, ToggleAction, ToggleOutcome
+from app.core.transcription_backend import TranscriptionBackend
 from app.core.transcription_handler import TranscriptionHandler
-
-SessionState = Literal["idle", "recording", "processing"]
+from app.i18n import _
 
 
 class RecordingSession:
-    """Gerencia o ciclo gravação → transcrição → handler com máquina de estado.
+    """Manage the recording → transcription → handler cycle with a state machine.
 
-    Estados: idle → recording → processing → idle. Trigger em `processing`
-    cancela o handler ativo e inicia uma nova gravação imediatamente.
-    O `handler_id` passado em `toggle()` é usado apenas quando o trigger
-    PARA a gravação (decide o destino do texto).
+    States: idle → recording → processing → idle. A trigger in `processing`
+    cancels the active handler and starts a new recording immediately.
+    The `handler_id` passed to `toggle()` is only used when the trigger
+    STOPS the recording (it decides the text's destination).
+
+    `toggle()` returns a `ToggleOutcome` immediately (the start/stop decision is
+    synchronous under the lock — only the transcription is asynchronous), so the
+    trigger knows what happened. If a `SessionStatus` is injected, the state
+    transitions are published to it (live state queryable by the consumers).
     """
 
     def __init__(
         self,
         recorder: Recorder,
-        transcriber: Transcriber,
+        transcriber: TranscriptionBackend,
         audio: AudioFeedback,
         config: Config,
         handlers: dict[str, TranscriptionHandler],
         default_handler_id: str = "clipboard",
+        status: SessionStatus | None = None,
     ) -> None:
         if not handlers:
-            raise ValueError("RecordingSession precisa de ao menos um handler")
+            raise ValueError("RecordingSession needs at least one handler")
         if default_handler_id not in handlers:
-            raise ValueError(f"default_handler_id '{default_handler_id}' não está em handlers")
+            raise ValueError(f"default_handler_id '{default_handler_id}' is not in handlers")
         self._recorder = recorder
         self._transcriber = transcriber
         self._audio = audio
@@ -43,26 +51,41 @@ class RecordingSession:
         self._warning_percent = config.timeout_warning_percent
         self._handlers = handlers
         self._default_handler_id = default_handler_id
+        self._status = status
         self._lock = threading.Lock()
         self._warning_timer: threading.Timer | None = None
         self._timeout_timer: threading.Timer | None = None
         self._state: SessionState = "idle"
         self._stop_handler_id: str | None = None
         self._active_handler_id: str | None = None
+        self._slow_warning_shown = False
+        # Single-flight error beep: with a dead audio server a beep hangs forever,
+        # so a new one is skipped while the previous is still stuck.
+        self._error_beep_busy = threading.Event()
+        # op_seq: the session is the authority. Each recording that STARTS opens a
+        # new operation; the STOP continues the same one (it goes to processing).
+        self._op_counter = 0
+        self._op_seq = 0
+        self._op_flow: str | None = None
+        self._op_client_id: str | None = None
 
-    def toggle(self, handler_id: str) -> None:
+    def toggle(self, handler_id: str, client_id: str | None = None) -> ToggleOutcome | None:
         if handler_id not in self._handlers:
-            print(f"[VoiceMate] ⚠ Handler desconhecido: {handler_id}")
-            return
+            print(_("[VoiceMate] ⚠ Unknown handler: {handler_id}").format(handler_id=handler_id))
+            return None
         handler_to_cancel: TranscriptionHandler | None = None
+        outcome: ToggleOutcome | None = None
         with self._lock:
             state = self._state
             if state == "idle":
-                self._start_locked()
+                self._start_locked(handler_id, client_id)
+                outcome = self._outcome_locked("started")
             elif state == "recording":
                 self._stop_handler_id = handler_id
                 self._cancel_timers()
                 self._state = "processing"
+                self._publish_state_locked("processing")
+                outcome = self._outcome_locked("stopped")
                 threading.Thread(target=self._stop_and_dispatch, daemon=True).start()
             elif state == "processing":
                 active = self._active_handler_id
@@ -70,22 +93,104 @@ class RecordingSession:
                     handler_to_cancel = self._handlers[active]
                 self._active_handler_id = None
         if state == "processing":
-            # Solta o lock antes de chamar cancel_in_flight (que pode bloquear
-            # brevemente em I/O) e antes de iniciar o recorder.
+            # Release the lock before calling cancel_in_flight (which may block
+            # briefly on I/O) and before starting the recorder.
             if handler_to_cancel is not None:
                 handler_to_cancel.cancel_in_flight()
             with self._lock:
                 if self._state == "processing":
-                    self._start_locked()
+                    self._start_locked(handler_id, client_id)
+                    outcome = self._outcome_locked("restarted")
+                else:
+                    outcome = self._outcome_locked("started")
+        return outcome
 
-    def _start_locked(self) -> None:
-        if not self._recorder.start():
+    def _outcome_locked(self, action: ToggleAction) -> ToggleOutcome:
+        return ToggleOutcome(
+            action=action,
+            op_seq=self._op_seq,
+            state=self._state,
+            flow=self._op_flow or self._default_handler_id,
+        )
+
+    def _publish_state_locked(self, state: SessionState) -> None:
+        if self._status is not None:
+            self._status.set_operation(self._op_seq, state, self._op_flow, self._op_client_id)
+
+    def _start_locked(self, handler_id: str, client_id: str | None) -> None:
+        op_seq = self._op_counter + 1
+        # The start cue plays once the mic is LIVE (on the recorder's open thread):
+        # it never blocks the trigger, and it doesn't race the mic open for the device.
+        started = self._recorder.start(
+            on_failure=lambda reason: self._on_mic_failure(op_seq, reason),
+            on_opened=self._on_mic_opened,
+        )
+        if not started:
             self._state = "idle"
             return
         self._state = "recording"
-        self._audio.recording_started()
-        print("[VoiceMate] 🎙  Gravando... (pressione para parar)")
+        self._op_counter = op_seq
+        self._op_seq = op_seq
+        self._op_flow = handler_id
+        self._op_client_id = client_id
+        self._publish_state_locked("recording")
+        print(_("[VoiceMate] 🎙  Recording... (press to stop)"))
         self._schedule_timers_locked()
+
+    def _on_mic_opened(self) -> None:
+        try:
+            self._audio.recording_started()
+        except Exception as exc:  # noqa: BLE001 (best-effort cue; the recording itself is fine)
+            print(_("[VoiceMate] ⚠ Could not play the start beep ({exc}).").format(exc=exc), file=sys.stderr)
+
+    def _on_mic_failure(self, op_seq: int, reason: str) -> None:
+        """The microphone could not be opened for `op_seq` (called off-thread by the Recorder).
+
+        Returns the session to idle (so the next press STARTS again instead of
+        "stopping" a recording that never captured anything) and publishes an error
+        event, which the Windows side turns into a notification.
+        """
+        with self._lock:
+            if self._op_seq != op_seq:
+                return  # a newer operation owns the mic now and reports its own failures
+            client_id = self._op_client_id
+            active = self._state == "recording"
+            if active:
+                self._cancel_timers()
+                self._state = "idle"
+        if active and self._status is not None:
+            self._status.mark_idle(op_seq)
+        print(
+            _(
+                "[VoiceMate] 🎙 ✗ Microphone unavailable ({reason}). Check that a microphone is connected "
+                "and enabled, then press the hotkey again."
+            ).format(reason=reason),
+            file=sys.stderr,
+        )
+        if self._status is not None:
+            self._status.record_error(
+                "mic_unavailable",
+                _("Microphone unavailable: {reason}").format(reason=reason),
+                op_seq=op_seq,
+                client_id=client_id,
+            )
+        self._beep_error_async()
+
+    def _beep_error_async(self) -> None:
+        """Error cue off the caller's thread; skipped while a previous one is stuck."""
+        if self._error_beep_busy.is_set():
+            return
+        self._error_beep_busy.set()
+
+        def _run() -> None:
+            try:
+                self._audio.error()
+            except Exception:  # noqa: BLE001, S110 (best-effort beep: the audio device may be the problem)
+                pass
+            finally:
+                self._error_beep_busy.clear()
+
+        threading.Thread(target=_run, daemon=True, name="ErrorBeep").start()
 
     def _schedule_timers_locked(self) -> None:
         warning_at = self._max_seconds * self._warning_percent
@@ -106,53 +211,95 @@ class RecordingSession:
 
     def _on_warning(self) -> None:
         remaining = self._max_seconds * (1 - self._warning_percent)
-        print(f"[VoiceMate] ⚠ Gravação será encerrada em {remaining:.0f}s")
+        print(_("[VoiceMate] ⚠ Recording will end in {remaining:.0f}s").format(remaining=remaining))
         self._audio.timeout_warning()
 
     def _on_timeout(self) -> None:
-        print("[VoiceMate] ⏰ Tempo máximo atingido. Encerrando gravação...")
+        print(_("[VoiceMate] ⏰ Maximum time reached. Ending recording..."))
         with self._lock:
             if self._state != "recording":
                 return
             self._cancel_timers()
             self._stop_handler_id = self._default_handler_id
             self._state = "processing"
+            self._publish_state_locked("processing")
         self._stop_and_dispatch()
 
     def _stop_and_dispatch(self) -> None:
-        result: NDArray[np.float32] | None = self._recorder.stop()
-        with self._lock:
-            stop_id = self._stop_handler_id
-            self._stop_handler_id = None
-            if self._state != "processing":
-                # Usuário cancelou e iniciou nova gravação; abortamos silenciosamente.
-                return
-            if stop_id is None:
-                self._state = "idle"
-                return
-            self._active_handler_id = stop_id
+        """Stop the recording, transcribe and dispatch — runs in its own thread.
 
-        if result is None:
-            print("[VoiceMate] Nenhum áudio capturado.")
-            self._finish_processing_locked(stop_id)
-            return
-
-        duration = len(result) / self._sample_rate
-        print(f"[VoiceMate] ⏳ Transcrevendo {duration:.1f}s de áudio...")
-        text = self._transcriber.transcribe(result)
-        if not text:
-            print("[VoiceMate] Nenhuma fala detectada.")
-            self._finish_processing_locked(stop_id)
-            return
-
-        handler = self._handlers[stop_id]
+        Any exception here is logged (traceback) and the state ALWAYS returns to
+        idle: a daemon thread that dies silently would leave the session stuck in
+        `processing` and the toggle "dead" with no clue in the log.
+        """
+        stop_id: str | None = None
         try:
-            handler.handle(text)
+            result: NDArray[np.float32] | None = self._recorder.stop()
+            with self._lock:
+                stop_id = self._stop_handler_id
+                self._stop_handler_id = None
+                if self._state != "processing":
+                    # User cancelled and started a new recording; we abort silently.
+                    return
+                if stop_id is None:
+                    self._state = "idle"
+                    return
+                self._active_handler_id = stop_id
+
+            if result is None:
+                print(_("[VoiceMate] No audio captured."))
+                return
+
+            duration = len(result) / self._sample_rate
+            print(_("[VoiceMate] ⏳ Transcribing {duration:.1f}s of audio...").format(duration=duration))
+            started_at = time.perf_counter()
+            text = self._transcriber.transcribe(result)
+            self._warn_if_slow(duration, time.perf_counter() - started_at)
+            if not text:
+                print(_("[VoiceMate] No speech detected."))
+                return
+
+            self._handlers[stop_id].handle(text)
+        except Exception:  # noqa: BLE001 — thread boundary: log + recover
+            print(_("[VoiceMate] ❌ Error processing the recording:"), file=sys.stderr)
+            traceback.print_exc()
+            try:
+                self._audio.error()
+            except Exception:  # noqa: BLE001, S110 — beep is best-effort
+                pass
         finally:
-            self._finish_processing_locked(stop_id)
+            if stop_id is not None:
+                self._finish_processing_locked(stop_id)
+
+    def _warn_if_slow(self, audio_seconds: float, elapsed: float) -> None:
+        """Detect a GPU-less backend (silent fallback to CPU/software).
+
+        Healthy GPU transcription runs well below real time; 3× the audio
+        duration (with a 5s floor to absorb warmup) indicates the backend is
+        running on CPU/Vulkan-software. Warns once per session.
+        """
+        if self._slow_warning_shown or elapsed <= max(5.0, 3.0 * audio_seconds):
+            return
+        self._slow_warning_shown = True
+        ratio = elapsed / audio_seconds if audio_seconds > 0 else float("inf")
+        print(
+            _(
+                "[VoiceMate] ⚠ Transcription {ratio:.0f}× slower than the audio "
+                "({elapsed:.0f}s for {audio_seconds:.0f}s) — the backend is probably running WITHOUT GPU. "
+                "Run `make doctor` for diagnosis."
+            ).format(ratio=ratio, elapsed=elapsed, audio_seconds=audio_seconds),
+            file=sys.stderr,
+        )
 
     def _finish_processing_locked(self, stop_id: str) -> None:
+        op_seq: int | None = None
         with self._lock:
             if self._state == "processing" and self._active_handler_id == stop_id:
                 self._state = "idle"
                 self._active_handler_id = None
+                op_seq = self._op_seq
+        # Publish idle OUTSIDE the session lock (the hub has its own lock) and only
+        # if this finalization is the one that actually returned to idle — mark_idle
+        # ignores it if a new operation already opened on top (race-free).
+        if op_seq is not None and self._status is not None:
+            self._status.mark_idle(op_seq)

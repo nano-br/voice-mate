@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-21 14:42-0300\n"
+"POT-Creation-Date: 2026-10-01 17:26-0300\n"
 "PO-Revision-Date: 2026-05-21 14:42-0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -18,84 +18,1600 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: app/main.py:37
+#: app/main.py:87
 msgid "[VoiceMate] No handler available; exiting."
 msgstr ""
 
-#: app/main.py:53
+#: app/main.py:112
 #, python-brace-format
 msgid ""
 "\n"
 "[VoiceMate] Ready. Input: {input_method}"
 msgstr ""
 
-#: app/main.py:55
+#: app/main.py:114
+#, python-brace-format
+msgid "[VoiceMate] Platform: {platform} (trigger: {trigger})"
+msgstr ""
+
+#: app/main.py:120
+#, python-brace-format
+msgid "[VoiceMate] Daemon listening on http://127.0.0.1:{port} (POST /trigger)."
+msgstr ""
+
+#: app/main.py:124
+msgid ""
+"[VoiceMate] Register the Windows-side hotkeys with scripts/windows"
+"/voicemate-hotkeys.ahk (or .ps1)."
+msgstr ""
+
+#: app/main.py:127
 msgid "clipboard"
 msgstr ""
 
-#: app/main.py:55
+#: app/main.py:127
 msgid "Claude (multi-turn)"
 msgstr ""
 
-#: app/main.py:56
+#: app/main.py:128
 #, python-brace-format
 msgid "[VoiceMate] Hotkey {hotkey}: → {label}"
 msgstr ""
 
-#: app/main.py:57
+#: app/main.py:129
 #, python-brace-format
 msgid "[VoiceMate] Max recording: {seconds}s"
 msgstr ""
 
-#: app/main.py:58
+#: app/main.py:130
 msgid "[VoiceMate] Ctrl+C to exit.\n"
 msgstr ""
 
-#: app/features/claude/chat_handler.py:48
+#: app/main.py:162
+#, python-brace-format
+msgid "[VoiceMate] Failed to close handler: {exc}"
+msgstr ""
+
+#: app/main.py:170
+#, python-brace-format
+msgid "[VoiceMate] Failed to close transcriber: {exc}"
+msgstr ""
+
+#: app/main.py:171
+msgid ""
+"\n"
+"[VoiceMate] Shutting down."
+msgstr ""
+
+#: app/cli/config_builder.py:108
+msgid "[VoiceMate] ⚠ Claude flow requires input-method=keyboard. Disabling."
+msgstr ""
+
+#: app/cli/config_builder.py:127
+msgid ""
+"[VoiceMate] ⚠ --claude-no-system-prompt and --claude-system-prompt were "
+"passed together; using --claude-no-system-prompt."
+msgstr ""
+
+#: app/cli/config_builder.py:237
+#, python-brace-format
+msgid "[VoiceMate] Auto-seed removed: {path}"
+msgstr ""
+
+#: app/cli/config_builder.py:240
+#, python-brace-format
+msgid "[VoiceMate] ⚠ Failed to remove {path}: {exc}"
+msgstr ""
+
+#: app/cli/wiring.py:62
+#, python-brace-format
+msgid "[VoiceMate] ⚠ openai-whisper failed: {exc}"
+msgstr ""
+
+#: app/cli/wiring.py:69
+msgid ""
+"[VoiceMate] ⚠ whisper.cpp not found (run `make configure`); trying "
+"fallback."
+msgstr ""
+
+#: app/cli/wiring.py:76
+#, python-brace-format
+msgid "[VoiceMate] ⚠ whisper.cpp failed; falling back: {exc}"
+msgstr ""
+
+#: app/cli/wiring.py:96
+#, python-brace-format
+msgid "[VoiceMate] ⚠ faster-whisper (CT2-ROCm) failed on the AMD GPU: {exc}"
+msgstr ""
+
+#: app/cli/wiring.py:99
+msgid "[VoiceMate]   Disabling until the next `make configure`."
+msgstr ""
+
+#: app/cli/wiring.py:106
+#, python-brace-format
+msgid "[VoiceMate] ⚠ Failed to persist ct2_rocm_ok: {persist_exc}"
+msgstr ""
+
+#: app/cli/wiring.py:147
+msgid ""
+"[VoiceMate] ⚠ No GPU backend available on AMD; using faster-whisper on "
+"CPU."
+msgstr ""
+
+#: app/cli/wiring.py:184
+#, python-brace-format
+msgid "[VoiceMate] ⚠ TTS disabled: engine '{engine}' packages not installed."
+msgstr ""
+
+#: app/cli/wiring.py:188
+#, python-brace-format
+msgid ""
+"[VoiceMate]   Install with: poetry install --extras {extra} (or run with "
+"--no-tts)."
+msgstr ""
+
+#: app/cli/wiring.py:198
+#, python-brace-format
+msgid "[VoiceMate] ⚠ TTS disabled (failed to start engine '{engine}'): {exc}"
+msgstr ""
+
+#: app/cli/wiring.py:205
+#, python-brace-format
+msgid ""
+"[VoiceMate]   Check `poetry install --extras {extra}`, GPU availability, "
+"or run with `--no-tts`."
+msgstr ""
+
+#: app/cli/wiring.py:245
+msgid "[VoiceMate] ⚠ Claude flow disabled: extra 'claude' not installed."
+msgstr ""
+
+#: app/cli/wiring.py:249
+msgid "[VoiceMate]   Install with: poetry install --extras claude"
+msgstr ""
+
+#: app/cli/wiring.py:265
+#, python-brace-format
+msgid "[VoiceMate] ⚠ Failed to start Claude (run `claude login`): {exc}"
+msgstr ""
+
+#: app/cli/wiring.py:277
+#, python-brace-format
+msgid "[VoiceMate] ⚠ Unknown flow ignored: {kind}"
+msgstr ""
+
+#: app/cli/wiring.py:330
+#, python-brace-format
+msgid ""
+"[VoiceMate] ⚠ --input-method mouse is only supported on Windows "
+"(trigger={trigger}); using keyboard hotkeys."
+msgstr ""
+
+#: app/core/recorder.py:94
+msgid ""
+"the audio system is not responding (a previous microphone open is still "
+"stuck; on WSL2 run `wsl --shutdown`)"
+msgstr ""
+
+#: app/core/recorder.py:151
+#, python-brace-format
+msgid "timed out opening the microphone after {seconds:.0f}s"
+msgstr ""
+
+#: app/core/recorder.py:181
+#, python-brace-format
+msgid "[VoiceMate] ❌ Could not open the microphone ({reason})."
+msgstr ""
+
+#: app/core/recording_session.py:74
+#, python-brace-format
+msgid "[VoiceMate] ⚠ Unknown handler: {handler_id}"
+msgstr ""
+
+#: app/core/recording_session.py:137
+msgid "[VoiceMate] 🎙  Recording... (press to stop)"
+msgstr ""
+
+#: app/core/recording_session.py:144
+#, python-brace-format
+msgid "[VoiceMate] ⚠ Could not play the start beep ({exc})."
+msgstr ""
+
+#: app/core/recording_session.py:165
+#, python-brace-format
+msgid ""
+"[VoiceMate] 🎙 ✗ Microphone unavailable ({reason}). Check that a "
+"microphone is connected and enabled, then press the hotkey again."
+msgstr ""
+
+#: app/core/recording_session.py:173
+#, python-brace-format
+msgid "Microphone unavailable: {reason}"
+msgstr ""
+
+#: app/core/recording_session.py:214
+#, python-brace-format
+msgid "[VoiceMate] ⚠ Recording will end in {remaining:.0f}s"
+msgstr ""
+
+#: app/core/recording_session.py:218
+msgid "[VoiceMate] ⏰ Maximum time reached. Ending recording..."
+msgstr ""
+
+#: app/core/recording_session.py:250
+msgid "[VoiceMate] No audio captured."
+msgstr ""
+
+#: app/core/recording_session.py:254
+#, python-brace-format
+msgid "[VoiceMate] ⏳ Transcribing {duration:.1f}s of audio..."
+msgstr ""
+
+#: app/core/recording_session.py:259
+msgid "[VoiceMate] No speech detected."
+msgstr ""
+
+#: app/core/recording_session.py:264
+msgid "[VoiceMate] ❌ Error processing the recording:"
+msgstr ""
+
+#: app/core/recording_session.py:287
+#, python-brace-format
+msgid ""
+"[VoiceMate] ⚠ Transcription {ratio:.0f}× slower than the audio "
+"({elapsed:.0f}s for {audio_seconds:.0f}s) — the backend is probably "
+"running WITHOUT GPU. Run `make doctor` for diagnosis."
+msgstr ""
+
+#: app/core/transcriber.py:26
+#, python-brace-format
+msgid "[VoiceMate] Loading Whisper '{model_size}' on {device} ({compute_type})..."
+msgstr ""
+
+#: app/core/transcriber.py:30 app/features/openai_whisper/backend.py:41
+msgid "[VoiceMate] (first run downloads the model automatically)"
+msgstr ""
+
+#: app/core/transcriber.py:34 app/features/openai_whisper/backend.py:43
+#: app/features/whispercpp/backend.py:49
+msgid "[VoiceMate] Model ready."
+msgstr ""
+
+#: app/core/transcription_handler.py:33
+#, python-brace-format
+msgid "[VoiceMate] ✓ Copied: {preview}"
+msgstr ""
+
+#: app/features/claude/chat_handler.py:53
+#, python-brace-format
+msgid "[VoiceMate] ⏳ Claude processing... ({elapsed:.0f}s)"
+msgstr ""
+
+#: app/features/claude/chat_handler.py:90
 #, python-brace-format
 msgid "[VoiceMate] ✓ Transcription: {preview}"
 msgstr ""
 
-#: app/features/claude/chat_handler.py:50
+#: app/features/claude/chat_handler.py:92
 msgid "[VoiceMate] 📋 Transcription copied to clipboard."
 msgstr ""
 
-#: app/features/claude/chat_handler.py:52
+#: app/features/claude/chat_handler.py:94
 msgid "[VoiceMate] 🤖 Calling Claude..."
 msgstr ""
 
-#: app/features/claude/chat_handler.py:57
+#: app/features/claude/chat_handler.py:105
 msgid "[VoiceMate] ✗ Claude response discarded (cancelled)."
 msgstr ""
 
-#: app/features/claude/chat_handler.py:60
+#: app/features/claude/chat_handler.py:108
 msgid "[VoiceMate] Claude returned an empty response."
 msgstr ""
 
-#: app/features/claude/chat_handler.py:63
+#: app/features/claude/chat_handler.py:111
 #, python-brace-format
 msgid "[VoiceMate] 💬 Claude: {preview}"
 msgstr ""
 
-#: app/features/claude/chat_handler.py:65
+#: app/features/claude/chat_handler.py:112
+#, python-brace-format
+msgid "[VoiceMate] ⏱ Full response in {elapsed:.1f}s"
+msgstr ""
+
+#: app/features/claude/chat_handler.py:114
 msgid "[VoiceMate] 📋 Claude response copied to clipboard."
 msgstr ""
 
-#: app/features/tts/voxcpm_speaker.py:57
-msgid "cloning"
+#: app/features/claude/chat_handler.py:118
+msgid "[VoiceMate] ✗ Claude call cancelled."
 msgstr ""
 
-#: app/features/tts/voxcpm_speaker.py:57
-msgid "voice-design"
-msgstr ""
-
-#: app/features/tts/voxcpm_speaker.py:58
+#: app/features/claude/chat_handler.py:121
 #, python-brace-format
-msgid "[VoxCPMSpeaker] 🔊 Synthesizing voice ({mode})..."
+msgid "[VoiceMate] ⏱ Claude exceeded timeout ({timeout:.0f}s), discarding turn."
+msgstr ""
+
+#: app/features/claude/chat_handler.py:129
+#, python-brace-format
+msgid "[VoiceMate] ❌ Error talking to Claude: {exc}"
+msgstr ""
+
+#: app/features/claude/chat_handler.py:153
+msgid "[VoiceMate] 💬 Claude responding..."
+msgstr ""
+
+#: app/features/openai_whisper/backend.py:37
+#, python-brace-format
+msgid "[VoiceMate] Loading Whisper '{model_size}' (openai-whisper) on {device}..."
+msgstr ""
+
+#: app/features/openai_whisper/backend.py:101
+#, python-brace-format
+msgid "[VoiceMate] ⚠ openai-whisper warmup failed (continuing): {exc}"
+msgstr ""
+
+#: app/features/openai_whisper/vad.py:47
+#, python-brace-format
+msgid "[VoiceMate] ⚠ VAD failed (using full audio): {exc}"
+msgstr ""
+
+#: app/features/tts/kokoro_speaker.py:80
+#, python-brace-format
+msgid "[KokoroSpeaker] error while speaking: {exc}"
+msgstr ""
+
+#: app/features/tts/kokoro_speaker.py:89
+msgid ""
+"[KokoroSpeaker] ⚠ AudioPlayer drain timed out — audio may have been left "
+"incomplete."
+msgstr ""
+
+#: app/features/tts/kokoro_speaker.py:102
+msgid "[KokoroSpeaker] Warmup..."
+msgstr ""
+
+#: app/features/tts/kokoro_speaker.py:105
+msgid "[KokoroSpeaker] Warmup done — synthesis ready."
+msgstr ""
+
+#: app/features/tts/kokoro_speaker.py:107
+#, python-brace-format
+msgid "[KokoroSpeaker] ⚠ warmup failed (continuing): {exc}"
+msgstr ""
+
+#: app/features/tts/kokoro_speaker.py:136
+#, python-brace-format
+msgid ""
+"[KokoroSpeaker] ⚠ Failed to load Kokoro: {exc}\n"
+"[KokoroSpeaker]   PT-BR needs espeak-ng: sudo apt install -y espeak-ng"
+msgstr ""
+
+#: app/features/tts/kokoro_speaker.py:150
+#, python-brace-format
+msgid ""
+"[KokoroSpeaker] Loading Kokoro (lang={lang_code}, {device}, first run "
+"downloads weights)..."
+msgstr ""
+
+#: app/features/tts/kokoro_speaker.py:155
+msgid "[KokoroSpeaker] Model ready."
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:104
+#, python-brace-format
+msgid "[OmniVoiceSpeaker] error while speaking: {exc}"
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:113
+msgid ""
+"[OmniVoiceSpeaker] ⚠ AudioPlayer drain timed out — audio may have been "
+"left incomplete."
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:135
+msgid ""
+"[OmniVoiceSpeaker] Warmup (tuning ROCm kernels; only the 1st time is "
+"slow)..."
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:137
+msgid "[OmniVoiceSpeaker] Warmup done — synthesis ready (realtime)."
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:139
+#, python-brace-format
+msgid "[OmniVoiceSpeaker] ⚠ warmup failed (continuing): {exc}"
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:168
+#, python-brace-format
+msgid "[OmniVoiceSpeaker] ⚠ Failed to load OmniVoice: {exc}"
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:180
+msgid ""
+"[OmniVoiceSpeaker] ROCm — TunableOp enabled: each new sentence length "
+"gets a small tune (~1-2s) the 1st time; after that it is realtime (RTF "
+"~0.7)."
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:186
+#, python-brace-format
+msgid ""
+"[OmniVoiceSpeaker] Loading OmniVoice ({device_map}, first run downloads "
+"weights)..."
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:191
+msgid "[OmniVoiceSpeaker] Model ready."
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:223
+msgid ""
+"[OmniVoiceSpeaker] ⚠ PyTorch without GPU acceleration — OmniVoice will "
+"run on CPU (much slower synthesis). Run `make configure` to install the "
+"torch for your GPU."
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:281
+#, python-brace-format
+msgid "[OmniVoiceSpeaker] Auto-seed loaded from {cached_wav}"
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:283
+#, python-brace-format
+msgid "[OmniVoiceSpeaker] ⚠ Failed to read auto-seed: {exc}"
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:303
+msgid "[OmniVoiceSpeaker] soundfile not installed — could not save auto-seed."
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:312
+#, python-brace-format
+msgid "[OmniVoiceSpeaker] ⚠ Failed to save auto-seed: {exc}"
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:316
+#, python-brace-format
+msgid "[OmniVoiceSpeaker] Auto-seed saved to {wav_path}"
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:322
+msgid "[OmniVoiceSpeaker] soundfile not installed — could not save audio."
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:328
+#, python-brace-format
+msgid "[OmniVoiceSpeaker] Audio saved to {path}"
+msgstr ""
+
+#: app/features/tts/omnivoice_speaker.py:352
+#, python-brace-format
+msgid ""
+"[OmniVoiceSpeaker] VRAM ({label}): alloc={allocated:.2f}GB, "
+"reserved={reserved:.2f}GB"
 msgstr ""
 
 #: app/features/tts/voxcpm_speaker.py:75
 #, python-brace-format
+msgid "[VoxCPMSpeaker] ⚠ Failed to load VoxCPM2: {exc}"
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:87
+msgid "cloning"
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:87
+msgid "voice-design"
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:88
+#, python-brace-format
+msgid "[VoxCPMSpeaker] 🔊 Synthesizing voice ({mode})..."
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:99
+msgid ""
+"[VoxCPMSpeaker] ⚠ AudioPlayer drain timed out — flow recovered, audio may"
+" have been left incomplete."
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:107
+#, python-brace-format
 msgid "[VoxCPMSpeaker] ✓ Playback finished ({elapsed:.1f}s)."
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:109
+#, python-brace-format
+msgid "[VoxCPMSpeaker] error while speaking: {exc}"
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:155
+#, python-brace-format
+msgid "[VoxCPMSpeaker] Auto-seed loaded from {cached_wav}"
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:159
+#, python-brace-format
+msgid "[VoxCPMSpeaker] ⚠ Failed to read auto-seed: {exc}"
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:181
+msgid "[VoxCPMSpeaker] Loading VoxCPM2 (first run downloads weights)..."
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:183
+msgid "[VoxCPMSpeaker] Model ready."
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:210
+msgid ""
+"[VoxCPMSpeaker] ⚠ PyTorch without GPU acceleration — VoxCPM will run on "
+"CPU (synthesis ~50-100× slower than GPU)."
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:218
+msgid ""
+"[VoxCPMSpeaker]   For the AMD GPU, install torch ROCm (Adrenalin driver "
+">= 26.2.2). Run: make configure"
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:225
+msgid ""
+"[VoxCPMSpeaker]   Wheels: https://repo.radeon.com/rocm/windows/ "
+"(torch/torchaudio +rocm, cp312, win_amd64)"
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:232
+msgid "[VoxCPMSpeaker]   For the NVIDIA GPU, reinstall PyTorch with a CUDA build:"
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:237
+msgid ""
+"[VoxCPMSpeaker]   poetry run pip install --upgrade --index-url "
+"https://download.pytorch.org/whl/cu128 torch torchaudio"
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:260
+#, python-brace-format
+msgid "[VoxCPMSpeaker] ⚠ failed to close generator: {exc}"
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:324
+msgid "[VoxCPMSpeaker] soundfile not installed — could not save auto-seed."
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:336
+#, python-brace-format
+msgid "[VoxCPMSpeaker] ⚠ Failed to save auto-seed: {exc}"
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:340
+#, python-brace-format
+msgid "[VoxCPMSpeaker] Auto-seed saved to {wav_path}"
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:362
+#, python-brace-format
+msgid ""
+"[VoxCPMSpeaker] VRAM ({label}): alloc={allocated:.2f}GB, "
+"reserved={reserved:.2f}GB"
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:379
+msgid "[VoxCPMSpeaker] soundfile not installed — could not save audio."
+msgstr ""
+
+#: app/features/tts/voxcpm_speaker.py:388
+#, python-brace-format
+msgid "[VoxCPMSpeaker] Audio saved to {path}"
+msgstr ""
+
+#: app/features/whispercpp/__init__.py:102
+#, python-brace-format
+msgid ""
+"[VoiceMate] ⚠ whisper-server failed to start ({exc}); falling back to "
+"whisper-cli."
+msgstr ""
+
+#: app/features/whispercpp/__init__.py:109
+msgid "[VoiceMate] ⚠ whisper-server.exe not found; using whisper-cli (cli mode)."
+msgstr ""
+
+#: app/features/whispercpp/backend.py:45
+#, python-brace-format
+msgid ""
+"[VoiceMate] Loading Whisper '{model_stem}' (whisper.cpp + Vulkan, "
+"language={language})..."
+msgstr ""
+
+#: app/features/whispercpp/server_backend.py:168
+#, python-brace-format
+msgid ""
+"[VoiceMate] Starting whisper-server '{model_stem}' (whisper.cpp, "
+"language={language}, vad={vad})..."
+msgstr ""
+
+#: app/features/whispercpp/server_backend.py:191
+msgid "[VoiceMate] Model ready (warm)."
+msgstr ""
+
+#: app/features/whispercpp/server_backend.py:201
+#, python-brace-format
+msgid "[VoiceMate] {line}"
+msgstr ""
+
+#: app/features/whispercpp/server_backend.py:205
+#, python-brace-format
+msgid "[VoiceMate] ⚠ {warning}"
+msgstr ""
+
+#: app/features/whispercpp/server_backend.py:227
+#, python-brace-format
+msgid "[VoiceMate] ⚠ whisper-server warmup failed (continuing): {exc}"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:28
+#, python-brace-format
+msgid "[VoiceMate] Windows audio device check unavailable: {0}"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:29
+#, python-brace-format
+msgid "[VoiceMate] Connected to the daemon at {0}."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:30
+#, python-brace-format
+msgid ""
+"[VoiceMate] Lost contact with the daemon at {0} (stopped or restarting?)."
+" Retrying every {1} s."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:31
+msgid "connection refused"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:32
+msgid "connection closed before the daemon answered"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:33
+#, python-brace-format
+msgid "nothing is listening on {0}"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:34
+#, python-brace-format
+msgid "[VoiceMate] Registered with the daemon as consumer {0}."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:35
+#, python-brace-format
+msgid ""
+"[VoiceMate] Daemon restarted (instance {0} -> {1}): reading its results "
+"from the start."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:36
+#, python-brace-format
+msgid ""
+"[VoiceMate] Registered with the daemon as consumer {0} (assigned on the "
+"trigger)."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:37
+#, python-brace-format
+msgid "[VoiceMate] > recording... (op {0})"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:38
+#, python-brace-format
+msgid "[VoiceMate] # transcribing... (op {0})"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:39
+#, python-brace-format
+msgid "[VoiceMate] ~ restarted (op {0})"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:40
+#, python-brace-format
+msgid "[VoiceMate] trigger '{0}' received."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:41
+msgid "daemon offline"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:42
+#, python-brace-format
+msgid ""
+"{0}: daemon offline at {1} ({2}). Start it in WSL with `make run`, then "
+"press the hotkey again."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:43
+msgid "daemon busy"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:45
+#, python-brace-format
+msgid ""
+"{0}: the daemon did not answer within {1} s (busy). It is running, so it "
+"may still act on this key press: check the WSL console before pressing "
+"again."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:47
+msgid "daemon error"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:48
+#, python-brace-format
+msgid "{0}: daemon error ({1}). See the WSL console for details."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:49
+msgid "trigger rejected"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:50
+#, python-brace-format
+msgid "{0}: the daemon rejected the trigger ({1})."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:51
+msgid "trigger failed"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:52
+#, python-brace-format
+msgid "{0}: unexpected error talking to the daemon at {1}: {2}"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:53
+#, python-brace-format
+msgid "The daemon reported an error ({0})."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:54
+#, python-brace-format
+msgid "[VoiceMate] {0} (seq {1}, op {2}, error '{3}'; clipboard untouched)"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:55
+msgid "error"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:56
+msgid "microphone unavailable"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:57
+msgid ""
+"No microphone is connected to Windows. Connect one and press the hotkey "
+"again."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:59
+msgid ""
+"Windows has an active microphone, but WSL cannot open it: the WSLg audio "
+"bridge is stuck. Run `wsl --shutdown`, then start the daemon again."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:62
+msgid ""
+"Could not query the Windows audio devices. Check that a microphone is "
+"connected; if it is, run `wsl --shutdown` and start the daemon again."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:65
+#, python-brace-format
+msgid ""
+"[VoiceMate] Transcription could not be copied to the clipboard (seq {0}, "
+"op {1}) after {2} tries. Full text below, copy it manually:"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:67
+#, python-brace-format
+msgid "----- VoiceMate transcription (seq {0}) -----"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:68
+msgid "----- end -----"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:69
+msgid "Transcription could not be copied to the clipboard"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:70
+#, python-brace-format
+msgid "\"{0}\" (the full text is in the VoiceMate console window)"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:71
+#, python-brace-format
+msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}, retry {2}): \"{3}\""
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:72
+#, python-brace-format
+msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}): \"{2}\""
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:73
+#, python-brace-format
+msgid "[VoiceMate] could not confirm the clipboard (seq {0}): \"{1}\"; retrying."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:75
+msgid ""
+"WSL audio is stuck: the daemon cannot reach the WSLg PulseAudio server, "
+"so recording will fail. Run `wsl --shutdown`, then start the daemon "
+"again."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:77
+msgid "Windows has no microphone connected either: connect one first."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:78
+msgid "WSL audio is down"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:79
+msgid "[VoiceMate] WSL audio is working again."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:80
+#, python-brace-format
+msgid "[VoiceMate] Unexpected error in the main loop (continuing): {0}"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:81
+#, python-brace-format
+msgid "[VoiceMate] Hotkeys active: {0} (clipboard) / {1} (Claude) -> {2}"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:82
+#, python-brace-format
+msgid "(unregistered, retrying every {0} s)"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:83
+#, python-brace-format
+msgid ""
+"[VoiceMate] Consumer {0} | scope={1}. Clipboard set by Windows. Leave "
+"this window open."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:85
+#, python-brace-format
+msgid ""
+"[VoiceMate] Daemon not reachable at {0} yet: start it in WSL (`make "
+"run`). The hotkeys stay active and this window connects as soon as it is "
+"up."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:87
+msgid ""
+"[VoiceMate] Windows has no active microphone: recording will fail until "
+"you connect one."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:88
+#, python-brace-format
+msgid "{0} is already registered by another app."
+msgstr ""
+
+#: app/platform/clipboard.py:114
+#, python-brace-format
+msgid ""
+"[VoiceMate] ⚠ clipboard '{writer_name}' failed ({exc}); retrying the "
+"other mechanisms..."
+msgstr ""
+
+#: app/platform/listeners/socket_trigger_listener.py:152
+msgid "[VoiceMate] Shutdown requested over HTTP."
+msgstr ""
+
+#: app/platform/listeners/socket_trigger_listener.py:260
+#, python-brace-format
+msgid "[VoiceMate] ❌ Error in trigger for flow '{flow}':"
+msgstr ""
+
+#: app/setup/ct2_rocm.py:45
+#, python-brace-format
+msgid "⚠ Missing tools for the CT2-ROCm build: {tools}"
+msgstr ""
+
+#: app/setup/ct2_rocm.py:46
+#, python-brace-format
+msgid "  Install with: {hint}"
+msgstr ""
+
+#: app/setup/ct2_rocm.py:47
+msgid "  (on WSL2, also install ROCm: https://rocm.docs.amd.com)"
+msgstr ""
+
+#: app/setup/ct2_rocm.py:50
+msgid "⚠ GPU gfx target not detected (rocminfo); using the fork's default list."
+msgstr ""
+
+#: app/setup/ct2_rocm.py:60
+msgid "⚠ Build completed but validation failed (import/GPU). See messages above."
+msgstr ""
+
+#: app/setup/ct2_rocm.py:67
+msgid ""
+"✓ CTranslate2-ROCm installed and validated (faster-whisper accelerates on"
+" the AMD GPU)."
+msgstr ""
+
+#: app/setup/ct2_rocm.py:88
+#, python-brace-format
+msgid "⚠ CT2-ROCm validation did not run: {exc}"
+msgstr ""
+
+#: app/setup/ct2_rocm.py:125
+#, python-brace-format
+msgid "Source already cloned at {path} (reusing)."
+msgstr ""
+
+#: app/setup/ct2_rocm.py:129
+msgid "Cloning CTranslate2-rocm (with submodules)..."
+msgstr ""
+
+#: app/setup/ct2_rocm.py:158
+msgid "Configuring build (cmake)..."
+msgstr ""
+
+#: app/setup/ct2_rocm.py:163
+#, python-brace-format
+msgid ""
+"Compiling (parallel={jobs}; this can take a LONG time — grab a coffee "
+"☕)..."
+msgstr ""
+
+#: app/setup/ct2_rocm.py:169
+#, python-brace-format
+msgid "Installing into {path}..."
+msgstr ""
+
+#: app/setup/ct2_rocm.py:181
+msgid "Installing the CTranslate2-ROCm python wrapper into the venv..."
+msgstr ""
+
+#: app/setup/ct2_rocm.py:192
+#, python-brace-format
+msgid "⚠ Failed to execute: {exc}"
+msgstr ""
+
+#: app/setup/ct2_rocm.py:195
+#, python-brace-format
+msgid "⚠ Command returned code {code}."
+msgstr ""
+
+#: app/setup/doctor.py:40
+msgid "Platform detected"
+msgstr ""
+
+#: app/setup/doctor.py:42
+#, python-brace-format
+msgid "{platform} (trigger: {trigger})"
+msgstr ""
+
+#: app/setup/doctor.py:73
+msgid "espeak-ng (Kokoro PT-BR)"
+msgstr ""
+
+#: app/setup/doctor.py:75
+msgid "found"
+msgstr ""
+
+#: app/setup/doctor.py:75
+msgid "missing — Kokoro PT-BR fails without it"
+msgstr ""
+
+#: app/setup/doctor.py:90
+msgid "WSLg PulseServer (socket)"
+msgstr ""
+
+#: app/setup/doctor.py:92
+msgid "socket does not exist"
+msgstr ""
+
+#: app/setup/doctor.py:93
+msgid ""
+"Update WSL (`wsl --update` on Windows) and check guiApplications in "
+".wslconfig."
+msgstr ""
+
+#: app/setup/doctor.py:98
+msgid "PULSE_SERVER in the environment"
+msgstr ""
+
+#: app/setup/doctor.py:100
+msgid "(empty — the ALSA shim may handle it, but exporting is recommended)"
+msgstr ""
+
+#: app/setup/doctor.py:113
+msgid "ALSA→Pulse plugin (for PortAudio)"
+msgstr ""
+
+#: app/setup/doctor.py:133
+msgid "only clip.exe via interop (uncertain fallback)"
+msgstr ""
+
+#: app/setup/doctor.py:135
+msgid "none (clip.exe fails without the WSLInterop binfmt)"
+msgstr ""
+
+#: app/setup/doctor.py:138
+msgid "Native clipboard (WSLg)"
+msgstr ""
+
+#: app/setup/doctor.py:141
+msgid ""
+"sudo apt install -y wl-clipboard   # wl-copy works via WSLg and syncs "
+"with Windows"
+msgstr ""
+
+#: app/setup/doctor.py:150
+msgid "Windows interop (clip.exe direct)"
+msgstr ""
+
+#: app/setup/doctor.py:152
+msgid "registered"
+msgstr ""
+
+#: app/setup/doctor.py:152
+msgid "WSLInterop missing — clip.exe won't run"
+msgstr ""
+
+#: app/setup/doctor.py:154
+msgid ""
+"wsl --update (on Windows) fixes it in most cases; or register: sudo sh -c"
+" 'echo :WSLInterop:M::MZ::/init:PF > /proc/sys/fs/binfmt_misc/register'"
+msgstr ""
+
+#: app/setup/doctor.py:174 app/setup/doctor.py:179
+msgid "Audio (sounddevice)"
+msgstr ""
+
+#: app/setup/doctor.py:174
+msgid "poetry install (core dependencies)"
+msgstr ""
+
+#: app/setup/doctor.py:192
+msgid "Microphone (input device)"
+msgstr ""
+
+#: app/setup/doctor.py:194
+msgid "no input device"
+msgstr ""
+
+#: app/setup/doctor.py:196
+msgid ""
+"WSL2: enable the WSLg mic (wsl --update; `pactl list sources short` "
+"should show RDPSource). Linux: check PulseAudio/PipeWire."
+msgstr ""
+
+#: app/setup/doctor.py:201
+msgid "Audio output (output device)"
+msgstr ""
+
+#: app/setup/doctor.py:203
+msgid "no output device"
+msgstr ""
+
+#: app/setup/doctor.py:204
+msgid "WSL2: `pactl list sinks short` should show RDPSink (wsl --update if not)."
+msgstr ""
+
+#: app/setup/doctor.py:216
+msgid "Access to /dev/input (evdev)"
+msgstr ""
+
+#: app/setup/doctor.py:218
+#, python-brace-format
+msgid "{count} device(s)"
+msgstr ""
+
+#: app/setup/doctor.py:218
+msgid "no event* devices"
+msgstr ""
+
+#: app/setup/doctor.py:219
+msgid "sudo usermod -aG input $USER  # then re-login (or `newgrp input`)"
+msgstr ""
+
+#: app/setup/doctor.py:225
+msgid "Trigger via HTTP daemon"
+msgstr ""
+
+#: app/setup/doctor.py:227
+msgid ""
+"register the hotkeys on Windows: scripts/windows/voicemate-hotkeys.ahk "
+"(or .ps1)"
+msgstr ""
+
+#: app/setup/doctor.py:234
+msgid "X11 session (DISPLAY) for pynput"
+msgstr ""
+
+#: app/setup/doctor.py:237
+msgid "No X11? Use --trigger evdev (Wayland) — requires the input group."
+msgstr ""
+
+#: app/setup/doctor.py:240
+msgid "Trigger (Windows hooks)"
+msgstr ""
+
+#: app/setup/doctor.py:240
+msgid "keyboard/mouse libs"
+msgstr ""
+
+#: app/setup/doctor.py:268 app/setup/doctor.py:274 app/setup/doctor.py:286
+msgid "Vulkan (GPU for whisper.cpp)"
+msgstr ""
+
+#: app/setup/doctor.py:268
+msgid "vulkaninfo missing (vulkan-tools)"
+msgstr ""
+
+#: app/setup/doctor.py:274 app/setup/doctor.py:340
+#, python-brace-format
+msgid "not verified: {exc}"
+msgstr ""
+
+#: app/setup/doctor.py:277
+msgid "no devices"
+msgstr ""
+
+#: app/setup/doctor.py:280
+msgid ""
+"On WSL2 this is expected: Vulkan can't reach the GPU — use openai-"
+"whisper/CT2-ROCm (make configure). On native Linux: install the GPU's "
+"Vulkan driver (mesa-vulkan-drivers)."
+msgstr ""
+
+#: app/setup/doctor.py:284
+msgid ""
+"Install the GPU's Vulkan driver (mesa-vulkan-drivers) or use openai-"
+"whisper."
+msgstr ""
+
+#: app/setup/doctor.py:299
+msgid "whisper.cpp (binary + model)"
+msgstr ""
+
+#: app/setup/doctor.py:301
+#, python-brace-format
+msgid "{exe} / {model} in {dir}"
+msgstr ""
+
+#: app/setup/doctor.py:304
+msgid "make configure  # downloads/builds whisper.cpp and the model"
+msgstr ""
+
+#: app/setup/doctor.py:310
+msgid "VAD (silero) for whisper.cpp"
+msgstr ""
+
+#: app/setup/doctor.py:312
+msgid "no VAD model (ok on Windows; recommended on Linux)"
+msgstr ""
+
+#: app/setup/doctor.py:313
+msgid "make configure  # downloads ggml-silero (silence-based trimming)"
+msgstr ""
+
+#: app/setup/doctor.py:327
+msgid "Claude CLI (claude_chat flow)"
+msgstr ""
+
+#: app/setup/doctor.py:330
+msgid "npm install -g @anthropic-ai/claude-code && claude  # interactive login"
+msgstr ""
+
+#: app/setup/doctor.py:340 app/setup/doctor.py:344
+msgid "PyTorch (TTS)"
+msgstr ""
+
+#: app/setup/doctor.py:346
+msgid "torch not installed (ok if TTS is disabled)"
+msgstr ""
+
+#: app/setup/doctor.py:347
+msgid "make configure  # installs the torch for your GPU"
+msgstr ""
+
+#: app/setup/doctor.py:354
+msgid "PyTorch with GPU (realtime TTS)"
+msgstr ""
+
+#: app/setup/doctor.py:357
+msgid "make configure  # reinstalls the CUDA/ROCm torch; check the driver"
+msgstr ""
+
+#: app/setup/doctor.py:367
+msgid "[doctor] VoiceMate environment diagnostics\n"
+msgstr ""
+
+#: app/setup/doctor.py:380
+#, python-brace-format
+msgid "      ↳ fix: {fix}"
+msgstr ""
+
+#: app/setup/doctor.py:383
+#, python-brace-format
+msgid "[doctor] {count} problem(s) found — suggested fixes above."
+msgstr ""
+
+#: app/setup/doctor.py:385
+msgid "[doctor] All good! Run: make run"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:127
+#, python-brace-format
+msgid "[setup] Platform: {platform} (default trigger: {trigger})"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:131
+#, python-brace-format
+msgid "[setup] GPU detected: {vendor}{name}{gfx}"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:147
+msgid "Enable TTS (spoken Claude response)?"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:167
+#, python-brace-format
+msgid ""
+"\n"
+"[setup] Plan: platform={platform}, vendor={vendor}, "
+"transcription={backend}, flow={flow}, tts={tts}, extras=[{extras}]"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:185
+msgid ""
+"[setup] ⚠ The GPU torch install failed (see the error above). Without it "
+"the app falls back to CPU. Fix it and run `make configure`."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:202
+msgid ""
+"\n"
+"Save these choices for the next run?"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:217
+msgid "[setup] ✓ Choices saved to ~/.config/voicemate/config.toml"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:219
+msgid "[setup] Choices not saved (apply to this install only)."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:224
+msgid ""
+"\n"
+"[setup] Done! Run:  make run"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:225
+msgid "[setup] Environment diagnostics (audio/mic/hotkeys):  make doctor"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:227
+msgid "[setup] WSL2: register the hotkeys on the Windows side — see docs/wsl2.md."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:236
+msgid ""
+"\n"
+"Install the systemd service (daemon starts with WSL)?"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:237
+msgid "[setup] systemd service not installed (instructions in docs/wsl2.md)."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:246
+msgid "Reloading systemd units (user)..."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:248
+msgid "Enabling the voicemate service..."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:249
+msgid "[setup] ✓ Service installed. Logs: journalctl --user -u voicemate -f"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:250
+msgid "[setup]   To survive without an open session: loginctl enable-linger $USER"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:257
+msgid "[setup] CTranslate2-ROCm already installed and validated (reusing)."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:262
+msgid ""
+"\n"
+"Install CTranslate2-ROCm? (faster-whisper on the AMD GPU — maximum "
+"quality;\n"
+"SLOW build from source. If you skip it or it fails, whisper.cpp takes "
+"over.)"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:269
+msgid "[setup] CT2-ROCm skipped (whisper.cpp will be the transcription backend)."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:275
+msgid ""
+"[setup] ⚠ CT2-ROCm failed — continuing with whisper.cpp (without "
+"aborting). Fix the prerequisites and run `make configure` to retry."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:286
+msgid ""
+"Detect the GPU, install the right torch (CUDA/ROCm/CPU) and remember the "
+"choice."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:288
+msgid "Skip detection/prompt."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:289
+msgid "Non-interactive: accept the defaults (detected/saved)."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:290
+msgid "Re-ask the choices (used by make configure)."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:291
+msgid "Override the poetry extras (e.g. \"all\")."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:317
+msgid "NVIDIA (CUDA — faster-whisper on the GPU)"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:318
+msgid "AMD (ROCm — VoxCPM on the GPU + openai-whisper)"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:319
+msgid "CPU (no GPU)"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:322
+msgid ""
+"\n"
+"Which configuration to install?"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:324
+msgid "  (detected/suggested)"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:326
+#, python-brace-format
+msgid "Choose [1-3] (Enter = {default}): "
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:341
+msgid ""
+"\n"
+"Which TTS engine (voice of Claude's response)?"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:342
+msgid ""
+"  1) kokoro — light, runs on the CPU, realtime, does NOT saturate the GPU"
+" (no crackle). Fixed voices."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:343
+msgid ""
+"  2) omnivoice — clones a voice, high quality, but heavy on the GPU (may "
+"crackle on WSL2)."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:344 app/setup/gpu_bootstrap.py:355
+#, python-brace-format
+msgid "Choose [1-2] (Enter = {default}): "
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:352
+msgid ""
+"\n"
+"Which main flow?"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:353
+msgid "  1) clipboard — voice becomes text on the clipboard (transcription only)"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:354
+msgid "  2) claude_chat — voice → Claude → spoken response (+ clipboard)"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:368
+msgid "[Y/n]"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:368
+msgid "[y/N]"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:419
+#, python-brace-format
+msgid "[setup] Removed {name} from torch (the WSL HSA runtime is the system's)."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:433
+#, python-brace-format
+msgid ""
+"[setup] ⚠ The ROCm Linux wheels are cp312 (this Python is {ver}). "
+"Recreate the environment with 3.12 (`poetry env use 3.12`) and run `make "
+"configure`."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:440
+msgid ""
+"[setup] ✓ ROCm torch already present and accelerating — keeping the "
+"validated install."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:441
+msgid ""
+"[setup]   (to force a reinstall: pip uninstall torch and run `make "
+"configure`)"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:445
+msgid "Installing ROCm torch (official AMD wheels for Linux/WSL2)..."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:458
+#, python-brace-format
+msgid ""
+"[setup] ⚠ The ROCm wheels require Python 3.12 (this is {ver}). Recreate "
+"the environment with 3.12 (`poetry env use 3.12`) and run `make "
+"configure`."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:465
+msgid "Installing ROCm SDK (AMD runtime)..."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:470
+msgid "Installing ROCm torch (AMD)..."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:474
+msgid "Installing CUDA torch (NVIDIA)..."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:474
+msgid "Installing CPU torch..."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:482
+msgid "Installing dependencies (poetry)..."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:490
+#, python-brace-format
+msgid "[setup] ⚠ Could not verify torch: {exc}"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:494
+msgid "[setup] torch check:"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:500
+msgid ""
+"[setup] ⚠ The GPU was not recognized by torch — the app will fall back to"
+" CPU. Check the driver and run `make configure`."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:506
+msgid "[setup] ✓ GPU ready for torch."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:515
+#, python-brace-format
+msgid "[setup] whisper.cpp already present in {dir}."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:517
+msgid ""
+"[setup] Installing whisper.cpp + Vulkan (binary ~17 MB + turbo fp16 model"
+" ~1.5 GB)..."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:526
+#, python-brace-format
+msgid "[setup] ✓ whisper.cpp ready in {dir}"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:548
+#, python-brace-format
+msgid "[setup] ⚠ Missing tools to compile whisper.cpp: {tools}"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:551
+#, python-brace-format
+msgid "[setup]   Install with: {hint}"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:565
+#, python-brace-format
+msgid "[setup] ✓ whisper.cpp (Linux/Vulkan) ready in {dir}"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:575
+#, python-brace-format
+msgid "Cloning whisper.cpp {tag}..."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:590
+msgid "Configuring the whisper.cpp build (cmake + Vulkan)..."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:596
+msgid "Compiling whisper.cpp (a few minutes)..."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:608
+#, python-brace-format
+msgid "[setup] ⚠ Binary not found after the build: {path}"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:622
+#, python-brace-format
+msgid "[setup] downloading {url}"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:627
+#, python-brace-format
+msgid "[setup] ⚠ download failed: {exc}"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:632
+#, python-brace-format
+msgid "[setup] ⚠ SHA-256 mismatch for {name} (got {digest}); removing."
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:662
+#, python-brace-format
+msgid "[setup] ⚠ Failed to execute: {exc}"
+msgstr ""
+
+#: app/setup/gpu_bootstrap.py:665
+#, python-brace-format
+msgid "[setup] ⚠ Command returned code {code}."
+msgstr ""
+
+#: app/setup/gpu_detect.py:258
+#, python-brace-format
+msgid ""
+"[VoiceMate] ⚠ Could not confirm the AMD/ROCm driver. For the GPU to "
+"accelerate, install the Adrenalin driver >= {version} ({url}) and, on "
+"Linux/WSL2, ROCm (rocminfo should list the GPU). Installation continues "
+"regardless — if the GPU is not used, the app falls back to CPU."
 msgstr ""
 

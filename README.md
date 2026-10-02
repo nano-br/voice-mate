@@ -1,4 +1,4 @@
-**English** | [Português](README.pt-BR.md)
+**English** | [Português](README.pt-BR.md) | [Español](README.es.md)
 
 # VoiceMate
 
@@ -18,8 +18,8 @@ Cloud dictation is fast — until it's not. VoiceMate runs Whisper **locally** o
 
 - **Toggle hotkey** — press once to start, press again to stop and transcribe
 - **Two flows, one mic** — `Ctrl+Alt+V` drops the transcription in the clipboard; `Ctrl+Alt+A` routes it to Claude (multi-turn) and reads the AI response back through TTS
-- **Local transcription** — `faster-whisper` (CTranslate2 backend, 4–8× faster than PyTorch)
-- **GPU-accelerated** — CUDA float16 by default, with CPU int8 fallback
+- **Local transcription** — `faster-whisper` (CTranslate2) on NVIDIA/CPU, or `whisper.cpp` + Vulkan on AMD GPUs (~1.6 GB VRAM, large-v3-turbo) — the backend is picked automatically per GPU
+- **GPU-accelerated, vendor-agnostic** — NVIDIA (CUDA) **and** AMD (Vulkan + ROCm) are both supported, with automatic CPU fallback. Idle VRAM ≈ 0 (STT runs as a subprocess; TTS loads lazily on first speech)
 - **Pluggable TTS** — Claude's response is read aloud by [VoxCPM2](https://github.com/OpenBMB/VoxCPM) (2B params, voice design from a textual description, streaming). The architecture isolates each TTS engine so you can swap or remove it without touching the rest
 - **Dual-clipboard with Win+V** — the AI flow copies the transcription first, then the response, so the Windows clipboard history shows both side by side for review
 - **Stop decides the destination** — start with any hotkey; the hotkey you press to *stop* picks the handler (clipboard vs. Claude)
@@ -32,10 +32,17 @@ Cloud dictation is fast — until it's not. VoiceMate runs Whisper **locally** o
 
 ## Requirements
 
-- Windows 10/11 (primary target — Linux/macOS may work but are not the focus)
+- One of the supported environments (the platform layer picks the right integrations automatically):
+  - **Windows 10/11** native (NVIDIA recommended) — the original target, unchanged
+  - **Linux** native, X11 or Wayland
+  - **WSL2** (Ubuntu) on Windows 11 — the app runs **entirely inside the WSL**, with a tiny
+    Windows-side hotkey script; recommended path for **AMD GPUs** (ROCm). See [docs/wsl2.md](docs/wsl2.md)
 - Python 3.12 (the TTS flow via VoxCPM2 does not support 3.13 yet)
 - [Poetry](https://python-poetry.org/docs/#installation)
-- NVIDIA GPU with CUDA (optional but recommended — required for TTS at decent latency)
+- A GPU is optional but strongly recommended (required for TTS at decent latency):
+  - **NVIDIA** with CUDA, **or**
+  - **AMD** (RDNA — e.g. RX 7000/9000) via ROCm (Linux/WSL2) or ROCm-on-Windows (Adrenalin ≥ 26.2.2)
+  - No GPU? It still runs on CPU (slower — consider `--no-tts`)
 - **For the Claude flow only:** Node.js 18+ and the [Claude Code CLI](https://docs.claude.com/en/docs/claude-code) authenticated locally
 
 ## Install
@@ -43,20 +50,26 @@ Cloud dictation is fast — until it's not. VoiceMate runs Whisper **locally** o
 ```bash
 git clone https://github.com/nano-br/voice-mate.git
 cd voice-mate
-make setup_env
+make setup
 ```
+
+`make setup` **detects your GPU** (NVIDIA / AMD / none), confirms with you, installs the matching PyTorch build (CUDA `cu128` for NVIDIA, ROCm for AMD, or CPU) plus the modules you pick, and remembers everything in `~/.config/voicemate/config.toml`. Re-run the picker anytime with **`make configure`** (e.g. after switching GPUs).
+
+> **AMD note:** `make setup` installs the ROCm PyTorch (for VoxCPM/TTS) and downloads **whisper.cpp + Vulkan** (for transcription). The ROCm wheels are **not** on PyPI and the AMD Adrenalin driver (≥ 26.2.2) must already be installed — the setup warns if the driver looks missing. See "GPU backends" below.
 
 ### Modular install (extras)
 
-`make setup_env` installs **everything** by default (`poetry install --extras all`). Pick a smaller install if you don't need every feature:
+`make setup` asks which modules you want. If you'd rather install non-interactively, the granular targets still work (note: these don't install the GPU build of PyTorch — run `make configure` afterwards, or use `make setup`):
 
 | Command                                        | What it installs                                                       |
 | ---------------------------------------------- | ---------------------------------------------------------------------- |
-| `make setup_env_minimal`                       | Just **core**: voice → transcription → clipboard. Whisper + CUDA in.   |
+| `make setup_env_minimal`                       | Just **core**: voice → transcription → clipboard.                      |
 | `make setup_env_claude`                        | Core + `claude-agent-sdk` (enables the `Ctrl+Alt+A` Claude flow).      |
 | `make setup_env_tts`                           | Core + `voxcpm` + `soundfile` (TTS — heavy: ~5 GB of model weights).   |
-| `make setup_env` *(default)*                   | Core + Claude + TTS (`poetry install --extras all`).                   |
+| `make setup_env` *(legacy, assumes NVIDIA)*    | Core + Claude + TTS + CUDA PyTorch (`--extras all`).                   |
 | `make setup_env_custom EXTRAS="claude tts"`    | Free combination of extras.                                            |
+
+Extras (passed to `poetry install --extras`): `claude`, `tts`, `whisper-gpu` (AMD GPU transcription via `openai-whisper`), `all`.
 
 If an extra is missing the app still starts and just disables the corresponding flow with an instructive warning (`extra 'claude' not installed`) — never a hard crash.
 
@@ -74,9 +87,11 @@ Internally, the canonical prompt (written in English) has an `{output_lang}` pla
 **App messages themselves** (logs, CLI help text) are also localized via `gettext` + Babel. Default is PT-BR; switch with an env var:
 
 ```bash
-# App logs in English
+# App logs in English (or `es` for Spanish)
 VOICEMATE_LANG=en make run
 ```
+
+Available catalogs: `pt_BR`, `en` and `es`. Every user-facing string must exist in all three; `pt_BR` and `es` translate it, `en` keeps `msgstr` empty (the English msgid is the text).
 
 To edit / regenerate the translation catalog:
 
@@ -86,7 +101,7 @@ make i18n-update      # propagate new keys to existing .po files
 make i18n-compile     # compile .po → .mo (gettext loads .mo at runtime)
 ```
 
-Catalogs live in `app/i18n/locales/{pt_BR,en}/LC_MESSAGES/voicemate.po`.
+Catalogs live in `app/i18n/locales/{pt_BR,en,es}/LC_MESSAGES/voicemate.po`.
 
 ### Code conventions
 
@@ -131,19 +146,60 @@ By default, Claude's response is read aloud using [VoxCPM2](https://github.com/O
 - To disable TTS, run with `--no-tts` (the response still lands in the clipboard, and the triad beep comes back).
 - If VoxCPM2 fails to boot (no CUDA, low disk, etc.), the app silently falls back to a no-TTS state — no action needed.
 
-#### About PyTorch and CUDA
+#### GPU backends (NVIDIA / AMD / CPU)
 
-`pyproject.toml` pins `torch` and `torchaudio` to the official PyTorch source with the **CUDA 12.8** build — so `make setup_env` installs the GPU-enabled version out of the box, no extra step needed.
+`torch`/`torchaudio` are **not** pinned in `pyproject.toml` — the right build depends on your card and OS. `make setup` (via `app.setup.gpu_bootstrap`) detects the platform + GPU and installs the correct build:
 
-To confirm:
+| Platform × GPU       | PyTorch build              | Transcription (best available first)                      | TTS (OmniVoice/VoxCPM) |
+| -------------------- | -------------------------- | --------------------------------------------------------- | ---------------------- |
+| Windows + NVIDIA     | CUDA `cu128`               | `faster-whisper` (CUDA)                                   | GPU (CUDA)             |
+| Windows + AMD        | ROCm (`repo.radeon.com`)   | **whisper.cpp + Vulkan**                                  | GPU (ROCm)             |
+| Linux/WSL2 + AMD     | ROCm (pytorch.org)         | **faster-whisper via CTranslate2-ROCm** → whisper.cpp + Vulkan → openai-whisper | GPU (ROCm) |
+| Linux + NVIDIA       | CUDA `cu128`               | `faster-whisper` (CUDA)                                   | GPU (CUDA)             |
+| any, no GPU          | CPU                        | `faster-whisper` (int8)                                   | CPU (slow)             |
+
+**AMD on Linux/WSL2 (recommended for AMD):** the setup offers to build the
+[CTranslate2-ROCm fork](https://github.com/arlo-phoenix/CTranslate2-rocm) — with it, transcription uses the
+exact same `faster-whisper` engine as NVIDIA (identical quality). If you skip it (or the build fails), the
+chain falls back automatically to **whisper.cpp** built with Vulkan (server mode keeps the model hot — fast
+startup) with silero-VAD, then to `openai-whisper`. The choice is remembered (`ct2_rocm_ok` in the config);
+`make configure` retries, `make stt-eval` measures quality objectively (WER + split-word detector).
+
+**AMD on Windows:** transcription uses **whisper.cpp + Vulkan**, a small native binary plus a GGUF model
+(large-v3-turbo fp16) downloaded to `~/.cache/voicemate/whispercpp/` (SHA-256 verified). The ROCm PyTorch
+stack is still installed — but only for TTS.
+
+To confirm GPU acceleration is live:
 
 ```bash
-poetry run python -c "import torch; print('CUDA:', torch.cuda.is_available())"
+poetry run python -c "import torch; print('GPU:', torch.cuda.is_available())"
 ```
 
-This must print `CUDA: True`. If it prints `False`, check that your NVIDIA driver is up to date (`nvidia-smi` shows the version) — recent drivers (≥ 545) already cover CUDA 12.8.
+This must print `GPU: True` (on ROCm, AMD's HIP reports as `cuda` — so `True` is correct for AMD too). If it prints `False`:
 
-If you don't have an NVIDIA GPU and want to use the app for the clipboard flow only (no TTS), run with `--no-tts`. The VoxCPMSpeaker also prints a warning on startup if it detects PyTorch without CUDA — watch for that message.
+- **NVIDIA:** update your driver (`nvidia-smi`); recent drivers (≥ 545) cover CUDA 12.8.
+- **AMD:** install/update the Adrenalin driver (≥ 26.2.2), then run `make configure`.
+
+If you have no GPU and only want the clipboard flow, run with `--no-tts`. VoxCPMSpeaker also prints a vendor-aware warning on startup when it detects PyTorch without acceleration.
+
+You can override detection per run with `--gpu-backend {auto,nvidia,amd,cpu}`, `--whisper-backend {faster-whisper,whispercpp,openai-whisper}` and `--stt-strategy {auto,faster-whisper-rocm,whispercpp,openai-whisper}`.
+
+### Platforms & triggers
+
+The platform layer (`app/platform/`) detects where you are and picks the right hotkey mechanism and clipboard
+integration — override with `--platform` / `--trigger`:
+
+| Platform        | Hotkey trigger (default)                  | Clipboard            | Notes |
+| --------------- | ----------------------------------------- | -------------------- | ----- |
+| `windows`       | `keyboard-hooks` (keyboard/mouse libs)    | pyperclip            | Same behaviour as always (incl. listener keepalive) |
+| `linux-x11`     | `pynput` (GlobalHotKeys)                  | pyperclip (xclip)    | `poetry install --extras linux` |
+| `linux-wayland` | `evdev` (/dev/input — needs `input` group)| pyperclip (wl-copy)  | `sudo usermod -aG input $USER` |
+| `wsl2`          | `socket` — local HTTP daemon + a tiny Windows-side hotkey script | WSLg sync (fallback `clip.exe`) | See [docs/wsl2.md](docs/wsl2.md) |
+
+Default hotkeys are identical everywhere: `Ctrl+Alt+V` (clipboard) and `Ctrl+Alt+A` (Claude). On WSL2 they are
+registered by `scripts/windows/voicemate-hotkeys.ahk` (or `.ps1`) which POSTs to the daemon — same
+"the stop hotkey picks the handler" semantics. Run `make doctor` to validate mic/audio/trigger/GPU with
+actionable fixes.
 
 ## Usage
 
@@ -211,6 +267,10 @@ poetry run voice-mate --tts-save-dir ./tts_logs
 # Force CPU for Whisper transcription (no GPU available)
 poetry run voice-mate --cpu
 
+# Override GPU detection / transcription backend for this run
+poetry run voice-mate --gpu-backend amd                       # force AMD (ROCm)
+poetry run voice-mate --gpu-backend nvidia --whisper-backend faster-whisper
+
 # Use a mouse side-button instead (clipboard flow only)
 poetry run voice-mate --input-method mouse --mouse-button x
 
@@ -235,7 +295,11 @@ Default is `large-v3-turbo` — the best speed/quality balance, especially for m
 
 | Command            | Description                                   |
 | ------------------ | --------------------------------------------- |
-| `make setup_env`   | Install dependencies via Poetry               |
+| `make setup`       | Detect platform + GPU, install matching PyTorch + modules, remember choice |
+| `make configure`   | Re-run the GPU/module picker (e.g. after a GPU swap) |
+| `make doctor`      | Environment diagnosis (mic/audio, trigger, whisper.cpp, GPU) with fixes |
+| `make stt-eval`    | STT quality gate: WER + split-word detector vs local samples |
+| `make setup_env`   | Legacy install (assumes NVIDIA + all extras)  |
 | `make lock`        | Regenerate `poetry.lock` (after pyproject edits) |
 | `make run`         | Run with default model (`large-v3-turbo`)     |
 | `make run-large`   | Run with `large-v3`                           |

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import Protocol
 
-import pyperclip
-
 from app.core.audio_feedback import AudioFeedback
+from app.i18n import _
+from app.platform.clipboard import ClipboardWriter, PyperclipWriter
 
 
 class TranscriptionHandler(Protocol):
-    """Decide o que fazer com o texto vindo da transcrição."""
+    """Decide what to do with the text coming from transcription."""
 
     def handle(self, text: str) -> None: ...
 
@@ -20,16 +20,17 @@ class TranscriptionHandler(Protocol):
 
 
 class ClipboardHandler:
-    """Copia o texto cru para o clipboard e toca o som de transcrição concluída."""
+    """Copy the raw text to the clipboard and play the transcription-complete sound."""
 
-    def __init__(self, audio: AudioFeedback) -> None:
+    def __init__(self, audio: AudioFeedback, clipboard: ClipboardWriter | None = None) -> None:
         self._audio = audio
+        self._clipboard: ClipboardWriter = clipboard if clipboard is not None else PyperclipWriter()
 
     def handle(self, text: str) -> None:
-        pyperclip.copy(text)
+        self._clipboard.copy(text)
         self._audio.transcription_complete()
         preview = text[:100] + ("..." if len(text) > 100 else "")
-        print(f"[VoiceMate] ✓ Copiado: {preview}")
+        print(_("[VoiceMate] ✓ Copied: {preview}").format(preview=preview))
 
     def is_busy(self) -> bool:
         return False
