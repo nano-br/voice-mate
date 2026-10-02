@@ -11,6 +11,7 @@ microphone).
 The probe is `pactl info` with a timeout: it talks to the server without opening
 the microphone (no mic-in-use indicator on Windows) and hangs exactly when the
 server is stuck. No `pactl` installed → "unknown" (the launcher ignores it).
+`on_change` reports every transition (the daemon publishes a `health` event).
 """
 
 from __future__ import annotations
@@ -19,9 +20,10 @@ import shutil
 import subprocess
 import threading
 from collections.abc import Callable
-from typing import Literal
 
-AudioHealth = Literal["ok", "down", "unknown"]
+from app.protocol.models import AudioHealth
+
+__all__ = ["AudioHealth", "AudioServerProbe"]
 
 # Runs a command with a timeout; raises subprocess.TimeoutExpired / OSError like subprocess.run.
 Runner = Callable[[list[str], float], int]
@@ -34,10 +36,17 @@ def _run(cmd: list[str], timeout: float) -> int:
 class AudioServerProbe:
     """Periodically checks whether the PulseAudio server answers; thread-safe `state`."""
 
-    def __init__(self, interval: float = 20.0, timeout: float = 5.0, runner: Runner = _run) -> None:
+    def __init__(
+        self,
+        interval: float = 20.0,
+        timeout: float = 5.0,
+        runner: Runner = _run,
+        on_change: Callable[[AudioHealth], None] | None = None,
+    ) -> None:
         self._interval = interval
         self._timeout = timeout
         self._runner = runner
+        self._on_change = on_change
         self._state: AudioHealth = "unknown"
         self._lock = threading.Lock()
         self._stop = threading.Event()
@@ -60,7 +69,10 @@ class AudioServerProbe:
             except OSError:
                 result = "unknown"
         with self._lock:
+            changed = result != self._state
             self._state = result
+        if changed and self._on_change is not None:
+            self._on_change(result)
         return result
 
     def start(self) -> None:

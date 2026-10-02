@@ -224,7 +224,7 @@ def _check_trigger(platform: PlatformKind, trigger: TriggerKind) -> list[CheckRe
             CheckResult(
                 _("Trigger via HTTP daemon"),
                 True,
-                _("register the hotkeys on Windows: scripts/windows/voicemate-hotkeys.ahk (or .ps1)"),
+                _("hotkeys on Windows: the companion app; without it, scripts/windows/voicemate-hotkeys.ahk (or .ps1)"),
             )
         ]
     if trigger == "pynput":

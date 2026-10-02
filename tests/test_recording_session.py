@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import itertools
 import threading
 import time
 from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import pytest
@@ -10,7 +12,7 @@ from numpy.typing import NDArray
 
 from app.core.config import Config
 from app.core.recording_session import RecordingSession
-from app.core.session_status import SessionStatus
+from app.core.session_status import OperationHandle, SessionStatus
 
 
 class FakeRecorder:
@@ -95,6 +97,7 @@ class FakeAudio:
 class FakeHandler:
     def __init__(self, block_event: threading.Event | None = None) -> None:
         self.handle_calls: list[str] = []
+        self.ops: list[OperationHandle | None] = []
         self.cancel_calls = 0
         self.close_calls = 0
         self.block_event = block_event
@@ -103,10 +106,11 @@ class FakeHandler:
         self._busy = False
         self._lock = threading.Lock()
 
-    def handle(self, text: str) -> None:
+    def handle(self, text: str, op: OperationHandle | None = None) -> None:
         with self._lock:
             self._busy = True
         self.handle_calls.append(text)
+        self.ops.append(op)
         self.handle_started.set()
         if self.block_event is not None:
             self.block_event.wait(timeout=2.0)
@@ -131,20 +135,23 @@ def _make_session(
     handlers: dict[str, FakeHandler] | None = None,
     transcriber: FakeTranscriber | None = None,
     status: SessionStatus | None = None,
+    config: Config | None = None,
+    stt_ready: threading.Event | None = None,
 ) -> tuple[RecordingSession, FakeRecorder, FakeTranscriber, FakeAudio, dict[str, FakeHandler]]:
     recorder = FakeRecorder()
     transcriber = transcriber or FakeTranscriber()
     audio = FakeAudio()
-    config = Config(max_recording_seconds=600)
     handlers = handlers or {"clipboard": FakeHandler()}
     session = RecordingSession(
         recorder=recorder,  # type: ignore[arg-type]
         transcriber=transcriber,  # type: ignore[arg-type]
         audio=audio,  # type: ignore[arg-type]
-        config=config,
+        config=config or Config(max_recording_seconds=600),
         handlers=handlers,  # type: ignore[arg-type]
         default_handler_id=next(iter(handlers)),
         status=status,
+        flow_kinds={"clipboard": "clipboard", "claude_chat": "claude_chat"},
+        stt_ready=stt_ready,
     )
     return session, recorder, transcriber, audio, handlers
 
@@ -261,9 +268,9 @@ def test_slow_transcription_warns_once(capsys: pytest.CaptureFixture[str], monke
     """Slow backend (no GPU) → RTF warning printed once per session."""
     from app.core import recording_session as rs
 
-    # perf_counter returns 0 before and 30 after each transcribe → 30s for 1s of audio.
-    ticks = iter([0.0, 30.0] * 10)
-    monkeypatch.setattr(rs.time, "perf_counter", lambda: next(ticks))
+    # The session's clock returns 0 before and 30 after each transcribe → 30s for 1s of audio.
+    ticks = itertools.cycle([0.0, 30.0])
+    monkeypatch.setattr(rs, "_perf_counter", lambda: next(ticks))
 
     handler = FakeHandler()
     session, recorder, _, _, _ = _make_session(handlers={"clipboard": handler})
@@ -281,8 +288,8 @@ def test_slow_transcription_warns_once(capsys: pytest.CaptureFixture[str], monke
 def test_fast_transcription_no_warning(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
     from app.core import recording_session as rs
 
-    ticks = iter([0.0, 0.3] * 10)  # 0.3s for 1s of audio → healthy
-    monkeypatch.setattr(rs.time, "perf_counter", lambda: next(ticks))
+    ticks = itertools.cycle([0.0, 0.3])  # 0.3s for 1s of audio → healthy
+    monkeypatch.setattr(rs, "_perf_counter", lambda: next(ticks))
 
     handler = FakeHandler()
     session, recorder, _, _, _ = _make_session(handlers={"clipboard": handler})
@@ -474,3 +481,341 @@ def test_error_beep_is_single_flight() -> None:
     time.sleep(0.05)
     assert audio.error_calls == 1  # the 2nd and 3rd were skipped while the 1st is stuck
     release.set()
+
+
+# -- API v2: expect, cancel, events, cue lease -------------------------------------------
+
+
+def _client(status: SessionStatus, *caps: str) -> tuple[str, int]:
+    reg = status.hub.register(name="test", capabilities=caps)  # type: ignore[arg-type]
+    return reg["client_id"], reg["cursor"]
+
+
+def _events(status: SessionStatus, client_id: str, since: int) -> list[dict[str, Any]]:
+    """Events after `since`, flattened: {"type": ..., **data}."""
+    response = status.hub.poll(client_id, instance=status.instance, since=since, wait=0)
+    return [{"type": event["type"], **event["data"]} for event in response["events"]]
+
+
+def _wait_idle(status: SessionStatus) -> bool:
+    return _wait_for(lambda: status.hub.state()["state"] == "idle")
+
+
+def test_expect_makes_triggers_idempotent() -> None:
+    block = threading.Event()
+    handler = FakeHandler(block_event=block)
+    session, recorder, _, _, _ = _make_session(handlers={"clipboard": handler})
+
+    noop = session.toggle("clipboard", expect="stop")
+    assert noop is not None and (noop.action, noop.state) == ("noop", "idle")
+    assert recorder.start_calls == 0
+
+    started = session.toggle("clipboard", expect="start")
+    assert started is not None and started.action == "started"
+    again = session.toggle("clipboard", expect="start")
+    assert again is not None and (again.action, again.state, again.op_seq) == ("noop", "recording", started.op_seq)
+
+    stopped = session.toggle("clipboard", expect="stop")
+    assert stopped is not None and stopped.action == "stopped"
+    assert handler.handle_started.wait(timeout=2.0)
+    late_stop = session.toggle("clipboard", expect="stop")
+    assert late_stop is not None and (late_stop.action, late_stop.state) == ("noop", "processing")
+
+    restarted = session.toggle("clipboard", expect="start")
+    assert restarted is not None and (restarted.action, restarted.op_seq) == ("restarted", started.op_seq + 1)
+    assert handler.cancel_calls == 1
+    block.set()
+
+
+def test_restart_supersedes_the_operation_in_processing() -> None:
+    block = threading.Event()
+    handler = FakeHandler(block_event=block)
+    session, _, _, _, _ = _make_session(handlers={"claude_chat": handler}, status=SessionStatus())
+
+    session.toggle("claude_chat")
+    session.toggle("claude_chat")
+    assert handler.handle_started.wait(timeout=2.0)
+    old = handler.ops[0]
+    assert old is not None and old.active()
+    session.toggle("claude_chat")  # restart
+    assert not old.active()  # the handler must not start new work for it
+    assert not old.cancelled()  # ... but what it already produced may still be published
+    block.set()
+
+
+def test_state_events_follow_the_flow_semantics_and_mic_live() -> None:
+    status = SessionStatus()
+    cid, cursor = _client(status)
+    handlers = {"clipboard": FakeHandler(), "claude_chat": FakeHandler()}
+    session, recorder, _, _, _ = _make_session(handlers=handlers, status=status)
+    recorder.auto_open = False
+
+    session.toggle("clipboard", client_id="c9")
+    assert recorder.on_opened is not None
+    recorder.on_opened()  # the mic is live
+    session.toggle("claude_chat")  # stop decides the destination
+    assert handlers["claude_chat"].handle_done.wait(timeout=2.0)
+    assert _wait_idle(status)
+
+    states = [e for e in _events(status, cid, cursor) if e["type"] == "state"]
+    summary = [(s["state"], s["phase"], s["flow"], s["flow_kind"], s["mic_live"]) for s in states]
+    assert summary == [
+        ("recording", None, "clipboard", "clipboard", False),
+        ("recording", None, "clipboard", "clipboard", True),
+        ("processing", "transcribing", "claude_chat", "claude_chat", False),
+        ("idle", None, None, None, False),
+    ]
+    assert all(s["client_id"] == "c9" for s in states)
+
+
+def test_cue_lease_silences_the_daemon_beeps() -> None:
+    status = SessionStatus()
+    _client(status, "cues")
+    session, recorder, _, audio, _ = _make_session(status=status)
+
+    session.toggle("clipboard")
+    assert audio.recording_started_calls == 0  # the client plays the start cue
+    recorder.fail_open("no device")
+    time.sleep(0.05)
+    assert audio.error_calls == 0  # ... and the error cue
+    assert status.result(None, "all")["error"] == "mic_unavailable"
+
+
+def test_cancel_while_recording_discards_the_audio() -> None:
+    status = SessionStatus()
+    handler = FakeHandler()
+    session, recorder, _, _, _ = _make_session(handlers={"clipboard": handler}, status=status)
+
+    started = session.toggle("clipboard")
+    assert started is not None
+    assert session.cancel(op_seq=started.op_seq + 1).action == "noop"  # not the current operation
+    outcome = session.cancel(op_seq=started.op_seq)
+    assert (outcome.action, outcome.state) == ("cancelled", "idle")
+    assert recorder.stop_calls == 1
+    assert not recorder.is_recording
+    assert status.hub.state()["state"] == "idle"
+    assert session.cancel().action == "noop"  # nothing left
+    time.sleep(0.05)
+    assert handler.handle_calls == []
+
+
+def test_cancel_while_processing_publishes_no_result() -> None:
+    gate = threading.Event()
+
+    class SlowTranscriber(FakeTranscriber):
+        def transcribe(self, audio: NDArray[np.float32]) -> str:
+            gate.wait(timeout=5.0)
+            return "too late"
+
+    status = SessionStatus()
+    handler = FakeHandler()
+    session, _, _, _, _ = _make_session(handlers={"clipboard": handler}, transcriber=SlowTranscriber(), status=status)
+    started = session.toggle("clipboard")
+    session.toggle("clipboard")  # processing, transcription held
+    assert started is not None
+    assert session.cancel().action == "cancelled"
+    gate.set()
+    time.sleep(0.1)
+    assert handler.handle_calls == []
+    assert status.is_cancelled(started.op_seq)
+    nxt = session.toggle("clipboard")  # a fresh operation works normally
+    assert nxt is not None and (nxt.action, nxt.op_seq) == ("started", started.op_seq + 1)
+
+
+@pytest.mark.parametrize(("audio_data", "text", "code"), [(None, "x", "no_audio"), (np.zeros(16000), "", "no_speech")])
+def test_empty_recordings_publish_a_warning(audio_data: NDArray[np.float32] | None, text: str, code: str) -> None:
+    status = SessionStatus()
+    cid, cursor = _client(status)
+    session, recorder, _, audio, _ = _make_session(transcriber=FakeTranscriber(text=text), status=status)
+    recorder.next_audio = audio_data
+    session.toggle("clipboard")
+    session.toggle("clipboard")
+    assert _wait_idle(status)
+    warnings = [e for e in _events(status, cid, cursor) if e["type"] == "warning"]
+    assert [w["code"] for w in warnings] == [code]
+    assert warnings[0]["message"]
+    assert audio.error_calls == 0
+
+
+def test_time_limit_warning_is_an_event_with_a_cue() -> None:
+    status = SessionStatus()
+    cid, cursor = _client(status)
+    config = Config(max_recording_seconds=30, timeout_warning_percent=0.002)  # warns after 60 ms
+    session, _, _, audio, _ = _make_session(status=status, config=config)
+    session.toggle("clipboard")
+    assert _wait_for(lambda: audio.timeout_warning_calls == 1)
+    warnings = [e for e in _events(status, cid, cursor) if e["type"] == "warning"]
+    assert [w["code"] for w in warnings] == ["time_limit_soon"]
+    assert warnings[0]["needs_cue"] is False  # nobody holds `cues`: the daemon beeped
+    session.toggle("clipboard")  # stop before the 30 s limit
+    assert _wait_idle(status)
+
+
+def test_slow_backend_warning_is_published_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.core import recording_session as rs
+
+    ticks = itertools.cycle([0.0, 30.0])
+    monkeypatch.setattr(rs, "_perf_counter", lambda: next(ticks))
+    status = SessionStatus()
+    cid, cursor = _client(status)
+    handler = FakeHandler()
+    session, _, _, _, _ = _make_session(handlers={"clipboard": handler}, status=status)
+    for _attempt in range(2):
+        handler.handle_done.clear()
+        session.toggle("clipboard")
+        session.toggle("clipboard")
+        assert handler.handle_done.wait(timeout=2.0)
+        assert _wait_idle(status)
+    codes = [e["code"] for e in _events(status, cid, cursor) if e["type"] == "warning"]
+    assert codes == ["slow_backend"]
+
+
+def test_transcription_failure_is_an_error_event() -> None:
+    class BoomTranscriber(FakeTranscriber):
+        def transcribe(self, audio: NDArray[np.float32]) -> str:
+            raise RuntimeError("whisper exploded")
+
+    status = SessionStatus()
+    cid, cursor = _client(status)
+    session, _, _, audio, _ = _make_session(transcriber=BoomTranscriber(), status=status)
+    session.toggle("clipboard")
+    session.toggle("clipboard")
+    assert _wait_for(lambda: audio.error_calls == 1)
+    assert _wait_idle(status)
+    errors = [e for e in _events(status, cid, cursor) if e["type"] == "error"]
+    assert [(e["code"], e["detail"]) for e in errors] == [("transcription_failed", "whisper exploded")]
+    assert status.result(None, "all")["error"] == "transcription_failed"
+
+
+# -- one transcription at a time; the warmup wait is not inference time ------------
+
+
+class _OverlapProbe(FakeTranscriber):
+    """Takes `seconds` per call and records how many calls ever ran at once."""
+
+    def __init__(self, seconds: float) -> None:
+        super().__init__(text="texto")
+        self.seconds = seconds
+        self.running = 0
+        self.max_running = 0
+        self.started = threading.Event()
+        self._probe_lock = threading.Lock()
+
+    def transcribe(self, audio: NDArray[np.float32]) -> str:
+        with self._probe_lock:
+            self.running += 1
+            self.max_running = max(self.max_running, self.running)
+        self.started.set()
+        time.sleep(self.seconds)
+        with self._probe_lock:
+            self.running -= 1
+        self.calls.append(audio)
+        return self.text
+
+
+def _record_and_stop(session: RecordingSession, recorder: FakeRecorder) -> int:
+    started = session.toggle("clipboard")
+    assert started is not None and started.action == "started"
+    stopped = session.toggle("clipboard")
+    assert stopped is not None and stopped.action == "stopped"
+    return started.op_seq
+
+
+def test_transcriptions_never_overlap_after_a_cancel() -> None:
+    """The cancelled operation keeps transcribing in the background (inference cannot be
+    interrupted); the next one must wait for it, the backends are not thread-safe."""
+    probe = _OverlapProbe(seconds=0.4)
+    status = SessionStatus()
+    handler = FakeHandler()
+    session, recorder, _, _, _ = _make_session(handlers={"clipboard": handler}, transcriber=probe, status=status)
+
+    _record_and_stop(session, recorder)
+    assert probe.started.wait(timeout=2.0)
+    assert session.cancel().action == "cancelled"
+    _record_and_stop(session, recorder)
+
+    assert handler.handle_done.wait(timeout=5.0)
+    assert probe.max_running == 1
+    assert len(probe.calls) == 2  # the cancelled one finished, its text was dropped
+    assert handler.handle_calls == ["texto"]
+
+
+def test_transcriptions_never_overlap_after_a_restart() -> None:
+    probe = _OverlapProbe(seconds=0.4)
+    handler = FakeHandler()
+    session, recorder, _, _, _ = _make_session(handlers={"clipboard": handler}, transcriber=probe)
+
+    _record_and_stop(session, recorder)
+    assert probe.started.wait(timeout=2.0)
+    restarted = session.toggle("clipboard")  # restart while transcribing
+    assert restarted is not None and restarted.action == "restarted"
+    session.toggle("clipboard")  # stop the new recording right away
+    assert _wait_for(lambda: len(handler.handle_calls) == 2, timeout=5.0)
+    assert probe.max_running == 1
+
+
+def test_an_operation_cancelled_while_waiting_its_turn_is_not_transcribed() -> None:
+    probe = _OverlapProbe(seconds=0.4)
+    status = SessionStatus()
+    session, recorder, _, _, _ = _make_session(transcriber=probe, status=status)
+
+    _record_and_stop(session, recorder)
+    assert probe.started.wait(timeout=2.0)
+    assert session.cancel().action == "cancelled"
+    _record_and_stop(session, recorder)  # waits for the first transcription
+    time.sleep(0.1)
+    assert session.cancel().action == "cancelled"  # cancelled before its turn came
+    assert _wait_for(lambda: probe.running == 0, timeout=3.0)
+    time.sleep(0.2)
+    assert len(probe.calls) == 1
+
+
+def test_first_transcription_waits_for_the_warmup() -> None:
+    warm = threading.Event()
+    probe = _OverlapProbe(seconds=0.0)
+    handler = FakeHandler()
+    session, recorder, _, _, _ = _make_session(handlers={"clipboard": handler}, transcriber=probe, stt_ready=warm)
+
+    _record_and_stop(session, recorder)
+    assert not probe.started.wait(timeout=0.3)  # still warming up: not transcribing yet
+    warm.set()
+    assert handler.handle_done.wait(timeout=2.0)
+
+
+def test_a_warmup_wait_is_not_reported_as_a_slow_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Only the inference is timed: waiting for the warmup (or for another transcription)
+    must not look like a GPU-less backend, nor use up the once-per-session warning."""
+    from app.core import recording_session as rs
+
+    monkeypatch.setattr(rs, "_SLOW_FLOOR_S", 0.2)
+    monkeypatch.setattr(rs, "_SLOW_RATIO", 0.0)
+    warm = threading.Event()
+    status = SessionStatus()
+    cid, cursor = _client(status)
+    handler = FakeHandler()
+    session, recorder, _, _, _ = _make_session(handlers={"clipboard": handler}, status=status, stt_ready=warm)
+
+    _record_and_stop(session, recorder)
+    time.sleep(0.5)  # longer than the 0.2 s threshold
+    warm.set()
+    assert handler.handle_done.wait(timeout=2.0)
+    assert _wait_idle(status)
+    assert [e for e in _events(status, cid, cursor) if e["type"] == "warning"] == []
+
+    # A really slow inference still warns.
+    slow = _OverlapProbe(seconds=0.3)
+    handler2 = FakeHandler()
+    session2 = RecordingSession(
+        recorder=FakeRecorder(),  # type: ignore[arg-type]
+        transcriber=slow,  # type: ignore[arg-type]
+        audio=FakeAudio(),  # type: ignore[arg-type]
+        config=Config(max_recording_seconds=600),
+        handlers={"clipboard": handler2},  # type: ignore[dict-item]
+        status=status,
+    )
+    session2.toggle("clipboard")
+    session2.toggle("clipboard")
+    assert handler2.handle_done.wait(timeout=2.0)
+    assert _wait_for(lambda: any(e["type"] == "warning" for e in _events(status, cid, cursor)))
+    codes = [e["code"] for e in _events(status, cid, cursor) if e["type"] == "warning"]
+    assert codes == ["slow_backend"]

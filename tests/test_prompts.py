@@ -31,6 +31,9 @@ def test_claude_cli_injects_arbitrary_language() -> None:
     rendered_es = claude_cli_system_prompt("es")
     assert "Always reply in es" in rendered_es
 
+    assert "Always reply in ru" in claude_cli_system_prompt("ru")
+    assert "Always reply in zh-CN" in claude_cli_system_prompt("zh-CN")
+
 
 def test_codex_stub_raises_until_implemented() -> None:
     with pytest.raises(NotImplementedError):

@@ -1,4 +1,4 @@
-[English](README.md) | **Português** | [Español](README.es.md)
+[English](README.md) | **Português** | [Español](README.es.md) | [Русский](README.ru.md) | [简体中文](README.zh-CN.md)
 
 # VoiceMate
 
@@ -87,11 +87,11 @@ Internamente, o prompt canônico (em inglês) tem um placeholder `{output_lang}`
 **Mensagens do próprio app** (logs, helps do CLI) também são localizadas via `gettext` + Babel. Default é PT-BR; controle via env var:
 
 ```bash
-# Mostra os logs do app em inglês (ou `es` para espanhol)
+# Mostra os logs do app em inglês (ou `es`, `ru`, `zh-CN`)
 VOICEMATE_LANG=en make run
 ```
 
-Catálogos disponíveis: `pt_BR`, `en` e `es`. Toda string exibida ao usuário precisa existir nos três; `pt_BR` e `es` traduzem, e o `en` mantém o `msgstr` vazio (o msgid em inglês já é o texto).
+Catálogos disponíveis: `pt_BR`, `en`, `es`, `ru` e `zh_CN`. Toda string exibida ao usuário precisa existir em todos; todos menos o `en` traduzem, e o `en` mantém o `msgstr` vazio (o msgid em inglês já é o texto).
 
 Para editar/regenerar o catálogo de traduções:
 
@@ -101,7 +101,7 @@ make i18n-update      # propaga novas chaves para os .po existentes
 make i18n-compile     # compila .po → .mo (gettext lê o .mo em runtime)
 ```
 
-Os `.po` ficam em `app/i18n/locales/{pt_BR,en,es}/LC_MESSAGES/voicemate.po`.
+Os `.po` ficam em `app/i18n/locales/{pt_BR,en,es,ru,zh_CN}/LC_MESSAGES/voicemate.po`.
 
 ### Convenções de código
 
@@ -233,7 +233,7 @@ integração de clipboard — sobrescreva com `--platform` / `--trigger`:
 As hotkeys default são idênticas em todo lugar: `Ctrl+Alt+V` (clipboard) e `Ctrl+Alt+A` (Claude). No WSL2
 elas são registradas pelo `scripts/windows/voicemate-hotkeys.ahk` (ou `.ps1`), que faz POST no daemon —
 mesma semântica de "o atalho do stop escolhe o destino". Rode `make doctor` para validar
-mic/áudio/gatilho/GPU com correções acionáveis.
+mic/áudio/gatilho/GPU com correções acionáveis. No Windows, o [aplicativo companion](#aplicativo-companion-bandeja) substitui esses scripts.
 
 ## Uso
 
@@ -325,6 +325,78 @@ poetry run voice-mate --listener-refresh-seconds 30 --watchdog-timeout 60
 
 O padrão é `large-v3-turbo` — melhor equilíbrio entre velocidade e qualidade, especialmente quando o áudio tem mistura de idiomas.
 
+## Aplicativo companion (bandeja)
+
+O companion é um pequeno aplicativo de desktop (PySide6) que fica na bandeja do sistema. Ele inicia e supervisiona o motor, registra as hotkeys, toca os sons de aviso, escreve cada transcrição no clipboard e confere se ela chegou lá, e reúne num lugar só o status e o botão de sair de tudo. No Windows ele substitui o script PowerShell/AutoHotkey e comanda o motor dentro do WSL2; no Linux é uma interface opcional. O motor em si não muda: `make run` continua funcionando sem o companion.
+
+### Instalação no Windows
+
+**Com o instalador (recomendado).** Rode o `VoiceMate-Setup-<versão>.exe`. Ele instala só para o seu usuário (sem pedir administrador) em `%LOCALAPPDATA%\Programs\VoiceMate` e adiciona o VoiceMate ao menu Iniciar; um atalho na área de trabalho e iniciar junto com o Windows são opcionais (a primeira instalação oferece a segunda opção; depois quem controla é **Iniciar o VoiceMate ao fazer login**, nas Configurações). O instalador fala português, inglês, espanhol, russo e chinês simplificado. Para gerá-lo você mesmo (Python 3.12+ e Inno Setup 6.3+, `winget install JRSoftware.InnoSetup`):
+
+```powershell
+make companion-venv        # uma vez: .venv-companion com PySide6 e PyInstaller nas versões fixadas
+make companion-installer   # dist\VoiceMate (PyInstaller), depois dist\installer\VoiceMate-Setup-<versão>.exe
+```
+
+**Pelo código-fonte.** Com Python 3.12+ no Windows:
+
+```powershell
+make companion-venv   # uma vez
+make run-tray
+```
+
+Nos dois casos o motor continua no WSL2 (instale como em [docs/wsl2.md](docs/wsl2.md)): o companion o inicia para você, ou se conecta a um que já esteja rodando (por exemplo o serviço do systemd). Se um dos scripts antigos de hotkeys (PowerShell ou AutoHotkey) ainda estiver rodando, feche-o e remova o atalho dele do `shell:startup`: agora quem registra `Ctrl+Alt+V` e `Ctrl+Alt+A` é o companion.
+
+### Fixar na barra de tarefas
+
+O Windows não deixa instaladores fixarem aplicativos. Abra o Iniciar, pesquise VoiceMate, clique nele com o botão direito e escolha **Fixar na barra de tarefas**. Clicar no ícone fixado com o VoiceMate rodando abre a janela de status; o botão direito oferece **Configurações**, **Reiniciar o motor**, **Reiniciar o WSL...** e **Sair do VoiceMate**. Fixar usa o atalho do menu Iniciar, então vale para o aplicativo instalado. Na primeira execução, uma notificação **Fixe o VoiceMate na barra de tarefas** lembra esses passos.
+
+O ícone da bandeja (a figura do VoiceMate, cujo pequeno selo no canto mostra gravando, transcrevendo e pronto, como o indicador de microfone em uso do Windows) é outra coisa: o Windows 11 esconde ícones novos da bandeja atrás da seta ao lado do relógio, então o VoiceMate mantém o ícone dele na barra de tarefas por padrão. Ele só faz isso enquanto ninguém decidiu nada: se você esconder o ícone nas configurações da barra de tarefas do Windows, o VoiceMate respeita e não o traz de volta. Para escondê-lo de vez, desmarque **Sempre mostrar o ícone do VoiceMate na barra de tarefas** em Configurações > **Geral**. Para trazer de volta um ícone que você escondeu no Windows, desmarque essa opção, clique em **Aplicar**, marque-a de novo e clique em **OK**: o ícone volta a aparecer, independentemente das configurações do Windows.
+
+### Sair
+
+Menu do ícone na bandeja > **Sair do VoiceMate** (também é um botão na janela de status e um item do menu de botão direito do ícone fixado). Sair encerra o motor que o companion iniciou; um motor ao qual ele só se conectou (por exemplo o serviço do systemd) continua rodando. Pelo terminal, para o aplicativo instalado (PowerShell):
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\VoiceMate\VoiceMate.exe" --command quit
+```
+
+Pelo código-fonte: `make run-tray ARGS="--command quit"`. Um `--command` nunca inicia o VoiceMate: se ele não estiver rodando, nada acontece.
+
+### Configurações
+
+Menu do ícone na bandeja > **Configurações...**, em três abas: **Atalhos**; **Sons** (sons embutidos ou seus próprios arquivos WAV, volume); **Geral**: idioma, notificações, **Iniciar o VoiceMate ao fazer login**, **Sempre mostrar o ícone do VoiceMate na barra de tarefas** (só no Windows) e o motor (modo, distro do WSL, pasta do motor e **Reiniciar o WSL se o áudio falhar**: **Automaticamente**, **Perguntar antes** ou **Nunca**). As configurações ficam salvas em `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) e sobrevivem a uma desinstalação. Os logs ficam em `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); menu do ícone na bandeja > **Motor** > **Abrir logs** abre a pasta. As transcrições que não chegaram ao clipboard ficam em `%LOCALAPPDATA%\VoiceMate\pending.json` (Linux: `~/.local/state/voicemate/pending.json`) até você copiá-las ou esvaziar a lista (**Não copiadas** > **Limpar lista** no menu da bandeja, ou **Limpar** na janela de status), então continuam em **Não copiadas** depois de reiniciar o aplicativo ou de um travamento. Resultados que ainda esperavam o clipboard quando você sai também ficam lá. Esse arquivo guarda o texto das transcrições: ele fica no seu perfil de usuário, é apagado quando a lista fica vazia, e o desinstalador o remove junto com os logs. Se ele não puder ser lido, o VoiceMate o guarda como `pending.json.broken-<data>`, começa com a lista vazia e avisa você.
+
+Um novo idioma só passa a valer depois de reiniciar, então o VoiceMate pergunta **Reiniciar o VoiceMate?**: **Reiniciar agora** reinicia o aplicativo (o motor também, cerca de 10 segundos); **Depois** mantém a escolha, e a aba **Geral** mostra "Passa a valer depois que o VoiceMate reiniciar." até lá.
+
+### Linux (opcional)
+
+A CLI continua funcionando como antes. Para o ícone na bandeja e a janela de status, no repositório:
+
+```bash
+poetry install --extras ui
+make run-tray
+```
+
+No Linux o motor mantém as próprias hotkeys (a aba **Atalhos** as mostra só para leitura). Sem bandeja do sistema (por exemplo GNOME sem a extensão AppIndicator), a janela de status vira a janela principal. Para colocar o VoiceMate no menu de aplicativos:
+
+```bash
+mkdir -p ~/.local/share/applications &&
+  sed "s|@VOICEMATE_DIR@|$PWD|g" packaging/linux/voicemate-companion.desktop \
+  > ~/.local/share/applications/voicemate-companion.desktop
+```
+
+### Solução de problemas
+
+| Sintoma | Correção |
+| ------- | -------- |
+| "Iniciando o motor..." por muito tempo | A primeira carga do modelo leva de 10 a 60 s. Veja o `engine.log` (**Motor** > **Abrir logs**) e a distro do WSL e a pasta do motor nas Configurações |
+| Uma hotkey mostra "Em uso por outro aplicativo" na primeira execução | Um script antigo de hotkeys (PowerShell ou AutoHotkey) ainda está rodando: feche-o e remova-o do `shell:startup` |
+| "O áudio do WSL parou" ou "Sem microfone" | Conecte um microfone. O WSL é reiniciado conforme **Reiniciar o WSL se o áudio falhar**; à mão: **Motor** > **Reiniciar o WSL...** |
+| "O motor é mais antigo que este aplicativo. Reinicie ou atualize o motor." | Atualize o checkout no WSL (`git pull`) e use **Reiniciar o motor** |
+| Uma transcrição não foi copiada | Ela fica em **Não copiadas**, no menu da bandeja (clique para copiar) e na janela de status (**Copiar**), mesmo depois de o VoiceMate reiniciar. **Limpar lista** (bandeja) ou **Limpar** (janela de status) esvazia a lista depois de confirmar |
+| O SmartScreen alerta sobre o instalador | O instalador não tem assinatura de código: **Mais informações** > **Executar assim mesmo** |
+
 ## Makefile
 
 | Comando                    | Descrição                                                       |
@@ -342,6 +414,11 @@ O padrão é `large-v3-turbo` — melhor equilíbrio entre velocidade e qualidad
 | `make format`              | Formata o código com Ruff                                       |
 | `make lint`                | Roda Ruff + type-check com Mypy                                 |
 | `make test`                | Executa os testes com pytest                                    |
+| `make run-tray`            | Executa o aplicativo companion (bandeja); `ARGS="..."` repassa flags |
+| `make companion-venv`      | Cria a `.venv-companion` (ambiente do companion no Windows, versões fixadas) |
+| `make companion-test` / `make companion-lint` | Testes / lint do companion                   |
+| `make companion-build`     | Congela o companion com PyInstaller (`dist\VoiceMate`)          |
+| `make companion-installer` | Gera o instalador do Windows com Inno Setup (`dist\installer`)  |
 | `make clean`               | Limpa os caches                                                 |
 
 ## Arquitetura

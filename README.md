@@ -1,4 +1,4 @@
-**English** | [Português](README.pt-BR.md) | [Español](README.es.md)
+**English** | [Português](README.pt-BR.md) | [Español](README.es.md) | [Русский](README.ru.md) | [简体中文](README.zh-CN.md)
 
 # VoiceMate
 
@@ -87,11 +87,11 @@ Internally, the canonical prompt (written in English) has an `{output_lang}` pla
 **App messages themselves** (logs, CLI help text) are also localized via `gettext` + Babel. Default is PT-BR; switch with an env var:
 
 ```bash
-# App logs in English (or `es` for Spanish)
+# App logs in English (or `es`, `ru`, `zh-CN`)
 VOICEMATE_LANG=en make run
 ```
 
-Available catalogs: `pt_BR`, `en` and `es`. Every user-facing string must exist in all three; `pt_BR` and `es` translate it, `en` keeps `msgstr` empty (the English msgid is the text).
+Available catalogs: `pt_BR`, `en`, `es`, `ru` and `zh_CN`. Every user-facing string must exist in all of them; every catalog but `en` translates it, `en` keeps `msgstr` empty (the English msgid is the text).
 
 To edit / regenerate the translation catalog:
 
@@ -101,7 +101,7 @@ make i18n-update      # propagate new keys to existing .po files
 make i18n-compile     # compile .po → .mo (gettext loads .mo at runtime)
 ```
 
-Catalogs live in `app/i18n/locales/{pt_BR,en,es}/LC_MESSAGES/voicemate.po`.
+Catalogs live in `app/i18n/locales/{pt_BR,en,es,ru,zh_CN}/LC_MESSAGES/voicemate.po`.
 
 ### Code conventions
 
@@ -199,7 +199,7 @@ integration — override with `--platform` / `--trigger`:
 Default hotkeys are identical everywhere: `Ctrl+Alt+V` (clipboard) and `Ctrl+Alt+A` (Claude). On WSL2 they are
 registered by `scripts/windows/voicemate-hotkeys.ahk` (or `.ps1`) which POSTs to the daemon — same
 "the stop hotkey picks the handler" semantics. Run `make doctor` to validate mic/audio/trigger/GPU with
-actionable fixes.
+actionable fixes. On Windows, the [companion app](#companion-app-tray) replaces these scripts.
 
 ## Usage
 
@@ -291,6 +291,78 @@ poetry run voice-mate --listener-refresh-seconds 30 --watchdog-timeout 60
 
 Default is `large-v3-turbo` — the best speed/quality balance, especially for mixed-language audio.
 
+## Companion app (tray)
+
+The companion is a small desktop app (PySide6) that lives in the system tray. It starts and supervises the engine, registers the hotkeys, plays the sound cues, writes each transcription to the clipboard and checks that it got there, and gives you one place to see the status and quit everything. On Windows it replaces the PowerShell/AutoHotkey script and drives the engine inside WSL2; on Linux it is an optional UI. The engine itself does not change: `make run` keeps working without the companion.
+
+### Install on Windows
+
+**With the installer (recommended).** Run `VoiceMate-Setup-<version>.exe`. It installs for your user only (no administrator prompt) into `%LOCALAPPDATA%\Programs\VoiceMate` and adds VoiceMate to the Start menu; a desktop shortcut and starting at sign-in are optional (the first install offers the latter, then **Start VoiceMate when I sign in** in Settings controls it). The installer speaks English, Portuguese, Spanish, Russian and Simplified Chinese. To build it yourself (Python 3.12+ and Inno Setup 6.3+, `winget install JRSoftware.InnoSetup`):
+
+```powershell
+make companion-venv        # once: .venv-companion with the pinned PySide6 and PyInstaller
+make companion-installer   # dist\VoiceMate (PyInstaller), then dist\installer\VoiceMate-Setup-<version>.exe
+```
+
+**From source.** With Python 3.12+ on Windows:
+
+```powershell
+make companion-venv   # once
+make run-tray
+```
+
+Either way the engine still lives in WSL2 (install it as in [docs/wsl2.md](docs/wsl2.md)): the companion starts it for you, or attaches to one that is already running (for example the systemd service). If one of the old hotkey scripts (PowerShell or AutoHotkey) is still running, close it and remove its shortcut from `shell:startup`: the companion now owns `Ctrl+Alt+V` and `Ctrl+Alt+A`.
+
+### Pin to the taskbar
+
+Windows does not let installers pin apps. Open Start, search for VoiceMate, right-click it and choose **Pin to taskbar**. Clicking the pinned icon while VoiceMate runs opens its status window; right-clicking it offers **Settings**, **Restart engine**, **Restart WSL...** and **Quit VoiceMate**. Pinning uses the Start menu shortcut, so it applies to the installed app. On the first run, a **Pin VoiceMate to the taskbar** notification recalls these steps.
+
+The tray icon (the VoiceMate figure, whose small corner badge shows recording, transcribing and ready, like the Windows microphone-in-use indicator) is a different thing: Windows 11 hides new tray icons behind the arrow next to the clock, so VoiceMate keeps its icon on the taskbar by default. It does so only while nobody has decided yet: if you hide the icon in the Windows taskbar settings, VoiceMate respects that and does not bring it back. To hide it for good, turn off **Always show the VoiceMate icon on the taskbar** in Settings > **General**. To bring back an icon you hid in Windows, turn that option off, click **Apply**, then turn it on again and click **OK**: the icon shows again, whatever the Windows settings say.
+
+### Quit
+
+Tray icon menu > **Quit VoiceMate** (also a button in the status window and an entry in the pinned icon's right-click menu). Quitting stops the engine the companion started; an engine it only attached to (for example the systemd service) keeps running. From a terminal, for the installed app (PowerShell):
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\VoiceMate\VoiceMate.exe" --command quit
+```
+
+From source: `make run-tray ARGS="--command quit"`. A `--command` never starts VoiceMate: when it is not running, nothing happens.
+
+### Settings
+
+Tray icon menu > **Settings...**, in three tabs: **Hotkeys**; **Sounds** (built-in sounds or your own WAV files, volume); **General**: language, notifications, **Start VoiceMate when I sign in**, **Always show the VoiceMate icon on the taskbar** (Windows only) and the engine (mode, WSL distro, engine folder, and **Restart WSL when audio fails**: **Automatically**, **Ask first** or **Never**). The settings are saved in `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) and survive an uninstall. Logs live in `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); tray icon menu > **Engine** > **Open logs** opens them. Transcriptions that did not reach the clipboard are kept in `%LOCALAPPDATA%\VoiceMate\pending.json` (Linux: `~/.local/state/voicemate/pending.json`) until you copy them or empty the list (**Not copied** > **Clear list** in the tray menu, or **Clear** in the status window), so they are still under **Not copied** after a restart or a crash. Results still waiting for the clipboard when you quit are kept there too. That file holds the transcription text: it stays in your user profile, is deleted once the list is empty, and the uninstaller removes it together with the logs. If it cannot be read, VoiceMate keeps it aside as `pending.json.broken-<date>`, starts with an empty list and tells you.
+
+A new language takes effect after a restart, so VoiceMate asks **Restart VoiceMate?**: **Restart now** restarts it (the engine too, about 10 seconds); **Later** keeps the choice, and the **General** tab shows "Takes effect after VoiceMate restarts." until then.
+
+### Linux (optional)
+
+The CLI keeps working as before. For the tray icon and status window, in the repository:
+
+```bash
+poetry install --extras ui
+make run-tray
+```
+
+On Linux the engine keeps its own hotkeys (the **Hotkeys** tab shows them read-only). Without a system tray (for example GNOME without the AppIndicator extension) the status window is the main window. To add VoiceMate to the applications menu:
+
+```bash
+mkdir -p ~/.local/share/applications &&
+  sed "s|@VOICEMATE_DIR@|$PWD|g" packaging/linux/voicemate-companion.desktop \
+  > ~/.local/share/applications/voicemate-companion.desktop
+```
+
+### Troubleshooting
+
+| Symptom | Fix |
+| ------- | --- |
+| "Starting engine..." for a long time | The first model load takes 10 to 60 s. Check `engine.log` (**Engine** > **Open logs**) and the WSL distro and engine folder in Settings |
+| A hotkey shows "Used by another app" on first run | An old hotkey script (PowerShell or AutoHotkey) is still running: close it and remove it from `shell:startup` |
+| "WSL audio stopped" or "No microphone" | Connect a microphone. WSL is restarted as set in **Restart WSL when audio fails**; by hand: **Engine** > **Restart WSL...** |
+| "The engine is older than this app. Restart or update it." | Update the checkout in WSL (`git pull`), then **Restart engine** |
+| A transcription was not copied | It stays under **Not copied**, in the tray menu (click it to copy) and in the status window (**Copy**), even after VoiceMate restarts. **Clear list** (tray) or **Clear** (status window) empties it after asking |
+| SmartScreen warns about the installer | The installer is not code-signed: **More info** > **Run anyway** |
+
 ## Makefile
 
 | Command            | Description                                   |
@@ -307,6 +379,11 @@ Default is `large-v3-turbo` — the best speed/quality balance, especially for m
 | `make format`      | Format code with Ruff                         |
 | `make lint`        | Lint with Ruff + type-check with Mypy         |
 | `make test`        | Run pytest suite                              |
+| `make run-tray`    | Run the companion app (tray); `ARGS="..."` passes flags |
+| `make companion-venv` | Create `.venv-companion` (companion dev env on Windows, pinned) |
+| `make companion-test` / `make companion-lint` | Test / lint the companion |
+| `make companion-build` | Freeze the companion with PyInstaller (`dist\VoiceMate`) |
+| `make companion-installer` | Build the Windows installer with Inno Setup (`dist\installer`) |
 | `make clean`       | Remove caches                                 |
 
 ## Architecture

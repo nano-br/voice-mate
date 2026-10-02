@@ -1,0 +1,11 @@
+# Companion development/build on Windows (Python 3.12+, 3.13 is fine): `make companion-venv`,
+# which runs (pinned by companion-constraints.txt, the same pins the build uses):
+#   py -3 -m venv .venv-companion
+#   .venv-companion\Scripts\python -m pip install -r requirements/companion-dev.txt -c requirements/companion-constraints.txt
+-r companion.txt
+types-pywin32; sys_platform == "win32"
+babel
+pytest
+mypy
+ruff
+pyinstaller

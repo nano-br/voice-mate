@@ -13,6 +13,12 @@ it clears the cache and re-resolves from scratch, falling back to another
 mechanism instead of staying stuck on the broken one. (The most robust path is
 clip.exe — straight to Windows, without the WSLg bridge — but it requires the
 WSLInterop interop to be registered.)
+
+Writers only write. Whether the daemon writes the clipboard at all is decided
+when the result is published (`OperationHandle.publish_result`): while a client
+holds the `clipboard` lease (the companion app), that client delivers the text
+and the handlers skip the writer. Publishing also feeds the session hub, from
+which the Windows side reads the text on WSL2 (`/result`, `/events`).
 """
 
 from __future__ import annotations
@@ -23,13 +29,10 @@ import subprocess
 import sys
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol
+from typing import Protocol
 
 from app.i18n import _
 from app.platform.kinds import PlatformKind
-
-if TYPE_CHECKING:
-    from app.core.session_status import SessionStatus
 
 # Default clip.exe path via interop (for when appendWindowsPath=false drops it from PATH).
 _WINDOWS_CLIP_EXE = Path("/mnt/c/Windows/System32/clip.exe")
@@ -87,20 +90,16 @@ class WslClipboardWriter:
     """Clipboard on WSL2: wl-copy/xclip (native, via WSLg) → pyperclip → clip.exe.
 
     Tries the strategies in order, keeping the first one that works (cached).
-    clip.exe reads UTF-16LE with a BOM; the others, UTF-8.
+    clip.exe reads UTF-16LE with a BOM; the others, UTF-8. Best effort on WSL2:
+    the reliable path to the Windows clipboard is the Windows side reading the
+    published result (the hotkeys script or the companion app).
     """
 
-    def __init__(self, status: SessionStatus | None = None) -> None:
+    def __init__(self) -> None:
         self._writer: Callable[[str], None] | None = None
         self._writer_name = ""
-        self._status = status
 
     def copy(self, text: str) -> None:
-        # Publish to the hub so Windows can fetch it via /result and set the
-        # native clipboard (Set-Clipboard) — the reliable path on WSL2, where the
-        # WSLg/interop bridge fails. The wl-copy below is best-effort (WSL-local clipboard).
-        if self._status is not None:
-            self._status.record_result(text)
         # Fast path: use the already-validated mechanism. If it FAILS (the WSLg
         # Wayland bridge gets flaky over long sessions), DON'T give up — clear the
         # cache and re-resolve from scratch, falling back to another mechanism (self-heals).
@@ -156,7 +155,7 @@ class WslClipboardWriter:
         return _writer
 
 
-def create_clipboard_writer(platform: PlatformKind, status: SessionStatus | None = None) -> ClipboardWriter:
+def create_clipboard_writer(platform: PlatformKind) -> ClipboardWriter:
     if platform == "wsl2":
-        return WslClipboardWriter(status)
+        return WslClipboardWriter()
     return PyperclipWriter()

@@ -12,11 +12,13 @@ the `core.transcription_backend.TranscriptionBackend` Protocol and exposes
 
 from __future__ import annotations
 
+import contextlib
 import io
 import json
 import socket
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
 import uuid
@@ -32,6 +34,23 @@ from app.i18n import _
 _READY_TIMEOUT_SECONDS = 120.0
 _INFER_TIMEOUT_SECONDS = 120.0
 _WARMUP_SECONDS = 0.3
+
+# whisper-server processes started by this interpreter and not closed yet. The
+# daemon hard-exits when asked to stop while the engine loads (os._exit runs no
+# cleanup), and a server left behind would keep the model in VRAM.
+_LIVE_SERVERS: set[subprocess.Popen[bytes]] = set()
+_LIVE_LOCK = threading.Lock()
+
+
+def kill_live_servers() -> None:
+    """Kill every whisper-server this process started and has not closed (before a hard exit)."""
+    with _LIVE_LOCK:
+        procs = list(_LIVE_SERVERS)
+        _LIVE_SERVERS.clear()
+    for proc in procs:
+        if proc.poll() is None:
+            with contextlib.suppress(OSError):
+                proc.kill()
 
 
 def _free_port() -> int:
@@ -133,7 +152,11 @@ class WhisperCppServerBackend:
     def close(self) -> None:
         proc = self._proc
         self._proc = None
-        if proc is None or proc.poll() is not None:
+        if proc is None:
+            return
+        with _LIVE_LOCK:
+            _LIVE_SERVERS.discard(proc)
+        if proc.poll() is not None:
             return
         proc.terminate()
         try:
@@ -185,6 +208,8 @@ class WhisperCppServerBackend:
             )
         finally:
             log_file.close()  # the child inherits the fd; our handle can close
+        with _LIVE_LOCK:
+            _LIVE_SERVERS.add(self._proc)
         self._wait_ready()
         self._report_vulkan_device()
         self._warmup()

@@ -3,8 +3,8 @@
 The Windows hotkeys script runs under PowerShell, outside this package, so
 `pybabel extract` (which only scans `app/`, see `babel.cfg`) would never see
 its strings. Listing them here with the `N_()` marker (one of Babel's default
-extraction keywords) puts them in `voicemate.pot` and in the `en`, `pt_BR` and
-`es` catalogs next to the daemon's messages, where they are translated like
+extraction keywords) puts them in `voicemate.pot` and in the `en`, `pt_BR`, `es`,
+`ru` and `zh_CN` catalogs next to the daemon's messages, where they are translated like
 any other msgid. At runtime the script reads the translations straight from
 the `.po` files; the app never imports this module.
 
@@ -13,7 +13,7 @@ script fills in with PowerShell's `-f` operator. `MESSAGES` must match the
 literals the script passes to its `Get-LocalizedText` function exactly:
 `tests/test_windows_script_i18n.py` fails when the two drift apart. After
 changing either side, run `make i18n-extract i18n-update`, translate the new
-entries in `pt_BR` and `es`, then `make i18n-compile`.
+entries in every catalog but `en`, then `make i18n-compile`.
 """
 
 from __future__ import annotations
@@ -44,6 +44,8 @@ MESSAGES: tuple[str, ...] = (
     N_(
         "{0}: the daemon did not answer within {1} s (busy). It is running, so it may still act on this key press: check the WSL console before pressing again."
     ),
+    N_("daemon loading"),
+    N_("{0}: the daemon is still loading the model, try again in a few seconds."),
     N_("daemon error"),
     N_("{0}: daemon error ({1}). See the WSL console for details."),
     N_("trigger rejected"),

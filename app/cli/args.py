@@ -3,16 +3,46 @@
 from __future__ import annotations
 
 import argparse
+from typing import get_args
 
-from app.core.config import DEFAULT_OUTPUT_LANG, DEFAULT_VOICE_DESCRIPTION
+from app.core.config import DEFAULT_OUTPUT_LANG, DEFAULT_VOICE_DESCRIPTION, TranscriptionLanguage
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="VoiceMate — voice to clipboard or Claude")
     _add_core_args(parser)
+    _add_daemon_args(parser)
     _add_claude_args(parser)
     _add_tts_args(parser)
     return parser.parse_args(argv)
+
+
+def _add_daemon_args(parser: argparse.ArgumentParser) -> None:
+    """The engine as a supervised daemon with the HTTP API (docs/companion-app.md)."""
+    parser.add_argument(
+        "--supervised",
+        action="store_true",
+        help=(
+            "Shut down cleanly when stdin reaches EOF: the supervisor (the companion app) holds "
+            "stdin open while the engine should run."
+        ),
+    )
+    parser.add_argument(
+        "--api",
+        action="store_true",
+        help=(
+            "Serve the HTTP API on 127.0.0.1:--daemon-port next to the native hotkey listener "
+            "(Linux). Always on with trigger=socket (the WSL2 default)."
+        ),
+    )
+    parser.add_argument(
+        "--api-token",
+        action="store_true",
+        help=(
+            "Require 'Authorization: Bearer <token>' on every API route but /health. The token "
+            "lives in ~/.config/voicemate/api-token (created with mode 0600 when absent)."
+        ),
+    )
 
 
 def _add_core_args(parser: argparse.ArgumentParser) -> None:
@@ -79,7 +109,7 @@ def _add_core_args(parser: argparse.ArgumentParser) -> None:
         "--daemon-port",
         type=int,
         default=None,
-        help="Port of the local HTTP daemon when trigger=socket (default: 47821).",
+        help="Port of the local HTTP API (trigger=socket or --api; default: 47821).",
     )
     parser.add_argument(
         "--whispercpp-mode",
@@ -94,10 +124,10 @@ def _add_core_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--transcription-language",
         default=None,
-        choices=["auto", "pt", "en", "es", "fr", "de", "it", "ja", "zh"],
+        choices=list(get_args(TranscriptionLanguage)),
         help=(
             "Language pinned for transcription. Omitted = derived from --output-lang "
-            "(pt-BR→pt, en→en). Pinning improves stability and still transcribes embedded "
+            "(pt-BR→pt, en→en, ru→ru, zh-CN→zh). Pinning improves stability and still transcribes embedded "
             "foreign terms (code-switching). 'auto' detects per utterance "
             "(less stable on short utterances)."
         ),

@@ -24,7 +24,7 @@ import sys
 import urllib.request
 import zipfile
 from pathlib import Path
-from typing import cast
+from typing import Final, cast
 
 from app.core.config import FlowKind, GpuVendor, TTSEngine, WhisperBackend
 from app.core.console import force_utf8_stdio
@@ -362,6 +362,11 @@ def _prompt_flow(interactive: bool, default: FlowKind) -> FlowKind:
     return mapping.get(raw, default)
 
 
+# "Yes" in every UI language (pt-BR, en, es, ru, zh_CN): the [Y/n] hint is translated, so
+# the answer may come in the user's language. Anything else means no.
+_YES_ANSWERS: Final = frozenset({"s", "sim", "si", "sí", "y", "yes", "д", "да", "是", "好", "对"})
+
+
 def _prompt_yes_no(question: str, default_yes: bool, interactive: bool) -> bool:
     if not interactive:
         return default_yes
@@ -369,7 +374,7 @@ def _prompt_yes_no(question: str, default_yes: bool, interactive: bool) -> bool:
     raw = _ask(f"{question} {suffix} ").lower()
     if not raw:
         return default_yes
-    return raw in ("s", "sim", "si", "sí", "y", "yes")
+    return raw in _YES_ANSWERS
 
 
 def _ask(prompt: str) -> str:

@@ -47,15 +47,23 @@ make setup     # detecta WSL2 + AMD, instala torch ROCm, whisper.cpp (Vulkan),
 make doctor    # diagnóstico: mic/áudio WSLg, binários, GPU — com correções
 ```
 
+> **Aplicativo companion (recomendado no Windows):** o aplicativo de bandeja VoiceMate substitui os
+> dois scripts de hotkeys abaixo (PowerShell e AutoHotkey). Ele inicia e supervisiona o
+> daemon no WSL, registra as hotkeys, escreve o clipboard do Windows (com confirmação) e
+> reinicia o WSL quando o áudio trava. Instalação e uso: "Aplicativo companion (bandeja)" no
+> [README](../README.pt-BR.md#aplicativo-companion-bandeja). Com o companion, não rode nenhum
+> dos scripts e tire os atalhos deles do `shell:startup`. Os scripts continuam
+> funcionando com o daemon do `make run`.
+
 No Windows, registre as hotkeys:
 
 - **PowerShell** (recomendado — também seta o clipboard nativo via `/result`):
   `powershell -ExecutionPolicy Bypass -File scripts\windows\voicemate-hotkeys.ps1`
   Para iniciar com o Windows, crie um atalho em `shell:startup` (veja o cabeçalho
-  do script). As mensagens saem em pt-BR, en ou es: por padrão o script
+  do script). As mensagens saem em pt-BR, en, es, ru ou zh-CN: por padrão o script
   fala o mesmo idioma do daemon (o `lang` do `/health`), para não misturar idiomas
   ao repassar as mensagens dele; antes de conectar, usa o idioma do Windows. Para
-  fixar, use `-Language pt-BR|en|es` ou defina `VOICEMATE_LANG` no Windows.
+  fixar, use `-Language pt-BR|en|es|ru|zh-CN` ou defina `VOICEMATE_LANG` no Windows.
   Avisos importantes (sem microfone, áudio do WSL travado, transcrição que não
   entrou no clipboard) também viram notificação do Windows; `-NoToast` desliga.
 - **AutoHotkey v2**: dê dois cliques em `scripts\windows\voicemate-hotkeys.ahk`.
@@ -113,6 +121,10 @@ Atenção: quando o Windows fica sem microfone, o PulseAudio do WSLg costuma
 resolve; depois rode `make run` de novo.
 
 ### Autostart (systemd)
+
+Com o aplicativo companion o serviço é opcional: o companion inicia o motor sozinho; se o
+serviço estiver habilitado, ele se conecta ao daemon do serviço e, na primeira
+execução, oferece desabilitá-lo.
 
 O `make setup` oferece instalar o serviço; manualmente:
 

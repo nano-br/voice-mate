@@ -1,7 +1,7 @@
 ﻿# VoiceMate - global Windows hotkeys + native clipboard -> daemon in WSL2.
 #
 # Usage: powershell -ExecutionPolicy Bypass -File voicemate-hotkeys.ps1 [-Scope all|mine] [-DaemonUrl <url>] [-NoToast]
-#                   [-Language auto|pt-BR|en|es]
+#                   [-Language auto|pt-BR|en|es|ru|zh-CN]
 # Tip:   to run hidden at login, create a shortcut in shell:startup with
 #        powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File <path>\voicemate-hotkeys.ps1
 #
@@ -52,14 +52,15 @@
 # -Language "auto" (default): $env:VOICEMATE_LANG set on WINDOWS if any, else the
 #   language the daemon reports in /health (so the console never mixes the
 #   daemon's messages with another language), else the Windows display language;
-#   pt* -> pt-BR, es* -> es, anything else -> en. Messages are translated with the
+#   pt* -> pt-BR, es* -> es, ru* -> ru, zh* (zh-TW and zh-HK included) -> zh-CN,
+#   anything else -> en. Messages are translated with the
 #   project's gettext catalogs.
 
 param(
     [string]$DaemonUrl = "http://127.0.0.1:47821",
     [ValidateSet("all", "mine")][string]$Scope = "all",
     [switch]$NoToast,
-    [ValidateSet("auto", "pt-BR", "en", "es")][string]$Language = "auto"
+    [ValidateSet("auto", "pt-BR", "en", "es", "ru", "zh-CN")][string]$Language = "auto"
 )
 
 # --- Localization -----------------------------------------------------------------
@@ -74,10 +75,13 @@ param(
 
 function ConvertTo-CatalogLocale([string]$Name) {
     # "pt-BR" / "pt_BR" / "pt_BR.UTF-8" -> pt_BR; "es" / "es-MX" / "es_419" -> es;
-    # anything else (or nothing) -> en.
+    # "ru" / "ru-RU" -> ru; "zh-CN" / "zh_TW" / "zh-Hant-HK" -> zh_CN (the only Chinese
+    # catalog); anything else (or nothing) -> en.
     $n = ([string]$Name).Trim().ToLowerInvariant()
     if ($n -match '^pt([-_.@]|$)') { return "pt_BR" }
     if ($n -match '^es([-_.@]|$)') { return "es" }
+    if ($n -match '^ru([-_.@]|$)') { return "ru" }
+    if ($n -match '^zh([-_.@]|$)') { return "zh_CN" }
     return "en"
 }
 
@@ -158,7 +162,7 @@ function Read-PoCatalog([string]$Path) {
 }
 
 function Set-UiLanguage([string]$Name) {
-    # Loads the catalog for $Name (any pt*/es*/other spelling). A missing or
+    # Loads the catalog for $Name (any pt*/es*/ru*/zh*/other spelling). A missing or
     # unreadable catalog leaves the messages in English, with a visible warning.
     $script:UiLocale = ConvertTo-CatalogLocale $Name
     $script:Catalog = $null
@@ -660,7 +664,10 @@ function Send-Trigger([string]$Flow, [string]$Key) {
             Write-Alert (Get-LocalizedText 'daemon busy') ((Get-LocalizedText '{0}: the daemon did not answer within {1} s (busy). It is running, so it may still act on this key press: check the WSL console before pressing again.') -f $Key, $sec)
         }
         "http" {
-            if ($res.Status -ge 500) {
+            if ($res.Status -eq 503) {
+                # The daemon answers before its model is loaded (API v2 readiness gate).
+                Write-Alert (Get-LocalizedText 'daemon loading') ((Get-LocalizedText '{0}: the daemon is still loading the model, try again in a few seconds.') -f $Key)
+            } elseif ($res.Status -ge 500) {
                 Write-Alert (Get-LocalizedText 'daemon error') ((Get-LocalizedText '{0}: daemon error ({1}). See the WSL console for details.') -f $Key, $res.Detail)
             } else {
                 Write-Alert (Get-LocalizedText 'trigger rejected') ((Get-LocalizedText '{0}: the daemon rejected the trigger ({1}).') -f $Key, $res.Detail)

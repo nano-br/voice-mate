@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 17:26-0300\n"
+"POT-Creation-Date: 2026-10-02 05:02-0300\n"
 "PO-Revision-Date: 2026-05-21 14:42-0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -18,69 +18,113 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: app/main.py:87
+#: app/main.py:137
+#, python-brace-format
+msgid "[VoiceMate] ❌ Could not read or create the API token ({path}): {exc}"
+msgstr ""
+
+#: app/main.py:144
+#, python-brace-format
+msgid "[VoiceMate] API token required (taken from {env})."
+msgstr ""
+
+#: app/main.py:146
+#, python-brace-format
+msgid "[VoiceMate] API token required (Bearer), stored in {path}."
+msgstr ""
+
+#: app/main.py:165
+#, python-brace-format
+msgid "[VoiceMate] ❌ Could not open the HTTP API on 127.0.0.1:{port}: {exc}"
+msgstr ""
+
+#: app/main.py:171
+#, python-brace-format
+msgid "[VoiceMate] HTTP API on http://127.0.0.1:{port}; loading the engine..."
+msgstr ""
+
+#: app/main.py:195
 msgid "[VoiceMate] No handler available; exiting."
 msgstr ""
 
-#: app/main.py:112
+#: app/main.py:218
 #, python-brace-format
 msgid ""
 "\n"
 "[VoiceMate] Ready. Input: {input_method}"
 msgstr ""
 
-#: app/main.py:114
+#: app/main.py:220
 #, python-brace-format
 msgid "[VoiceMate] Platform: {platform} (trigger: {trigger})"
 msgstr ""
 
-#: app/main.py:120
+#: app/main.py:225
 #, python-brace-format
 msgid "[VoiceMate] Daemon listening on http://127.0.0.1:{port} (POST /trigger)."
 msgstr ""
 
-#: app/main.py:124
+#: app/main.py:228
 msgid ""
 "[VoiceMate] Register the Windows-side hotkeys with scripts/windows"
 "/voicemate-hotkeys.ahk (or .ps1)."
 msgstr ""
 
-#: app/main.py:127
+#: app/main.py:232
 msgid "clipboard"
 msgstr ""
 
-#: app/main.py:127
+#: app/main.py:232
 msgid "Claude (multi-turn)"
 msgstr ""
 
-#: app/main.py:128
+#: app/main.py:233
 #, python-brace-format
 msgid "[VoiceMate] Hotkey {hotkey}: → {label}"
 msgstr ""
 
-#: app/main.py:129
+#: app/main.py:235
+#, python-brace-format
+msgid "[VoiceMate] HTTP API on http://127.0.0.1:{port}."
+msgstr ""
+
+#: app/main.py:236
 #, python-brace-format
 msgid "[VoiceMate] Max recording: {seconds}s"
 msgstr ""
 
-#: app/main.py:130
+#: app/main.py:238
 msgid "[VoiceMate] Ctrl+C to exit.\n"
 msgstr ""
 
-#: app/main.py:162
+#: app/main.py:251
 #, python-brace-format
 msgid "[VoiceMate] Failed to close handler: {exc}"
 msgstr ""
 
-#: app/main.py:170
+#: app/main.py:259
 #, python-brace-format
 msgid "[VoiceMate] Failed to close transcriber: {exc}"
 msgstr ""
 
-#: app/main.py:171
+#: app/main.py:293
+msgid "[VoiceMate] Supervised: closing stdin shuts the engine down."
+msgstr ""
+
+#: app/main.py:312 app/main.py:383
 msgid ""
 "\n"
 "[VoiceMate] Shutting down."
+msgstr ""
+
+#: app/main.py:318
+#, python-brace-format
+msgid "[VoiceMate] ❌ The engine failed to start: {exc}"
+msgstr ""
+
+#: app/main.py:370
+#, python-brace-format
+msgid "[VoiceMate] Failed to stop the listener: {exc}"
 msgstr ""
 
 #: app/cli/config_builder.py:108
@@ -103,89 +147,1280 @@ msgstr ""
 msgid "[VoiceMate] ⚠ Failed to remove {path}: {exc}"
 msgstr ""
 
-#: app/cli/wiring.py:62
+#: app/cli/wiring.py:60
 #, python-brace-format
 msgid "[VoiceMate] ⚠ openai-whisper failed: {exc}"
 msgstr ""
 
-#: app/cli/wiring.py:69
+#: app/cli/wiring.py:67
 msgid ""
 "[VoiceMate] ⚠ whisper.cpp not found (run `make configure`); trying "
 "fallback."
 msgstr ""
 
-#: app/cli/wiring.py:76
+#: app/cli/wiring.py:74
 #, python-brace-format
 msgid "[VoiceMate] ⚠ whisper.cpp failed; falling back: {exc}"
 msgstr ""
 
-#: app/cli/wiring.py:96
+#: app/cli/wiring.py:94
 #, python-brace-format
 msgid "[VoiceMate] ⚠ faster-whisper (CT2-ROCm) failed on the AMD GPU: {exc}"
 msgstr ""
 
-#: app/cli/wiring.py:99
+#: app/cli/wiring.py:97
 msgid "[VoiceMate]   Disabling until the next `make configure`."
 msgstr ""
 
-#: app/cli/wiring.py:106
+#: app/cli/wiring.py:104
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Failed to persist ct2_rocm_ok: {persist_exc}"
 msgstr ""
 
-#: app/cli/wiring.py:147
+#: app/cli/wiring.py:145
 msgid ""
 "[VoiceMate] ⚠ No GPU backend available on AMD; using faster-whisper on "
 "CPU."
 msgstr ""
 
-#: app/cli/wiring.py:184
+#: app/cli/wiring.py:182
 #, python-brace-format
 msgid "[VoiceMate] ⚠ TTS disabled: engine '{engine}' packages not installed."
 msgstr ""
 
-#: app/cli/wiring.py:188
+#: app/cli/wiring.py:186
 #, python-brace-format
 msgid ""
 "[VoiceMate]   Install with: poetry install --extras {extra} (or run with "
 "--no-tts)."
 msgstr ""
 
-#: app/cli/wiring.py:198
+#: app/cli/wiring.py:196
 #, python-brace-format
 msgid "[VoiceMate] ⚠ TTS disabled (failed to start engine '{engine}'): {exc}"
 msgstr ""
 
-#: app/cli/wiring.py:205
+#: app/cli/wiring.py:203
 #, python-brace-format
 msgid ""
 "[VoiceMate]   Check `poetry install --extras {extra}`, GPU availability, "
 "or run with `--no-tts`."
 msgstr ""
 
-#: app/cli/wiring.py:245
+#: app/cli/wiring.py:243
 msgid "[VoiceMate] ⚠ Claude flow disabled: extra 'claude' not installed."
 msgstr ""
 
-#: app/cli/wiring.py:249
+#: app/cli/wiring.py:247
 msgid "[VoiceMate]   Install with: poetry install --extras claude"
 msgstr ""
 
-#: app/cli/wiring.py:265
+#: app/cli/wiring.py:263
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Failed to start Claude (run `claude login`): {exc}"
 msgstr ""
 
-#: app/cli/wiring.py:277
+#: app/cli/wiring.py:275
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Unknown flow ignored: {kind}"
 msgstr ""
 
-#: app/cli/wiring.py:330
+#: app/cli/wiring.py:314
 #, python-brace-format
 msgid ""
 "[VoiceMate] ⚠ --input-method mouse is only supported on Windows "
 "(trigger={trigger}); using keyboard hotkeys."
+msgstr ""
+
+#: app/companion/controller.py:607
+msgid ""
+"The settings file was written by a newer version of VoiceMate, so it is "
+"read-only here."
+msgstr ""
+
+#: app/companion/controller.py:626
+msgid "Could not save the settings file."
+msgstr ""
+
+#: app/companion/controller.py:654
+#, python-brace-format
+msgid "{hotkey} is already used by another app."
+msgstr ""
+
+#: app/companion/controller.py:719
+msgid "Could not change the start at login setting."
+msgstr ""
+
+#: app/companion/cues.py:80 app/companion/ui/texts.py:150
+msgid "Recording started"
+msgstr ""
+
+#: app/companion/cues.py:81 app/companion/ui/texts.py:151
+msgid "Transcribing"
+msgstr ""
+
+#: app/companion/cues.py:82 app/companion/ui/texts.py:105
+#: app/companion/ui/texts.py:152
+msgid "Copied"
+msgstr ""
+
+#: app/companion/cues.py:83 app/companion/ui/texts.py:153
+msgid "Claude answered"
+msgstr ""
+
+#: app/companion/cues.py:84 app/companion/ui/texts.py:154
+msgid "Warning"
+msgstr ""
+
+#: app/companion/cues.py:85 app/companion/ui/texts.py:155
+msgid "Error"
+msgstr ""
+
+#: app/companion/main.py:130
+#, python-brace-format
+msgid ""
+"VoiceMate cannot find its data folder: {variable} is not set and the home"
+" folder is unknown. Set {variable} or {home_variable} for your user and "
+"start VoiceMate again."
+msgstr ""
+
+#: app/companion/main.py:193
+msgid "Settings"
+msgstr ""
+
+#: app/companion/main.py:193 app/companion/ui/status_window.py:122
+#: app/companion/ui/status_window.py:177 app/companion/ui/tray.py:97
+msgid "Restart engine"
+msgstr ""
+
+#: app/companion/main.py:195 app/companion/ui/tray.py:99
+msgid "Restart WSL..."
+msgstr ""
+
+#: app/companion/main.py:196 app/companion/ui/status_window.py:181
+#: app/companion/ui/tray.py:107
+msgid "Quit VoiceMate"
+msgstr ""
+
+#: app/companion/model.py:592
+msgid "Engine not responding"
+msgstr ""
+
+#: app/companion/model.py:592
+msgid "No answer from the engine. VoiceMate restarts it if this continues."
+msgstr ""
+
+#: app/companion/model.py:594 app/companion/model.py:790
+msgid "Engine is outdated"
+msgstr ""
+
+#: app/companion/model.py:594
+msgid "The engine is older than this app. Update it, then use Restart engine."
+msgstr ""
+
+#: app/companion/model.py:597 app/companion/model.py:896
+#: app/companion/ui/texts.py:108
+msgid "No microphone"
+msgstr ""
+
+#: app/companion/model.py:597
+msgid "Connect a microphone to record."
+msgstr ""
+
+#: app/companion/model.py:600 app/companion/model.py:883
+#: app/companion/ui/demo_controller.py:333 app/companion/ui/texts.py:110
+msgid "WSL audio stopped"
+msgstr ""
+
+#: app/companion/model.py:600
+msgid "WSL lost its audio bridge. Restarting WSL brings it back."
+msgstr ""
+
+#: app/companion/model.py:601 app/companion/model.py:889
+msgid "Audio server is down"
+msgstr ""
+
+#: app/companion/model.py:601
+msgid "The engine cannot reach the audio server."
+msgstr ""
+
+#: app/companion/model.py:603 app/companion/model.py:607
+#: app/companion/model.py:608 app/companion/model.py:869
+msgid "Microphone unavailable"
+msgstr ""
+
+#: app/companion/model.py:604
+msgid ""
+"Check the privacy settings for microphone access by desktop apps, and "
+"close any app that holds the microphone."
+msgstr ""
+
+#: app/companion/model.py:607
+msgid "WSL cannot open the microphone. Restarting WSL fixes it."
+msgstr ""
+
+#: app/companion/model.py:608
+msgid "The engine cannot open the microphone."
+msgstr ""
+
+#: app/companion/model.py:613
+msgid "The engine stopped unexpectedly."
+msgstr ""
+
+#: app/companion/model.py:614
+msgid "The engine stopped answering."
+msgstr ""
+
+#: app/companion/model.py:615
+msgid "The engine took too long to start."
+msgstr ""
+
+#: app/companion/model.py:616
+msgid "Restarting WSL to recover the audio."
+msgstr ""
+
+#: app/companion/model.py:617
+msgid "Restart requested."
+msgstr ""
+
+#: app/companion/model.py:618
+msgid "Restarting WSL."
+msgstr ""
+
+#: app/companion/model.py:619
+msgid "The engine is restarting."
+msgstr ""
+
+#: app/companion/model.py:626 app/companion/model.py:752
+msgid "Engine folder not found"
+msgstr ""
+
+#: app/companion/model.py:626
+msgid "Set the engine folder in Settings."
+msgstr ""
+
+#: app/companion/model.py:628 app/companion/model.py:631
+msgid "Engine failed"
+msgstr ""
+
+#: app/companion/model.py:629
+msgid ""
+"Restarting WSL did not help. Check the engine log, then use Restart "
+"WSL... in the Engine menu."
+msgstr ""
+
+#: app/companion/model.py:631 app/companion/model.py:737
+msgid ""
+"The engine failed too many times. Check the engine log, then use Restart "
+"engine."
+msgstr ""
+
+#: app/companion/model.py:637 app/companion/model.py:729
+#: app/companion/ui/texts.py:86
+msgid "VoiceMate is stopped"
+msgstr ""
+
+#: app/companion/model.py:639 app/companion/ui/texts.py:88
+msgid "Starting engine..."
+msgstr ""
+
+#: app/companion/model.py:641
+#, python-brace-format
+msgid "Waiting for the engine on port {port}."
+msgstr ""
+
+#: app/companion/model.py:643 app/companion/ui/texts.py:92
+#, python-brace-format
+msgid "Restarting (attempt {attempt})"
+msgstr ""
+
+#: app/companion/model.py:647
+#, python-brace-format
+msgid "Listening for {hotkey}"
+msgstr ""
+
+#: app/companion/model.py:647 app/companion/ui/texts.py:97
+msgid "Ready"
+msgstr ""
+
+#: app/companion/model.py:650 app/companion/ui/texts.py:78
+#, python-brace-format
+msgid "Recording {elapsed}"
+msgstr ""
+
+#: app/companion/model.py:652 app/companion/ui/texts.py:99
+msgid "Transcribing..."
+msgstr ""
+
+#: app/companion/model.py:654 app/companion/ui/texts.py:101
+msgid "Claude is answering..."
+msgstr ""
+
+#: app/companion/model.py:656 app/companion/ui/texts.py:104
+#, python-brace-format
+msgid "Copied: {text}"
+msgstr ""
+
+#: app/companion/model.py:662
+msgid ""
+"WSL needs a restart to recover the audio. Use Restart WSL now... in the "
+"menu."
+msgstr ""
+
+#: app/companion/model.py:699
+msgid "No microphone is connected. Connect one and try again."
+msgstr ""
+
+#: app/companion/model.py:703
+msgid ""
+"The engine could not open the microphone. Allow desktop apps to use the "
+"microphone in the Windows privacy settings, and close any app that holds "
+"it exclusively."
+msgstr ""
+
+#: app/companion/model.py:706
+msgid ""
+"The engine could not open the microphone. Close any app that holds it "
+"exclusively."
+msgstr ""
+
+#: app/companion/model.py:708
+msgid ""
+"The engine could not open the microphone: the audio server is not "
+"responding."
+msgstr ""
+
+#: app/companion/model.py:711
+msgid ""
+"Windows has a microphone, but WSL cannot open it: its audio bridge is "
+"stuck. Restarting WSL fixes it."
+msgstr ""
+
+#: app/companion/model.py:713
+msgid ""
+"WSL cannot open the microphone. If one is connected, restarting WSL fixes"
+" it."
+msgstr ""
+
+#: app/companion/model.py:722
+msgid "VoiceMate is starting"
+msgstr ""
+
+#: app/companion/model.py:723
+msgid "The engine is still loading. Try again in a moment."
+msgstr ""
+
+#: app/companion/model.py:730
+msgid "The engine is not running. Use Restart engine in the menu."
+msgstr ""
+
+#: app/companion/model.py:736 app/companion/model.py:743
+msgid "VoiceMate stopped retrying"
+msgstr ""
+
+#: app/companion/model.py:745
+msgid ""
+"Restarting WSL did not bring the audio back. Check the engine log, then "
+"use Restart WSL... in the Engine menu."
+msgstr ""
+
+#: app/companion/model.py:753
+msgid "VoiceMate could not find the engine. Set the engine folder in Settings."
+msgstr ""
+
+#: app/companion/model.py:759
+msgid "Could not start the engine"
+msgstr ""
+
+#: app/companion/model.py:760
+msgid ""
+"Starting the engine failed. VoiceMate will try again; the engine log has "
+"the details."
+msgstr ""
+
+#: app/companion/model.py:766
+msgid "Restarting WSL"
+msgstr ""
+
+#: app/companion/model.py:767
+msgid ""
+"WSL lost its audio, so VoiceMate is restarting it. This takes a few "
+"seconds."
+msgstr ""
+
+#: app/companion/model.py:773 app/companion/model.py:780
+msgid "WSL needs a restart"
+msgstr ""
+
+#: app/companion/model.py:774
+msgid "WSL lost its audio. Choose Restart WSL now... in the VoiceMate menu."
+msgstr ""
+
+#: app/companion/model.py:782
+#, python-brace-format
+msgid ""
+"WSL lost its audio, but restarting it also stops {distros}. Choose "
+"Restart WSL now... in the VoiceMate menu when convenient."
+msgstr ""
+
+#: app/companion/model.py:791
+msgid ""
+"The engine is older than this app. Update it, then use Restart engine in "
+"the menu."
+msgstr ""
+
+#: app/companion/model.py:797
+msgid "Engine run by systemd"
+msgstr ""
+
+#: app/companion/model.py:799
+msgid ""
+"A systemd service runs the engine, so VoiceMate attaches to it. To let "
+"VoiceMate manage it, run `systemctl --user disable --now voicemate` in "
+"WSL."
+msgstr ""
+
+#: app/companion/model.py:807
+msgid "Engine access denied"
+msgstr ""
+
+#: app/companion/model.py:809
+msgid ""
+"The engine refused VoiceMate's access token. VoiceMate reads "
+"`~/.config/voicemate/api-token` again every 30 seconds; the engine log "
+"has the details."
+msgstr ""
+
+#: app/companion/model.py:817
+msgid "Settings reset"
+msgstr ""
+
+#: app/companion/model.py:819
+#, python-brace-format
+msgid ""
+"The settings file could not be read, so VoiceMate started with the "
+"default settings. The old file was kept as {path}."
+msgstr ""
+
+#: app/companion/model.py:827
+msgid "\"Not copied\" list reset"
+msgstr ""
+
+#: app/companion/model.py:829
+#, python-brace-format
+msgid ""
+"The saved \"Not copied\" list could not be read, so it starts empty. The "
+"old file, with the transcriptions it held, was kept as {path}."
+msgstr ""
+
+#: app/companion/model.py:837
+msgid "Engine unreachable"
+msgstr ""
+
+#: app/companion/model.py:838
+msgid "The engine did not answer. VoiceMate keeps trying to reconnect."
+msgstr ""
+
+#: app/companion/model.py:844
+msgid "Engine busy"
+msgstr ""
+
+#: app/companion/model.py:845
+msgid "The engine did not answer in time. It may still act on this key press."
+msgstr ""
+
+#: app/companion/model.py:851
+msgid "Request rejected"
+msgstr ""
+
+#: app/companion/model.py:852
+#, python-brace-format
+msgid "The engine rejected the request (HTTP {status})."
+msgstr ""
+
+#: app/companion/model.py:856
+msgid "Engine error"
+msgstr ""
+
+#: app/companion/model.py:856
+msgid "The engine reported an internal error. See the engine log."
+msgstr ""
+
+#: app/companion/model.py:858
+msgid "Nothing transcribed"
+msgstr ""
+
+#: app/companion/model.py:858
+msgid "No speech was detected in the recording."
+msgstr ""
+
+#: app/companion/model.py:860
+msgid "Nothing recorded"
+msgstr ""
+
+#: app/companion/model.py:860
+msgid "The recording captured no audio."
+msgstr ""
+
+#: app/companion/model.py:864
+msgid "Slow transcription"
+msgstr ""
+
+#: app/companion/model.py:865
+msgid ""
+"Transcription is running slower than usual. The engine log has the "
+"details."
+msgstr ""
+
+#: app/companion/model.py:873
+msgid "Transcription failed"
+msgstr ""
+
+#: app/companion/model.py:874
+msgid "The engine could not transcribe the recording. See the engine log."
+msgstr ""
+
+#: app/companion/model.py:878
+msgid "Claude did not answer"
+msgstr ""
+
+#: app/companion/model.py:878
+msgid "The request to Claude failed. See the engine log."
+msgstr ""
+
+#: app/companion/model.py:884
+msgid "The engine cannot reach the WSL audio server, so recording will fail."
+msgstr ""
+
+#: app/companion/model.py:890
+msgid "The engine cannot reach the audio server, so recording will fail."
+msgstr ""
+
+#: app/companion/model.py:897
+msgid "No microphone is connected. Recording will fail until you connect one."
+msgstr ""
+
+#: app/companion/model.py:902
+msgid ""
+"A transcription was not copied to the clipboard. Open VoiceMate to copy "
+"it."
+msgstr ""
+
+#: app/companion/model.py:904
+#, python-brace-format
+msgid ""
+"{count} transcriptions were not copied to the clipboard. Open VoiceMate "
+"to copy them."
+msgstr ""
+
+#: app/companion/model.py:907
+msgid "Not copied to the clipboard"
+msgstr ""
+
+#: app/companion/model.py:909
+msgid "Copy failed"
+msgstr ""
+
+#: app/companion/model.py:909
+msgid "The text could not be copied to the clipboard. Try again."
+msgstr ""
+
+#: app/companion/model.py:913
+msgid "Pin VoiceMate to the taskbar"
+msgstr ""
+
+#: app/companion/model.py:914
+msgid ""
+"Open Start, search for VoiceMate, right-click it and choose Pin to "
+"taskbar."
+msgstr ""
+
+#: app/companion/model.py:920
+msgid "Hotkey unavailable"
+msgstr ""
+
+#: app/companion/model.py:922
+#, python-brace-format
+msgid ""
+"Already used by another app: {hotkeys}. If the old VoiceMate hotkeys "
+"script is running, close it and remove it from shell:startup, or choose "
+"other hotkeys in Settings."
+msgstr ""
+
+#: app/companion/settings_store.py:88 app/companion/ui/settings_window.py:564
+msgid "Language"
+msgstr ""
+
+#: app/companion/settings_store.py:89
+msgid "Engine mode"
+msgstr ""
+
+#: app/companion/settings_store.py:90
+msgid "WSL restart"
+msgstr ""
+
+#: app/companion/settings_store.py:91 app/companion/ui/settings_window.py:565
+msgid "Notifications"
+msgstr ""
+
+#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:650
+msgid "Hotkeys"
+msgstr ""
+
+#: app/companion/settings_store.py:363 app/companion/settings_store.py:385
+#: app/companion/settings_store.py:401
+#, python-brace-format
+msgid "Invalid value for {setting}."
+msgstr ""
+
+#: app/companion/settings_store.py:367
+msgid "This engine mode is not available on this system."
+msgstr ""
+
+#: app/companion/settings_store.py:369
+msgid ""
+"The engine folder cannot contain quotes, $, backticks, backslashes or "
+"line breaks."
+msgstr ""
+
+#: app/companion/settings_store.py:371
+msgid "The WSL distribution name is not valid."
+msgstr ""
+
+#: app/companion/settings_store.py:373
+#, python-brace-format
+msgid "The port must be between {low} and {high}."
+msgstr ""
+
+#: app/companion/settings_store.py:375 app/companion/settings_store.py:397
+msgid "The volume must be between 0 and 1."
+msgstr ""
+
+#: app/companion/settings_store.py:382 app/companion/ui/demo_controller.py:228
+#, python-brace-format
+msgid "{hotkey} is not a valid hotkey."
+msgstr ""
+
+#: app/companion/settings_store.py:388
+#, python-brace-format
+msgid "The action {flow} has more than one hotkey."
+msgstr ""
+
+#: app/companion/settings_store.py:390
+#, python-brace-format
+msgid "{hotkey} is assigned to more than one action."
+msgstr ""
+
+#: app/companion/settings_store.py:408
+#, python-brace-format
+msgid "The sound file for the {cue} cue was not found."
+msgstr ""
+
+#: app/companion/settings_store.py:410
+#, python-brace-format
+msgid "The sound file for the {cue} cue must be a PCM 8 or 16-bit WAV file."
+msgstr ""
+
+#: app/companion/settings_store.py:413
+#, python-brace-format
+msgid "The sound file for the {cue} cue is longer than {seconds} seconds."
+msgstr ""
+
+#: app/companion/ui/app.py:158
+msgid "Restart WSL now?"
+msgstr ""
+
+#: app/companion/ui/app.py:159 app/companion/ui/status_window.py:128
+msgid ""
+"WSL audio is not working. Restarting WSL fixes it, but it also stops "
+"every running distro."
+msgstr ""
+
+#: app/companion/ui/app.py:160 app/companion/ui/app.py:186
+msgid "Restart WSL"
+msgstr ""
+
+#: app/companion/ui/app.py:161 app/companion/ui/status_window.py:132
+msgid "Not now"
+msgstr ""
+
+#: app/companion/ui/app.py:184
+msgid "Restart WSL?"
+msgstr ""
+
+#: app/companion/ui/app.py:185
+msgid ""
+"This stops every running WSL distro, Docker included, and starts the "
+"engine again."
+msgstr ""
+
+#: app/companion/ui/app.py:187 app/companion/ui/app.py:286
+#: app/companion/ui/settings_window.py:665
+#: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:79
+msgid "Cancel"
+msgstr ""
+
+#: app/companion/ui/app.py:211
+msgid "Could not change the sounds"
+msgstr ""
+
+#: app/companion/ui/app.py:228
+msgid "Restart VoiceMate?"
+msgstr ""
+
+#: app/companion/ui/app.py:229
+msgid "VoiceMate needs to restart to change the language. Restart now?"
+msgstr ""
+
+#: app/companion/ui/app.py:230
+msgid "Restart now"
+msgstr ""
+
+#: app/companion/ui/app.py:231
+msgid "Later"
+msgstr ""
+
+#: app/companion/ui/app.py:265
+msgid "Could not restart VoiceMate"
+msgstr ""
+
+#: app/companion/ui/app.py:266
+msgid "Quit VoiceMate and start it again to change the language."
+msgstr ""
+
+#: app/companion/ui/app.py:283
+msgid "Clear the \"Not copied\" list?"
+msgstr ""
+
+#: app/companion/ui/app.py:284
+msgid ""
+"These transcriptions never reached the clipboard. Once cleared, they "
+"cannot be copied any more."
+msgstr ""
+
+#: app/companion/ui/app.py:285 app/companion/ui/tray.py:199
+msgid "Clear list"
+msgstr ""
+
+#: app/companion/ui/demo_controller.py:145
+msgid "VoiceMate demo"
+msgstr ""
+
+#: app/companion/ui/demo_controller.py:146
+msgid "Nothing is recorded: the states change by themselves."
+msgstr ""
+
+#: app/companion/ui/demo_controller.py:334
+msgid "Restart WSL to bring the microphone back."
+msgstr ""
+
+#: app/companion/ui/hotkey_edit.py:65
+msgid "Press Enter, then the new shortcut. Esc cancels, Backspace clears."
+msgstr ""
+
+#: app/companion/ui/hotkey_edit.py:95 app/companion/ui/hotkey_edit.py:189
+msgid "Press the new shortcut..."
+msgstr ""
+
+#: app/companion/ui/hotkey_edit.py:156 app/companion/ui/hotkey_edit.py:189
+msgid "This key cannot be used"
+msgstr ""
+
+#: app/companion/ui/hotkey_edit.py:189 app/companion/ui/hotkey_edit.py:193
+msgid "No shortcut"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:141
+msgid "Click a shortcut, then press the new keys. Esc cancels, Backspace clears."
+msgstr ""
+
+#: app/companion/ui/settings_window.py:144
+msgid "The engine owns these shortcuts. Change them in the engine configuration."
+msgstr ""
+
+#: app/companion/ui/settings_window.py:157
+msgid "Restore defaults"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:184
+#, python-brace-format
+msgid "{action}:"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:186
+#, python-brace-format
+msgid "Shortcut for {action}"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:259
+msgid "No shortcut: use the menu"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:264
+msgid "Checking..."
+msgstr ""
+
+#: app/companion/ui/settings_window.py:346
+msgid "Play sound cues"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:350
+msgid "Volume:"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:351
+msgid "Master volume"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:363
+#: app/companion/ui/settings_window.py:651
+msgid "Sounds"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:380
+msgid "Custom sounds must be WAV files (PCM, 8 or 16 bit)."
+msgstr ""
+
+#: app/companion/ui/settings_window.py:387
+#, python-brace-format
+msgid "Source: {sound}"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:389
+#, python-brace-format
+msgid "Built-in sound: {sound}"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:392
+msgid "No file chosen"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:393
+#, python-brace-format
+msgid "Sound file: {sound}"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:395
+msgid "Browse..."
+msgstr ""
+
+#: app/companion/ui/settings_window.py:396
+#, python-brace-format
+msgid "Choose a file for {sound}"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:408
+#, python-brace-format
+msgid "Volume: {sound}"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:414
+msgid "Preview"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:415
+#, python-brace-format
+msgid "Preview: {sound}"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:479
+msgid "Choose a sound file"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:479
+msgid "WAV audio"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:508
+msgid "Language:"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:510
+msgid "Takes effect after VoiceMate restarts."
+msgstr ""
+
+#: app/companion/ui/settings_window.py:515
+msgid "Notifications:"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:516
+msgid "Start VoiceMate when I sign in"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:521
+msgid "Always show the VoiceMate icon on the taskbar"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:524
+msgid ""
+"Shows the icon with the recording and transcription state next to the "
+"clock, instead of hiding it behind the arrow. An icon hidden in the "
+"Windows taskbar settings stays hidden until you turn this off, click "
+"Apply and turn it on again."
+msgstr ""
+
+#: app/companion/ui/settings_window.py:533 app/companion/ui/tray.py:96
+msgid "Engine"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:540
+msgid "Mode:"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:542
+msgid "Default distro"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:543
+msgid "WSL distro:"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:545
+msgid "Detect automatically"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:546
+msgid "The voice-mate folder: relative to your home folder, or absolute."
+msgstr ""
+
+#: app/companion/ui/settings_window.py:547
+msgid "Engine folder:"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:550
+msgid ""
+"Restarting WSL brings its audio back, but it stops every running distro, "
+"Docker included."
+msgstr ""
+
+#: app/companion/ui/settings_window.py:552
+msgid "Restart WSL when audio fails:"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:566
+msgid "Mode"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:567
+msgid "WSL distro"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:568
+msgid "Engine folder"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:569
+msgid "Restart WSL when audio fails"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:631
+msgid "VoiceMate Settings"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:642
+msgid ""
+"These settings were saved by a newer version of VoiceMate. They are shown"
+" read-only."
+msgstr ""
+
+#: app/companion/ui/settings_window.py:652
+msgid "General"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:664
+msgid "OK"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:666
+msgid "Apply"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:747
+msgid "Saving..."
+msgstr ""
+
+#: app/companion/ui/settings_window.py:759
+#, python-brace-format
+msgid "Unexpected error: {error}"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:766
+msgid "The settings were not saved:"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:778
+msgid "Settings saved."
+msgstr ""
+
+#: app/companion/ui/status_window.py:121
+msgid "The engine is older than this app. Restart or update it."
+msgstr ""
+
+#: app/companion/ui/status_window.py:130
+msgid "Restart WSL now"
+msgstr ""
+
+#: app/companion/ui/status_window.py:137
+msgid "Dismiss"
+msgstr ""
+
+#: app/companion/ui/status_window.py:157
+msgid "Engine:"
+msgstr ""
+
+#: app/companion/ui/status_window.py:158
+msgid "Audio:"
+msgstr ""
+
+#: app/companion/ui/status_window.py:159
+msgid "Microphones:"
+msgstr ""
+
+#: app/companion/ui/status_window.py:160
+msgid "Restarts:"
+msgstr ""
+
+#: app/companion/ui/status_window.py:163 app/companion/ui/tray.py:86
+#: app/companion/ui/tray.py:149
+msgid "Not copied"
+msgstr ""
+
+#: app/companion/ui/status_window.py:164
+msgid "Transcriptions that never reached the clipboard. Copy them from here."
+msgstr ""
+
+#: app/companion/ui/status_window.py:165
+msgid "Clear"
+msgstr ""
+
+#: app/companion/ui/status_window.py:170 app/companion/ui/tray.py:83
+msgid "Recent"
+msgstr ""
+
+#: app/companion/ui/status_window.py:175 app/companion/ui/tray.py:104
+msgid "Settings..."
+msgstr ""
+
+#: app/companion/ui/status_window.py:179 app/companion/ui/tray.py:102
+msgid "Open logs"
+msgstr ""
+
+#: app/companion/ui/status_window.py:200
+msgid "Copy"
+msgstr ""
+
+#: app/companion/ui/status_window.py:239 app/companion/ui/tray.py:192
+msgid "No transcriptions yet"
+msgstr ""
+
+#: app/companion/ui/status_window.py:349 app/companion/ui/tray.py:229
+msgid "Quitting..."
+msgstr ""
+
+#: app/companion/ui/texts.py:51
+msgid "Dictate"
+msgstr ""
+
+#: app/companion/ui/texts.py:51
+msgid "Ask Claude"
+msgstr ""
+
+#: app/companion/ui/texts.py:58
+#, python-brace-format
+msgid "{title} ({flow})"
+msgstr ""
+
+#: app/companion/ui/texts.py:64
+msgid "Stop and copy"
+msgstr ""
+
+#: app/companion/ui/texts.py:64
+msgid "Stop and ask Claude"
+msgstr ""
+
+#: app/companion/ui/texts.py:76
+msgid "Recording"
+msgstr ""
+
+#: app/companion/ui/texts.py:93
+msgid "Restarting engine..."
+msgstr ""
+
+#: app/companion/ui/texts.py:96
+#, python-brace-format
+msgid "Listening for {chord}"
+msgstr ""
+
+#: app/companion/ui/texts.py:111
+msgid "Check the microphone"
+msgstr ""
+
+#: app/companion/ui/texts.py:113
+msgid "The engine stopped working"
+msgstr ""
+
+#: app/companion/ui/texts.py:119
+msgid "Shortcuts paused"
+msgstr ""
+
+#: app/companion/ui/texts.py:126
+msgid "Stopped"
+msgstr ""
+
+#: app/companion/ui/texts.py:127
+msgid "Starting"
+msgstr ""
+
+#: app/companion/ui/texts.py:128
+msgid "Running"
+msgstr ""
+
+#: app/companion/ui/texts.py:129
+msgid "Not responding"
+msgstr ""
+
+#: app/companion/ui/texts.py:130
+msgid "Restarting"
+msgstr ""
+
+#: app/companion/ui/texts.py:131
+msgid "Waiting to restart"
+msgstr ""
+
+#: app/companion/ui/texts.py:132
+msgid "Failed"
+msgstr ""
+
+#: app/companion/ui/texts.py:137
+msgid "Working"
+msgstr ""
+
+#: app/companion/ui/texts.py:137
+msgid "Not working"
+msgstr ""
+
+#: app/companion/ui/texts.py:137 app/companion/ui/texts.py:142
+msgid "Unknown"
+msgstr ""
+
+#: app/companion/ui/texts.py:144
+msgid "None found"
+msgstr ""
+
+#: app/companion/ui/texts.py:160
+msgid "Built-in"
+msgstr ""
+
+#: app/companion/ui/texts.py:160
+msgid "Custom file"
+msgstr ""
+
+#: app/companion/ui/texts.py:164
+msgid "Classic"
+msgstr ""
+
+#: app/companion/ui/texts.py:164
+msgid "Soft"
+msgstr ""
+
+#: app/companion/ui/texts.py:164
+msgid "Click"
+msgstr ""
+
+#: app/companion/ui/texts.py:170
+msgid "Automatic (system language)"
+msgstr ""
+
+#: app/companion/ui/texts.py:181
+msgid "Start it in WSL"
+msgstr ""
+
+#: app/companion/ui/texts.py:182
+msgid "Start it on this computer"
+msgstr ""
+
+#: app/companion/ui/texts.py:183
+msgid "Connect only"
+msgstr ""
+
+#: app/companion/ui/texts.py:188
+msgid "Automatically"
+msgstr ""
+
+#: app/companion/ui/texts.py:188
+msgid "Ask first"
+msgstr ""
+
+#: app/companion/ui/texts.py:188
+msgid "Never"
+msgstr ""
+
+#: app/companion/ui/texts.py:193
+msgid "All"
+msgstr ""
+
+#: app/companion/ui/texts.py:194
+msgid "Warnings and errors"
+msgstr ""
+
+#: app/companion/ui/texts.py:195
+msgid "Errors only"
+msgstr ""
+
+#: app/companion/ui/texts.py:196
+msgid "None"
+msgstr ""
+
+#: app/companion/ui/texts.py:202
+msgid "Available"
+msgstr ""
+
+#: app/companion/ui/texts.py:203
+msgid "Used by another app"
+msgstr ""
+
+#: app/companion/ui/texts.py:204
+msgid "Used by another action"
+msgstr ""
+
+#: app/companion/ui/texts.py:205
+msgid "Not allowed"
+msgstr ""
+
+#: app/companion/ui/texts.py:206
+msgid "Set by the engine"
+msgstr ""
+
+#: app/companion/ui/texts.py:211
+msgid ""
+"Use Ctrl, Alt, Shift or Win with a key, or a function key alone. F12 is "
+"reserved by Windows."
+msgstr ""
+
+#: app/companion/ui/tray.py:76
+msgid "Open VoiceMate"
+msgstr ""
+
+#: app/companion/ui/tray.py:89
+msgid "Restart WSL now..."
+msgstr ""
+
+#: app/companion/ui/tray.py:93
+msgid "Mute sounds"
+msgstr ""
+
+#: app/companion/ui/tray.py:149
+#, python-brace-format
+msgid "Not copied ({count})"
+msgstr ""
+
+#: app/companion/ui/tray.py:196
+msgid "Nothing to copy"
+msgstr ""
+
+#: app/companion/ui/tray.py:242
+#, python-brace-format
+msgid "Claude: {text}"
 msgstr ""
 
 #: app/core/recorder.py:94
@@ -204,64 +1439,98 @@ msgstr ""
 msgid "[VoiceMate] ❌ Could not open the microphone ({reason})."
 msgstr ""
 
-#: app/core/recording_session.py:74
+#: app/core/recording_session.py:113
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Unknown handler: {handler_id}"
 msgstr ""
 
-#: app/core/recording_session.py:137
+#: app/core/recording_session.py:160
+#, python-brace-format
+msgid "[VoiceMate] ✗ Operation {op_seq} cancelled."
+msgstr ""
+
+#: app/core/recording_session.py:167
+#, python-brace-format
+msgid "[VoiceMate] ⚠ Could not stop the microphone: {exc}"
+msgstr ""
+
+#: app/core/recording_session.py:216
 msgid "[VoiceMate] 🎙  Recording... (press to stop)"
 msgstr ""
 
-#: app/core/recording_session.py:144
+#: app/core/recording_session.py:247
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Could not play the start beep ({exc})."
 msgstr ""
 
-#: app/core/recording_session.py:165
+#: app/core/recording_session.py:268
 #, python-brace-format
 msgid ""
 "[VoiceMate] 🎙 ✗ Microphone unavailable ({reason}). Check that a "
 "microphone is connected and enabled, then press the hotkey again."
 msgstr ""
 
-#: app/core/recording_session.py:173
+#: app/core/recording_session.py:278
 #, python-brace-format
 msgid "Microphone unavailable: {reason}"
 msgstr ""
 
-#: app/core/recording_session.py:214
+#: app/core/recording_session.py:324
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Recording will end in {remaining:.0f}s"
 msgstr ""
 
-#: app/core/recording_session.py:218
+#: app/core/recording_session.py:330
+#, python-brace-format
+msgid "Recording will end in {remaining:.0f}s."
+msgstr ""
+
+#: app/core/recording_session.py:340
 msgid "[VoiceMate] ⏰ Maximum time reached. Ending recording..."
 msgstr ""
 
-#: app/core/recording_session.py:250
+#: app/core/recording_session.py:360
 msgid "[VoiceMate] No audio captured."
 msgstr ""
 
-#: app/core/recording_session.py:254
+#: app/core/recording_session.py:361
+msgid "No audio captured."
+msgstr ""
+
+#: app/core/recording_session.py:365
 #, python-brace-format
 msgid "[VoiceMate] ⏳ Transcribing {duration:.1f}s of audio..."
 msgstr ""
 
-#: app/core/recording_session.py:259
+#: app/core/recording_session.py:378
 msgid "[VoiceMate] No speech detected."
 msgstr ""
 
-#: app/core/recording_session.py:264
+#: app/core/recording_session.py:379
+msgid "No speech detected."
+msgstr ""
+
+#: app/core/recording_session.py:384
 msgid "[VoiceMate] ❌ Error processing the recording:"
 msgstr ""
 
-#: app/core/recording_session.py:287
+#: app/core/recording_session.py:389
+#, python-brace-format
+msgid "Transcription failed: {detail}"
+msgstr ""
+
+#: app/core/recording_session.py:420
 #, python-brace-format
 msgid ""
 "[VoiceMate] ⚠ Transcription {ratio:.0f}× slower than the audio "
 "({elapsed:.0f}s for {audio_seconds:.0f}s) — the backend is probably "
 "running WITHOUT GPU. Run `make doctor` for diagnosis."
+msgstr ""
+
+#: app/core/recording_session.py:430
+msgid ""
+"Transcription is much slower than the audio: the backend is probably "
+"running without a GPU."
 msgstr ""
 
 #: app/core/transcriber.py:26
@@ -278,66 +1547,135 @@ msgstr ""
 msgid "[VoiceMate] Model ready."
 msgstr ""
 
-#: app/core/transcription_handler.py:33
+#: app/core/transcription_handler.py:47
 #, python-brace-format
 msgid "[VoiceMate] ✓ Copied: {preview}"
 msgstr ""
 
-#: app/features/claude/chat_handler.py:53
+#: app/core/transcription_handler.py:50
+#, python-brace-format
+msgid ""
+"[VoiceMate] ✓ Transcribed (the clipboard lease holder copies it): "
+"{preview}"
+msgstr ""
+
+#: app/daemon/hub.py:316
+#, python-brace-format
+msgid "[VoiceMate] Client {client} registered (leases: {leases})."
+msgstr ""
+
+#: app/daemon/hub.py:436
+#, python-brace-format
+msgid ""
+"[VoiceMate] ⚠ Lease '{lease}' of client {client} expired: the daemon "
+"takes that job back."
+msgstr ""
+
+#: app/daemon/hub.py:442
+#, python-brace-format
+msgid ""
+"[VoiceMate] Lease '{lease}' released by client {client}: the daemon takes"
+" that job back."
+msgstr ""
+
+#: app/daemon/lifecycle.py:76
+msgid "[VoiceMate] Shutdown requested while the engine loads: exiting now."
+msgstr ""
+
+#: app/daemon/lifecycle.py:113
+msgid "[VoiceMate] stdin closed: shutting down."
+msgstr ""
+
+#: app/daemon/server.py:437
+#, python-brace-format
+msgid "[VoiceMate] Client {client} unregistered."
+msgstr ""
+
+#: app/daemon/server.py:466
+#, python-brace-format
+msgid "[VoiceMate] ❌ Error in trigger for flow '{flow}':"
+msgstr ""
+
+#: app/daemon/server.py:523
+msgid "[VoiceMate] Shutdown requested over HTTP."
+msgstr ""
+
+#: app/features/claude/chat_handler.py:56
 #, python-brace-format
 msgid "[VoiceMate] ⏳ Claude processing... ({elapsed:.0f}s)"
 msgstr ""
 
-#: app/features/claude/chat_handler.py:90
+#: app/features/claude/chat_handler.py:109
 #, python-brace-format
 msgid "[VoiceMate] ✓ Transcription: {preview}"
 msgstr ""
 
-#: app/features/claude/chat_handler.py:92
+#: app/features/claude/chat_handler.py:117
 msgid "[VoiceMate] 📋 Transcription copied to clipboard."
 msgstr ""
 
-#: app/features/claude/chat_handler.py:94
+#: app/features/claude/chat_handler.py:119
+#: app/features/claude/chat_handler.py:160
+msgid "[VoiceMate] 📋 The clipboard lease holder copies it to the clipboard."
+msgstr ""
+
+#: app/features/claude/chat_handler.py:121
+msgid ""
+"[VoiceMate] Claude not called: the operation was cancelled or a new "
+"recording took over."
+msgstr ""
+
+#: app/features/claude/chat_handler.py:134
 msgid "[VoiceMate] 🤖 Calling Claude..."
 msgstr ""
 
-#: app/features/claude/chat_handler.py:105
+#: app/features/claude/chat_handler.py:147
 msgid "[VoiceMate] ✗ Claude response discarded (cancelled)."
 msgstr ""
 
-#: app/features/claude/chat_handler.py:108
+#: app/features/claude/chat_handler.py:150
 msgid "[VoiceMate] Claude returned an empty response."
 msgstr ""
 
-#: app/features/claude/chat_handler.py:111
+#: app/features/claude/chat_handler.py:153
 #, python-brace-format
 msgid "[VoiceMate] 💬 Claude: {preview}"
 msgstr ""
 
-#: app/features/claude/chat_handler.py:112
+#: app/features/claude/chat_handler.py:154
 #, python-brace-format
 msgid "[VoiceMate] ⏱ Full response in {elapsed:.1f}s"
 msgstr ""
 
-#: app/features/claude/chat_handler.py:114
+#: app/features/claude/chat_handler.py:158
 msgid "[VoiceMate] 📋 Claude response copied to clipboard."
 msgstr ""
 
-#: app/features/claude/chat_handler.py:118
+#: app/features/claude/chat_handler.py:164
 msgid "[VoiceMate] ✗ Claude call cancelled."
 msgstr ""
 
-#: app/features/claude/chat_handler.py:121
+#: app/features/claude/chat_handler.py:167
 #, python-brace-format
 msgid "[VoiceMate] ⏱ Claude exceeded timeout ({timeout:.0f}s), discarding turn."
 msgstr ""
 
-#: app/features/claude/chat_handler.py:129
+#: app/features/claude/chat_handler.py:176
+#, python-brace-format
+msgid "Claude did not answer within {timeout:.0f}s."
+msgstr ""
+
+#: app/features/claude/chat_handler.py:180
 #, python-brace-format
 msgid "[VoiceMate] ❌ Error talking to Claude: {exc}"
 msgstr ""
 
-#: app/features/claude/chat_handler.py:153
+#: app/features/claude/chat_handler.py:184
+#, python-brace-format
+msgid "Error talking to Claude: {detail}"
+msgstr ""
+
+#: app/features/claude/chat_handler.py:207
 msgid "[VoiceMate] 💬 Claude responding..."
 msgstr ""
 
@@ -398,96 +1736,96 @@ msgstr ""
 msgid "[KokoroSpeaker] Model ready."
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:104
+#: app/features/tts/omnivoice_speaker.py:105
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] error while speaking: {exc}"
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:113
+#: app/features/tts/omnivoice_speaker.py:114
 msgid ""
 "[OmniVoiceSpeaker] ⚠ AudioPlayer drain timed out — audio may have been "
 "left incomplete."
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:135
+#: app/features/tts/omnivoice_speaker.py:136
 msgid ""
 "[OmniVoiceSpeaker] Warmup (tuning ROCm kernels; only the 1st time is "
 "slow)..."
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:137
+#: app/features/tts/omnivoice_speaker.py:138
 msgid "[OmniVoiceSpeaker] Warmup done — synthesis ready (realtime)."
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:139
+#: app/features/tts/omnivoice_speaker.py:140
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ warmup failed (continuing): {exc}"
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:168
+#: app/features/tts/omnivoice_speaker.py:169
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ Failed to load OmniVoice: {exc}"
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:180
+#: app/features/tts/omnivoice_speaker.py:181
 msgid ""
 "[OmniVoiceSpeaker] ROCm — TunableOp enabled: each new sentence length "
 "gets a small tune (~1-2s) the 1st time; after that it is realtime (RTF "
 "~0.7)."
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:186
+#: app/features/tts/omnivoice_speaker.py:187
 #, python-brace-format
 msgid ""
 "[OmniVoiceSpeaker] Loading OmniVoice ({device_map}, first run downloads "
 "weights)..."
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:191
+#: app/features/tts/omnivoice_speaker.py:192
 msgid "[OmniVoiceSpeaker] Model ready."
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:223
+#: app/features/tts/omnivoice_speaker.py:224
 msgid ""
 "[OmniVoiceSpeaker] ⚠ PyTorch without GPU acceleration — OmniVoice will "
 "run on CPU (much slower synthesis). Run `make configure` to install the "
 "torch for your GPU."
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:281
+#: app/features/tts/omnivoice_speaker.py:282
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] Auto-seed loaded from {cached_wav}"
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:283
+#: app/features/tts/omnivoice_speaker.py:284
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ Failed to read auto-seed: {exc}"
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:303
+#: app/features/tts/omnivoice_speaker.py:304
 msgid "[OmniVoiceSpeaker] soundfile not installed — could not save auto-seed."
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:312
+#: app/features/tts/omnivoice_speaker.py:313
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ Failed to save auto-seed: {exc}"
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:316
+#: app/features/tts/omnivoice_speaker.py:317
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] Auto-seed saved to {wav_path}"
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:322
+#: app/features/tts/omnivoice_speaker.py:323
 msgid "[OmniVoiceSpeaker] soundfile not installed — could not save audio."
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:328
+#: app/features/tts/omnivoice_speaker.py:329
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] Audio saved to {path}"
 msgstr ""
 
-#: app/features/tts/omnivoice_speaker.py:352
+#: app/features/tts/omnivoice_speaker.py:353
 #, python-brace-format
 msgid ""
 "[OmniVoiceSpeaker] VRAM ({label}): alloc={allocated:.2f}GB, "
@@ -627,28 +1965,28 @@ msgid ""
 "language={language})..."
 msgstr ""
 
-#: app/features/whispercpp/server_backend.py:168
+#: app/features/whispercpp/server_backend.py:191
 #, python-brace-format
 msgid ""
 "[VoiceMate] Starting whisper-server '{model_stem}' (whisper.cpp, "
 "language={language}, vad={vad})..."
 msgstr ""
 
-#: app/features/whispercpp/server_backend.py:191
+#: app/features/whispercpp/server_backend.py:216
 msgid "[VoiceMate] Model ready (warm)."
 msgstr ""
 
-#: app/features/whispercpp/server_backend.py:201
+#: app/features/whispercpp/server_backend.py:226
 #, python-brace-format
 msgid "[VoiceMate] {line}"
 msgstr ""
 
-#: app/features/whispercpp/server_backend.py:205
+#: app/features/whispercpp/server_backend.py:230
 #, python-brace-format
 msgid "[VoiceMate] ⚠ {warning}"
 msgstr ""
 
-#: app/features/whispercpp/server_backend.py:227
+#: app/features/whispercpp/server_backend.py:252
 #, python-brace-format
 msgid "[VoiceMate] ⚠ whisper-server warmup failed (continuing): {exc}"
 msgstr ""
@@ -746,150 +2084,159 @@ msgid ""
 msgstr ""
 
 #: app/i18n/windows_script_messages.py:47
-msgid "daemon error"
+msgid "daemon loading"
 msgstr ""
 
 #: app/i18n/windows_script_messages.py:48
 #, python-brace-format
-msgid "{0}: daemon error ({1}). See the WSL console for details."
+msgid "{0}: the daemon is still loading the model, try again in a few seconds."
 msgstr ""
 
 #: app/i18n/windows_script_messages.py:49
-msgid "trigger rejected"
+msgid "daemon error"
 msgstr ""
 
 #: app/i18n/windows_script_messages.py:50
 #, python-brace-format
-msgid "{0}: the daemon rejected the trigger ({1})."
+msgid "{0}: daemon error ({1}). See the WSL console for details."
 msgstr ""
 
 #: app/i18n/windows_script_messages.py:51
-msgid "trigger failed"
+msgid "trigger rejected"
 msgstr ""
 
 #: app/i18n/windows_script_messages.py:52
 #, python-brace-format
-msgid "{0}: unexpected error talking to the daemon at {1}: {2}"
+msgid "{0}: the daemon rejected the trigger ({1})."
 msgstr ""
 
 #: app/i18n/windows_script_messages.py:53
-#, python-brace-format
-msgid "The daemon reported an error ({0})."
+msgid "trigger failed"
 msgstr ""
 
 #: app/i18n/windows_script_messages.py:54
 #, python-brace-format
-msgid "[VoiceMate] {0} (seq {1}, op {2}, error '{3}'; clipboard untouched)"
+msgid "{0}: unexpected error talking to the daemon at {1}: {2}"
 msgstr ""
 
 #: app/i18n/windows_script_messages.py:55
-msgid "error"
+#, python-brace-format
+msgid "The daemon reported an error ({0})."
 msgstr ""
 
 #: app/i18n/windows_script_messages.py:56
-msgid "microphone unavailable"
+#, python-brace-format
+msgid "[VoiceMate] {0} (seq {1}, op {2}, error '{3}'; clipboard untouched)"
 msgstr ""
 
 #: app/i18n/windows_script_messages.py:57
+msgid "error"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:58
+msgid "microphone unavailable"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:59
 msgid ""
 "No microphone is connected to Windows. Connect one and press the hotkey "
 "again."
 msgstr ""
 
-#: app/i18n/windows_script_messages.py:59
+#: app/i18n/windows_script_messages.py:61
 msgid ""
 "Windows has an active microphone, but WSL cannot open it: the WSLg audio "
 "bridge is stuck. Run `wsl --shutdown`, then start the daemon again."
 msgstr ""
 
-#: app/i18n/windows_script_messages.py:62
+#: app/i18n/windows_script_messages.py:64
 msgid ""
 "Could not query the Windows audio devices. Check that a microphone is "
 "connected; if it is, run `wsl --shutdown` and start the daemon again."
 msgstr ""
 
-#: app/i18n/windows_script_messages.py:65
+#: app/i18n/windows_script_messages.py:67
 #, python-brace-format
 msgid ""
 "[VoiceMate] Transcription could not be copied to the clipboard (seq {0}, "
 "op {1}) after {2} tries. Full text below, copy it manually:"
 msgstr ""
 
-#: app/i18n/windows_script_messages.py:67
+#: app/i18n/windows_script_messages.py:69
 #, python-brace-format
 msgid "----- VoiceMate transcription (seq {0}) -----"
 msgstr ""
 
-#: app/i18n/windows_script_messages.py:68
+#: app/i18n/windows_script_messages.py:70
 msgid "----- end -----"
 msgstr ""
 
-#: app/i18n/windows_script_messages.py:69
-msgid "Transcription could not be copied to the clipboard"
-msgstr ""
-
-#: app/i18n/windows_script_messages.py:70
-#, python-brace-format
-msgid "\"{0}\" (the full text is in the VoiceMate console window)"
-msgstr ""
-
 #: app/i18n/windows_script_messages.py:71
-#, python-brace-format
-msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}, retry {2}): \"{3}\""
+msgid "Transcription could not be copied to the clipboard"
 msgstr ""
 
 #: app/i18n/windows_script_messages.py:72
 #, python-brace-format
-msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}): \"{2}\""
+msgid "\"{0}\" (the full text is in the VoiceMate console window)"
 msgstr ""
 
 #: app/i18n/windows_script_messages.py:73
 #, python-brace-format
-msgid "[VoiceMate] could not confirm the clipboard (seq {0}): \"{1}\"; retrying."
+msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}, retry {2}): \"{3}\""
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:74
+#, python-brace-format
+msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}): \"{2}\""
 msgstr ""
 
 #: app/i18n/windows_script_messages.py:75
+#, python-brace-format
+msgid "[VoiceMate] could not confirm the clipboard (seq {0}): \"{1}\"; retrying."
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:77
 msgid ""
 "WSL audio is stuck: the daemon cannot reach the WSLg PulseAudio server, "
 "so recording will fail. Run `wsl --shutdown`, then start the daemon "
 "again."
 msgstr ""
 
-#: app/i18n/windows_script_messages.py:77
+#: app/i18n/windows_script_messages.py:79
 msgid "Windows has no microphone connected either: connect one first."
 msgstr ""
 
-#: app/i18n/windows_script_messages.py:78
+#: app/i18n/windows_script_messages.py:80
 msgid "WSL audio is down"
 msgstr ""
 
-#: app/i18n/windows_script_messages.py:79
-msgid "[VoiceMate] WSL audio is working again."
-msgstr ""
-
-#: app/i18n/windows_script_messages.py:80
-#, python-brace-format
-msgid "[VoiceMate] Unexpected error in the main loop (continuing): {0}"
-msgstr ""
-
 #: app/i18n/windows_script_messages.py:81
-#, python-brace-format
-msgid "[VoiceMate] Hotkeys active: {0} (clipboard) / {1} (Claude) -> {2}"
+msgid "[VoiceMate] WSL audio is working again."
 msgstr ""
 
 #: app/i18n/windows_script_messages.py:82
 #, python-brace-format
-msgid "(unregistered, retrying every {0} s)"
+msgid "[VoiceMate] Unexpected error in the main loop (continuing): {0}"
 msgstr ""
 
 #: app/i18n/windows_script_messages.py:83
+#, python-brace-format
+msgid "[VoiceMate] Hotkeys active: {0} (clipboard) / {1} (Claude) -> {2}"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:84
+#, python-brace-format
+msgid "(unregistered, retrying every {0} s)"
+msgstr ""
+
+#: app/i18n/windows_script_messages.py:85
 #, python-brace-format
 msgid ""
 "[VoiceMate] Consumer {0} | scope={1}. Clipboard set by Windows. Leave "
 "this window open."
 msgstr ""
 
-#: app/i18n/windows_script_messages.py:85
+#: app/i18n/windows_script_messages.py:87
 #, python-brace-format
 msgid ""
 "[VoiceMate] Daemon not reachable at {0} yet: start it in WSL (`make "
@@ -897,31 +2244,22 @@ msgid ""
 "up."
 msgstr ""
 
-#: app/i18n/windows_script_messages.py:87
+#: app/i18n/windows_script_messages.py:89
 msgid ""
 "[VoiceMate] Windows has no active microphone: recording will fail until "
 "you connect one."
 msgstr ""
 
-#: app/i18n/windows_script_messages.py:88
+#: app/i18n/windows_script_messages.py:90
 #, python-brace-format
 msgid "{0} is already registered by another app."
 msgstr ""
 
-#: app/platform/clipboard.py:114
+#: app/platform/clipboard.py:113
 #, python-brace-format
 msgid ""
 "[VoiceMate] ⚠ clipboard '{writer_name}' failed ({exc}); retrying the "
 "other mechanisms..."
-msgstr ""
-
-#: app/platform/listeners/socket_trigger_listener.py:152
-msgid "[VoiceMate] Shutdown requested over HTTP."
-msgstr ""
-
-#: app/platform/listeners/socket_trigger_listener.py:260
-#, python-brace-format
-msgid "[VoiceMate] ❌ Error in trigger for flow '{flow}':"
 msgstr ""
 
 #: app/setup/ct2_rocm.py:45
@@ -1136,8 +2474,8 @@ msgstr ""
 
 #: app/setup/doctor.py:227
 msgid ""
-"register the hotkeys on Windows: scripts/windows/voicemate-hotkeys.ahk "
-"(or .ps1)"
+"hotkeys on Windows: the companion app; without it, scripts/windows"
+"/voicemate-hotkeys.ahk (or .ps1)"
 msgstr ""
 
 #: app/setup/doctor.py:234
@@ -1448,20 +2786,20 @@ msgstr ""
 msgid "  2) claude_chat — voice → Claude → spoken response (+ clipboard)"
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:368
+#: app/setup/gpu_bootstrap.py:373
 msgid "[Y/n]"
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:368
+#: app/setup/gpu_bootstrap.py:373
 msgid "[y/N]"
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:419
+#: app/setup/gpu_bootstrap.py:424
 #, python-brace-format
 msgid "[setup] Removed {name} from torch (the WSL HSA runtime is the system's)."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:433
+#: app/setup/gpu_bootstrap.py:438
 #, python-brace-format
 msgid ""
 "[setup] ⚠ The ROCm Linux wheels are cp312 (this Python is {ver}). "
@@ -1469,23 +2807,23 @@ msgid ""
 "configure`."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:440
+#: app/setup/gpu_bootstrap.py:445
 msgid ""
 "[setup] ✓ ROCm torch already present and accelerating — keeping the "
 "validated install."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:441
+#: app/setup/gpu_bootstrap.py:446
 msgid ""
 "[setup]   (to force a reinstall: pip uninstall torch and run `make "
 "configure`)"
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:445
+#: app/setup/gpu_bootstrap.py:450
 msgid "Installing ROCm torch (official AMD wheels for Linux/WSL2)..."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:458
+#: app/setup/gpu_bootstrap.py:463
 #, python-brace-format
 msgid ""
 "[setup] ⚠ The ROCm wheels require Python 3.12 (this is {ver}). Recreate "
@@ -1493,115 +2831,115 @@ msgid ""
 "configure`."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:465
+#: app/setup/gpu_bootstrap.py:470
 msgid "Installing ROCm SDK (AMD runtime)..."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:470
+#: app/setup/gpu_bootstrap.py:475
 msgid "Installing ROCm torch (AMD)..."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:474
+#: app/setup/gpu_bootstrap.py:479
 msgid "Installing CUDA torch (NVIDIA)..."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:474
+#: app/setup/gpu_bootstrap.py:479
 msgid "Installing CPU torch..."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:482
+#: app/setup/gpu_bootstrap.py:487
 msgid "Installing dependencies (poetry)..."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:490
+#: app/setup/gpu_bootstrap.py:495
 #, python-brace-format
 msgid "[setup] ⚠ Could not verify torch: {exc}"
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:494
+#: app/setup/gpu_bootstrap.py:499
 msgid "[setup] torch check:"
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:500
+#: app/setup/gpu_bootstrap.py:505
 msgid ""
 "[setup] ⚠ The GPU was not recognized by torch — the app will fall back to"
 " CPU. Check the driver and run `make configure`."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:506
+#: app/setup/gpu_bootstrap.py:511
 msgid "[setup] ✓ GPU ready for torch."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:515
+#: app/setup/gpu_bootstrap.py:520
 #, python-brace-format
 msgid "[setup] whisper.cpp already present in {dir}."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:517
+#: app/setup/gpu_bootstrap.py:522
 msgid ""
 "[setup] Installing whisper.cpp + Vulkan (binary ~17 MB + turbo fp16 model"
 " ~1.5 GB)..."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:526
+#: app/setup/gpu_bootstrap.py:531
 #, python-brace-format
 msgid "[setup] ✓ whisper.cpp ready in {dir}"
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:548
+#: app/setup/gpu_bootstrap.py:553
 #, python-brace-format
 msgid "[setup] ⚠ Missing tools to compile whisper.cpp: {tools}"
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:551
+#: app/setup/gpu_bootstrap.py:556
 #, python-brace-format
 msgid "[setup]   Install with: {hint}"
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:565
+#: app/setup/gpu_bootstrap.py:570
 #, python-brace-format
 msgid "[setup] ✓ whisper.cpp (Linux/Vulkan) ready in {dir}"
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:575
+#: app/setup/gpu_bootstrap.py:580
 #, python-brace-format
 msgid "Cloning whisper.cpp {tag}..."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:590
+#: app/setup/gpu_bootstrap.py:595
 msgid "Configuring the whisper.cpp build (cmake + Vulkan)..."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:596
+#: app/setup/gpu_bootstrap.py:601
 msgid "Compiling whisper.cpp (a few minutes)..."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:608
+#: app/setup/gpu_bootstrap.py:613
 #, python-brace-format
 msgid "[setup] ⚠ Binary not found after the build: {path}"
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:622
+#: app/setup/gpu_bootstrap.py:627
 #, python-brace-format
 msgid "[setup] downloading {url}"
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:627
+#: app/setup/gpu_bootstrap.py:632
 #, python-brace-format
 msgid "[setup] ⚠ download failed: {exc}"
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:632
+#: app/setup/gpu_bootstrap.py:637
 #, python-brace-format
 msgid "[setup] ⚠ SHA-256 mismatch for {name} (got {digest}); removing."
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:662
+#: app/setup/gpu_bootstrap.py:667
 #, python-brace-format
 msgid "[setup] ⚠ Failed to execute: {exc}"
 msgstr ""
 
-#: app/setup/gpu_bootstrap.py:665
+#: app/setup/gpu_bootstrap.py:670
 #, python-brace-format
 msgid "[setup] ⚠ Command returned code {code}."
 msgstr ""

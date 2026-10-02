@@ -1,5 +1,5 @@
-"""SocketTriggerListener: a real HTTP request on an ephemeral port dispatches the right
-callback and returns the operation; the register/status/result endpoints expose the state."""
+"""SocketTriggerListener over the daemon's ApiServer: the v1 protocol of the Windows
+scripts keeps working (no token): register, trigger, status, result, health, shutdown."""
 
 from __future__ import annotations
 
@@ -12,45 +12,60 @@ from collections.abc import Iterator
 
 import pytest
 
-from app.core.session_status import SessionStatus, ToggleOutcome
+from app.core.session_status import CancelOutcome, SessionStatus, ToggleOutcome
+from app.daemon.server import ApiServer, EngineInfo
 from app.i18n import active_language
 from app.platform.listeners.socket_trigger_listener import SocketTriggerListener
+from app.protocol.models import FlowInfo, TriggerExpect
+
+_INFO = EngineInfo(
+    platform="wsl2",
+    trigger="socket",
+    flows=(
+        FlowInfo(name="clipboard", kind="clipboard", hotkey="ctrl+alt+v"),
+        FlowInfo(name="claude_chat", kind="claude_chat", hotkey="ctrl+alt+a"),
+    ),
+)
 
 
-class _Recorder:
-    """Fake binding: records the received client_ids and returns a ToggleOutcome."""
+class _Control:
+    """Fake session: records the toggles and returns a ToggleOutcome (optionally via a hook)."""
 
-    def __init__(self, flow: str = "clipboard", action: str = "started") -> None:
+    def __init__(self, status: SessionStatus | None = None) -> None:
         self.event = threading.Event()
-        self.count = 0
-        self.client_ids: list[str | None] = []
-        self._flow = flow
-        self._action = action
+        self.calls: list[tuple[str, str | None]] = []
+        self.status = status
+        self.raise_exc: Exception | None = None
 
-    def __call__(self, client_id: str | None) -> ToggleOutcome:
-        self.count += 1
-        self.client_ids.append(client_id)
+    def toggle(self, handler_id: str, client_id: str | None = None, expect: TriggerExpect = "toggle") -> ToggleOutcome:
+        if self.raise_exc is not None:
+            raise self.raise_exc
+        self.calls.append((handler_id, client_id))
         self.event.set()
-        return ToggleOutcome(action=self._action, op_seq=self.count, state="recording", flow=self._flow)  # type: ignore[arg-type]
+        return ToggleOutcome(action="started", op_seq=len(self.calls), state="recording", flow=handler_id)
+
+    def cancel(self, op_seq: int | None = None) -> CancelOutcome:
+        return CancelOutcome(action="noop", state="idle")
 
 
-def _serve(instance: SocketTriggerListener) -> threading.Thread:
-    thread = threading.Thread(target=instance.listen, daemon=True)
+def _serve(
+    status: SessionStatus | None = None, control: _Control | None = None
+) -> tuple[SocketTriggerListener, _Control, threading.Thread]:
+    store = status or SessionStatus()
+    fake = control or _Control(store)
+    server = ApiServer(store, info=_INFO, control=fake, port=0)
+    server.bind()  # main binds before the model loads; listen() then serves
+    listener = SocketTriggerListener(server)
+    thread = threading.Thread(target=listener.listen, daemon=True)
     thread.start()
-    deadline = time.monotonic() + 5.0
-    while instance.port == 0 and time.monotonic() < deadline:
-        time.sleep(0.01)
-    assert instance.port != 0, "server não subiu a tempo"
-    return thread
+    return listener, fake, thread
 
 
 @pytest.fixture
-def listener() -> Iterator[tuple[SocketTriggerListener, dict[str, _Recorder]]]:
-    callbacks = {"clipboard": _Recorder("clipboard"), "claude_chat": _Recorder("claude_chat")}
-    instance = SocketTriggerListener(dict(callbacks), port=0)  # ephemeral port, no status
-    thread = _serve(instance)
+def listener() -> Iterator[tuple[SocketTriggerListener, _Control]]:
+    instance, control, thread = _serve()
     try:
-        yield instance, callbacks
+        yield instance, control
     finally:
         instance.stop()
         thread.join(timeout=5.0)
@@ -79,38 +94,6 @@ def _get(port: int, path: str) -> tuple[int, dict[str, object]]:
         return exc.code, json.loads(exc.read().decode("utf-8"))
 
 
-def test_post_trigger_dispatches_named_flow_and_returns_action(
-    listener: tuple[SocketTriggerListener, dict[str, _Recorder]],
-) -> None:
-    instance, callbacks = listener
-    status, body = _post(instance.port, "/trigger", {"flow": "claude_chat"})
-    assert status == 200
-    assert body["ok"] is True
-    assert body["flow"] == "claude_chat"
-    assert body["action"] == "started"
-    assert body["op_seq"] == 1
-    assert callbacks["claude_chat"].event.wait(timeout=5.0)
-    assert callbacks["clipboard"].count == 0
-
-
-def test_post_trigger_without_body_uses_default_flow(
-    listener: tuple[SocketTriggerListener, dict[str, _Recorder]],
-) -> None:
-    instance, callbacks = listener
-    status, body = _post(instance.port, "/trigger", None)
-    assert status == 200
-    assert body["flow"] == "clipboard"  # first binding
-    assert callbacks["clipboard"].event.wait(timeout=5.0)
-
-
-def test_get_trigger_is_rejected(listener: tuple[SocketTriggerListener, dict[str, _Recorder]]) -> None:
-    """POST-only: a GET could be fired by any web page with a plain <img> tag."""
-    instance, callbacks = listener
-    status, body = _get(instance.port, "/trigger?flow=claude_chat&client_id=abc123")
-    assert status == 405
-    assert callbacks["claude_chat"].count == 0
-
-
 def _request(
     port: int, method: str, path: str, headers: dict[str, str], body: bytes | None = None
 ) -> tuple[int, dict[str, object]]:
@@ -122,54 +105,84 @@ def _request(
         return exc.code, json.loads(exc.read().decode("utf-8"))
 
 
-@pytest.mark.parametrize("path", ["/trigger", "/shutdown", "/register"])
-def test_browser_originated_post_is_forbidden(
-    listener: tuple[SocketTriggerListener, dict[str, _Recorder]], path: str
+def test_post_trigger_dispatches_named_flow_and_returns_action(
+    listener: tuple[SocketTriggerListener, _Control],
 ) -> None:
+    instance, control = listener
+    status, body = _post(instance.port, "/trigger", {"flow": "claude_chat"})
+    assert status == 200
+    assert body["ok"] is True
+    assert body["flow"] == "claude_chat"
+    assert body["action"] == "started"
+    assert body["op_seq"] == 1
+    assert control.event.wait(timeout=5.0)
+    assert [flow for flow, _cid in control.calls] == ["claude_chat"]
+
+
+def test_post_trigger_without_body_uses_default_flow(listener: tuple[SocketTriggerListener, _Control]) -> None:
+    instance, control = listener
+    status, body = _post(instance.port, "/trigger", None)
+    assert status == 200
+    assert body["flow"] == "clipboard"  # first flow
+    assert [flow for flow, _cid in control.calls] == ["clipboard"]
+
+
+def test_get_trigger_is_rejected(listener: tuple[SocketTriggerListener, _Control]) -> None:
+    """POST-only: a GET could be fired by any web page with a plain <img> tag."""
+    instance, control = listener
+    status, _body = _get(instance.port, "/trigger?flow=claude_chat&client_id=abc123")
+    assert status == 405
+    assert control.calls == []
+
+
+@pytest.mark.parametrize("path", ["/trigger", "/shutdown", "/register"])
+def test_browser_originated_post_is_forbidden(listener: tuple[SocketTriggerListener, _Control], path: str) -> None:
     """Browsers always send Origin on cross-site POSTs; scripts/WinHTTP don't."""
-    instance, callbacks = listener
+    instance, control = listener
     status, _body = _request(
         instance.port, "POST", path, {"Origin": "https://evil.example", "Content-Type": "text/plain"}, b"{}"
     )
     assert status == 403
-    assert callbacks["clipboard"].count == 0
+    assert control.calls == []
     assert _get(instance.port, "/health")[0] == 200  # still serving (shutdown refused)
 
 
-def test_dns_rebinding_host_is_forbidden(listener: tuple[SocketTriggerListener, dict[str, _Recorder]]) -> None:
-    instance, _callbacks = listener
+def test_dns_rebinding_host_is_forbidden(listener: tuple[SocketTriggerListener, _Control]) -> None:
+    instance, _control = listener
     status, _body = _request(instance.port, "GET", "/result", {"Host": f"evil.example:{instance.port}"})
     assert status == 403
     assert _request(instance.port, "GET", "/health", {"Host": f"localhost:{instance.port}"})[0] == 200
 
 
-def test_unknown_flow_is_404(listener: tuple[SocketTriggerListener, dict[str, _Recorder]]) -> None:
-    instance, callbacks = listener
+def test_unknown_flow_is_404(listener: tuple[SocketTriggerListener, _Control]) -> None:
+    instance, control = listener
     status, body = _post(instance.port, "/trigger", {"flow": "telepathy"})
     assert status == 404
     assert "telepathy" in str(body["error"])
-    assert callbacks["clipboard"].count == 0
-    assert callbacks["claude_chat"].count == 0
+    assert body["flows"] == ["clipboard", "claude_chat"]
+    assert control.calls == []
 
 
-def test_health_reports_flows(
-    listener: tuple[SocketTriggerListener, dict[str, _Recorder]], monkeypatch: pytest.MonkeyPatch
+def test_health_reports_v1_fields(
+    listener: tuple[SocketTriggerListener, _Control], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr("app.i18n._active_language", "es")  # not the "en" default
-    instance, _callbacks = listener
+    instance, _control = listener
     status, body = _get(instance.port, "/health")
     assert status == 200
     assert body["status"] == "ok"
     assert body["flows"] == ["clipboard", "claude_chat"]
     assert isinstance(body["pid"], int)
-    assert body["audio"] == "unknown"  # no probe wired
+    assert body["audio"] == "unknown"  # no probe report yet
     assert body["lang"] == active_language() == "es"
+    assert isinstance(body["instance"], str)
 
 
 def test_health_reports_audio_probe_state() -> None:
-    instance = SocketTriggerListener({"clipboard": _Recorder()}, port=0, audio_health=lambda: "down")
-    thread = _serve(instance)
+    store = SessionStatus()
+    instance, _control, thread = _serve(store)
     try:
+        store.hub.publish_health("down")  # what the AudioServerProbe reports on a change
         assert _get(instance.port, "/health")[1]["audio"] == "down"
     finally:
         instance.stop()
@@ -179,8 +192,7 @@ def test_health_reports_audio_probe_state() -> None:
 def test_shutdown_answers_then_stops_the_server() -> None:
     """POST /shutdown is the launcher's clean "Quit": it answers, then listen() returns.
     A request body (e.g. Invoke-RestMethod -Body '{}') is drained, not left unread."""
-    instance = SocketTriggerListener({"clipboard": _Recorder()}, port=0)
-    thread = _serve(instance)
+    instance, _control, thread = _serve()
     status, body = _post(instance.port, "/shutdown", {"reason": "user_quit"})
     assert status == 200
     assert body["ok"] is True
@@ -188,31 +200,40 @@ def test_shutdown_answers_then_stops_the_server() -> None:
     assert not thread.is_alive(), "listen() should return after /shutdown"
 
 
-def test_unknown_route_is_404(listener: tuple[SocketTriggerListener, dict[str, _Recorder]]) -> None:
-    instance, _callbacks = listener
+def test_stop_before_listen_does_not_block() -> None:
+    store = SessionStatus()
+    server = ApiServer(store, info=_INFO, control=_Control(), port=0)
+    server.bind()
+    listener = SocketTriggerListener(server)
+    listener.stop()  # a shutdown that arrives between "ready" and listen()
+    thread = threading.Thread(target=listener.listen, daemon=True)
+    thread.start()
+    thread.join(timeout=5.0)
+    assert not thread.is_alive()
+
+
+def test_unknown_route_is_404(listener: tuple[SocketTriggerListener, _Control]) -> None:
+    instance, _control = listener
     status, _body = _get(instance.port, "/nope")
     assert status == 404
 
 
-def test_empty_bindings_raise() -> None:
-    with pytest.raises(ValueError, match="requires at least one binding"):
-        SocketTriggerListener({}, port=0)
-
-
 def test_register_status_and_result_roundtrip() -> None:
-    """Full flow: register → trigger → /trigger returns the action → the hub publishes
-    the result → /result (default scope=all) delivers the text to Windows."""
+    """Full flow: register -> trigger -> /trigger returns the action -> the hub publishes
+    the result -> /result (default scope=all) delivers the text to Windows."""
     store = SessionStatus()
 
-    def _binding(client_id: str | None) -> ToggleOutcome:
-        store.set_operation(1, "processing", "clipboard", client_id)
-        store.record_result("texto do consumidor")
-        return ToggleOutcome(action="stopped", op_seq=1, state="processing", flow="clipboard")
+    class _Stopping(_Control):
+        def toggle(
+            self, handler_id: str, client_id: str | None = None, expect: TriggerExpect = "toggle"
+        ) -> ToggleOutcome:
+            store.set_operation(1, "processing", "clipboard", client_id)
+            store.record_result("texto do consumidor")
+            return ToggleOutcome(action="stopped", op_seq=1, state="processing", flow="clipboard")
 
-    instance = SocketTriggerListener({"clipboard": _binding}, port=0, status=store)
-    thread = _serve(instance)
+    instance, _control, thread = _serve(store, _Stopping(store))
     try:
-        status, reg = _post(instance.port, "/register", None)
+        status, reg = _post(instance.port, "/register", None)  # v1: empty body
         assert status == 200
         client_id = reg["client_id"]
         assert client_id
@@ -248,33 +269,17 @@ def test_register_status_and_result_roundtrip() -> None:
 def test_trigger_without_client_id_auto_registers() -> None:
     """Triggering without a client_id emits one and returns it, so the consumer starts using it."""
     store = SessionStatus()
-    seen: list[str | None] = []
-
-    def _binding(client_id: str | None) -> ToggleOutcome:
-        seen.append(client_id)
-        return ToggleOutcome(action="started", op_seq=1, state="recording", flow="clipboard")
-
-    instance = SocketTriggerListener({"clipboard": _binding}, port=0, status=store)
-    thread = _serve(instance)
+    instance, control, thread = _serve(store)
     try:
         status, body = _post(instance.port, "/trigger", {"flow": "clipboard"})
         assert status == 200
         emitted = body["client_id"]
         assert emitted  # an id was emitted
-        assert seen == [emitted]  # and forwarded to the binding
+        assert control.calls == [("clipboard", emitted)]  # and forwarded to the session
         assert store.is_registered(str(emitted))
     finally:
         instance.stop()
         thread.join(timeout=5.0)
-
-
-def test_status_and_result_404_without_store(
-    listener: tuple[SocketTriggerListener, dict[str, _Recorder]],
-) -> None:
-    instance, _callbacks = listener  # fixture creates it without status
-    assert _get(instance.port, "/status")[0] == 404
-    assert _get(instance.port, "/result")[0] == 404
-    assert _post(instance.port, "/register", None)[0] == 404
 
 
 def test_result_scope_mine_filters_by_client() -> None:
@@ -285,8 +290,7 @@ def test_result_scope_mine_filters_by_client() -> None:
     store.set_operation(2, "processing", "clipboard", bob)
     store.record_result("do bob")
 
-    instance = SocketTriggerListener({"clipboard": lambda _c: None}, port=0, status=store)
-    thread = _serve(instance)
+    instance, _control, thread = _serve(store)
     try:
         _, mine = _get(instance.port, f"/result?client_id={alice}&scope=mine")
         assert mine["text"] == "da alice"
@@ -297,20 +301,43 @@ def test_result_scope_mine_filters_by_client() -> None:
         thread.join(timeout=5.0)
 
 
+def test_error_events_reach_the_v1_result_stream() -> None:
+    store = SessionStatus()
+    store.publish_error(
+        "transcription_failed", detail="boom", message="Transcription failed: boom", op_seq=1, client_id=None
+    )
+    instance, _control, thread = _serve(store)
+    try:
+        _, res = _get(instance.port, "/result?since=0")
+        assert (res["error"], res["message"], res["text"]) == ("transcription_failed", "Transcription failed: boom", "")
+    finally:
+        instance.stop()
+        thread.join(timeout=5.0)
+
+
 def test_binding_exception_returns_500_and_keeps_serving() -> None:
-    """An exception in the binding must not take down the server; the request responds 500."""
-
-    def boom(_client_id: str | None) -> ToggleOutcome:
-        raise RuntimeError("toggle explodiu")
-
-    instance = SocketTriggerListener({"clipboard": boom}, port=0)
-    thread = _serve(instance)
+    """An exception in the session must not take down the server; the request responds 500."""
+    control = _Control()
+    control.raise_exc = RuntimeError("toggle exploded")
+    instance, _control, thread = _serve(control=control)
     try:
         status, body = _post(instance.port, "/trigger", {"flow": "clipboard"})
         assert status == 500
         assert body["ok"] is False
         # Server stays alive and serving.
         assert _get(instance.port, "/health")[0] == 200
+    finally:
+        instance.stop()
+        thread.join(timeout=5.0)
+
+
+def test_port_reports_the_bound_ephemeral_port() -> None:
+    instance, _control, thread = _serve()
+    try:
+        assert instance.port != 0
+        deadline = time.monotonic() + 5.0
+        while _get(instance.port, "/health")[0] != 200 and time.monotonic() < deadline:
+            time.sleep(0.01)
     finally:
         instance.stop()
         thread.join(timeout=5.0)

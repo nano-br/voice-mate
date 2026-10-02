@@ -12,6 +12,8 @@ packages = [{ include = "app" }]
 
 [tool.poetry.scripts]
 voice-mate = "app.main:main"
+# Companion (tray app): needs the `ui` extra (PySide6), see README "Companion app".
+voice-mate-tray = "app.companion.main:main"
 
 [tool.poetry.dependencies]
 # Travado em 3.12: os wheels ROCm da AMD (torch/torchaudio) são cp312-only e o
@@ -41,6 +43,10 @@ silero-vad = { version = "*", optional = true }
 # Linux: hotkeys globais (pynput p/ X11, evdev p/ Wayland — evdev só compila em Linux)
 pynput = { version = "*", optional = true }
 evdev = { version = "*", optional = true, markers = "sys_platform == 'linux'" }
+# Companion (tray app), optional on Linux. Mirrors requirements/companion.txt, the
+# single source of truth (tests/test_companion_packaging.py checks they match).
+pyside6-essentials = { version = ">=6.8", optional = true }
+pywin32 = { version = ">=306", optional = true, markers = "sys_platform == 'win32'" }
 
 [tool.poetry.extras]
 claude = ["claude-agent-sdk"]
@@ -55,6 +61,9 @@ whisper-gpu = ["openai-whisper", "silero-vad"]
 # Linux nativo/WSL2: listeners de hotkey (pynput/evdev). No WSL2 o gatilho é o
 # daemon HTTP (sem dependência extra), mas o extra cobre o Linux nativo.
 linux = ["pynput", "evdev"]
+# Companion (tray app): `poetry install --extras ui` + `make run-tray`. Left out of
+# `all` on purpose: the engine (WSL2 daemon, CLI) never needs Qt.
+ui = ["pyside6-essentials", "pywin32"]
 all = ["claude-agent-sdk", "omnivoice", "kokoro", "voxcpm", "soundfile", "openai-whisper", "silero-vad", "pynput", "evdev"]
 
 [tool.poetry.group.dev.dependencies]

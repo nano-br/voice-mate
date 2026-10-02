@@ -51,6 +51,7 @@ _OMNI_LANG_NAMES = {
     "de": "German",
     "it": "Italian",
     "ja": "Japanese",
+    "ru": "Russian",
     "zh": "Chinese",
 }
 
