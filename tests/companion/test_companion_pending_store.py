@@ -313,6 +313,28 @@ def test_replace_gives_up_after_a_few_attempts(tmp_path: Path, monkeypatch: pyte
     assert not path.with_name("pending.json.tmp").exists()
 
 
+def test_clearing_retries_while_the_file_is_briefly_locked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Clear list while an antivirus reads the file: the texts must not come back at the next start."""
+    path = tmp_path / "pending.json"
+    store = PendingStore(path)
+    assert store.save([item(1)])
+    real_unlink = Path.unlink
+    failures = [PermissionError("held by the antivirus")] * 2
+    sleeps: list[float] = []
+
+    def flaky_unlink(self: Path, missing_ok: bool = False) -> None:
+        if self == path and failures:
+            raise failures.pop()
+        real_unlink(self, missing_ok=missing_ok)
+
+    monkeypatch.setattr(Path, "unlink", flaky_unlink)
+    monkeypatch.setattr(pending_store_module.time, "sleep", sleeps.append)
+    assert store.save([])
+    assert sleeps == [0.05, 0.1]
+    assert not path.exists()
+    assert PendingStore(path).load() == []
+
+
 def test_no_temp_file_with_text_is_left_behind(tmp_path: Path) -> None:
     path = tmp_path / "pending.json"
     tmp = path.with_name("pending.json.tmp")

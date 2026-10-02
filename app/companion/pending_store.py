@@ -31,7 +31,7 @@ import math
 import os
 import threading
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any, Final, TypeGuard, cast, get_args
 
@@ -44,12 +44,24 @@ log = logging.getLogger(__name__)
 PENDING_FILE_VERSION: Final = 1
 BROKEN_SUFFIX: Final = ".broken"
 TMP_SUFFIX: Final = ".tmp"
-# Windows: os.replace fails while another process briefly holds the target open (an
-# antivirus or the search indexer): try this many times, waiting 50 ms more each time.
+# Windows: os.replace and unlink fail while another process briefly holds the target open
+# (an antivirus or the search indexer): try this many times, waiting 50 ms more each time.
 REPLACE_ATTEMPTS: Final = 5
 REPLACE_BACKOFF_S: Final = 0.05
 _KINDS: Final = frozenset(get_args(ResultKind))
 _STATUSES: Final = frozenset(get_args(DeliveryStatus))
+
+
+def _retry_while_shared(action: Callable[[], None]) -> None:
+    """Run a file operation, retrying while Windows reports the file as in use."""
+    for attempt in range(1, REPLACE_ATTEMPTS + 1):
+        try:
+            action()
+            return
+        except PermissionError:  # Windows: the file is briefly open (antivirus, indexer)
+            if attempt == REPLACE_ATTEMPTS:
+                raise
+            time.sleep(REPLACE_BACKOFF_S * attempt)
 
 
 class PendingFileError(ValueError):
@@ -222,8 +234,9 @@ class PendingStore:
                 if kept:
                     self._write(dump_pending(kept))
                 else:
-                    self._path.unlink(missing_ok=True)
-                    self._tmp.unlink(missing_ok=True)  # no text may stay behind
+                    # The cleared texts must not come back at the next start: retry like _write.
+                    _retry_while_shared(lambda: self._path.unlink(missing_ok=True))
+                    _retry_while_shared(lambda: self._tmp.unlink(missing_ok=True))  # no text may stay behind
             except OSError as exc:
                 if not self._failing:
                     log.warning("pending list: cannot write %s (%s); keeping it in memory only", self._path, exc)
@@ -250,14 +263,7 @@ class PendingStore:
                 handle.write(text)
                 handle.flush()
                 os.fsync(handle.fileno())
-            for attempt in range(1, REPLACE_ATTEMPTS + 1):
-                try:
-                    os.replace(tmp, self._path)
-                    break
-                except PermissionError:  # Windows: the target is briefly open (antivirus, indexer)
-                    if attempt == REPLACE_ATTEMPTS:
-                        raise
-                    time.sleep(REPLACE_BACKOFF_S * attempt)
+            _retry_while_shared(lambda: os.replace(tmp, self._path))
         except OSError:
             with contextlib.suppress(OSError):
                 tmp.unlink(missing_ok=True)

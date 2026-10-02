@@ -217,6 +217,8 @@ def test_clear_pending_empties_the_list_and_deletes_the_file(
     controller.start()
     assert wait_until(lambda: recorder.last.pending_unacked == 2)
     assert wait_until(lambda: _stored_texts(make_controller.pending_path) == ["old one", "old two"])
+    # The dismissed ACKs leave on the io worker after the list is saved: count them once they landed.
+    assert wait_until(lambda: daemon.ack_status(first) == daemon.ack_status(second) == "dismissed")
     acks_before = len(daemon.acks)
     controller.clear_pending([(i.instance, i.record["result_seq"]) for i in controller.pending_results()])
     assert wait_until(lambda: recorder.last.pending_unacked == 0)
@@ -297,7 +299,10 @@ def test_a_lost_ack_is_sent_again(make_controller: ControllerKit, daemon: FakeDa
     before = sent()
     assert wait_until(lambda: daemon.ack_status(seq) == "dismissed", timeout=3)  # two rounds later
     threading.Event().wait(1.0)  # several more reconciliation rounds (FAST timings)
-    assert sent() == before + 1  # once: no storm once the daemon has it
+    settled = sent()
+    assert settled - before in (1, 2)  # one resend; a round that overtakes it in transit may double it once
+    threading.Event().wait(1.0)
+    assert sent() == settled  # no storm once the daemon has it
     assert parts.clipboard.texts == []
     assert [i.record["result_seq"] for i in controller.pending_results()] == [seq]
 
@@ -734,9 +739,9 @@ def test_a_newer_tray_icon_change_cancels_pending_tries(make_controller: Control
     controller, _parts, _backend = make_controller(daemon, parts=parts)
     controller.start()
     assert controller.apply_settings(replace(controller.settings(), tray_icon_visible=False)) == []
-    threading.Event().wait(1.2)
-    assert parts.tray_calls and parts.tray_calls[-1] is False
-    assert parts.tray_calls.count(False) == 4  # at once, then the three retries
+    assert wait_until(lambda: parts.tray_calls.count(False) == 4)  # at once, then the three retries
+    threading.Event().wait(0.8)  # no fifth try and no late True from the startup promotion
+    assert parts.tray_calls[-1] is False and parts.tray_calls.count(False) == 4
     assert True not in parts.tray_calls[parts.tray_calls.index(False) :]
 
 

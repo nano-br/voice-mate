@@ -87,14 +87,14 @@ def test_auto_and_the_explicit_choice_of_the_same_catalog_need_no_restart(
     assert not _hint_shown(dialog)
     dialog.apply_button.click()
     assert _applied(fake, process_events, 1)
-    process_events()
+    assert process_events(lambda: dialog.ok_button.isEnabled())  # the UI side of the save ran
     assert fake.settings().language == "en"
     assert ui._language_box is None
 
     _choose(dialog, "auto")
     dialog.ok_button.click()
     assert _applied(fake, process_events, 2)
-    process_events()
+    assert process_events(lambda: not dialog.isVisible())  # OK closed it: the save finished on the UI side
     assert fake.settings().language == "auto"
     assert ui._language_box is None
 
@@ -108,7 +108,7 @@ def test_other_edits_do_not_ask_even_with_a_pending_language(
     dialog.general_page.engine_dir.setText("elsewhere")
     dialog.ok_button.click()
     assert _applied(fake, process_events, 1)
-    process_events()
+    assert process_events(lambda: not dialog.isVisible())  # OK closed it: the save finished on the UI side
     assert ui._language_box is None
 
 

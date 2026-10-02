@@ -118,8 +118,11 @@ def ui(
     companion.bridge.detach()
     if companion.settings_dialog is not None:
         companion.settings_dialog.hide()
-    if companion._language_box is not None:
-        companion._language_box.close()
+    for attribute in ("_wsl_box", "_restart_wsl_box", "_language_box", "_clear_pending_box"):
+        box = getattr(companion, attribute)
+        if box is not None:
+            setattr(companion, attribute, None)
+            box.close()
     companion.status_window.hide()
     if companion.tray is not None:
         companion.tray.hide()
