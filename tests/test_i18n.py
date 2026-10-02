@@ -227,25 +227,24 @@ def test_set_language_auto_follows_the_os_ui_language(
     assert active_language() == expected_lang
 
 
-def test_os_ui_language_reads_the_posix_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    """GNU gettext semantics: the C locale (or none) means English and LANGUAGE is ignored;
-    otherwise LANGUAGE's first entry wins over the messages locale."""
-    monkeypatch.setattr(i18n_module.sys, "platform", "linux")
-    for variable in ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"):
-        monkeypatch.delenv(variable, raising=False)
-    assert i18n_module._os_ui_language() is None  # no locale at all: the C locale
-    monkeypatch.setenv("LANGUAGE", "pt_BR:en")
-    assert i18n_module._os_ui_language() is None  # ... and LANGUAGE alone does not count
-    monkeypatch.setenv("LANG", "es_MX.UTF-8")
-    assert i18n_module._os_ui_language() == "pt_BR"  # LANGUAGE wins over a real locale
-    monkeypatch.setenv("LANGUAGE", "")
-    assert i18n_module._os_ui_language() == "es_MX"
-    monkeypatch.setenv("LC_MESSAGES", "de_DE@euro")
-    assert i18n_module._os_ui_language() == "de_DE"  # LC_MESSAGES before LANG
-    monkeypatch.setenv("LANGUAGE", "pt_BR")
-    for c_locale in ("C", "C.UTF-8", "POSIX"):
-        monkeypatch.setenv("LC_ALL", c_locale)
-        assert i18n_module._os_ui_language() is None, c_locale  # LC_ALL=C beats LANGUAGE
+@pytest.mark.parametrize(
+    ("environ", "expected"),
+    [
+        ({}, None),  # no locale at all: the C locale
+        ({"LANGUAGE": "pt_BR:en"}, None),  # LANGUAGE alone does not count
+        ({"LANG": "es_MX.UTF-8"}, "es_MX"),
+        ({"LANG": "es_MX.UTF-8", "LANGUAGE": "pt_BR:en"}, "pt_BR"),  # LANGUAGE wins over a real locale
+        ({"LANG": "es_MX.UTF-8", "LANGUAGE": ""}, "es_MX"),
+        ({"LANG": "es_MX.UTF-8", "LC_MESSAGES": "de_DE@euro"}, "de_DE"),  # LC_MESSAGES before LANG
+        ({"LANG": "es_MX", "LC_ALL": "C", "LANGUAGE": "pt_BR"}, None),  # LC_ALL=C beats LANGUAGE
+        ({"LANG": "es_MX", "LC_ALL": "C.UTF-8", "LANGUAGE": "pt_BR"}, None),
+        ({"LANG": "es_MX", "LC_ALL": "POSIX", "LANGUAGE": "pt_BR"}, None),
+    ],
+)
+def test_posix_ui_language_follows_gnu_gettext(environ: dict[str, str], expected: str | None) -> None:
+    """The C locale (or none) means English and LANGUAGE is ignored; otherwise LANGUAGE's
+    first entry wins over the messages locale."""
+    assert i18n_module._posix_ui_language(environ) == expected
 
 
 def test_setup_locale_with_unknown_lang_does_not_raise(monkeypatch: pytest.MonkeyPatch) -> None:

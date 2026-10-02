@@ -299,7 +299,10 @@ class CompanionUi(QObject):
             self.tray.hide()
         self.status_window.hide()
         self.quit_finished.emit()
-        self._exit_app()
+        # Deferred: a quit buffered during startup can finish before app.exec() runs, and a
+        # QCoreApplication.quit() made before the loop starts is silently dropped. A
+        # zero-delay timer fires once the loop runs (or at once, if it already does).
+        QTimer.singleShot(0, self._exit_app)
 
     def on_about_to_quit(self) -> None:
         """The Qt loop is ending without our Quit (e.g. the session ends): stop cleanly anyway."""

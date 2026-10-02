@@ -73,7 +73,11 @@ class ControllerBridge(QObject):
 
     def call_soon(self, callback: Callable[[], None]) -> None:
         """Run `callback` on the GUI thread (safe to call from any thread)."""
-        self._call_posted.emit(callback)
+        try:
+            self._call_posted.emit(callback)
+        except RuntimeError:
+            # The UI is already gone (a late controller callback at shutdown): nothing to run.
+            log.debug("GUI callback dropped: the bridge no longer exists")
 
     def run_async(
         self,

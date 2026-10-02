@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from dataclasses import replace
 
@@ -7,6 +8,7 @@ import pytest
 
 pytest.importorskip("PySide6")
 
+from PySide6.QtCore import QCoreApplication, QTimer  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from app.companion.contract import CompanionSettings, Notification  # noqa: E402
@@ -29,7 +31,7 @@ def test_restart_wsl_from_the_jump_list_asks_first(ui: CompanionUi, fake: FakeCo
 
 
 def test_commands_and_notifications_are_ignored_while_quitting(
-    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+    ui: CompanionUi, fake: FakeController, exits: list[int], process_events: Callable[..., bool]
 ) -> None:
     fake.quit_delay = 0.3
     ui.quit_app()
@@ -40,6 +42,7 @@ def test_commands_and_notifications_are_ignored_while_quitting(
     assert ui.settings_dialog is None
     assert fake.called("restart_engine") == []
     assert ui.notifications.shown == []
+    assert process_events(lambda: exits == [0], timeout=3.0)  # let the quit finish in this test
 
 
 class _BrokenQuit(FakeController):
@@ -52,11 +55,37 @@ class _SilentQuit(FakeController):
         self._call("quit")  # never calls on_done
 
 
-def test_quit_finishes_at_once_when_the_controller_fails(qapp: QApplication) -> None:
+def test_quit_finishes_at_once_when_the_controller_fails(
+    qapp: QApplication, process_events: Callable[..., bool]
+) -> None:
     exits: list[int] = []
+    finished: list[bool] = []
     companion = CompanionUi(_BrokenQuit(), tray_available=False, exit_app=lambda: exits.append(0))
+    companion.quit_finished.connect(lambda: finished.append(True))
     companion.quit_app()
-    assert exits == [0]
+    assert finished == [True]  # finished at once, the exit itself runs from the event loop
+    assert process_events(lambda: exits == [0])
+
+
+def test_a_quit_finished_before_the_loop_starts_still_exits(qapp: QApplication) -> None:
+    """A `quit` buffered during startup runs before app.exec(); QCoreApplication.quit()
+    called then would be dropped, so the exit must wait for the loop."""
+    companion = CompanionUi(_BrokenQuit(), tray_available=False)  # the real exit: QCoreApplication.quit
+    companion.quit_app()  # controller.quit() raises: quitting finishes before exec()
+    timed_out: list[bool] = []
+
+    def give_up() -> None:
+        timed_out.append(True)
+        QCoreApplication.quit()
+
+    guard = QTimer()  # without the deferred exit, exec() would run until this fires
+    guard.setSingleShot(True)
+    guard.timeout.connect(give_up)
+    guard.start(3000)
+    started = time.monotonic()
+    qapp.exec()
+    guard.stop()
+    assert timed_out == [] and time.monotonic() - started < 2.5
 
 
 def test_quit_has_a_safety_timeout(

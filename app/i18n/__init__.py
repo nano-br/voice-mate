@@ -16,6 +16,7 @@ import gettext as _gettext
 import locale
 import os
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -81,27 +82,33 @@ def set_language(lang: UiLanguage) -> None:
 
 
 def _os_ui_language() -> str | None:
-    """The OS UI language as a POSIX-style name ("pt_BR", "es_MX"), or None if unknown.
-
-    POSIX, with GNU gettext semantics: the messages locale is the first one set among
-    LC_ALL, LC_MESSAGES and LANG ("pt_BR.UTF-8"). When it is "C"/"POSIX" (also "C.UTF-8")
-    or unset, the UI is untranslated (English, None) and LANGUAGE is ignored, like gettext
-    does. Otherwise the first entry of LANGUAGE (a priority list, "pt_BR:en") wins over it.
-    """
+    """The OS UI language as a POSIX-style name ("pt_BR", "es_MX"), or None if unknown:
+    the Windows display language, elsewhere `_posix_ui_language(os.environ)`."""
     if sys.platform == "win32":
         import ctypes
 
         # Display language of the Windows UI (not the regional format).
         langid = ctypes.windll.kernel32.GetUserDefaultUILanguage()
         return locale.windows_locale.get(langid)
+    return _posix_ui_language(os.environ)
+
+
+def _posix_ui_language(environ: Mapping[str, str]) -> str | None:
+    """The UI language from POSIX locale variables, with GNU gettext semantics.
+
+    The messages locale is the first one set among LC_ALL, LC_MESSAGES and LANG
+    ("pt_BR.UTF-8"). When it is "C"/"POSIX" (also "C.UTF-8") or unset, the UI is
+    untranslated (English, None) and LANGUAGE is ignored, like gettext does. Otherwise
+    the first entry of LANGUAGE (a priority list, "pt_BR:en") wins over it.
+    """
     messages_locale = ""
     for variable in ("LC_ALL", "LC_MESSAGES", "LANG"):
-        messages_locale = _locale_name(os.environ.get(variable, ""))
+        messages_locale = _locale_name(environ.get(variable, ""))
         if messages_locale:
             break
     if not messages_locale or messages_locale in ("C", "POSIX"):
         return None
-    return _locale_name(os.environ.get("LANGUAGE", "").split(":")[0]) or messages_locale
+    return _locale_name(environ.get("LANGUAGE", "").split(":")[0]) or messages_locale
 
 
 def _locale_name(value: str) -> str:
