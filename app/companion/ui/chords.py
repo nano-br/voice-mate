@@ -14,20 +14,32 @@ from typing import Final
 from PySide6.QtCore import QKeyCombination, Qt
 from PySide6.QtGui import QKeySequence
 
-from app.companion.chords import (  # noqa: F401 (re-exported for the UI modules)
-    _DISPLAY_MODIFIERS,
-    _KEY_ALIASES,
-    _MODIFIER_ALIASES,
+from app.companion.chords import (
+    DISPLAY_MODIFIERS,
     FUNCTION_KEYS,
+    KEY_ALIASES,
     KEY_NAMES,
+    MODIFIER_ALIASES,
     MODIFIERS,
     NUMPAD_KEYS,
-    Chord,
     Modifier,
     display_chord,
     normalize_chord,
-    parse_chord,
 )
+
+# The Qt layer below, plus the core names the UI modules import from here.
+__all__ = [
+    "KEY_NAMES",
+    "chord_from_key",
+    "chord_to_sequence",
+    "display_chord",
+    "is_modifier_key",
+    "key_name_for",
+    "modifier_names",
+    "modifiers_display",
+    "normalize_chord",
+    "sequence_to_chord",
+]
 
 # ---------------------------------------------------------------------------------------
 # Qt layer: key capture and QKeySequence conversion.
@@ -177,11 +189,11 @@ def _split(text: str) -> tuple[list[Modifier], str]:
     modifiers: set[Modifier] = set()
     key = ""
     for part in (" ".join(p.split()) for p in text.strip().lower().split("+")):
-        mod = _MODIFIER_ALIASES.get(part)
+        mod = MODIFIER_ALIASES.get(part)
         if mod is not None:
             modifiers.add(mod)
         elif part:
-            key = _KEY_ALIASES.get(part, part)
+            key = KEY_ALIASES.get(part, part)
     return [mod for mod in MODIFIERS if mod in modifiers], key
 
 
@@ -215,5 +227,5 @@ def sequence_to_chord(sequence: QKeySequence) -> str:
 
 def modifiers_display(modifiers: Qt.KeyboardModifier) -> str:
     """Live preview while capturing: "Ctrl+Alt+" (empty when no modifier is held)."""
-    names = [_DISPLAY_MODIFIERS[name] for name in modifier_names(modifiers)]
+    names = [DISPLAY_MODIFIERS[name] for name in modifier_names(modifiers)]
     return "+".join(names) + "+" if names else ""

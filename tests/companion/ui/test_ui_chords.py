@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import importlib
-import importlib.util
 import sys
 
 import pytest
@@ -18,7 +16,6 @@ from app.companion.ui.chords import (  # noqa: E402
     display_chord,
     modifiers_display,
     normalize_chord,
-    parse_chord,
     sequence_to_chord,
 )
 
@@ -143,15 +140,15 @@ def test_every_capturable_key_is_a_core_key_name() -> None:
     assert names <= chords.KEY_NAMES
 
 
-def test_mirror_matches_the_core_module_when_present() -> None:
-    """After the merge the core module exists: the UI's mirror must agree with it exactly."""
-    if importlib.util.find_spec("app.companion.chords") is None:
-        pytest.skip("the core chords module is not in this checkout")
-    core = importlib.import_module("app.companion.chords")
-    assert core.KEY_NAMES == chords.KEY_NAMES
+def test_captured_chords_round_trip_through_the_core() -> None:
+    """The capture widget writes canonical core text, and the Qt conversion parses like the core."""
+    held = Mod.ControlModifier | Mod.AltModifier
+    for key in [*chords._QT_NAMED, Qt.Key.Key_V, Qt.Key.Key_7, Qt.Key.Key_F5]:
+        captured = chord_from_key(int(key), held)
+        assert captured is not None, key
+        assert normalize_chord(captured) == captured, captured
+        assert display_chord(captured).startswith(modifiers_display(held)), captured
     for sample in SAMPLES:
-        core_chord = core.parse_chord(sample)
-        mine = parse_chord(sample)
-        assert (core_chord is None) == (mine is None), sample
-        assert core.normalize_chord(sample) == normalize_chord(sample), sample
-        assert core.display_chord(sample) == display_chord(sample), sample
+        expected = normalize_chord(sample)
+        if expected is not None:
+            assert sequence_to_chord(chord_to_sequence(sample)) == expected, sample

@@ -36,8 +36,8 @@ the Windows side is a PowerShell script. Problems this design addresses:
   only Qt's built-in strings (standard context menus, file dialogs) use Qt's own
   qtbase translations (`qtbase_pt_BR.qm`, `qtbase_es.qm`, installed with a
   `QTranslator` after `set_language`). The companion picks its language ONCE at
-  startup with `app.i18n.set_language(lang)` (new, owned by the companion UI stream,
-  since `main.py` calls it; ignores `VOICEMATE_LANG`; `setup_locale` keeps its
+  startup with `app.i18n.set_language(lang)` (owned by `app/i18n`, called by
+  `app/companion/main.py`; ignores `VOICEMATE_LANG`; `setup_locale` keeps its
   behavior for the engine):
   the `language` setting, or for `auto` the OS UI language. It never flips mid
   session, and it never relays the daemon's localized `message` text: it builds

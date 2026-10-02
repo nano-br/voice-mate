@@ -26,7 +26,7 @@ from typing import Final, Literal
 
 Modifier = Literal["ctrl", "alt", "shift", "win"]
 MODIFIERS: Final[tuple[Modifier, ...]] = ("ctrl", "alt", "shift", "win")
-_MODIFIER_ALIASES: Final[dict[str, Modifier]] = {
+MODIFIER_ALIASES: Final[dict[str, Modifier]] = {
     "ctrl": "ctrl",
     "control": "ctrl",
     "alt": "alt",
@@ -65,7 +65,7 @@ NAMED_KEYS: Final = (
 )
 NUMPAD_KEYS: Final = tuple(f"num{n}" for n in range(10))
 PUNCTUATION_KEYS: Final = (";", "=", ",", "-", ".", "/", "`", "[", "\\", "]", "'")
-_KEY_ALIASES: Final = {
+KEY_ALIASES: Final = {
     "escape": "esc",
     "return": "enter",
     "del": "delete",
@@ -83,7 +83,7 @@ KEY_NAMES: Final = frozenset(FUNCTION_KEYS + LETTER_KEYS + DIGIT_KEYS + NAMED_KE
 # Keys that type a character: Shift alone on them would steal normal typing.
 _PRINTABLE_KEYS: Final = frozenset(LETTER_KEYS + DIGIT_KEYS + PUNCTUATION_KEYS + ("space",))
 
-_DISPLAY_MODIFIERS: Final[dict[Modifier, str]] = {"ctrl": "Ctrl", "alt": "Alt", "shift": "Shift", "win": "Win"}
+DISPLAY_MODIFIERS: Final[dict[Modifier, str]] = {"ctrl": "Ctrl", "alt": "Alt", "shift": "Shift", "win": "Win"}
 _DISPLAY_NAMED: Final = {
     "space": "Space",
     "enter": "Enter",
@@ -135,7 +135,7 @@ def parse_chord(text: str) -> Chord | None:
     modifiers: set[Modifier] = set()
     key: str | None = None
     for part in parts:
-        mod = _MODIFIER_ALIASES.get(part)
+        mod = MODIFIER_ALIASES.get(part)
         if mod is not None:
             if mod in modifiers:
                 return None
@@ -143,7 +143,7 @@ def parse_chord(text: str) -> Chord | None:
             continue
         if key is not None:
             return None
-        key = _KEY_ALIASES.get(part, part)
+        key = KEY_ALIASES.get(part, part)
     if key is None or key not in KEY_NAMES or key in RESERVED_KEYS:
         return None
     if key not in FUNCTION_KEYS:
@@ -164,7 +164,7 @@ def display_chord(text: str) -> str:
     chord = parse_chord(text)
     if chord is None:
         return text
-    parts = [_DISPLAY_MODIFIERS[mod] for mod in MODIFIERS if mod in chord.modifiers]
+    parts = [DISPLAY_MODIFIERS[mod] for mod in MODIFIERS if mod in chord.modifiers]
     key = chord.key
     if key in _DISPLAY_NAMED:
         parts.append(_DISPLAY_NAMED[key])

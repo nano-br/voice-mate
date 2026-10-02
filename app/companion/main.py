@@ -6,7 +6,7 @@ Startup order (app/companion/contract.py, docs/companion-app.md):
    (retrying while the first one starts up) and exits; if the first one is quitting,
    a plain launch waits for it to end and then starts.
 3. The command channel listens at once; commands wait until the UI exists.
-4. The controller (lazy import: the core may not be installed in a UI-only checkout;
+4. The controller (lazy import, so a forwarded command never loads the core;
    `--demo` uses the fake controller) -> `settings()` -> `app.i18n.set_language`
    (plus Qt's own qtbase translations) -> build the UI -> `controller.start()`.
 A `--command` never starts VoiceMate: with nothing running it exits 0.
