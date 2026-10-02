@@ -95,7 +95,8 @@ Details settled by the implementation (`app/daemon/`):
 - `ready` means "model loaded": the background warmup may still run. A trigger is
   accepted at once; only the first transcription waits for the warmup (the
   backends are not thread-safe).
-- Exit codes: 0 after `/shutdown` or stdin EOF (also during the build); 1 when the
+- Exit codes: 0 after `/shutdown`, stdin EOF or SIGTERM (also during the build, where
+  they exit at once, killing a whisper-server the build already started); 1 when the
   build fails or the port is taken (the log then says "Address already in use").
 - The Python imports take a few seconds (about 3 s on WSL2) before the API binds;
   until then connections are refused (`starting`, like a refused probe).
@@ -181,8 +182,8 @@ buffer of 512 events. Client HTTP timeout: `wait` + 5 s.
 - `warning` (`WarningData`): `time_limit_soon | no_speech | no_audio | slow_backend`.
 - `health` (`HealthData`) when the audio state changes.
 - `shutdown` (`ShutdownData`) before stopping; it wakes every pending long poll.
-  The daemon's own reasons: `supervisor` for stdin EOF, `user_quit` for Ctrl+C in
-  its console and for a `/shutdown` without a reason.
+  The daemon's own reasons: `supervisor` for stdin EOF and SIGTERM, `user_quit` for
+  Ctrl+C in its console and for a `/shutdown` without a reason.
 
 Parameters: `client_id` is required (400 without it); `wait` defaults to 0 and is
 capped at 25; a missing `instance` or `since` is answered with a reset. While
@@ -195,7 +196,10 @@ they belong to:
   transcript already being produced is still published, as the operation's
   `final` result when no AI response will follow. Warnings and errors of a
   superseded operation are not published.
-- `/cancel` drops the operation: nothing more is published for its `op_seq`.
+- `/cancel` drops the operation: no result, error or warning is published for its
+  `op_seq` (its state `idle` event still is).
+- An operation may end without a final result (a restart or cancel during
+  `thinking`/`speaking`, an empty AI answer, `chat_failed`): state `idle` ends it.
 - Error codes also reach the v1 `/result` stream (the scripts show any code).
 
 ### Delivery, ACK and reconciliation
@@ -235,8 +239,11 @@ they belong to:
   `restarted`; `stop` while idle or processing -> `noop`.
 - `POST /cancel` (`CancelRequest` -> `CancelResponse`): no result is published for a
   cancelled `op_seq`.
-- `POST /shutdown` (`ShutdownRequest`, body optional). Another client's `user_quit`
-  shutdown puts the supervisor in `stopped`, not a crash restart.
+- `POST /shutdown` (`ShutdownRequest`, body optional; an unknown `reason` is a 400).
+  Another client's `user_quit` shutdown puts the supervisor in `stopped`, not a crash
+  restart.
+- In `TriggerRequest`, an empty `client_id` is the same as none (the daemon assigns
+  one); a non-string `flow` or `client_id` is a 400.
 - `--supervised`: shut down cleanly when stdin reaches EOF (verified: EOF propagates
   through `wsl.exe`). Killing `wsl.exe` kills the Linux process without cleanup, so
   every stop path tries `/shutdown` and EOF first.
