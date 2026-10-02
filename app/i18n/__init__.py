@@ -83,9 +83,10 @@ def set_language(lang: UiLanguage) -> None:
 def _os_ui_language() -> str | None:
     """The OS UI language as a POSIX-style name ("pt_BR", "es_MX"), or None if unknown.
 
-    POSIX: the first variable set among LANGUAGE, LC_ALL, LC_MESSAGES and LANG decides.
-    LANGUAGE is a priority list ("pt_BR:en"); the others hold one locale ("pt_BR.UTF-8").
-    The "C"/"POSIX" locale (also "C.UTF-8") means untranslated, so English (None).
+    POSIX, with GNU gettext semantics: the messages locale is the first one set among
+    LC_ALL, LC_MESSAGES and LANG ("pt_BR.UTF-8"). When it is "C"/"POSIX" (also "C.UTF-8")
+    or unset, the UI is untranslated (English, None) and LANGUAGE is ignored, like gettext
+    does. Otherwise the first entry of LANGUAGE (a priority list, "pt_BR:en") wins over it.
     """
     if sys.platform == "win32":
         import ctypes
@@ -93,11 +94,19 @@ def _os_ui_language() -> str | None:
         # Display language of the Windows UI (not the regional format).
         langid = ctypes.windll.kernel32.GetUserDefaultUILanguage()
         return locale.windows_locale.get(langid)
-    for variable in ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"):
-        value = os.environ.get(variable, "").split(":")[0].split(".")[0].split("@")[0]
-        if value:
-            return None if value in ("C", "POSIX") else value
-    return None
+    messages_locale = ""
+    for variable in ("LC_ALL", "LC_MESSAGES", "LANG"):
+        messages_locale = _locale_name(os.environ.get(variable, ""))
+        if messages_locale:
+            break
+    if not messages_locale or messages_locale in ("C", "POSIX"):
+        return None
+    return _locale_name(os.environ.get("LANGUAGE", "").split(":")[0]) or messages_locale
+
+
+def _locale_name(value: str) -> str:
+    """ "pt_BR.UTF-8@euro" -> "pt_BR"."""
+    return value.split(".")[0].split("@")[0].strip()
 
 
 def active_language() -> str:

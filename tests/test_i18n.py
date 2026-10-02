@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-import sys
 import unicodedata
 from collections import Counter
 from collections.abc import Callable, Iterator
@@ -229,21 +228,24 @@ def test_set_language_auto_follows_the_os_ui_language(
 
 
 def test_os_ui_language_reads_the_posix_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    if sys.platform == "win32":
-        pytest.skip("Windows reads GetUserDefaultUILanguage, not the environment")
+    """GNU gettext semantics: the C locale (or none) means English and LANGUAGE is ignored;
+    otherwise LANGUAGE's first entry wins over the messages locale."""
+    monkeypatch.setattr(i18n_module.sys, "platform", "linux")
     for variable in ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"):
         monkeypatch.delenv(variable, raising=False)
-    monkeypatch.setenv("LANG", "es_MX.UTF-8")
-    assert i18n_module._os_ui_language() == "es_MX"
+    assert i18n_module._os_ui_language() is None  # no locale at all: the C locale
     monkeypatch.setenv("LANGUAGE", "pt_BR:en")
-    assert i18n_module._os_ui_language() == "pt_BR"
+    assert i18n_module._os_ui_language() is None  # ... and LANGUAGE alone does not count
+    monkeypatch.setenv("LANG", "es_MX.UTF-8")
+    assert i18n_module._os_ui_language() == "pt_BR"  # LANGUAGE wins over a real locale
     monkeypatch.setenv("LANGUAGE", "")
-    monkeypatch.setenv("LC_ALL", "C.UTF-8")
-    assert i18n_module._os_ui_language() is None  # the C locale is untranslated: English
-    monkeypatch.setenv("LC_ALL", "POSIX")
-    assert i18n_module._os_ui_language() is None
-    monkeypatch.delenv("LC_ALL")
     assert i18n_module._os_ui_language() == "es_MX"
+    monkeypatch.setenv("LC_MESSAGES", "de_DE@euro")
+    assert i18n_module._os_ui_language() == "de_DE"  # LC_MESSAGES before LANG
+    monkeypatch.setenv("LANGUAGE", "pt_BR")
+    for c_locale in ("C", "C.UTF-8", "POSIX"):
+        monkeypatch.setenv("LC_ALL", c_locale)
+        assert i18n_module._os_ui_language() is None, c_locale  # LC_ALL=C beats LANGUAGE
 
 
 def test_setup_locale_with_unknown_lang_does_not_raise(monkeypatch: pytest.MonkeyPatch) -> None:
