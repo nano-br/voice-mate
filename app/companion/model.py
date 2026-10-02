@@ -11,7 +11,8 @@ states, cues and reactions", "Notifications") live here:
   a snapshot never plays a cue;
 - `ready` lasts READY_S after a final result reached the clipboard;
 - notifications: once per code per 5 minutes, except "not copied", which is aggregated
-  instead of dropped; `slow_backend` once per session; filtered by `notify_level`.
+  instead of dropped; `slow_backend` once per session; filtered by `notify_level`
+  (one-time tips such as `pin_taskbar` only by `none`).
 All user-facing text is built here from codes with `app.i18n._` (never the daemon's
 `message`).
 """
@@ -87,12 +88,16 @@ NoticeCode = Literal[
     "not_copied",
     "copy_failed",
     "hotkey_in_use",
+    "pin_taskbar",
 ]
 # Why the tray shows `warning` while the supervisor is healthy.
 WarningReason = Literal["no_mic", "audio_down", "mic_unavailable", "mic_blocked"]
 
 _LEVEL_RANK: Final[dict[NotificationLevel, int]] = {"info": 0, "warning": 1, "error": 2}
 _MIN_RANK: Final[dict[NotifyLevel, int]] = {"all": 0, "warnings": 1, "errors": 2, "none": 3}
+# One-time tips: info level, yet shown unless notifications are off ("warnings", the
+# default, would otherwise hide them on the very first run).
+_TIPS: Final[frozenset[NoticeCode]] = frozenset({"pin_taskbar"})
 _ENTER_CUE: Final[dict[TrayState, CueName]] = {"transcribing": "transcribing", "warning": "warning", "error": "error"}
 _WARNING_NOTICES: Final[dict[WarningCode, NoticeCode]] = {
     "no_speech": "no_speech",
@@ -891,6 +896,13 @@ def _build(state: CoreState, note: _Note) -> tuple[NotificationLevel, str, str, 
         return "error", _("Not copied to the clipboard"), message, "show_status"
     if code == "copy_failed":
         return "error", _("Copy failed"), _("The text could not be copied to the clipboard. Try again."), "none"
+    if code == "pin_taskbar":
+        return (
+            "info",
+            _("Pin VoiceMate to the taskbar"),
+            _("Open Start, search for VoiceMate, right-click it and choose Pin to taskbar."),
+            "none",
+        )
     # hotkey_in_use
     return (
         "warning",
@@ -923,6 +935,9 @@ def _notify(state: CoreState, note: _Note, mono: float) -> tuple[CoreState, Noti
             return state, None
         state = replace(state, notified_at={**state.notified_at, note.code: mono})
     level, title, message, action = _build(state, note)
-    if _LEVEL_RANK[level] < _MIN_RANK[state.notify_level]:
+    if note.code in _TIPS:
+        if state.notify_level == "none":
+            return state, None
+    elif _LEVEL_RANK[level] < _MIN_RANK[state.notify_level]:
         return state, None
     return state, Notification(level, title, message, action)

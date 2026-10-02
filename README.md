@@ -315,7 +315,9 @@ Either way the engine still lives in WSL2 (install it as in [docs/wsl2.md](docs/
 
 ### Pin to the taskbar
 
-Windows does not let installers pin apps. Open Start, search for VoiceMate, right-click it and choose **Pin to taskbar**. Clicking the pinned icon while VoiceMate runs opens its status window; right-clicking it offers **Settings**, **Restart engine**, **Restart WSL...** and **Quit VoiceMate**. Pinning uses the Start menu shortcut, so it applies to the installed app.
+Windows does not let installers pin apps. Open Start, search for VoiceMate, right-click it and choose **Pin to taskbar**. Clicking the pinned icon while VoiceMate runs opens its status window; right-clicking it offers **Settings**, **Restart engine**, **Restart WSL...** and **Quit VoiceMate**. Pinning uses the Start menu shortcut, so it applies to the installed app. On the first run, a **Pin VoiceMate to the taskbar** notification recalls these steps.
+
+The tray icon (the microphone that shows recording, transcribing and ready, like the Windows microphone-in-use indicator) is a different thing: Windows 11 hides new tray icons behind the arrow next to the clock, so VoiceMate keeps its icon on the taskbar by default. To put it back behind the arrow, turn off **Always show the VoiceMate icon on the taskbar** in Settings > **General**.
 
 ### Quit
 
@@ -329,7 +331,7 @@ From source: `make run-tray ARGS="--command quit"`. A `--command` never starts V
 
 ### Settings
 
-Tray icon menu > **Settings...**, in three tabs: **Hotkeys**; **Sounds** (built-in sounds or your own WAV files, volume); **General**: language, notifications, **Start VoiceMate when I sign in** and the engine (mode, WSL distro, engine folder, and **Restart WSL when audio fails**: **Automatically**, **Ask first** or **Never**). The settings are saved in `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) and survive an uninstall. Logs live in `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); tray icon menu > **Engine** > **Open logs** opens them.
+Tray icon menu > **Settings...**, in three tabs: **Hotkeys**; **Sounds** (built-in sounds or your own WAV files, volume); **General**: language, notifications, **Start VoiceMate when I sign in**, **Always show the VoiceMate icon on the taskbar** (Windows only) and the engine (mode, WSL distro, engine folder, and **Restart WSL when audio fails**: **Automatically**, **Ask first** or **Never**). The settings are saved in `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) and survive an uninstall. Logs live in `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); tray icon menu > **Engine** > **Open logs** opens them.
 
 ### Linux (optional)
 

@@ -283,6 +283,24 @@ Badges differ by shape, not only color. The base glyph follows the taskbar theme
 (`HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize\SystemUsesLightTheme`).
 No animation by default.
 
+Windows 11 puts every NEW notification-area icon in the hidden overflow (the arrow
+next to the clock), where nobody would see these states. With `tray_icon_visible`
+(default true; Settings > General > "Always show the VoiceMate icon on the taskbar",
+shown on Windows only) the core promotes our icon
+(`app/companion/win/tray_visibility.py`, through `Desktop.set_tray_icon_promoted`):
+Windows 11 keeps one subkey per icon under `HKCU\Control Panel\NotifyIconSettings`
+(REG_SZ `ExecutablePath`, REG_DWORD `IsPromoted`: 1 = on the taskbar, 0 or absent =
+in the overflow) and applies `IsPromoted` changes live. Only the subkeys whose
+`ExecutablePath` is this process's executable are written (`sys.executable` and the
+process image, compared after `normcase(abspath())`; a known-folder prefix such as
+`{6D809377-...}\` for Program Files is resolved first). Explorer creates the subkey
+asynchronously after the icon first shows, so the core tries 2 s, 10 s and 30 s
+after start and stops at the first try that finds an entry. It writes only at
+startup (when the setting is true) and when the setting changes (true promotes,
+false sets `IsPromoted` to 0 at once), so a choice made later in the Windows
+settings is not fought until the next start. Windows 10 has no such key: nothing
+happens there. Errors are logged, never raised.
+
 An event's cue REPLACES the cue on entering the tray state (never two cues). A
 `warning` tray state clears on the next `mic_live`, or when `audio` is back to `ok`
 and Windows has a microphone.
@@ -329,7 +347,10 @@ is clickable (`NotificationAction`). Anything that needs a decision or a copy li
 in the menu and the status window (`pending_unacked`, `pending_wsl_restart`).
 Rate limit: once per code per 5 minutes, except "not copied" (delivery failed or
 stale result), which is never dropped: within 5 minutes it is aggregated ("2
-transcriptions were not copied"). `notify_level` filters them.
+transcriptions were not copied"). `notify_level` filters them, except one-time
+tips (info level), which only `none` hides: on the first run (no `companion.toml`
+yet) on Windows, "Pin VoiceMate to the taskbar" explains how to pin the app (code
+`pin_taskbar`, raised once by the core at start).
 
 ### Supervisor (WSL2)
 
@@ -443,6 +464,7 @@ master_volume = 0.8
 wsl_restart_policy = "auto"
 notify_level = "warnings"
 start_at_login = false
+tray_icon_visible = true
 
 [[hotkeys]]
 flow = "clipboard"
@@ -477,8 +499,11 @@ volume = 1.0
   `ICustomDestinationList`): Settings, Restart engine, Restart WSL... (`wsl2` mode
   only), Quit VoiceMate; each runs `VoiceMate.exe --command <x>`.
 - Clicking the pinned shortcut while running opens the status window. Windows 11
-  forbids pinning from an installer: the first run explains
-  "Start > right-click VoiceMate > Pin to taskbar".
+  forbids pinning from an installer: the first run (no settings file yet) shows the
+  info notification "Pin VoiceMate to the taskbar" ("Open Start, search for
+  VoiceMate, right-click it and choose Pin to taskbar."). Pinning the app is separate
+  from the tray icon, which shows on the taskbar by default (`tray_icon_visible`,
+  see "Tray states, cues and reactions").
 - Start at login: `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` with
   `--autostart` (Windows), XDG autostart (Linux). The Run value name is
   `AUTOSTART_RUN_VALUE`, shared by the installer's autostart task and

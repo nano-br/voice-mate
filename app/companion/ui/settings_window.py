@@ -490,7 +490,7 @@ class SoundsPage(QWidget):
 class GeneralPage(QWidget):
     changed = Signal()
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget | None = None, *, platform: str = sys.platform) -> None:
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
@@ -507,6 +507,18 @@ class GeneralPage(QWidget):
         app_form.addRow(_("Notifications:"), self.notify_level)
         self.start_at_login = QCheckBox(_("Start VoiceMate when I sign in"))
         app_form.addRow("", self.start_at_login)
+        # Windows only: Windows 11 hides new tray icons in the overflow behind the arrow.
+        self.tray_icon_visible: QCheckBox | None = None
+        if platform == "win32":
+            self.tray_icon_visible = QCheckBox(_("Always show the VoiceMate icon on the taskbar"))
+            self.tray_icon_visible.setToolTip(
+                _(
+                    "Shows the icon with the recording and transcription state next to the clock, "
+                    "instead of hiding it behind the arrow."
+                )
+            )
+            self.tray_icon_visible.toggled.connect(self.changed)
+            app_form.addRow("", self.tray_icon_visible)
         layout.addLayout(app_form)
 
         engine_box = QGroupBox(_("Engine"))
@@ -554,6 +566,8 @@ class GeneralPage(QWidget):
             _select(self.language, settings.language, texts.language_labels())
             _select(self.notify_level, settings.notify_level, texts.notify_level_labels())
             self.start_at_login.setChecked(settings.start_at_login)
+            if self.tray_icon_visible is not None:
+                self.tray_icon_visible.setChecked(settings.tray_icon_visible)
             _select(self.engine_mode, settings.engine_mode, texts.engine_mode_labels())
             self.wsl_distro.setText(settings.wsl_distro)
             self.engine_dir.setText(settings.engine_dir)
@@ -565,11 +579,15 @@ class GeneralPage(QWidget):
         notify_level: NotifyLevel = self.notify_level.currentData()
         engine_mode: EngineMode = self.engine_mode.currentData()
         policy: WslRestartPolicy = self.wsl_restart_policy.currentData()
+        tray_icon_visible = (
+            settings.tray_icon_visible if self.tray_icon_visible is None else self.tray_icon_visible.isChecked()
+        )
         return replace(
             settings,
             language=language,
             notify_level=notify_level,
             start_at_login=self.start_at_login.isChecked(),
+            tray_icon_visible=tray_icon_visible,
             engine_mode=engine_mode,
             wsl_distro=self.wsl_distro.text().strip(),
             engine_dir=self.engine_dir.text().strip(),

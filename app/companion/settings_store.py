@@ -261,6 +261,7 @@ def parse_settings(text: str, platform: str = sys.platform) -> LoadResult:
         ),
         notify_level=reader.literal("notify_level", get_args(NotifyLevel), defaults.notify_level),
         start_at_login=reader.boolean("start_at_login", defaults.start_at_login),
+        tray_icon_visible=reader.boolean("tray_icon_visible", defaults.tray_icon_visible),
     )
     known = {field.name for field in fields(CompanionSettings)}
     for key in data:
@@ -320,6 +321,7 @@ def dump_settings(settings: CompanionSettings) -> str:
         f"wsl_restart_policy = {_toml_value(settings.wsl_restart_policy)}",
         f"notify_level = {_toml_value(settings.notify_level)}",
         f"start_at_login = {_toml_value(settings.start_at_login)}",
+        f"tray_icon_visible = {_toml_value(settings.tray_icon_visible)}",
     ]
     if not settings.hotkeys:
         lines.append("hotkeys = []")  # explicit: no hotkeys at all (absent = defaults)
@@ -442,6 +444,8 @@ class SettingsStore:
         self._lock = threading.Lock()
         self.broken_backup: Path | None = None
         result = self._load()
+        # No settings file existed yet: this is the first run (first-run tips).
+        self.first_run = result.missing
         self._settings = result.settings
         self._read_only = result.read_only
 

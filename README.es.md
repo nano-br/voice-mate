@@ -315,7 +315,9 @@ En ambos casos el motor sigue en WSL2 (instálalo como en [docs/wsl2.md](docs/ws
 
 ### Anclar a la barra de tareas
 
-Windows no permite que los instaladores anclen aplicaciones. Abre Inicio, busca VoiceMate, haz clic derecho sobre él y elige **Anclar a la barra de tareas**. Hacer clic en el icono anclado con VoiceMate en ejecución abre la ventana de estado; el clic derecho ofrece **Configuración**, **Reiniciar el motor**, **Reiniciar WSL...** y **Salir de VoiceMate**. Anclar usa el acceso directo del menú Inicio, así que aplica a la aplicación instalada.
+Windows no permite que los instaladores anclen aplicaciones. Abre Inicio, busca VoiceMate, haz clic derecho sobre él y elige **Anclar a la barra de tareas**. Hacer clic en el icono anclado con VoiceMate en ejecución abre la ventana de estado; el clic derecho ofrece **Configuración**, **Reiniciar el motor**, **Reiniciar WSL...** y **Salir de VoiceMate**. Anclar usa el acceso directo del menú Inicio, así que aplica a la aplicación instalada. En la primera ejecución, una notificación **Ancla VoiceMate a la barra de tareas** recuerda estos pasos.
+
+El icono de la bandeja (el micrófono que muestra grabando, transcribiendo y listo, como el indicador de micrófono en uso de Windows) es otra cosa: Windows 11 oculta los iconos nuevos de la bandeja detrás de la flecha junto al reloj, así que VoiceMate mantiene su icono en la barra de tareas de forma predeterminada. Para devolverlo detrás de la flecha, desmarca **Mostrar siempre el icono de VoiceMate en la barra de tareas** en Configuración > **General**.
 
 ### Salir
 
@@ -329,7 +331,7 @@ Desde el código fuente: `make run-tray ARGS="--command quit"`. Un `--command` n
 
 ### Configuración
 
-Menú del icono de la bandeja > **Configuración...**, en tres pestañas: **Atajos**; **Sonidos** (sonidos integrados o tus propios archivos WAV, volumen); **General**: idioma, notificaciones, **Iniciar VoiceMate al iniciar sesión** y el motor (modo, distro de WSL, carpeta del motor y **Reiniciar WSL si falla el audio**: **Automáticamente**, **Preguntar antes** o **Nunca**). La configuración se guarda en `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) y se conserva al desinstalar. Los logs están en `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); menú del icono de la bandeja > **Motor** > **Abrir registros** abre la carpeta.
+Menú del icono de la bandeja > **Configuración...**, en tres pestañas: **Atajos**; **Sonidos** (sonidos integrados o tus propios archivos WAV, volumen); **General**: idioma, notificaciones, **Iniciar VoiceMate al iniciar sesión**, **Mostrar siempre el icono de VoiceMate en la barra de tareas** (solo en Windows) y el motor (modo, distro de WSL, carpeta del motor y **Reiniciar WSL si falla el audio**: **Automáticamente**, **Preguntar antes** o **Nunca**). La configuración se guarda en `%APPDATA%\VoiceMate\companion.toml` (Linux: `~/.config/voicemate/companion.toml`) y se conserva al desinstalar. Los logs están en `%LOCALAPPDATA%\VoiceMate\logs` (Linux: `~/.local/state/voicemate/logs`); menú del icono de la bandeja > **Motor** > **Abrir registros** abre la carpeta.
 
 ### Linux (opcional)
 

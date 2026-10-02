@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
 from dataclasses import replace
 
@@ -9,7 +10,7 @@ pytest.importorskip("PySide6")
 
 from PySide6.QtCore import Qt  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
-from PySide6.QtWidgets import QApplication  # noqa: E402
+from PySide6.QtWidgets import QApplication, QCheckBox  # noqa: E402
 
 from app.companion.contract import (  # noqa: E402
     CompanionSettings,
@@ -19,7 +20,7 @@ from app.companion.contract import (  # noqa: E402
 )
 from app.companion.ui.app import CompanionUi  # noqa: E402
 from app.companion.ui.demo_controller import FakeController  # noqa: E402
-from app.companion.ui.settings_window import SettingsDialog  # noqa: E402
+from app.companion.ui.settings_window import GeneralPage, SettingsDialog  # noqa: E402
 
 Mod = Qt.KeyboardModifier
 
@@ -447,3 +448,30 @@ def test_errors_do_not_reopen_the_dialog_while_quitting(
     process_events()
     assert not process_events(lambda: dialog.isVisible(), timeout=0.3)
     assert process_events(lambda: exits == [0], timeout=3.0)  # let the quit finish in this test
+
+
+def test_tray_icon_checkbox_only_on_windows(qapp: QApplication) -> None:
+    hidden = CompanionSettings(tray_icon_visible=False)
+    windows = GeneralPage(platform="win32")
+    assert windows.tray_icon_visible is not None
+    assert windows.tray_icon_visible.text() == "Always show the VoiceMate icon on the taskbar"
+    windows.load(hidden)
+    assert not windows.tray_icon_visible.isChecked()
+    edits: list[None] = []
+    windows.changed.connect(lambda: edits.append(None))
+    windows.tray_icon_visible.setChecked(True)
+    assert edits  # an edit enables Apply
+    assert windows.apply_to(hidden).tray_icon_visible is True
+
+    linux = GeneralPage(platform="linux")
+    assert linux.tray_icon_visible is None
+    assert not any(
+        box.text() == "Always show the VoiceMate icon on the taskbar" for box in linux.findChildren(QCheckBox)
+    )
+    linux.load(hidden)
+    assert linux.apply_to(hidden).tray_icon_visible is False  # kept as saved
+
+
+def test_the_settings_dialog_follows_the_running_os(ui: CompanionUi) -> None:
+    dialog = _open(ui)
+    assert (dialog.general_page.tray_icon_visible is not None) == (sys.platform == "win32")

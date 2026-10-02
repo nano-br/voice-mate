@@ -469,6 +469,23 @@ def test_notify_level_filters() -> None:
     assert sim.notes == []
 
 
+@pytest.mark.parametrize("level", ["all", "warnings", "errors"])
+def test_the_pin_tip_is_info_yet_shown_unless_notifications_are_off(level: NotifyLevel) -> None:
+    sim = Sim(notify_level=level)
+    effects = sim.feed(NoticeRequested("pin_taskbar"))
+    assert sim.notes == [
+        (
+            "info",
+            "Pin VoiceMate to the taskbar",
+            "Open Start, search for VoiceMate, right-click it and choose Pin to taskbar.",
+        )
+    ]
+    assert effects.notifications[0].action == "none" and effects.cue is None
+    sim = Sim(notify_level="none")
+    sim.feed(NoticeRequested("pin_taskbar"))
+    assert sim.notes == []
+
+
 def test_manual_copy_shows_ready_without_a_cue() -> None:
     sim = Sim().healthy()
     sim.feed(DeliveryOutcome(job(manual=True), True))
