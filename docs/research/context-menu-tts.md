@@ -1,66 +1,68 @@
-# Pesquisa: Menu de Contexto do SO + Text-to-Speech
+# Research: OS context menu + text-to-speech
 
-## Objetivo
+Purpose: research notes (written early in the project) on reading selected text aloud from the operating system's context menu. Kept for reference; nothing here is implemented. The TTS that shipped speaks Claude's answers ([usage.md](../usage.md#tts-engines)). Back to the [README](../../README.md).
 
-Permitir que o usuário selecione texto em qualquer aplicativo, clique com botão direito, e tenha uma opção "VoiceMate: Ler texto" (ou similar) que pronuncie o texto selecionado. Evolução futura do projeto para bidirecional: voz→texto E texto→voz.
+## Goal
+
+Let the user select text in any application, right-click it, and get an option such as "VoiceMate: Read text" that speaks the selected text. A future evolution of the project into both directions: voice to text AND text to voice.
 
 ---
 
-## Parte 1: Integração com Menu de Contexto
+## Part 1: context menu integration
 
-### Windows — Registry Shell Extensions
+### Windows: registry shell extensions
 
-**Abordagem com biblioteca `context_menu`:**
+**With the `context_menu` library:**
 ```python
 from context_menu import menus
 
 def read_text(filenames, params):
-    # Recebe texto selecionado ou arquivo
+    # Receives the selected text or file
     import subprocess
     subprocess.run(["voice-mate", "--speak", filenames[0]])
 
 cm = menus.ContextMenu("VoiceMate", type="FILES")
 cm.add_items([
-    menus.ContextCommand("Ler texto", command=read_text),
+    menus.ContextCommand("Read text", command=read_text),
 ])
-cm.compile()  # Registra no Windows Registry
+cm.compile()  # Registers in the Windows Registry
 ```
 
-**Abordagem manual (winreg):**
+**By hand (winreg):**
 ```
 HKEY_CLASSES_ROOT\*\shell\VoiceMate\
-    (Default) = "VoiceMate: Ler"
+    (Default) = "VoiceMate: Read"
     Icon = "path\to\voicemate.ico"
     command\
         (Default) = "python path\to\voicemate.py --speak "%1""
 ```
 
-**Limitações:**
-- Menu de contexto do Windows funciona para **arquivos** no Explorer
-- Para texto selecionado em qualquer app, a abordagem é diferente: precisa ler do clipboard
-- Fluxo alternativo: "Copiar texto → Hotkey → VoiceMate lê do clipboard"
+**Limitations:**
+- The Windows context menu works for **files** in Explorer.
+- For selected text in any app the approach is different: it has to read from the clipboard.
+- Alternative flow: "Copy text, then hotkey, then VoiceMate reads from the clipboard".
 
-**Biblioteca:** `context_menu` (PyPI) ou `WindowsContextMenu` (GitHub)
+**Library:** `context_menu` (PyPI) or `WindowsContextMenu` (GitHub)
 
-### macOS — Automator Quick Actions (Services)
+### macOS: Automator Quick Actions (Services)
 
-**Como funciona:**
-1. Criar um Quick Action no Automator
-2. Configurar para receber "texto" de "qualquer aplicação"
-3. Adicionar ação "Run Shell Script" que chama VoiceMate
-4. Salvar em `~/Library/Services/`
+**How it works:**
+1. Create a Quick Action in Automator.
+2. Set it to receive "text" from "any application".
+3. Add a "Run Shell Script" action that calls VoiceMate.
+4. Save it in `~/Library/Services/`.
 
-**Resultado:** Aparece no menu de contexto (botão direito) como "VoiceMate: Ler" em qualquer app que tenha texto selecionado.
+**Result:** it shows in the context menu (right click) as "VoiceMate: Read" in any app with selected text.
 
 ```bash
-# Script dentro do Automator:
+# Script inside Automator:
 echo "$1" | python3 -m voicemate --speak-stdin
 ```
 
-**Prós:** Integração nativa, funciona em qualquer app, sem dependências extras
-**Contras:** Requer configuração manual pelo usuário (ou script de setup)
+**Pros:** native integration, works in any app, no extra dependencies.
+**Cons:** the user has to set it up by hand (or with a setup script).
 
-### Linux — Nautilus Extensions + Freedesktop
+### Linux: Nautilus extensions + freedesktop
 
 **Nautilus (GNOME):**
 ```python
@@ -71,55 +73,55 @@ class VoiceMateExtension(GObject.GObject, Nautilus.MenuProvider):
     def get_file_items(self, files):
         item = Nautilus.MenuItem(
             name="VoiceMate::Read",
-            label="VoiceMate: Ler texto",
+            label="VoiceMate: Read text",
         )
         item.connect("activate", self.on_read, files)
         return [item]
 ```
 
-**Scripts simples:**
-- Colocar script em `~/.local/share/nautilus/scripts/VoiceMate-Ler`
-- Funciona no file manager, não em apps arbitrários
+**Simple scripts:**
+- Put a script in `~/.local/share/nautilus/scripts/VoiceMate-Read`.
+- Works in the file manager, not in arbitrary apps.
 
-**Para texto em qualquer app:** Similar ao Windows, melhor usar hotkey + clipboard.
+**For text in any app:** as on Windows, a hotkey plus the clipboard works better.
 
-### Abordagem Universal: Hotkey + Clipboard
+### Universal approach: hotkey + clipboard
 
-A forma mais confiável e cross-platform de "ler texto selecionado" em qualquer aplicativo:
+The most reliable cross-platform way to "read the selected text" in any application:
 
-1. Usuário seleciona texto
-2. Pressiona hotkey dedicado (ex: `ctrl+alt+r`)
-3. VoiceMate copia a seleção atual (`Ctrl+C` simulado)
-4. Lê o texto do clipboard
-5. Pronuncia via TTS
+1. The user selects text.
+2. Presses a dedicated hotkey (for example `ctrl+alt+r`).
+3. VoiceMate copies the current selection (simulated `Ctrl+C`).
+4. Reads the text from the clipboard.
+5. Speaks it with TTS.
 
-Isso funciona em **qualquer aplicativo** em **qualquer SO**, sem precisar de integração com context menu.
+This works in **any application** on **any OS**, without context menu integration.
 
 ---
 
-## Parte 2: Bibliotecas de Text-to-Speech
+## Part 2: text-to-speech libraries
 
-### pyttsx3 — Offline, Cross-platform
+### pyttsx3: offline, cross-platform
 
 ```python
 import pyttsx3
 
 engine = pyttsx3.init()
-engine.setProperty("rate", 150)     # Velocidade
+engine.setProperty("rate", 150)     # Speed
 engine.setProperty("volume", 0.9)   # Volume
-# Vozes disponíveis dependem do SO:
+# Available voices depend on the OS:
 # Windows: SAPI5 (Microsoft voices)
 # macOS: NSSpeechSynthesizer
 # Linux: espeak
-engine.say("Olá, mundo!")
+engine.say("Hello, world!")
 engine.runAndWait()
 ```
 
-**Prós:** Offline, sem API key, cross-platform, controle de velocidade/voz
-**Contras:** Qualidade robótica, vozes limitadas, PT-BR depende das vozes instaladas no SO
-**Ideal para:** Feedback rápido, ambientes sem internet
+**Pros:** offline, no API key, cross-platform, control of speed and voice.
+**Cons:** robotic quality, limited voices; Brazilian Portuguese depends on the voices installed in the OS.
+**Best for:** quick feedback, environments without internet.
 
-### edge-tts — Neural voices da Microsoft (Gratuito)
+### edge-tts: Microsoft neural voices (free)
 
 ```python
 import edge_tts
@@ -132,15 +134,15 @@ async def speak(text):
 asyncio.run(speak("Olá, mundo!"))
 ```
 
-**Vozes PT-BR disponíveis:**
-- `pt-BR-FranciscaNeural` (feminina, natural)
-- `pt-BR-AntonioNeural` (masculina, natural)
+**Brazilian Portuguese voices available:**
+- `pt-BR-FranciscaNeural` (female, natural)
+- `pt-BR-AntonioNeural` (male, natural)
 
-**Prós:** Qualidade neural excelente, 200+ vozes, 70+ idiomas, gratuito
-**Contras:** Requer internet, depende de serviço Microsoft (pode mudar)
-**Ideal para:** Qualidade profissional, PT-BR natural
+**Pros:** excellent neural quality, 200+ voices, 70+ languages, free.
+**Cons:** needs internet, depends on a Microsoft service (which may change).
+**Best for:** professional quality, natural Brazilian Portuguese.
 
-### gTTS — Google Text-to-Speech
+### gTTS: Google Text-to-Speech
 
 ```python
 from gtts import gTTS
@@ -149,33 +151,33 @@ tts = gTTS("Olá, mundo!", lang="pt-br")
 tts.save("output.mp3")
 ```
 
-**Prós:** Simples, boa qualidade, muitos idiomas
-**Contras:** Requer internet, Google API, sem controle de velocidade nativo
-**Ideal para:** Uso simples, prototipagem
+**Pros:** simple, good quality, many languages.
+**Cons:** needs internet, Google API, no native speed control.
+**Best for:** simple use, prototyping.
 
-### Comparação
+### Comparison
 
-| Biblioteca | Offline | Qualidade | PT-BR | Latência | Dependências |
+| Library | Offline | Quality | Brazilian Portuguese | Latency | Dependencies |
 |-----------|---------|-----------|-------|----------|-------------|
-| **pyttsx3** | Sim | Baixa-Média | Depende do SO | Baixa | Mínimas |
-| **edge-tts** | Não | Alta (neural) | Excelente | Média | `edge-tts` |
-| **gTTS** | Não | Média-Alta | Boa | Média-Alta | `gtts` |
+| **pyttsx3** | Yes | Low to medium | Depends on the OS | Low | Minimal |
+| **edge-tts** | No | High (neural) | Excellent | Medium | `edge-tts` |
+| **gTTS** | No | Medium to high | Good | Medium to high | `gtts` |
 
-### Recomendação
+### Recommendation
 
-**Primário:** `edge-tts` — qualidade neural, PT-BR natural com `pt-BR-FranciscaNeural`
-**Fallback:** `pyttsx3` — quando sem internet ou para latência mínima
+**Primary:** `edge-tts`, for neural quality and natural Brazilian Portuguese with `pt-BR-FranciscaNeural`.
+**Fallback:** `pyttsx3`, without internet or for minimal latency.
 
-**Arquitetura sugerida:**
+**Suggested architecture:**
 ```python
 class TextToSpeech(Protocol):
     def speak(self, text: str) -> None: ...
 
 class EdgeTTSSpeaker:
-    """Neural TTS via Microsoft Edge (requer internet)."""
+    """Neural TTS through Microsoft Edge (needs internet)."""
 
 class OfflineSpeaker:
-    """TTS offline via pyttsx3."""
+    """Offline TTS through pyttsx3."""
 
 def create_speaker(prefer_offline: bool = False) -> TextToSpeech:
     if prefer_offline:
@@ -185,27 +187,27 @@ def create_speaker(prefer_offline: bool = False) -> TextToSpeech:
 
 ---
 
-## Parte 3: Fluxo Completo Proposto
+## Part 3: proposed complete flow
 
 ```
-[Usuário seleciona texto] → [Hotkey: Ctrl+Alt+R]
-    ↓
-[VoiceMate captura clipboard]
-    ↓
-[TTS processa texto] → [Áudio é reproduzido]
-    ↓
-[Feedback visual: ícone no tray muda / overlay aparece]
+[User selects text] -> [Hotkey: Ctrl+Alt+R]
+    |
+[VoiceMate captures the clipboard]
+    |
+[TTS processes the text] -> [Audio plays]
+    |
+[Visual feedback: the tray icon changes / an overlay appears]
 ```
 
-**Implementação gradual:**
-1. **Fase 1:** Hotkey + clipboard + edge-tts (funciona em qualquer app, qualquer SO)
-2. **Fase 2:** Adicionar context menu do Windows (para quem preferir botão direito)
-3. **Fase 3:** Automator workflow para macOS
-4. **Fase 4:** Nautilus extension para Linux
+**Gradual implementation:**
+1. **Phase 1:** hotkey + clipboard + edge-tts (works in any app, on any OS).
+2. **Phase 2:** add the Windows context menu (for people who prefer the right click).
+3. **Phase 3:** Automator workflow for macOS.
+4. **Phase 4:** Nautilus extension for Linux.
 
 ---
 
-## Referências
+## References
 
 - [context_menu PyPI](https://pypi.org/project/context-menu/)
 - [edge-tts PyPI](https://pypi.org/project/edge-tts/)

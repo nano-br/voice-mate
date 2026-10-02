@@ -1,7 +1,8 @@
 .PHONY: all setup configure doctor setup_env setup_env_minimal setup_env_claude setup_env_tts setup_env_custom lock \
         format lint test stt-eval run run-large run-turbo run-vozes-aleatorias run-reset-voz \
         i18n-extract i18n-init-pt i18n-init-en i18n-init-es i18n-init-ru i18n-init-zh i18n-update i18n-compile i18n-mo clean \
-        companion-venv companion-test companion-lint run-tray companion-build companion-installer
+        companion-venv companion-test companion-lint run-tray companion-build companion-installer \
+        docs-screenshots release-check
 
 all: format lint test
 
@@ -23,7 +24,7 @@ configure:
 	poetry run python -m app.setup.gpu_bootstrap --reconfigure
 
 # Diagnóstico do ambiente: áudio/mic (WSLg), grupo input (evdev), whisper.cpp,
-# Claude CLI, torch+GPU. Nunca aborta — imprime ✓/✗ com a correção de cada item.
+# Claude CLI, torch+GPU. Nunca aborta, imprime ✓/✗ com a correção de cada item.
 doctor:
 	poetry run python -m app.setup.doctor
 
@@ -147,10 +148,13 @@ endif
 COMPANION_PY ?= $(if $(wildcard $(COMPANION_VENV_PY)),"$(COMPANION_VENV_PY)",$(COMPANION_FALLBACK_PY))
 # The interpreter, or an error that stops only the target that needs it.
 companion_py = $(or $(COMPANION_PY),$(error No companion environment: run "make companion-venv" first))
-windows_only = $(if $(filter Windows_NT,$(OS)),,$(error "make $@" builds the Windows app: run it on Windows))
-COMPANION_TESTS := $(wildcard tests/companion) tests/test_import_boundary.py tests/test_companion_packaging.py
+windows_only = $(if $(filter Windows_NT,$(OS)),,$(error "make $@" runs on Windows only: run it on Windows))
+# The release helper too: the release workflow runs it on Windows.
+COMPANION_TESTS := $(wildcard tests/companion) tests/test_import_boundary.py tests/test_companion_packaging.py \
+                   tests/test_release_check.py
 COMPANION_SOURCES := app/companion app/protocol $(COMPANION_TESTS) \
-                     tools/gen_icon.py tools/build_installer.py packaging/windows/voicemate_launcher.py
+                     tools/gen_icon.py tools/build_installer.py tools/release_check.py tools/render_screenshots.py \
+                     packaging/windows/voicemate_launcher.py
 
 # Pinned (requirements/companion-constraints.txt), so builds are reproducible.
 companion-venv:
@@ -179,6 +183,26 @@ companion-build:
 # A custom location: make companion-installer ISCC="C:/path/to/ISCC.exe".
 companion-installer: companion-build
 	$(companion_py) -m tools.build_installer $(if $(ISCC),--iscc "$(ISCC)")
+
+# README screenshots (docs/assets/screenshots/<lang>/) and banners (docs/assets/brand/),
+# rendered by the companion's own UI in every language without showing anything on screen.
+# One language: make docs-screenshots ARGS="--lang pt-BR".
+docs-screenshots:
+	$(windows_only)$(companion_py) -m tools.render_screenshots $(ARGS)
+
+# ─── Release (docs/releasing.md) ─────────────────────────────────────────────
+# Before tagging: the pyproject version is SemVer, CHANGELOG.md has its dated section,
+# docs/releases/vX.Y.Z.md and its five translations exist, the companion agrees.
+# Standard library only, so no environment is needed. Check a tag too:
+#   make release-check TAG=v0.1.0
+ifeq ($(OS),Windows_NT)
+RELEASE_PY ?= py -3
+else
+RELEASE_PY ?= python3
+endif
+
+release-check:
+	$(RELEASE_PY) -m tools.release_check $(if $(TAG),--tag $(TAG))
 
 clean:
 	rm -rf .pytest_cache .ruff_cache .mypy_cache

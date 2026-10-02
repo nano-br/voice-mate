@@ -1,283 +1,200 @@
-# VoiceMate no WSL2 (GPU AMD via ROCm)
+# VoiceMate on WSL2 (AMD GPU through ROCm)
 
-O app roda **inteiro dentro do WSL** (Ubuntu): captura do microfone, transcrição
-na GPU, clipboard e TTS. A única peça do lado Windows é um script mínimo que
-registra as hotkeys globais e dispara um request HTTP local para o daemon —
-hotkeys globais do Windows não chegam a processos em background do WSL.
+Purpose: how to run the VoiceMate engine inside WSL2, mainly with an AMD GPU through ROCm, and what to expect from that setup. This path is **experimental**: it was validated on one AMD card (Radeon RX 9070 XT, RDNA4, `gfx1201`). Back to the [README](../README.md).
 
-```
+The engine runs **entirely inside WSL** (Ubuntu): microphone capture, transcription on the GPU, TTS. Global Windows hotkeys do not reach background processes in WSL, so a Windows-side program owns the hotkeys and talks to the engine over a local HTTP API. That program is the **VoiceMate companion app** (recommended). The old PowerShell and AutoHotkey scripts still work as a legacy option.
+
+```text
 [Windows]  Ctrl+Alt+V / Ctrl+Alt+A
-   │  voicemate-hotkeys.ps1 (ou .ahk)
-   │  POST /register → client_id ; POST /trigger {"flow"} → ação (gravando/transcrevendo)
-   ▼  GET /result ← texto  →  Set-Clipboard nativo no Windows
-[WSL2]  VoiceMate daemon (trigger=socket, 127.0.0.1:47821)
-   ├── mic via PulseAudio do WSLg (RDPSource)
-   ├── STT na GPU AMD (openai-whisper torch ROCm; CT2-ROCm opt-in)
-   ├── publica o texto p/ o Windows buscar (clipboard nativo, confiável)
-   └── Claude + TTS (OmniVoice na GPU / Kokoro na CPU)
+   |  VoiceMate companion (tray app): hotkeys, verified clipboard, sound cues, supervisor
+   |  starts the engine with wsl.exe ... make run-engine, then talks HTTP on 127.0.0.1:47821
+   v
+[WSL2]  VoiceMate engine daemon (trigger=socket, API v2 with a token)
+   |-- microphone through WSLg PulseAudio (RDPSource)
+   |-- speech-to-text on the AMD GPU (openai-whisper on PyTorch ROCm; CTranslate2-ROCm optional)
+   |-- publishes each result for the companion to deliver to the Windows clipboard
+   `-- Claude + TTS (OmniVoice on the GPU, or Kokoro on the CPU), optional
 ```
 
-## Pré-requisitos
+## Prerequisites
 
-1. **Windows 11 + WSL2 atualizado** (`wsl --update`) com WSLg (vem por padrão).
-2. **Driver AMD Adrenalin ≥ 26.2.2** no Windows.
-3. **ROCm dentro do WSL** ([guia oficial AMD](https://rocm.docs.amd.com/projects/radeon/en/latest/docs/install/wsl/install-radeon.html)) — `rocminfo` deve listar a GPU (ex.: `gfx1201`).
-4. Pacotes de áudio/build no Ubuntu:
+1. **Windows 11 with an up-to-date WSL2** (`wsl --update`), with WSLg (included by default).
+2. **AMD Adrenalin driver 26.2.2 or newer** on Windows.
+3. **ROCm inside WSL** ([official AMD guide](https://rocm.docs.amd.com/projects/radeon/en/latest/docs/install/wsl/install-radeon.html)): `rocminfo` must list the GPU (for example `gfx1201`).
+4. Audio and build packages in Ubuntu:
    ```bash
    sudo apt install -y libportaudio2 libasound2-plugins pulseaudio-utils wl-clipboard \
                        git cmake build-essential libvulkan-dev glslc vulkan-tools \
                        spirv-headers spirv-tools glslang-tools espeak-ng
    ```
-   > `espeak-ng` só é necessário para o engine de TTS **Kokoro** (G2P do PT-BR).
-   > `wl-clipboard` (wl-copy) é o caminho de clipboard nativo do WSLg e sincroniza
-   > com o Windows — mais confiável que o `clip.exe` via interop, que falha quando
-   > o systemd remove o binfmt do WSLInterop ("Exec format error").
-   > Os três últimos são exigidos pela compilação dos shaders Vulkan do
-   > whisper.cpp (`SPIRV-Headers`/`glslangValidator`). `libglslang-dev` não
-   > existe com esse nome no Ubuntu 24.04 — os pacotes acima bastam.
+   - `espeak-ng` is only needed by the **Kokoro** TTS engine (Portuguese phonemes).
+   - `wl-clipboard` (`wl-copy`) is the native WSLg clipboard path. It is more reliable than `clip.exe` through interop, which fails when systemd removes the WSLInterop binfmt ("Exec format error"). With the companion, the companion writes the Windows clipboard itself.
+   - The last three packages are needed to compile the Vulkan shaders of whisper.cpp (`SPIRV-Headers`, `glslangValidator`). `libglslang-dev` does not exist under that name on Ubuntu 24.04: the packages above are enough.
+5. Python 3.12, Poetry and `make`, available in a login shell (the companion runs `bash -lc`).
 
-## Instalação
+## Installation
 
-Dentro do WSL:
+Inside WSL:
 
 ```bash
-git clone https://github.com/nano-br/voice-mate.git && cd voice-mate
-make setup     # detecta WSL2 + AMD, instala torch ROCm, whisper.cpp (Vulkan),
-               # oferece o build do CTranslate2-ROCm e salva as escolhas
-make doctor    # diagnóstico: mic/áudio WSLg, binários, GPU — com correções
+git clone https://github.com/nano-br/voice-mate.git ~/voice-mate && cd ~/voice-mate
+make setup     # detects WSL2 + AMD, installs PyTorch ROCm, openai-whisper and whisper.cpp (Vulkan),
+               # offers the CTranslate2-ROCm build and saves your choices
+make doctor    # diagnostics: WSLg microphone and audio, binaries, GPU, with fixes
 ```
 
-> **Aplicativo companion (recomendado no Windows):** o aplicativo de bandeja VoiceMate substitui os
-> dois scripts de hotkeys abaixo (PowerShell e AutoHotkey). Ele inicia e supervisiona o
-> daemon no WSL, registra as hotkeys, escreve o clipboard do Windows (com confirmação) e
-> reinicia o WSL quando o áudio trava. Instalação e uso: "Aplicativo companion (bandeja)" no
-> [README](../README.pt-BR.md#aplicativo-companion-bandeja). Com o companion, não rode nenhum
-> dos scripts e tire os atalhos deles do `shell:startup`. Os scripts continuam
-> funcionando com o daemon do `make run`.
+Then install the companion on Windows: see [installation.md](installation.md#windows-installer-with-the-engine-in-wsl2). The companion finds the engine in `~/voice-mate` (or one of the other folders listed there), starts it, supervises it, registers the hotkeys, writes the Windows clipboard with verification, and restarts WSL when its audio gets stuck.
 
-No Windows, registre as hotkeys:
+## Running
 
-- **PowerShell** (recomendado — também seta o clipboard nativo via `/result`):
-  `powershell -ExecutionPolicy Bypass -File scripts\windows\voicemate-hotkeys.ps1`
-  Para iniciar com o Windows, crie um atalho em `shell:startup` (veja o cabeçalho
-  do script). As mensagens saem em pt-BR, en, es, ru ou zh-CN: por padrão o script
-  fala o mesmo idioma do daemon (o `lang` do `/health`), para não misturar idiomas
-  ao repassar as mensagens dele; antes de conectar, usa o idioma do Windows. Para
-  fixar, use `-Language pt-BR|en|es|ru|zh-CN` ou defina `VOICEMATE_LANG` no Windows.
-  Avisos importantes (sem microfone, áudio do WSL travado, transcrição que não
-  entrou no clipboard) também viram notificação do Windows; `-NoToast` desliga.
-- **AutoHotkey v2**: dê dois cliques em `scripts\windows\voicemate-hotkeys.ahk`.
-  Hoje ele **só dispara o gatilho** — o clipboard nativo é feito pelo script
-  PowerShell.
+With the companion, there is nothing to run by hand: start VoiceMate on Windows. Press `Ctrl+Alt+V` anywhere in Windows, wait for the start cue, speak, press `Ctrl+Alt+V` again: the transcription lands in the Windows clipboard. `Ctrl+Alt+A` runs the Claude flow (answer in the clipboard and read aloud), which is **experimental** too.
 
-## Rodando
+Without the companion, `make run` in WSL starts the engine and prints the port of the daemon; one of the legacy scripts below then provides the hotkeys.
 
-```bash
-make run    # no WSL — imprime a porta do daemon e fica escutando
-```
+### How the text reaches the Windows clipboard
 
-Aperte `Ctrl+Alt+V` em qualquer lugar do Windows → beep → fale → `Ctrl+Alt+V`
-de novo → transcrição no clipboard do Windows. `Ctrl+Alt+A` faz o fluxo Claude
-(resposta no clipboard + falada via TTS).
+On WSL2 the WSLg clipboard bridge (and `clip.exe` through interop) is not reliable: sometimes the text never reaches Windows. So the **Windows side** writes the clipboard: the daemon publishes each result, and the companion writes the native clipboard, reads it back and compares, then acknowledges the result. A result that cannot be delivered goes to the **Not copied** list. While the companion holds the clipboard lease, the engine does not write the clipboard itself. The protocol is described in [architecture.md](architecture.md) and [companion-app.md](companion-app.md).
 
-### Como o texto chega ao clipboard do Windows
+### Missing microphone or stuck WSLg audio
 
-No WSL2 a ponte de clipboard do WSLg (e o `clip.exe` via interop) é instável — às
-vezes o texto transcrito não chega ao Windows. Por isso quem escreve o clipboard
-de verdade é o **lado Windows**: o daemon publica o resultado e o script de
-hotkeys faz `GET /result`, setando o clipboard nativo com `Set-Clipboard` (com
-read-back + reasserção, à prova da contenção momentânea do clipboard). O daemon
-expõe um protocolo **com estado** para isso, em `127.0.0.1:47821`:
+Opening the microphone never blocks the hotkey: it runs in the background and the trigger answers at once. If the microphone does not open within 6 seconds (no microphone on Windows, or WSLg PulseAudio stuck), the engine reports "Microphone unavailable", plays the error cue, returns to idle and publishes a `mic_unavailable` event. The next hotkey tries to open the microphone again; while an earlier attempt is still stuck in the audio server, it fails at once (without piling up another stuck attempt) and asks for `wsl --shutdown`. The start cue only plays once the microphone is really open.
 
-- `POST /register` → um `client_id` (vários ouvintes podem coexistir);
-- `POST /trigger {"flow"}` → devolve a **ação** (`started`/`stopped`/`restarted`):
-  feedback imediato de que o atalho foi recebido e do que ele fez;
-- `GET /status` / `GET /result` → estado e texto, com `?scope=all` (default —
-  ouve qualquer consumidor) ou `?scope=mine` (só o que aquele `client_id`
-  iniciou), e `?since=<seq>` para drenar os resultados em ordem sem perder
-  nenhum. Um item com `error` preenchido (texto vazio) é um **evento de erro**,
-  por exemplo `mic_unavailable`, com a mensagem pronta em `message`; o script
-  avisa no console e com uma notificação do Windows. Se o `instance` mudar, o
-  daemon reiniciou e o `seq` recomeçou do zero (o script volta a drenar do início);
-- `GET /health` → `pid`, `instance`, `lang` (o catálogo que o daemon está usando)
-  e `audio` (`ok`/`down`/`unknown`): a saúde do PulseAudio do WSLg, sondada com
-  `pactl info` a cada 20s;
-- `POST /shutdown` → encerra o daemon de forma limpa.
-
-### Microfone ausente ou áudio do WSLg travado
-
-Abrir o microfone nunca trava o atalho: a abertura roda em segundo plano e o
-`/trigger` responde na hora. Se o microfone não abrir (nenhum mic no Windows ou o
-PulseAudio do WSLg travado), em até 6s o daemon avisa "Microfone indisponível",
-toca o bipe de erro, volta ao estado ocioso e publica o evento `mic_unavailable`.
-O próximo atalho tenta abrir o microfone de novo; enquanto uma abertura anterior
-continuar presa no servidor de áudio, ele falha na hora (sem empilhar outra
-abertura travada) e pede `wsl --shutdown`. O bipe de início só toca depois que o
-microfone abriu de verdade.
-
-Atenção: quando o Windows fica sem microfone, o PulseAudio do WSLg costuma
-**travar de vez** e não volta sozinho mesmo depois de reconectar o mic
-(`pactl info` dá `Connection failure: Timeout`). Nesse caso só `wsl --shutdown`
-resolve; depois rode `make run` de novo.
+Warning: when Windows loses its microphone, WSLg PulseAudio often **gets stuck for good** and does not recover even after the microphone is back (`pactl info` gives `Connection failure: Timeout`). Only `wsl --shutdown` fixes it. The companion detects this (the engine probes the audio every 20 seconds) and restarts WSL as set in "Restart WSL when audio fails:" ([troubleshooting.md](troubleshooting.md#wsl-audio-and-the-microphone)). Without the companion: run `wsl --shutdown`, then `make run` again.
 
 ### Autostart (systemd)
 
-Com o aplicativo companion o serviço é opcional: o companion inicia o motor sozinho; se o
-serviço estiver habilitado, ele se conecta ao daemon do serviço e, na primeira
-execução, oferece desabilitá-lo.
+With the companion, the service is optional: the companion starts the engine itself. If the `voicemate` systemd user service is enabled, the companion attaches to the engine of the service and, on every start, shows the notification "Engine run by systemd" with the command that disables the service: `systemctl --user disable --now voicemate`. It does not disable the service for you.
 
-O `make setup` oferece instalar o serviço; manualmente:
+`make setup` offers to install the service (off by default). By hand:
 
 ```bash
 cp scripts/systemd/voicemate.service ~/.config/systemd/user/
-# ajuste o WorkingDirectory se o checkout não está em ~/voice-mate
+# edit WorkingDirectory if the checkout is not in ~/voice-mate
 systemctl --user daemon-reload
 systemctl --user enable --now voicemate
-loginctl enable-linger $USER     # serviço vivo mesmo sem terminal aberto
+loginctl enable-linger $USER       # keeps the service alive without an open terminal
 journalctl --user -u voicemate -f  # logs
 ```
 
-## Performance de STT no WSL2 (importante)
+The service runs `poetry run voice-mate --trigger socket`, without a token.
 
-**No WSL2 o whisper.cpp via Vulkan NÃO acelera na GPU.** O Mesa, dentro do WSL2,
-só expõe o `llvmpipe` — uma implementação de Vulkan **por software, rodando na
-CPU**. A RX 9070 XT só é alcançável via **ROCm/HIP** (`/dev/dxg`), não via
-Vulkan. Rodar o `large-v3-turbo` no llvmpipe leva **minutos** por fala.
+## Speech-to-text performance on WSL2
 
-Por isso, no WSL2 a cadeia de transcrição prioriza o que de fato usa a GPU:
+**On WSL2, whisper.cpp with Vulkan does NOT use the GPU.** Inside WSL2, Mesa only exposes `llvmpipe`: a **software** Vulkan implementation that runs on the CPU. The GPU is only reachable through **ROCm/HIP** (`/dev/dxg`), not through Vulkan. Running `large-v3-turbo` on `llvmpipe` takes **minutes** per recording.
 
+So on WSL2 the transcription chain prefers what really uses the GPU:
+
+```text
+faster-whisper on CTranslate2-ROCm (if validated)  ->  openai-whisper (PyTorch ROCm)  ->  whisper.cpp (last resort)  ->  CPU
 ```
-faster-whisper-rocm (se CT2-ROCm validado)  →  openai-whisper (torch ROCm)  →  whisper.cpp (último recurso)  →  CPU
-```
 
-O **openai-whisper** roda sobre o mesmo torch ROCm que já acelera o TTS
-(OmniVoice) — `make configure` o instala automaticamente na AMD/Linux. Uma fala
-de 5 s deve transcrever em ~1–3 s.
+On native Linux the order is CTranslate2-ROCm, whisper.cpp with Vulkan, openai-whisper, CPU, because there Vulkan does reach the GPU.
 
-Como confirmar o device Vulkan escolhido pelo whisper.cpp (quando ele é usado):
-o servidor agora grava o log em `~/.cache/voicemate/whispercpp/server.log` — a
-linha `ggml_vulkan: found device:` mostra `llvmpipe` no WSL2. O `make doctor`
-também sinaliza isso ("Vulkan SEM GPU real").
+**openai-whisper** runs on the same PyTorch ROCm that already accelerates the TTS (OmniVoice); `make setup` installs it on AMD with Linux or WSL2 (extra `whisper-gpu`). A 5 second recording should transcribe in about 1 to 3 seconds.
 
-### CT2-ROCm (faster-whisper na GPU) — opt-in de qualidade máxima
+To confirm the Vulkan device that whisper.cpp picked (when it is used): the server writes its log to `~/.cache/voicemate/whispercpp/server.log`, and the line `ggml_vulkan: found device:` shows `llvmpipe` on WSL2. `make doctor` flags it too.
 
-Recupera a qualidade idêntica à da `main` (faster-whisper CUDA) na GPU AMD. É um
-build pesado (`make configure` → aceitar o CTranslate2-ROCm). Risco conhecido em
-gfx1201: relatos de *memory access fault* (OpenNMT/CTranslate2#2021); o app já
-aplica o workaround `CT2_CUDA_ALLOCATOR=cub_caching`. Se o build/validação
-falhar, a cadeia cai sozinha para o openai-whisper (decisão persistida em
-`ct2_rocm_ok`). O `hipcc` já vem com o usecase `rocm` do ROCm 7.2.
+### CTranslate2-ROCm (faster-whisper on the GPU): optional, best quality
 
-> O whisper.cpp **HIP** (em vez de Vulkan) resolveria isso nativamente, mas o PR
-> de suporte a gfx120X (ggml-org/whisper.cpp#3757) ainda não foi mergeado.
+It brings back the quality of faster-whisper on CUDA, on the AMD GPU. It is a heavy build (`make configure`, then accept CTranslate2-ROCm). Known risk on `gfx1201`: reports of a *memory access fault* (OpenNMT/CTranslate2#2021); the app already applies the workaround `CT2_CUDA_ALLOCATOR=cub_caching`. If the build or the validation fails, the chain falls back to openai-whisper by itself, and the decision is saved as `ct2_rocm_ok`. `hipcc` comes with the `rocm` use case of ROCm 7.2.
 
-## PyTorch ROCm — fonte dos wheels
+> whisper.cpp with **HIP** (instead of Vulkan) would solve this natively, but the pull request that adds `gfx120X` support (ggml-org/whisper.cpp#3757) is not merged yet.
 
-No Linux/WSL2 + AMD o `make setup` instala os **wheels manylinux do
-`repo.radeon.com`** (torch + torchvision + torchaudio + triton, com
-`numpy==1.26.4`) — é a combinação que a AMD publica e testa para WSL.
+## PyTorch ROCm: where the wheels come from
 
-Se o venv **já tem** um torch `+rocm` acelerando (instalação validada
-manualmente), o setup **não reinstala por cima** — ele detecta e mantém. Para
-forçar a reinstalação: `pip uninstall torch` dentro do venv e `make configure`.
+On Linux and WSL2 with AMD, `make setup` installs the **manylinux wheels from `repo.radeon.com`** (torch, torchvision, torchaudio and triton, with `numpy==1.26.4`): the combination AMD publishes and tests for WSL.
 
-> A trilha de ROCm do WSL é a **7.2** (pacote `7.2.70200`, instalado com
-> `amdgpu-install --usecase=wsl,rocm --no-dkms`). Não use a `7.2.4` — é a trilha
-> de Linux nativo e não tem o usecase `wsl`.
+If the environment **already has** a `+rocm` torch that accelerates (a manually validated install), setup **does not reinstall over it**: it detects it and keeps it. To force a reinstall: `pip uninstall torch` inside the environment, then `make configure`.
 
-## Variáveis de ambiente recomendadas (`~/.bashrc`)
+> The ROCm track for WSL is **7.2** (package `7.2.70200`, installed with `amdgpu-install --usecase=wsl,rocm --no-dkms`). Do not use `7.2.4`: that is the native Linux track and has no `wsl` use case.
+
+## Recommended environment variables (`~/.bashrc`)
 
 ```bash
-export PULSE_SERVER=unix:/mnt/wslg/PulseServer       # mic/áudio do WSLg
-export PYTORCH_HIP_ALLOC_CONF=expandable_segments:True   # fragmentação de VRAM
-export FLASH_ATTENTION_TRITON_AMD_ENABLE="TRUE"      # flash-attn via Triton (RDNA4)
+export PULSE_SERVER=unix:/mnt/wslg/PulseServer          # WSLg microphone and audio
+export PYTORCH_HIP_ALLOC_CONF=expandable_segments:True  # VRAM fragmentation
+export FLASH_ATTENTION_TRITON_AMD_ENABLE="TRUE"         # flash attention through Triton (RDNA4)
 ```
 
-O app já cuida sozinho de `PYTORCH_TUNABLEOP_*`/`MIOPEN_*` (cache em
-`~/.cache/voicemate`) e de `CT2_CUDA_ALLOCATOR=cub_caching` (workaround do
-faster-whisper-ROCm em gfx1201) — exportar é opcional, vale para outros apps.
+The app already sets `PYTORCH_TUNABLEOP_*` and `MIOPEN_*` (cache in `~/.cache/voicemate`) and `CT2_CUDA_ALLOCATOR=cub_caching` when they are absent. Exporting them is optional and helps other apps.
 
-> **Não** sete `HSA_OVERRIDE_GFX_VERSION` nem `HSA_ENABLE_DXG_DETECTION`: a
-> RX 9070 XT é reconhecida nativamente como `gfx1201` pela trilha WSL do ROCm.
+> Do **not** set `HSA_OVERRIDE_GFX_VERSION` or `HSA_ENABLE_DXG_DETECTION`: the WSL track of ROCm recognizes the RX 9070 XT natively as `gfx1201`.
 
-## Limitações conhecidas do WSL2 (não são erros)
+## Known WSL2 limitations (not bugs)
 
-- `rocm-smi` / `amd-smi` **não funcionam** no WSL2 — a detecção do app usa
-  `rocminfo` (que funciona). VRAM: `cat /sys/class/drm/card0/device/mem_info_vram_used`.
-- VRAM visível < 16 GB (~13–14 GB úteis — overhead da camada DXCore/librocdxg).
-- Overhead geral de ~10–20% vs Linux nativo.
+- `rocm-smi` and `amd-smi` **do not work** on WSL2; the app detects the GPU with `rocminfo`, which works. VRAM in use: `cat /sys/class/drm/card0/device/mem_info_vram_used`.
+- Visible VRAM is below 16 GB (about 13 to 14 GB usable), because of the DXCore/librocdxg layer.
+- About 10 to 20 % overhead compared with native Linux.
 
-## Engines de TTS (resposta falada do Claude)
+## TTS engines (Claude's spoken answer)
 
-| Engine | Voz | Onde roda | RTF (RX 9070 XT) |
+| Engine | Voice | Runs on | Real-time factor measured on an RX 9070 XT |
 |---|---|---|---|
-| `omnivoice` (padrão) | clona voz (difusão) | GPU | ~0.7 (satura a GPU na síntese) |
-| `kokoro` | fixa (~82M) | **CPU** por padrão | **~0.24 (realtime, GPU livre)** |
+| `omnivoice` (used when nothing is saved) | clones a voice (diffusion) | GPU | about 0.7 (saturates the GPU while it synthesizes) |
+| `kokoro` | fixed (about 82M parameters) | **CPU** by default | **about 0.24 (real time, GPU left free)** |
 
-No WSL2/AMD o **Kokoro roda na CPU** de propósito: medimos RTF ~0.24 (realtime) e,
-assim, a síntese **não disputa a GPU com a transcrição** — que é o que causava o
-chiado por contenção. (Curiosidade: no ROCm os kernels do Kokoro ainda são lentos,
-RTF ~1.8 na GPU; CPU é melhor nos dois sentidos.) Trocar:
+On WSL2 with AMD, **Kokoro runs on the CPU** on purpose: at a real-time factor of about 0.24 the synthesis **does not compete with transcription for the GPU**, which is what caused crackling. (On ROCm the Kokoro kernels are still slow, a real-time factor of about 1.8 on the GPU; the CPU is better in both respects.) To switch:
 
 ```bash
 make run ARGS="--tts-engine kokoro --tts-kokoro-voice pf_dora"
-# vozes PT-BR: pf_dora (feminina), pm_alex / pm_santa (masculinas)
-# --tts-device cuda força a GPU (não recomendado aqui — mais lento)
+# Portuguese voices: pf_dora (female), pm_alex and pm_santa (male)
+# --tts-device cuda forces the GPU (not recommended here: slower)
 ```
 
-Pré-requisitos do Kokoro: o extra (`poetry install --extras kokoro`). O `espeak-ng`
-do PT-BR vem embarcado via `espeakng-loader` (dependência do misaki) — o pacote de
-sistema `espeak-ng` é só um reforço. A prosódia PT-BR do Kokoro é mais "robótica"
-que a do OmniVoice (difusão); é a troca por realtime sem mexer na GPU. Compare e
-use o que preferir.
+Kokoro needs its extra (`poetry install --extras kokoro`). Portuguese `espeak-ng` data comes bundled through `espeakng-loader` (a dependency of misaki); the system `espeak-ng` package is a backup. Kokoro's Portuguese prosody sounds more robotic than OmniVoice's: that is the trade for real time without touching the GPU. Compare and keep the one you prefer.
 
-## Microfone no WSLg
+## Microphone on WSLg
 
-O WSLg expõe o microfone do Windows como source PulseAudio (`RDPSource`):
+WSLg exposes the Windows microphone as a PulseAudio source (`RDPSource`):
 
 ```bash
-export PULSE_SERVER=unix:/mnt/wslg/PulseServer   # coloque no ~/.bashrc
-pactl list sources short    # deve listar RDPSource
-pactl list sinks short      # deve listar RDPSink (saída de áudio)
+export PULSE_SERVER=unix:/mnt/wslg/PulseServer   # put it in ~/.bashrc
+pactl list sources short    # must list RDPSource
+pactl list sinks short      # must list RDPSink (audio output)
 ```
 
-Se o PortAudio (sounddevice) não enxergar os devices, instale o shim ALSA→Pulse
-(`libasound2-plugins`, ver pré-requisitos) — o `make doctor` confere tudo isso.
+If PortAudio (`sounddevice`) does not see the devices, install the ALSA to PulseAudio shim (`libasound2-plugins`, see the prerequisites). `make doctor` checks all of this.
 
-### Chiado no TTS (buffer de áudio)
+> Privacy: in Windows Settings > Privacy > Microphone, check that desktop apps may use the microphone.
 
-No WSLg o áudio de saída passa por PulseAudio sobre RDP, com jitter alto. Com o
-buffer default (~34 ms) o player "fome" no meio da fala → underrun → um chiado.
-O app define `PULSE_LATENCY_MSEC=200` no boot e abre o stream com um bloco maior
-(~340 ms efetivos), absorvendo o jitter. Para ajustar manualmente:
+### TTS crackle (audio buffer)
+
+On WSLg, audio output goes through PulseAudio over RDP, with high jitter. With the default buffer (about 34 ms) the player runs dry in the middle of a sentence and crackles. The app sets `PULSE_LATENCY_MSEC=200` at start and opens the stream with a larger block (about 340 ms in effect), which absorbs the jitter. To adjust it by hand:
 
 ```bash
-export PULSE_LATENCY_MSEC=300   # mais folga (latência maior) se ainda chiar
+export PULSE_LATENCY_MSEC=300   # more headroom (more latency) if it still crackles
 ```
 
-> Privacidade: confira em Configurações do Windows → Privacidade → Microfone
-> que apps desktop podem usar o microfone.
+## Legacy hotkey scripts (without the companion)
 
-## Solução de problemas
+Before the companion, a script on Windows registered the hotkeys and called the daemon. The scripts still work, but only against an engine **without a token** (`make run`), never with the companion's `make run-engine`. Do not run them together with the companion: close them and remove their shortcut from `shell:startup`, or the companion reports "Used by another app".
 
-| Sintoma | Causa provável | Correção |
+- **PowerShell:** `powershell -ExecutionPolicy Bypass -File scripts\windows\voicemate-hotkeys.ps1`. It also sets the native clipboard through `/result`, with read-back. To start it with Windows, create a shortcut in `shell:startup` (see the script header). Its messages follow the daemon's language, or `-Language pt-BR|en|es|ru|zh-CN`, or `VOICEMATE_LANG` on Windows. Important warnings also become Windows notifications; `-NoToast` turns them off.
+- **AutoHotkey v2:** double-click `scripts\windows\voicemate-hotkeys.ahk`. It **only triggers** the daemon; the native clipboard needs the PowerShell script.
+
+The scripts use the v1 routes of the daemon: `POST /register` (a `client_id`), `POST /trigger {"flow"}` (returns the action taken: `started`, `stopped` or `restarted`), `GET /status` and `GET /result` (with `?scope=all|mine` and `?since=<seq>`; an item with `error` set is an error event such as `mic_unavailable`), `GET /health` (`pid`, `instance`, `lang`, `audio`) and `POST /shutdown`.
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
 |---|---|---|
-| Hotkey não faz nada | daemon parado / script Windows não rodando | `make run` no WSL; rode o .ps1 |
-| Clipboard não atualiza | script PowerShell parado | veja o feedback no console do .ps1 (gravando/transcrevendo/confirmado) |
-| "Daemon offline" no Windows | daemon parado / porta diferente | `make run`; confira `--daemon-port` e o print do `make run` |
-| "Microfone indisponível" | nenhum mic no Windows, ou PulseAudio do WSLg travado | conecte um mic; se o Windows já tem mic, `wsl --shutdown` e `make run` |
-| `/health` com `"audio": "down"` | PulseAudio do WSLg travado | `wsl --shutdown` e `make run` |
-| Sem device de entrada | mic WSLg desabilitado | `wsl --update`; `make doctor` |
-| Transcrição lenta (10–50x) | caiu p/ CPU silenciosamente | `make doctor` (torch GPU); `rocminfo` |
-| CT2-ROCm falhou no build | ROCm dev incompleto | `make doctor`; instale rocm-hip-sdk; `make configure` re-tenta |
+| Hotkey does nothing | Engine stopped, or (legacy) Windows script not running | Check the tray state and `engine.log`; with the scripts, `make run` in WSL and run the `.ps1` |
+| "daemon offline" (legacy script) | Engine stopped or another port | `make run`; check `--daemon-port` and the port `make run` prints |
+| "Microphone unavailable" | No microphone on Windows, or WSLg PulseAudio stuck | Connect a microphone; if Windows has one, restart WSL (companion menu **Engine** > **Restart WSL...**, or `wsl --shutdown` and `make run`) |
+| `/health` reports `"audio": "down"` | WSLg PulseAudio stuck | Restart WSL as above |
+| No input device | WSLg microphone disabled | `wsl --update`; `make doctor` |
+| Transcription 10 to 50 times slower | Fell back to the CPU | `make doctor` (PyTorch with GPU); `rocminfo` |
+| CTranslate2-ROCm build failed | Incomplete ROCm development packages | `make doctor`; install the ROCm HIP SDK; `make configure` tries again |
 
-## Qualidade de transcrição
+More in [troubleshooting.md](troubleshooting.md).
 
-Gate objetivo (WER + palavras quebradas) contra amostras suas:
+## Transcription quality
+
+An objective gate (word error rate and split words) against your own samples:
 
 ```bash
-make stt-eval ARGS="--backends faster-whisper --save-baseline"  # uma vez (referência)
-make stt-eval                                                   # compara todos os backends
+make stt-eval ARGS="--backends faster-whisper --save-baseline"  # once (reference)
+make stt-eval                                                   # compares every backend
 ```
 
-Veja `samples/ptbr/README.md`.
+See `samples/ptbr/README.md`.

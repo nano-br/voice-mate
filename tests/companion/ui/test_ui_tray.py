@@ -331,10 +331,13 @@ def test_clear_list_in_the_not_copied_submenu_asks_first(
     assert box.windowTitle() == 'Clear the "Not copied" list?'
     default = box.defaultButton()
     assert default is not None and default.text() == "Cancel"  # Enter never deletes the texts
+    # Looked up before the `is` check below: without PySide6 (the engine's mypy run on
+    # Linux) `box` is `Any | None`, and that check widens it back to Optional.
+    button = next(candidate for candidate in box.buttons() if candidate.text() == answer)
     _action(tray.pending_menu, "Clear list").trigger()  # a second click raises the same question
     assert ui._clear_pending_box is box
     assert fake.called("clear_pending") == []
-    next(button for button in box.buttons() if button.text() == answer).click()
+    button.click()
     assert process_events(lambda: ui._clear_pending_box is None)
     assert fake.called("clear_pending") == clears
     process_events()

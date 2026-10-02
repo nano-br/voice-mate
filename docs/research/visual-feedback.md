@@ -1,29 +1,31 @@
-# Pesquisa: Feedback Visual para VoiceMate
+# Research: visual feedback for VoiceMate
 
-## Objetivo
+Purpose: research notes (written before the companion app existed) on visual indicators for VoiceMate. Kept for reference; the shipped design is the tray icon of the companion app ([brand.md](../brand.md), [companion-app.md](../companion-app.md)). Back to the [README](../../README.md).
 
-Substituir ou complementar os feedbacks sonoros com indicadores visuais que funcionem por cima de qualquer aplicação aberta (WhatsApp, IDE, browser, etc.).
+## Goal
+
+Replace or complement the sound cues with visual indicators that work on top of any open application (WhatsApp, IDE, browser, and so on).
 
 ---
 
-## Opção 1: Overlay transparente com tkinter (Recomendado para MVP)
+## Option 1: transparent overlay with tkinter (recommended for an MVP)
 
-**Como funciona:** Uma janela minúscula (15-20px), sem bordas, semi-transparente, que fica sempre por cima de todas as janelas. Muda de cor conforme o estado (gravando = vermelho pulsante, idle = verde/escondido).
+**How it works:** a tiny window (15 to 20 px), without borders, semi-transparent, that always stays on top of every window. It changes color with the state (recording = pulsing red, idle = green or hidden).
 
-**Implementação:**
+**Implementation:**
 ```python
 import tkinter as tk
 
 root = tk.Tk()
-root.overrideredirect(True)          # Remove bordas e título
-root.attributes("-topmost", True)     # Sempre por cima
-root.attributes("-alpha", 0.7)        # 70% opacidade
-root.geometry("20x20+1890+10")        # 20px no canto superior direito
+root.overrideredirect(True)          # Remove borders and title
+root.attributes("-topmost", True)     # Always on top
+root.attributes("-alpha", 0.7)        # 70% opacity
+root.geometry("20x20+1890+10")        # 20 px in the top right corner
 
 canvas = tk.Canvas(root, width=20, height=20, bg="red", highlightthickness=0)
 canvas.pack()
 
-# Animação de pulso
+# Pulse animation
 def pulse():
     current = root.attributes("-alpha")
     new_alpha = 0.3 if current > 0.5 else 0.7
@@ -31,20 +33,20 @@ def pulse():
     root.after(500, pulse)
 ```
 
-**Considerações:**
-- tkinter tem seu próprio event loop (`mainloop()`), precisa rodar em thread separada ou usar `root.after()` para integrar com o loop principal
-- No Windows, pode usar `-transparentcolor` para transparência por cor (pixel-perfect)
-- Cross-platform: funciona em Windows, macOS e Linux
-- Zero dependências extras (tkinter vem com Python)
+**Considerations:**
+- tkinter has its own event loop (`mainloop()`): it must run in a separate thread, or use `root.after()` to integrate with the main loop.
+- On Windows, `-transparentcolor` gives transparency by color (pixel-perfect).
+- Cross-platform: works on Windows, macOS and Linux.
+- No extra dependencies (tkinter ships with Python).
 
-**Prós:** Leve, built-in, simples
-**Contras:** Visual básico, threading com tkinter pode ser delicado (tkinter não é thread-safe — usar `root.after()` para comunicação entre threads)
+**Pros:** light, built in, simple.
+**Cons:** basic look; threading with tkinter can be delicate (tkinter is not thread-safe: use `root.after()` to communicate between threads).
 
 ---
 
-## Opção 2: PyQt6/PySide6 — Overlay sofisticado
+## Option 2: PyQt6/PySide6, a refined overlay
 
-**Como funciona:** Janela frameless com transparência por pixel, renderização suave, cantos arredondados.
+**How it works:** a frameless window with per-pixel transparency, smooth rendering and rounded corners.
 
 ```python
 from PyQt6.QtWidgets import QWidget, QApplication
@@ -56,22 +58,22 @@ class Overlay(QWidget):
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
-            | Qt.WindowType.Tool  # Não aparece na taskbar
+            | Qt.WindowType.Tool  # Does not show in the taskbar
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        # Click-through (eventos de mouse passam para a janela abaixo):
+        # Click-through (mouse events go to the window below):
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.setGeometry(1890, 10, 40, 40)
 ```
 
-**Prós:** Renderização profissional, per-pixel transparency, click-through nativo, animações fluidas
-**Contras:** Dependência pesada (~60MB), overkill para um indicador simples
+**Pros:** professional rendering, per-pixel transparency, native click-through, smooth animations.
+**Cons:** heavy dependency (about 60 MB), overkill for a simple indicator.
 
 ---
 
-## Opção 3: System Tray com pystray (Recomendado como complemento)
+## Option 3: system tray with pystray (recommended as a complement)
 
-**Como funciona:** Ícone no system tray (bandeja do sistema) que muda de ícone/cor para indicar estado. Menu de contexto para configurações rápidas.
+**How it works:** an icon in the system tray (notification area) that changes icon or color to show the state, with a context menu for quick settings.
 
 ```python
 import pystray
@@ -84,39 +86,39 @@ def create_icon(color):
 icon = pystray.Icon(
     "voicemate",
     create_icon("green"),
-    "VoiceMate - Pronto",
+    "VoiceMate - Ready",
     menu=pystray.Menu(
-        pystray.MenuItem("Gravando", None, enabled=False),
-        pystray.MenuItem("Sair", lambda: icon.stop()),
+        pystray.MenuItem("Recording", None, enabled=False),
+        pystray.MenuItem("Quit", lambda: icon.stop()),
     ),
 )
 icon.run()
 ```
 
-**Mudança de estado:**
+**State change:**
 ```python
-# Quando começa a gravar:
+# When recording starts:
 icon.icon = create_icon("red")
-icon.title = "VoiceMate - Gravando..."
+icon.title = "VoiceMate - Recording..."
 
-# Quando para:
+# When it stops:
 icon.icon = create_icon("green")
-icon.title = "VoiceMate - Pronto"
+icon.title = "VoiceMate - Ready"
 ```
 
-**Dependências:** `pystray` + `Pillow`
-**Prós:** Familiar ao usuário, não invade a tela, cross-platform, leve
-**Contras:** Pode ser discreto demais, nem sempre visível se muitos ícones no tray
+**Dependencies:** `pystray` + `Pillow`
+**Pros:** familiar to users, does not take over the screen, cross-platform, light.
+**Cons:** can be too discreet; not always visible when the tray has many icons.
 
 ---
 
-## Opção 4: Toast Notifications
+## Option 4: toast notifications
 
 ### Windows (win11toast)
 ```python
 from win11toast import toast
 
-toast("VoiceMate", "Transcrição copiada para clipboard!", duration="short")
+toast("VoiceMate", "Transcription copied to the clipboard!", duration="short")
 ```
 
 ### Cross-platform (desktop-notifier)
@@ -124,31 +126,31 @@ toast("VoiceMate", "Transcrição copiada para clipboard!", duration="short")
 from desktop_notifier import DesktopNotifier
 
 notifier = DesktopNotifier()
-await notifier.send(title="VoiceMate", message="Gravação iniciada")
+await notifier.send(title="VoiceMate", message="Recording started")
 ```
 
-**Prós:** Nativo do SO, familiar, não requer janela própria
-**Contras:** Não serve para estado contínuo ("gravando"), só para eventos pontuais ("transcrição concluída")
+**Pros:** native to the OS, familiar, needs no window of its own.
+**Cons:** not suited to a continuous state ("recording"), only to one-off events ("transcription done").
 
 ---
 
-## Recomendação
+## Recommendation
 
-| Abordagem | Quando usar | Complexidade |
+| Approach | When to use it | Complexity |
 |-----------|-------------|-------------|
-| **pystray (tray icon)** | MVP — indicador sempre visível, mínimo esforço | Baixa |
-| **tkinter overlay** | Stretch goal — dot vermelho pulsante sobre a tela | Média |
-| **Toast notifications** | Complemento — "transcrição copiada!" | Baixa |
-| **PyQt6 overlay** | Futuro — se quiser UI rica com animações | Alta |
+| **pystray (tray icon)** | MVP: an indicator that is always visible, minimal effort | Low |
+| **tkinter overlay** | Stretch goal: a pulsing red dot over the screen | Medium |
+| **Toast notifications** | Complement: "transcription copied!" | Low |
+| **PyQt6 overlay** | Future: if a rich UI with animations is wanted | High |
 
-**Sugestão de implementação gradual:**
-1. Primeiro: pystray para tray icon (indica estado, menu para sair)
-2. Depois: toast notification no "transcrição copiada"
-3. Futuro: tkinter overlay para indicador visual em tempo real
+**Suggested gradual implementation:**
+1. First: pystray for the tray icon (shows the state, menu to quit).
+2. Then: a toast notification on "transcription copied".
+3. Future: a tkinter overlay for a real-time visual indicator.
 
 ---
 
-## Referências
+## References
 
 - [pystray PyPI](https://pypi.org/project/pystray/)
 - [desktop-notifier PyPI](https://pypi.org/project/desktop-notifier/)
