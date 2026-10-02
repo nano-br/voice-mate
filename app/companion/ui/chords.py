@@ -1,164 +1,33 @@
 """Hotkey chords in the UI: key capture and QKeySequence conversion ("ctrl+alt+v" <-> Qt).
 
 The chord text format, its rules and its display belong to the core module
-`app/companion/chords.py`. The section marked MIRROR below repeats that module's
-public behavior exactly (same key names, same rules, same display), so this branch
-works on its own; at merge, replace it with `from app.companion.chords import ...`
-(tests/companion/ui/test_ui_chords.py compares both when the core module exists).
-This module itself only adds what needs Qt: turning a key press into a chord, and
-chords into QKeySequence objects and back.
+`app/companion/chords.py` and are imported (and re-exported) from it. This module
+only adds what needs Qt: turning a key press into a chord, and chords into
+QKeySequence objects and back.
 """
 
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass
-from typing import Final, Literal
+from typing import Final
 
 from PySide6.QtCore import QKeyCombination, Qt
 from PySide6.QtGui import QKeySequence
 
-# ---------------------------------------------------------------------------------------
-# MIRROR of app/companion/chords.py (core stream). Keep identical; drop at merge.
-# ---------------------------------------------------------------------------------------
-
-Modifier = Literal["ctrl", "alt", "shift", "win"]
-MODIFIERS: Final[tuple[Modifier, ...]] = ("ctrl", "alt", "shift", "win")
-_MODIFIER_ALIASES: Final[dict[str, Modifier]] = {
-    "ctrl": "ctrl",
-    "control": "ctrl",
-    "alt": "alt",
-    "shift": "shift",
-    "win": "win",
-    "windows": "win",
-    "super": "win",
-    "meta": "win",
-}
-
-FUNCTION_KEYS: Final = tuple(f"f{n}" for n in range(1, 25))
-# Windows reserves F12 for the debugger (RegisterHotKey refuses it, even with modifiers).
-RESERVED_KEYS: Final = frozenset({"f12"})
-LETTER_KEYS: Final = tuple(chr(code) for code in range(ord("a"), ord("z") + 1))
-DIGIT_KEYS: Final = tuple(str(n) for n in range(10))
-NAMED_KEYS: Final = (
-    "space",
-    "enter",
-    "tab",
-    "esc",
-    "backspace",
-    "insert",
-    "delete",
-    "home",
-    "end",
-    "page up",
-    "page down",
-    "up",
-    "down",
-    "left",
-    "right",
-    "pause",
-    "print screen",
+from app.companion.chords import (  # noqa: F401 (re-exported for the UI modules)
+    _DISPLAY_MODIFIERS,
+    _KEY_ALIASES,
+    _MODIFIER_ALIASES,
+    FUNCTION_KEYS,
+    KEY_NAMES,
+    MODIFIERS,
+    NUMPAD_KEYS,
+    Chord,
+    Modifier,
+    display_chord,
+    normalize_chord,
+    parse_chord,
 )
-NUMPAD_KEYS: Final = tuple(f"num{n}" for n in range(10))
-PUNCTUATION_KEYS: Final = (";", "=", ",", "-", ".", "/", "`", "[", "\\", "]", "'")
-_KEY_ALIASES: Final = {
-    "escape": "esc",
-    "return": "enter",
-    "del": "delete",
-    "ins": "insert",
-    "pageup": "page up",
-    "pgup": "page up",
-    "pagedown": "page down",
-    "pgdn": "page down",
-    "printscreen": "print screen",
-    "prtsc": "print screen",
-}
-KEY_NAMES: Final = frozenset(FUNCTION_KEYS + LETTER_KEYS + DIGIT_KEYS + NAMED_KEYS + NUMPAD_KEYS + PUNCTUATION_KEYS)
-_PRINTABLE_KEYS: Final = frozenset(LETTER_KEYS + DIGIT_KEYS + PUNCTUATION_KEYS + ("space",))
-
-_DISPLAY_MODIFIERS: Final[dict[Modifier, str]] = {"ctrl": "Ctrl", "alt": "Alt", "shift": "Shift", "win": "Win"}
-_DISPLAY_NAMED: Final = {
-    "space": "Space",
-    "enter": "Enter",
-    "tab": "Tab",
-    "esc": "Esc",
-    "backspace": "Backspace",
-    "insert": "Insert",
-    "delete": "Delete",
-    "home": "Home",
-    "end": "End",
-    "page up": "PageUp",
-    "page down": "PageDown",
-    "up": "Up",
-    "down": "Down",
-    "left": "Left",
-    "right": "Right",
-    "pause": "Pause",
-    "print screen": "PrintScreen",
-}
-
-
-@dataclass(frozen=True)
-class Chord:
-    modifiers: frozenset[Modifier]
-    key: str
-
-    def normalized(self) -> str:
-        parts: list[str] = [mod for mod in MODIFIERS if mod in self.modifiers]
-        parts.append(self.key)
-        return "+".join(parts)
-
-
-def parse_chord(text: str) -> Chord | None:
-    """None when `text` is not a usable global hotkey (same rules as the core)."""
-    raw = text.strip().lower()
-    if not raw:
-        return None
-    parts = [" ".join(part.split()) for part in raw.split("+")]
-    if any(not part for part in parts):
-        return None
-    modifiers: set[Modifier] = set()
-    key: str | None = None
-    for part in parts:
-        mod = _MODIFIER_ALIASES.get(part)
-        if mod is not None:
-            if mod in modifiers:
-                return None
-            modifiers.add(mod)
-            continue
-        if key is not None:
-            return None
-        key = _KEY_ALIASES.get(part, part)
-    if key is None or key not in KEY_NAMES or key in RESERVED_KEYS:
-        return None
-    if key not in FUNCTION_KEYS:
-        if not modifiers:
-            return None
-        if modifiers == {"shift"} and key in _PRINTABLE_KEYS:
-            return None
-    return Chord(frozenset(modifiers), key)
-
-
-def normalize_chord(text: str) -> str | None:
-    chord = parse_chord(text)
-    return chord.normalized() if chord is not None else None
-
-
-def display_chord(text: str) -> str:
-    """Human form for menus and tooltips ("Ctrl+Alt+V"); unparsable text is returned as is."""
-    chord = parse_chord(text)
-    if chord is None:
-        return text
-    parts = [_DISPLAY_MODIFIERS[mod] for mod in MODIFIERS if mod in chord.modifiers]
-    key = chord.key
-    if key in _DISPLAY_NAMED:
-        parts.append(_DISPLAY_NAMED[key])
-    elif key.startswith("num") and len(key) == 4:
-        parts.append(f"Num{key[3]}")
-    else:
-        parts.append(key.upper())
-    return "+".join(parts)
-
 
 # ---------------------------------------------------------------------------------------
 # Qt layer: key capture and QKeySequence conversion.
