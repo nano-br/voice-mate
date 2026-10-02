@@ -186,18 +186,43 @@ class DeliveryQueue:
                 if key not in self._acked:
                     self._unsynced.add(key)
 
-    def clear_pending(self) -> int:
-        """The user emptied the Not copied list: drop every item (returns how many).
+    def clear_pending(self, keys: Iterable[Key]) -> tuple[int, list[DeliveryEffect]]:
+        """The user emptied the Not copied list: drop these items (the ones the user saw
+        when confirming; any that arrived since stay). Returns (how many, effects).
 
         They stay known (never offered again by reconciliation); no ACK changes, they
-        were ACKed when they became pending. A restored one whose ACK the daemon never
-        got is still ACKed `dismissed` if the daemon reports it (see `on_unacked`)."""
-        keys = list(self._pending)
-        for key in keys:
+        were ACKed when they became pending. The exception: a restored one whose ACK the
+        daemon never got is ACKed `dismissed` now when it belongs to the current daemon
+        instance (later, from `on_unacked`, while the instance is not known yet)."""
+        targets = [key for key in dict.fromkeys(keys) if key in self._pending]
+        resync = [seq for (instance, seq) in targets if (instance, seq) in self._unsynced and instance == self.instance]
+        for key in targets:
             if key not in self._acked:
                 self._mark_acked(key, "dismissed")
-        self._pending.clear()
-        return len(keys)
+            del self._pending[key]
+        self._unsynced.difference_update((self.instance, seq) for seq in resync)
+        effects: list[DeliveryEffect] = []
+        if resync:
+            effects.append(SendAck(self.instance, tuple(_ack(seq, "dismissed") for seq in resync)))
+        return len(targets), effects
+
+    def abandon_queue(self) -> int:
+        """Quit: results still queued or in flight will not be delivered by this run.
+
+        They move to the pending list (saved to disk), so they are not lost when the
+        engine stops with the app, and stay "unsynced": they were never ACKed, so if the
+        same daemon still reports them on the next start, `on_unacked` ACKs them
+        `dismissed` there instead of delivering them late. Manual copies are dropped (their
+        result is already in the list, or was delivered before). An in-flight write may
+        still land on the clipboard: listing it anyway is the safe side. Returns how many
+        moved."""
+        entries = ([self._in_flight] if self._in_flight is not None else []) + self._queue
+        self._in_flight, self._queue = None, []
+        moved = [entry.job for entry in entries if not entry.job.manual and entry.job.key not in self._acked]
+        for job in moved:
+            self._move_to_pending(job)
+            self._unsynced.add(job.key)
+        return len(moved)
 
     def set_instance(self, instance: str, now: float) -> list[DeliveryEffect]:
         """A new daemon instance: queued results of the old one cannot be ACKed any more,

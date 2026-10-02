@@ -78,6 +78,7 @@ def test_with_neither_the_error_says_what_to_set(monkeypatch: pytest.MonkeyPatch
     with pytest.raises(paths.DataDirError, match=CONFIG_VAR) as raised:
         paths.settings_path()
     assert isinstance(raised.value, RuntimeError)
+    assert (raised.value.variable, raised.value.home_variable) == (CONFIG_VAR, "USERPROFILE" if WINDOWS else "HOME")
     assert ("USERPROFILE" if WINDOWS else "HOME") in str(raised.value)
     with pytest.raises(paths.DataDirError, match=STATE_VAR):
         paths.pending_path()

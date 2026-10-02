@@ -15,9 +15,11 @@ uninstaller removes it. Schema (UTF-8, LF, items oldest first):
 
 `instance` + `result_seq` are the identity the delivery queue and `copy_result` use;
 `age_s` is not stored (the daemon computes it per response). Only the newest `limit`
-items are kept. Never raises: a file that cannot be parsed is moved aside to
-`pending.json.broken-<YYYYmmdd-HHMMSS>` (like a broken companion.toml) and the list
-starts empty; a failed write is logged and the app goes on with the list in memory.
+items are kept. Never raises (`load` runs while the app starts): a file that cannot be
+parsed is moved aside to `pending.json.broken-<YYYYmmdd-HHMMSS>` (like a broken
+companion.toml) and the list starts empty; an invalid item is skipped; a failed write is
+logged and the app goes on with the list in memory. `pending.json.tmp` (a write cut short
+by a crash) is removed at load and whenever the list is emptied: it holds text too.
 """
 
 from __future__ import annotations
@@ -41,6 +43,11 @@ log = logging.getLogger(__name__)
 
 PENDING_FILE_VERSION: Final = 1
 BROKEN_SUFFIX: Final = ".broken"
+TMP_SUFFIX: Final = ".tmp"
+# Windows: os.replace fails while another process briefly holds the target open (an
+# antivirus or the search indexer): try this many times, waiting 50 ms more each time.
+REPLACE_ATTEMPTS: Final = 5
+REPLACE_BACKOFF_S: Final = 0.05
 _KINDS: Final = frozenset(get_args(ResultKind))
 _STATUSES: Final = frozenset(get_args(DeliveryStatus))
 
@@ -68,22 +75,34 @@ def _is_int(value: object) -> TypeGuard[int]:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
+def _timestamp(value: object) -> float | None:
+    """A finite float, or None (a bool, a string, NaN, or an int too large for a float)."""
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return None
+    try:
+        number = float(value)
+    except OverflowError:
+        return None
+    return number if math.isfinite(number) else None
+
+
 def item_from_json(raw: object) -> RecentItem | None:
-    """One stored item, or None when it is not a valid one (skipped, never fatal)."""
+    """One stored item, or None when it is not a valid one (skipped, never fatal).
+
+    Every field is type-checked before it is used, so no JSON value can raise here."""
     if not isinstance(raw, dict):
         return None
     instance, result_seq, op_seq = raw.get("instance"), raw.get("result_seq"), raw.get("op_seq")
     kind, flow, text, final = raw.get("kind"), raw.get("flow"), raw.get("text"), raw.get("final")
-    created_ts, delivery = raw.get("created_ts", 0.0), raw.get("delivery", "failed")
+    delivery = raw.get("delivery", "failed")
+    created_ts = _timestamp(raw.get("created_ts", 0.0))
     if not isinstance(instance, str) or not instance or not isinstance(text, str) or not isinstance(final, bool):
         return None
-    if not _is_int(result_seq) or not _is_int(op_seq):
+    if not _is_int(result_seq) or not _is_int(op_seq) or created_ts is None:
         return None
-    if kind not in _KINDS or delivery not in _STATUSES:
+    if not isinstance(kind, str) or kind not in _KINDS or not isinstance(delivery, str) or delivery not in _STATUSES:
         return None
     if flow is not None and not isinstance(flow, str):
-        return None
-    if not isinstance(created_ts, int | float) or isinstance(created_ts, bool) or not math.isfinite(created_ts):
         return None
     record = ResultRecord(
         result_seq=result_seq,
@@ -92,7 +111,7 @@ def item_from_json(raw: object) -> RecentItem | None:
         flow=flow,
         text=text,
         final=final,
-        created_ts=float(created_ts),
+        created_ts=created_ts,
         age_s=0.0,
         delivery=cast(DeliveryStatus, delivery),
     )
@@ -105,8 +124,8 @@ def parse_pending(text: str, limit: int = PENDING_LIMIT) -> tuple[list[RecentIte
     Raises PendingFileError when the text is not a version 1 pending list at all."""
     try:
         data = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise PendingFileError(f"not valid JSON ({exc})") from exc
+    except (ValueError, RecursionError) as exc:  # bad JSON, an integer over the digit limit, deep nesting
+        raise PendingFileError(f"not valid JSON ({exc.__class__.__name__}: {exc})") from exc
     if not isinstance(data, dict):
         raise PendingFileError("not a JSON object")
     version = data.get("version")
@@ -118,7 +137,10 @@ def parse_pending(text: str, limit: int = PENDING_LIMIT) -> tuple[list[RecentIte
     by_key: dict[tuple[str, int], RecentItem] = {}
     skipped = 0
     for raw in raw_items:
-        item = item_from_json(raw)
+        try:
+            item = item_from_json(raw)
+        except (TypeError, ValueError, OverflowError):  # a safety net: item_from_json checks every type
+            item = None
         if item is None:
             skipped += 1
             continue
@@ -131,7 +153,13 @@ def parse_pending(text: str, limit: int = PENDING_LIMIT) -> tuple[list[RecentIte
 
 def dump_pending(items: Sequence[RecentItem]) -> str:
     payload = {"version": PENDING_FILE_VERSION, "items": [item_to_json(item) for item in items]}
-    return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+    text = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError:
+        # A lone surrogate (JSON can carry one): \u escapes keep the file valid UTF-8.
+        text = json.dumps(payload, ensure_ascii=True, indent=2) + "\n"
+    return text
 
 
 class PendingStore:
@@ -151,9 +179,16 @@ class PendingStore:
     def path(self) -> Path:
         return self._path
 
+    @property
+    def _tmp(self) -> Path:
+        return self._path.with_name(self._path.name + TMP_SUFFIX)
+
     def load(self) -> list[RecentItem]:
-        """The stored items, oldest first. Missing file: empty. Broken file: kept aside, empty."""
+        """The stored items, oldest first. Missing file: empty. Broken file: kept aside, empty.
+
+        Never raises: it runs in the controller's constructor, at every start."""
         with self._lock:
+            self._remove_tmp()  # a write cut short; pending.json itself is whole (os.replace)
             try:
                 text = self._path.read_text(encoding="utf-8")
             except FileNotFoundError:
@@ -165,6 +200,9 @@ class PendingStore:
                 items, skipped = parse_pending(text, self._limit)
             except PendingFileError as exc:
                 self._set_aside(str(exc))
+                return []
+            except Exception as exc:  # noqa: BLE001 - a last resort: never stop the app from starting
+                self._set_aside(f"not readable ({exc.__class__.__name__}: {exc})")
                 return []
             if skipped:
                 log.warning("pending list: %s invalid item(s) in %s skipped", skipped, self._path)
@@ -185,6 +223,7 @@ class PendingStore:
                     self._write(dump_pending(kept))
                 else:
                     self._path.unlink(missing_ok=True)
+                    self._tmp.unlink(missing_ok=True)  # no text may stay behind
             except OSError as exc:
                 if not self._failing:
                     log.warning("pending list: cannot write %s (%s); keeping it in memory only", self._path, exc)
@@ -197,15 +236,28 @@ class PendingStore:
                 self._failing = False
             return True
 
+    def _remove_tmp(self) -> None:
+        try:
+            self._tmp.unlink(missing_ok=True)
+        except OSError as exc:
+            log.warning("pending list: cannot remove %s (%s)", self._tmp, exc)
+
     def _write(self, text: str) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self._path.with_name(self._path.name + ".tmp")
+        tmp = self._tmp
         try:
             with open(tmp, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write(text)
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(tmp, self._path)
+            for attempt in range(1, REPLACE_ATTEMPTS + 1):
+                try:
+                    os.replace(tmp, self._path)
+                    break
+                except PermissionError:  # Windows: the target is briefly open (antivirus, indexer)
+                    if attempt == REPLACE_ATTEMPTS:
+                        raise
+                    time.sleep(REPLACE_BACKOFF_S * attempt)
         except OSError:
             with contextlib.suppress(OSError):
                 tmp.unlink(missing_ok=True)

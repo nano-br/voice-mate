@@ -227,3 +227,100 @@ def test_an_unreadable_file_is_not_fatal(tmp_path: Path) -> None:
     folder.mkdir()  # reading a folder fails with an OSError on every platform
     store = PendingStore(folder)
     assert store.load() == []
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"kind": []},
+        {"kind": {"a": 1}},
+        {"delivery": []},
+        {"delivery": {}},
+        {"instance": ["a"]},
+        {"flow": []},
+        {"final": "yes"},
+        {"op_seq": 1.5},
+        {"created_ts": 10**400},
+        {"created_ts": "1.0"},
+        {"created_ts": None},
+    ],
+)
+def test_wrong_types_are_skipped_never_raised(tmp_path: Path, change: dict[str, object]) -> None:
+    good = json.loads(dump_pending([item(1), item(2)]))["items"]
+    path = tmp_path / "pending.json"
+    path.write_text(json.dumps({"version": 1, "items": [good[0], {**good[1], **change}]}), encoding="utf-8")
+    store = PendingStore(path)
+    assert [i.record["result_seq"] for i in store.load()] == [1]
+    assert store.broken_backup is None
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        '{"version": 1, "items": [{"result_seq": ' + "9" * 5000 + "}]}",  # over the int digit limit
+        "[" * 100_000 + "]" * 100_000,  # nesting deeper than the recursion limit
+    ],
+    ids=["huge-int", "deep-nesting"],
+)
+def test_pathological_json_is_kept_aside_never_raised(tmp_path: Path, content: str) -> None:
+    path = tmp_path / "pending.json"
+    path.write_text(content, encoding="utf-8")
+    store = PendingStore(path)
+    assert store.load() == []
+    assert store.broken_backup is not None and not path.exists()
+
+
+def test_a_lone_surrogate_round_trips(tmp_path: Path) -> None:
+    store = PendingStore(tmp_path / "pending.json")
+    items = [item(1, "broken \ud800 pair"), item(2, "ação")]
+    assert store.save(items)
+    store.path.read_bytes().decode("utf-8")  # still valid UTF-8
+    assert PendingStore(store.path).load() == items
+
+
+def test_replace_is_retried_while_the_target_is_briefly_locked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "pending.json"
+    store = PendingStore(path)
+    real_replace = os.replace
+    failures = [PermissionError("held by the indexer")] * 2
+    sleeps: list[float] = []
+
+    def flaky_replace(src: str | os.PathLike[str], dst: str | os.PathLike[str]) -> None:
+        if failures:
+            raise failures.pop()
+        real_replace(src, dst)
+
+    monkeypatch.setattr(pending_store_module.os, "replace", flaky_replace)
+    monkeypatch.setattr(pending_store_module.time, "sleep", sleeps.append)
+    assert store.save([item(1)])
+    assert sleeps == [0.05, 0.1]
+    assert [i.record["result_seq"] for i in store.load()] == [1]
+
+
+def test_replace_gives_up_after_a_few_attempts(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "pending.json"
+    store = PendingStore(path)
+    calls: list[str] = []
+
+    def locked(src: str | os.PathLike[str], dst: str | os.PathLike[str]) -> None:
+        calls.append(os.fspath(dst))
+        raise PermissionError("locked for good")
+
+    monkeypatch.setattr(pending_store_module.os, "replace", locked)
+    monkeypatch.setattr(pending_store_module.time, "sleep", lambda _s: None)
+    assert store.save([item(1)]) is False
+    assert len(calls) == pending_store_module.REPLACE_ATTEMPTS
+    assert not path.with_name("pending.json.tmp").exists()
+
+
+def test_no_temp_file_with_text_is_left_behind(tmp_path: Path) -> None:
+    path = tmp_path / "pending.json"
+    tmp = path.with_name("pending.json.tmp")
+    tmp.write_text("a write cut short by a crash", encoding="utf-8")
+    store = PendingStore(path)
+    assert store.load() == []
+    assert not tmp.exists()  # removed at startup, even with nothing else to do
+    assert store.save([item(1)])
+    tmp.write_text("another one", encoding="utf-8")
+    assert store.save([])  # the list emptied: the text goes with it
+    assert not path.exists() and not tmp.exists()

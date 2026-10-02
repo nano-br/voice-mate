@@ -29,7 +29,7 @@ Factory: `app/companion/main.py` builds the controller with
 from __future__ import annotations
 
 import sys
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Final, Literal, Protocol, get_args
 
@@ -258,8 +258,10 @@ class CompanionController(Protocol):
         """Put a recent/pending result on the clipboard (verified) and ACK it `delivered`
         (last status wins, also over an earlier `dismissed`)."""
 
-    def clear_pending(self) -> None:
-        """Empty the Not copied list (memory and disk). Nothing is ACKed again: those
-        results were ACKed when they became pending. The UI confirms first."""
+    def clear_pending(self, keys: Sequence[tuple[str, int]]) -> None:
+        """Remove these `(instance, result_seq)` items from the Not copied list (memory and
+        disk): the ones the user saw when confirming, so an item that arrived meanwhile
+        stays. Nothing is ACKed again (they were ACKed when they became pending), except a
+        restored item whose ACK the daemon never got. The UI confirms first."""
 
     def open_logs(self) -> None: ...

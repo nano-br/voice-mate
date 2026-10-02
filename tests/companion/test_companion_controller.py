@@ -218,7 +218,7 @@ def test_clear_pending_empties_the_list_and_deletes_the_file(
     assert wait_until(lambda: recorder.last.pending_unacked == 2)
     assert wait_until(lambda: _stored_texts(make_controller.pending_path) == ["old one", "old two"])
     acks_before = len(daemon.acks)
-    controller.clear_pending()
+    controller.clear_pending([(i.instance, i.record["result_seq"]) for i in controller.pending_results()])
     assert wait_until(lambda: recorder.last.pending_unacked == 0)
     assert controller.pending_results() == []
     assert wait_until(lambda: not make_controller.pending_path.exists())
@@ -226,6 +226,61 @@ def test_clear_pending_empties_the_list_and_deletes_the_file(
     assert controller.pending_results() == [] and len(daemon.acks) == acks_before  # no ACK changes
     assert daemon.ack_status(first) == daemon.ack_status(second) == "dismissed"
     assert parts.clipboard.texts == []
+
+
+def test_a_broken_pending_file_is_reported_and_never_stops_the_start(
+    make_controller: ControllerKit, daemon: FakeDaemon
+) -> None:
+    good = {
+        "instance": "inst-old",
+        "result_seq": 3,
+        "op_seq": 3,
+        "kind": "transcript",
+        "flow": "clipboard",
+        "text": "still here",
+        "final": True,
+        "created_ts": 1.0,
+        "delivery": "failed",
+    }
+    bad = [{**good, "kind": []}, {**good, "delivery": {}}, {**good, "created_ts": 10**400}]
+    make_controller.pending_path.write_text(json.dumps({"version": 1, "items": [*bad, good]}), encoding="utf-8")
+    controller, _parts, _backend = make_controller(daemon)  # an unhashable kind used to raise here
+    assert [i.record["text"] for i in controller.pending_results()] == ["still here"]
+
+    make_controller.pending_path.write_text("{ not json", encoding="utf-8")
+    broken, _parts, _backend = make_controller(daemon)
+    recorder = Recorder(broken)
+    assert broken.pending_results() == []
+    broken.start()
+    assert wait_until(lambda: '"Not copied" list reset' in recorder.titles())
+    note = next(n for n in recorder.notifications if n.title == '"Not copied" list reset')
+    assert "pending.json.broken-" in note.message and note.level == "warning"
+
+
+def test_quit_keeps_what_was_still_queued(make_controller: ControllerKit, daemon: FakeDaemon) -> None:
+    parts = FakeDesktopParts()
+    parts.clipboard.fail_next = 1000  # the clipboard stays locked: the job keeps retrying
+    controller, _parts, _backend = make_controller(daemon, parts=parts)
+    controller.start()
+    assert wait_until(lambda: _connected(controller, daemon))
+    controller.toggle("clipboard")
+    assert wait_until(lambda: daemon.triggers)
+    seq = daemon.publish_result("dictated just before quitting")["data"]["result_seq"]
+    assert wait_until(lambda: parts.clipboard.fail_next < 1000)  # first attempt failed
+    assert controller.pending_results() == []  # still retrying, not given up yet
+    done = threading.Event()
+    controller.quit(done.set)
+    assert done.wait(6)
+    assert _stored_texts(make_controller.pending_path) == ["dictated just before quitting"]
+    assert daemon.ack_status(seq) == "pending"  # never ACKed by the run that quit
+
+    # The daemon kept running (attached): the next run lists it and ACKs it, no late copy.
+    again, again_parts, _backend = make_controller(daemon)
+    assert [i.record["text"] for i in again.pending_results()] == ["dictated just before quitting"]
+    again.start()
+    assert wait_until(lambda: daemon.ack_status(seq) == "dismissed")
+    assert again_parts.clipboard.texts == []
+    assert [i.record["text"] for i in again.pending_results()] == ["dictated just before quitting"]
 
 
 def test_a_pending_list_that_cannot_be_saved_does_not_break_delivery(

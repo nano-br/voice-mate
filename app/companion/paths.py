@@ -27,7 +27,19 @@ PENDING_FILE_NAME = "pending.json"
 
 
 class DataDirError(RuntimeError):
-    """Neither the folder's environment variable nor a home directory is available."""
+    """Neither the folder's environment variable nor a home directory is available.
+
+    `variable` is the folder's variable (APPDATA, LOCALAPPDATA, XDG_*), `home_variable`
+    what gives the home directory (USERPROFILE on Windows, HOME elsewhere): the UI builds
+    its translated message from them (the exception text is English, for the log)."""
+
+    def __init__(self, variable: str, home_variable: str) -> None:
+        super().__init__(
+            f"Cannot locate the VoiceMate data folder: {variable} is not set and the home directory "
+            f"is unknown. Set {variable} or {home_variable} in the environment that starts VoiceMate."
+        )
+        self.variable = variable
+        self.home_variable = home_variable
 
 
 def home_dir() -> Path | None:
@@ -46,11 +58,7 @@ def _env_dir(name: str, fallback: Callable[[Path], Path]) -> Path:
         return Path(value)
     home = home_dir()
     if home is None:
-        home_variable = "USERPROFILE" if sys.platform == "win32" else "HOME"
-        raise DataDirError(
-            f"Cannot locate the VoiceMate data folder: {name} is not set and the home directory "
-            f"is unknown. Set {name} or {home_variable} in the environment that starts VoiceMate."
-        )
+        raise DataDirError(name, "USERPROFILE" if sys.platform == "win32" else "HOME")
     return fallback(home)
 
 

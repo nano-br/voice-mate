@@ -396,13 +396,15 @@ def test_rebuilt_flow_actions_stay_disabled_until_the_engine_is_ready(
     assert not any(action.isEnabled() for action in tray.flow_actions)
 
 
-@pytest.mark.parametrize(("answer", "clears"), [("Clear list", [()]), ("Cancel", [])])
+@pytest.mark.parametrize(("answer", "cleared"), [("Clear list", True), ("Cancel", False)])
 def test_clear_list_in_the_not_copied_submenu_asks_first(
-    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool], answer: str, clears: list[tuple[()]]
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool], answer: str, cleared: bool
 ) -> None:
-    fake.add_pending("first")
-    fake.add_pending("second")
+    first = fake.add_pending("first")
+    second = fake.add_pending("second")
     process_events()
+    seen = tuple((item.instance, item.record["result_seq"]) for item in (first, second))
+    clears = [(seen,)] if cleared else []
     tray = _tray(ui)
     tray.pending_menu.aboutToShow.emit()
     _action(tray.pending_menu, "Clear list").trigger()
@@ -418,4 +420,4 @@ def test_clear_list_in_the_not_copied_submenu_asks_first(
     assert process_events(lambda: ui._clear_pending_box is None)
     assert fake.called("clear_pending") == clears
     process_events()
-    assert tray.pending_menu.menuAction().isVisible() is not bool(clears)
+    assert tray.pending_menu.menuAction().isVisible() is not cleared

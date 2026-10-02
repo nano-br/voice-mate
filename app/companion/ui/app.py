@@ -207,6 +207,8 @@ class CompanionUi(QObject):
             self._clear_pending_box.raise_()
             self._clear_pending_box.activateWindow()
             return
+        # What the user sees now: an item that fails meanwhile is not cleared unseen.
+        keys = tuple((item.instance, item.record["result_seq"]) for item in self._controller.pending_results())
         box, clear = _question(
             _('Clear the "Not copied" list?'),
             _("These transcriptions never reached the clipboard. Once cleared, they cannot be copied any more."),
@@ -218,7 +220,7 @@ class CompanionUi(QObject):
             self._clear_pending_box = None
             box.deleteLater()
             if box.clickedButton() is clear and not self._quitting:
-                self._controller.clear_pending()
+                self._controller.clear_pending(keys)
 
         box.finished.connect(answered)
         self._clear_pending_box = box
@@ -299,7 +301,7 @@ class CompanionUi(QObject):
         if self.settings_dialog is not None:
             self.settings_dialog.hotkeys_page.cancel_capture()
             self.settings_dialog.hide()
-        for attribute in ("_wsl_box", "_restart_wsl_box"):
+        for attribute in ("_wsl_box", "_restart_wsl_box", "_clear_pending_box"):
             box = getattr(self, attribute)
             if box is not None:
                 setattr(self, attribute, None)

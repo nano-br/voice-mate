@@ -55,6 +55,7 @@ from app.companion.contract import (
     UiLanguage,
     WslRestartPolicy,
 )
+from app.companion.paths import home_dir
 from app.companion.ui import texts
 from app.companion.ui.hotkey_edit import HotkeyEdit
 from app.companion.ui.icons import app_icon
@@ -470,7 +471,7 @@ class SoundsPage(QWidget):
         self.changed.emit()
 
     def _choose_file(self, row: _CueRow) -> None:
-        start = row.file.text() or str(Path.home())
+        start = row.file.text() or str(home_dir() or "")
         path, _filter = QFileDialog.getOpenFileName(self, _("Choose a sound file"), start, _("WAV audio") + " (*.wav)")
         if path:
             row.file.setText(str(Path(path)))

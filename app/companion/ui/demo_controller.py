@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from typing import Any
 
@@ -275,11 +275,13 @@ class FakeController:
             count = len(self._pending)
         self.publish(pending_unacked=count)
 
-    def clear_pending(self) -> None:
-        self._call("clear_pending")
+    def clear_pending(self, keys: Sequence[tuple[str, int]]) -> None:
+        chosen = set(keys)
+        self._call("clear_pending", tuple(keys))
         with self._lock:
-            self._pending = []
-        self.publish(pending_unacked=0)
+            self._pending = [item for item in self._pending if (item.instance, item.record["result_seq"]) not in chosen]
+            count = len(self._pending)
+        self.publish(pending_unacked=count)
 
     def open_logs(self) -> None:
         self._call("open_logs")

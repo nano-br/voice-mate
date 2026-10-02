@@ -250,6 +250,14 @@ they belong to:
   see "Tray states, cues and reactions". A restored result the daemon still reports
   as unacked (the old run quit or crashed before its ACK went out) is ACKed
   `dismissed` again and stays in the list; it is never delivered automatically.
+- Quit: results still queued or in flight (e.g. a delivery retrying while another app
+  holds the clipboard) will not be delivered by this run, and the engine may stop
+  with the app and take them along. They move to the pending list before the quit
+  sequence flushes `pending.json` (no notification while quitting), without an ACK:
+  if the same daemon still reports them on the next start, they are ACKed `dismissed`
+  then (as above) and stay in the list. A write that was in flight may still have
+  reached the clipboard: listing it anyway is the safe side. Manual copies waiting in
+  the queue are dropped (their result is already in the list, or was delivered).
 
 ### Other endpoints and flags
 
@@ -336,12 +344,16 @@ window's Not copied group has "Clear" next to "Copy". Both ask first, with a
 non-modal question ('Clear the "Not copied" list?', buttons "Clear list" and
 "Cancel", Cancel being the default for Enter and Esc): the texts cannot be copied
 afterwards, and since the list now survives restarts it holds the only copy of them.
-Answering "Clear list" calls `clear_pending()`, which drops every item from memory
-and deletes `pending.json`. Nothing is ACKed again (those results were ACKed when
-they became pending) and cleared results stay known, so reconciliation never offers
-them again; a restored one whose ACK the daemon never got is still ACKed `dismissed`
-when the daemon reports it. There is no per-item removal: an item leaves the list
-when it is copied or when the whole list is cleared.
+The question remembers the items listed when it opened, and answering "Clear list"
+calls `clear_pending(keys)` with exactly those: a delivery that fails while the
+question is open is not wiped unseen. They are dropped from memory and the file is
+rewritten (deleted when nothing is left). Nothing is ACKed again (those results were
+ACKed when they became pending) and cleared results stay known, so reconciliation
+never offers them again. The exception is a restored result whose ACK the daemon
+never got: it is ACKed `dismissed` at once when it belongs to the current daemon
+instance, otherwise when the daemon reports it. Quit closes the question unanswered.
+There is no per-item removal: an item leaves the list when it is copied or when the
+list is cleared.
 
 ### Notifications
 
@@ -498,10 +510,13 @@ volume = 1.0
 The environment variable always wins, and the home directory is looked up only when
 it is missing: a process started without `USERPROFILE`/`HOME` (PowerShell
 `Start-Process -UseNewEnvironment`) still finds `%APPDATA%` and `%LOCALAPPDATA%`.
-When neither the variable nor a home directory is available, the companion stops at
-startup with `DataDirError` (a `RuntimeError`) that names the variable to set; it
-never guesses a folder (settings written to a temporary folder would be lost
-silently). Helpers that only look for optional things under the home directory (the
+When neither the variable nor a home directory is available, `paths` raises
+`DataDirError` (a `RuntimeError` with `variable` and `home_variable`): it never
+guesses a folder (settings written to a temporary folder would be lost silently).
+`main.py` catches it, logs it, shows a critical message box in the OS language
+("VoiceMate cannot find its data folder: APPDATA is not set...", built from a msgid
+with the variable names, since the exception text is English) and exits with code 1;
+`setup_file_logging` skips companion.log in that case instead of raising. Helpers that only look for optional things under the home directory (the
 Linux engine folder detection, the local API token) treat a missing home directory
 as "not found".
 
@@ -533,18 +548,28 @@ as "not found".
   restart never drops what the user could see; the oldest go first.
 - Written whole on every change (a result added, copied or capped, the list
   cleared), on the `pending` worker thread (temp file + `fsync` +
-  `os.replace`); Quit waits up to 2 s for the last write. An empty list deletes the
-  file. A write that fails is logged (once, until a write works again) and the list
-  stays in memory: disk errors never block the UI or a delivery.
-- A file that is missing starts an empty list. One that is not readable (not UTF-8,
-  not JSON, another `version`, `items` not a list) is moved aside to
-  `pending.json.broken-<YYYYmmdd-HHMMSS>`, never overwritten, and logged once; if it
-  cannot even be moved, nothing is written to it for the rest of the session. Invalid
-  items are skipped with a log line, the valid ones are restored.
+  `os.replace`; on Windows a `PermissionError` from `os.replace`, an antivirus or the
+  search indexer briefly holding the file, is retried up to 5 times, 50 ms more each
+  time); Quit waits up to 2 s for the last write. An empty list deletes the file and
+  any `pending.json.tmp`. A write that fails is logged (once, until a write works
+  again) and the list stays in memory: disk errors never block the UI or a delivery.
+  A lone surrogate in a text (JSON can carry one) is written as a `\u` escape, so the
+  file stays valid UTF-8.
+- Loading never raises (it runs in the controller's constructor, at every start). A
+  leftover `pending.json.tmp` (a write cut short by a crash; `pending.json` itself is
+  always whole) is deleted first. A file that is missing starts an empty list. One
+  that is not readable (not UTF-8, not JSON, an integer over Python's digit limit,
+  nesting too deep, another `version`, `items` not a list) is moved aside to
+  `pending.json.broken-<YYYYmmdd-HHMMSS>`, never overwritten, logged once, and a
+  warning notification ("pending_reset": '"Not copied" list reset', with the backup
+  path) tells the user, like "settings reset" does; if it cannot even be moved,
+  nothing is written to it for the rest of the session. An item with a missing field
+  or a wrong type (a list where a string belongs, a timestamp too large for a float)
+  is skipped with a log line, the valid ones are restored.
 - Privacy: the file holds transcription text. It stays in the user's profile, only
   holds what is waiting for a manual copy, goes away when the list is empty (also
-  after "Clear list"), and the Windows uninstaller deletes it (with its `.tmp` and `.broken-*` copies). The text
-  is never written to the logs.
+  after "Clear list", with its `.tmp`), and the Windows uninstaller deletes it (with
+  its `.tmp` and `.broken-*` copies). The text is never written to the logs.
 
 ### Single instance, taskbar, autostart
 

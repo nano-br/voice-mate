@@ -447,3 +447,26 @@ def test_errors_do_not_reopen_the_dialog_while_quitting(
     process_events()
     assert not process_events(lambda: dialog.isVisible(), timeout=0.3)
     assert process_events(lambda: exits == [0], timeout=3.0)  # let the quit finish in this test
+
+
+def test_the_sound_file_picker_works_without_a_home_folder(ui: CompanionUi, monkeypatch: pytest.MonkeyPatch) -> None:
+    from pathlib import Path
+
+    from app.companion.ui import settings_window
+
+    def no_home(cls: type[Path]) -> Path:
+        raise RuntimeError("Could not determine home directory.")
+
+    starts: list[str] = []
+
+    def pick(parent: object, caption: str, start: str, filters: str) -> tuple[str, str]:
+        starts.append(start)
+        return "", ""
+
+    monkeypatch.setattr(Path, "home", classmethod(no_home))
+    monkeypatch.setattr(settings_window.QFileDialog, "getOpenFileName", pick)
+    sounds = _open(ui).sounds_page
+    row = sounds.rows["ready"]
+    row.file.setText("")
+    sounds._choose_file(row)
+    assert starts == [""]  # the dialog opens where Qt wants instead of failing

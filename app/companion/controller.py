@@ -372,6 +372,9 @@ class CompanionControllerImpl:
         backup = self._store.broken_backup
         if backup is not None:
             self._input(NoticeRequested("settings_reset", (str(backup),)))
+        pending_backup = self._pending_store.broken_backup if self._pending_store is not None else None
+        if pending_backup is not None:
+            self._input(NoticeRequested("pending_reset", (str(pending_backup),)))
         self._io.submit(self._start_desktop)
         self._poller.start()
         self._run(self._policy.start(time.monotonic()))
@@ -453,6 +456,12 @@ class CompanionControllerImpl:
         for timer in self._timers.values():
             timer.cancel()
         self._timers.clear()
+        # What this run will not deliver goes to the Not copied list, saved before the
+        # quit sequence flushes it: the engine may stop with us and take the results along.
+        abandoned = self._delivery.abandon_queue()
+        if abandoned:
+            log.info("quitting: %s undelivered result(s) kept in the Not copied list", abandoned)
+            self._apply_delivery([])
         self._policy.quit()
         self._sync_supervisor()
         self._poller.stop()
@@ -795,11 +804,13 @@ class CompanionControllerImpl:
     def copy_result(self, instance: str, result_seq: int) -> None:
         self._post(lambda: self._apply_delivery(self._delivery.copy(instance, result_seq, time.monotonic())))
 
-    def clear_pending(self) -> None:
+    def clear_pending(self, keys: Sequence[tuple[str, int]]) -> None:
+        chosen = tuple(keys)
+
         def run() -> None:
-            cleared = self._delivery.clear_pending()
-            log.info("Not copied list cleared (%s item(s))", cleared)
-            self._apply_delivery([])  # saves the empty list (deletes pending.json)
+            cleared, effects = self._delivery.clear_pending(chosen)
+            log.info("Not copied list: %s item(s) cleared", cleared)
+            self._apply_delivery(effects)  # saves what is left (an empty list deletes pending.json)
 
         self._post(run)
 
@@ -1267,10 +1278,15 @@ _LOG_HANDLER_NAME: Final = "voicemate-companion-file"
 
 
 def setup_file_logging(log_path: Path | None = None) -> None:
-    """companion.log (rotating) for the `app` loggers; idempotent, never raises."""
-    target = log_path or paths.companion_log_path()
+    """companion.log (rotating) for the `app` loggers; idempotent, never raises (without a
+    data folder, `paths.DataDirError`, or a folder it cannot write, it logs and returns)."""
     app_logger = logging.getLogger("app")
     if any(handler.get_name() == _LOG_HANDLER_NAME for handler in app_logger.handlers):
+        return
+    try:
+        target = log_path or paths.companion_log_path()
+    except paths.DataDirError as exc:
+        log.warning("companion log unavailable: %s", exc)
         return
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -1290,7 +1306,8 @@ def create_controller(settings_path: Path | None = None) -> CompanionController:
     """The production controller: settings from `settings_path` (default: the per-user file),
     the Not copied list in `paths.pending_path()`.
 
-    Also starts companion.log (the UI only logs to stderr)."""
+    Also starts companion.log (the UI only logs to stderr). Raises `paths.DataDirError`
+    when the per-user folders cannot be located (main.py reports it)."""
     setup_file_logging()
     controller: CompanionController = CompanionControllerImpl(
         SettingsStore(settings_path or paths.settings_path()),

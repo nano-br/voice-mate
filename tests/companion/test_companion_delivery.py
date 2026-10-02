@@ -295,20 +295,67 @@ def test_clear_pending_empties_the_list_without_acks_and_for_good() -> None:
     q.on_unacked(INSTANCE, [record(1, 60.0), record(2, 60.0)], 0.0)  # dismissed: pending
     q.restore_pending([restored(9, "inst-old")])
     assert len(q.pending()) == 3
-    assert q.clear_pending() == 3
+    assert q.clear_pending(keys(q.pending())) == (3, [])  # already ACKed (or another instance)
     assert q.pending() == []
     # Reconciliation still sees them (say the ACK is slow): never offered again.
     assert q.on_unacked(INSTANCE, [record(1, 61.0), record(2, 61.0)], 1.0) == []
     assert q.pending() == []
-    assert q.clear_pending() == 0
+    assert q.clear_pending([(INSTANCE, 1)]) == (0, [])
 
 
 def test_a_cleared_restored_item_is_still_acked_when_the_daemon_reports_it() -> None:
     q = DeliveryQueue()
     q.restore_pending([restored(7)])  # its ACK was lost with the old run
-    assert q.clear_pending() == 1
+    assert q.clear_pending([(INSTANCE, 7)]) == (1, [])  # no daemon instance yet: ACKed later
     q.set_instance(INSTANCE, 0.0)
     effects = q.on_unacked(INSTANCE, [record(7, 1.0)], 0.5)
     assert acks(effects) == [(7, "dismissed")]
     assert started(effects) == [] and q.pending() == []
     assert q.on_unacked(INSTANCE, [record(7, 2.0)], 1.0) == []  # only once
+
+
+def keys(items: list[RecentItem]) -> list[tuple[str, int]]:
+    return [(item.instance, item.record["result_seq"]) for item in items]
+
+
+def test_clear_pending_removes_only_the_given_items() -> None:
+    q = queue()
+    q.on_unacked(INSTANCE, [record(1, 60.0), record(2, 60.0)], 0.0)
+    seen = keys(q.pending())
+    q.on_unacked(INSTANCE, [record(3, 60.0)], 1.0)  # failed while the question was open
+    assert q.clear_pending([*seen, ("inst-x", 99)]) == (2, [])
+    assert keys(q.pending()) == [(INSTANCE, 3)]
+
+
+def test_clearing_a_restored_item_of_the_current_instance_acks_it_at_once() -> None:
+    q = DeliveryQueue()
+    q.restore_pending([restored(7), restored(8, "inst-old")])
+    q.set_instance(INSTANCE, 0.0)
+    count, effects = q.clear_pending([(INSTANCE, 7), ("inst-old", 8)])
+    assert count == 2
+    assert acks(effects) == [(7, "dismissed")]  # inst-old is gone: nothing to ACK there
+    assert [e.instance for e in effects if isinstance(e, SendAck)] == [INSTANCE]
+    assert q.on_unacked(INSTANCE, [record(7, 1.0)], 0.5) == []  # not twice
+
+
+def test_abandon_queue_keeps_undelivered_results_for_the_next_run() -> None:
+    q = queue()
+    q.on_result(INSTANCE, result(1), 0.0, 0.0)  # in flight
+    q.on_delivery_done((INSTANCE, 1), False, 0.1)  # retrying: blocks the next ones
+    q.on_result(INSTANCE, result(2), 0.0, 0.2)
+    q.on_unacked(INSTANCE, [record(5, 60.0)], 0.3)  # already pending (dismissed)
+    q.copy(INSTANCE, 5, 0.4)  # a manual copy waiting too
+    assert q.abandon_queue() == 2
+    assert keys(q.pending()) == [(INSTANCE, 5), (INSTANCE, 1), (INSTANCE, 2)]
+    assert q.next_wakeup() is None and q.queued_keys() == []
+    assert q.on_delivery_done((INSTANCE, 1), True, 1.0) == []  # a late verdict changes nothing
+    assert q.abandon_queue() == 0
+
+    # Next run, same daemon still running: they are ACKed, never delivered late.
+    again = DeliveryQueue()
+    again.restore_pending(q.pending())
+    again.set_instance(INSTANCE, 10.0)
+    effects = again.on_unacked(INSTANCE, [record(1, 5.0), record(2, 5.0)], 10.0)
+    assert started(effects) == []
+    assert sorted(acks(effects)) == [(1, "dismissed"), (2, "dismissed")]
+    assert keys(again.pending()) == [(INSTANCE, 5), (INSTANCE, 1), (INSTANCE, 2)]

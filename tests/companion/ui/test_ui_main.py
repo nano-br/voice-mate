@@ -276,3 +276,38 @@ def test_the_core_controller_is_imported_lazily() -> None:
     probe = "import sys, app.companion.main\nprint('app.companion.controller' in sys.modules)\n"
     result = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, check=True, cwd=_ROOT)
     assert result.stdout.strip() == "False"
+
+
+def test_a_missing_data_folder_is_explained_not_a_traceback(
+    monkeypatch: pytest.MonkeyPatch, qapp: QApplication
+) -> None:
+    from app.companion.paths import DataDirError
+
+    class Server:
+        closed = False
+
+        def __init__(self, name: str) -> None:
+            pass
+
+        def listen(self) -> bool:
+            return True
+
+        def close(self) -> None:
+            Server.closed = True
+
+    def no_folder(demo: bool) -> FakeController:
+        raise DataDirError("APPDATA", "USERPROFILE")
+
+    shown: list[tuple[object, str, str]] = []
+    monkeypatch.setattr(companion_main, "CommandServer", Server)
+    monkeypatch.setattr(companion_main, "_create_controller", no_folder)
+    monkeypatch.setattr(companion_main, "set_language", lambda _language: None)  # keep the English msgids
+    monkeypatch.setattr(
+        companion_main.QMessageBox, "critical", lambda parent, title, text: shown.append((parent, title, text))
+    )
+    assert companion_main._run(qapp, companion_main.parse_args([]), "-test") == 1
+    ((parent, title, text),) = shown
+    assert parent is None and title == "VoiceMate"
+    assert text.startswith("VoiceMate cannot find its data folder: APPDATA is not set")
+    assert "USERPROFILE" in text
+    assert Server.closed
