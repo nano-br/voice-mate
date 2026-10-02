@@ -1718,8 +1718,8 @@ msgid ""
 "[VoiceMate] ✓ Transcribed (the clipboard lease holder copies it): "
 "{preview}"
 msgstr ""
-"[VoiceMate] ✓ Transcrito (quem detém a concessão da área de transferência copia): "
-"{preview}"
+"[VoiceMate] ✓ Transcrito (quem detém a concessão da área de transferência"
+" copia): {preview}"
 
 #: app/daemon/hub.py:316
 #, python-brace-format
@@ -1762,7 +1762,7 @@ msgstr "[VoiceMate] Cliente {client} desregistrado."
 #: app/daemon/server.py:466
 #, python-brace-format
 msgid "[VoiceMate] ❌ Error in trigger for flow '{flow}':"
-msgstr "[VoiceMate] ❌ Erro no trigger do flow '{flow}':"
+msgstr "[VoiceMate] ❌ Erro no gatilho do fluxo '{flow}':"
 
 #: app/daemon/server.py:523
 msgid "[VoiceMate] Shutdown requested over HTTP."
@@ -1786,8 +1786,8 @@ msgstr "[VoiceMate] 📋 Transcrição copiada para a área de transferência."
 #: app/features/claude/chat_handler.py:160
 msgid "[VoiceMate] 📋 The clipboard lease holder copies it to the clipboard."
 msgstr ""
-"[VoiceMate] 📋 Quem detém a concessão da área de transferência copia o texto "
-"para lá."
+"[VoiceMate] 📋 Quem detém a concessão da área de transferência copia o "
+"texto para lá."
 
 #: app/features/claude/chat_handler.py:121
 msgid ""
@@ -2361,7 +2361,9 @@ msgstr "O daemon reportou um erro ({0})."
 #: app/i18n/windows_script_messages.py:56
 #, python-brace-format
 msgid "[VoiceMate] {0} (seq {1}, op {2}, error '{3}'; clipboard untouched)"
-msgstr "[VoiceMate] {0} (seq {1}, op {2}, erro '{3}'; área de transferência intacta)"
+msgstr ""
+"[VoiceMate] {0} (seq {1}, op {2}, erro '{3}'; área de transferência "
+"intacta)"
 
 #: app/i18n/windows_script_messages.py:57
 msgid "error"
@@ -2403,9 +2405,9 @@ msgid ""
 "[VoiceMate] Transcription could not be copied to the clipboard (seq {0}, "
 "op {1}) after {2} tries. Full text below, copy it manually:"
 msgstr ""
-"[VoiceMate] Não foi possível copiar a transcrição para a área de transferência (seq "
-"{0}, op {1}) após {2} tentativas. Texto completo abaixo, copie "
-"manualmente:"
+"[VoiceMate] Não foi possível copiar a transcrição para a área de "
+"transferência (seq {0}, op {1}) após {2} tentativas. Texto completo "
+"abaixo, copie manualmente:"
 
 #: app/i18n/windows_script_messages.py:69
 #, python-brace-format
@@ -2428,7 +2430,9 @@ msgstr "\"{0}\" (o texto completo está na janela de console do VoiceMate)"
 #: app/i18n/windows_script_messages.py:73
 #, python-brace-format
 msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}, retry {2}): \"{3}\""
-msgstr "[VoiceMate] área de transferência confirmada (seq {0}, op {1}, tentativa {2}): \"{3}\""
+msgstr ""
+"[VoiceMate] área de transferência confirmada (seq {0}, op {1}, tentativa "
+"{2}): \"{3}\""
 
 #: app/i18n/windows_script_messages.py:74
 #, python-brace-format
@@ -2439,8 +2443,8 @@ msgstr "[VoiceMate] área de transferência confirmada (seq {0}, op {1}): \"{2}\
 #, python-brace-format
 msgid "[VoiceMate] could not confirm the clipboard (seq {0}): \"{1}\"; retrying."
 msgstr ""
-"[VoiceMate] não foi possível confirmar a área de transferência (seq {0}): \"{1}\"; "
-"tentando de novo."
+"[VoiceMate] não foi possível confirmar a área de transferência (seq {0}):"
+" \"{1}\"; tentando de novo."
 
 #: app/i18n/windows_script_messages.py:77
 msgid ""
@@ -2472,7 +2476,9 @@ msgstr "[VoiceMate] Erro inesperado no loop principal (seguindo em frente): {0}"
 #: app/i18n/windows_script_messages.py:83
 #, python-brace-format
 msgid "[VoiceMate] Hotkeys active: {0} (clipboard) / {1} (Claude) -> {2}"
-msgstr "[VoiceMate] Atalhos ativos: {0} (área de transferência) / {1} (Claude) -> {2}"
+msgstr ""
+"[VoiceMate] Atalhos ativos: {0} (área de transferência) / {1} (Claude) ->"
+" {2}"
 
 #: app/i18n/windows_script_messages.py:84
 #, python-brace-format
@@ -2485,8 +2491,8 @@ msgid ""
 "[VoiceMate] Consumer {0} | scope={1}. Clipboard set by Windows. Leave "
 "this window open."
 msgstr ""
-"[VoiceMate] Consumidor {0} | scope={1}. O Windows grava na área de transferência. "
-"Deixe esta janela aberta."
+"[VoiceMate] Consumidor {0} | scope={1}. O Windows grava na área de "
+"transferência. Deixe esta janela aberta."
 
 #: app/i18n/windows_script_messages.py:87
 #, python-brace-format
@@ -2518,8 +2524,8 @@ msgid ""
 "[VoiceMate] ⚠ clipboard '{writer_name}' failed ({exc}); retrying the "
 "other mechanisms..."
 msgstr ""
-"[VoiceMate] ⚠ Falha na área de transferência '{writer_name}' ({exc}); tentando os "
-"outros mecanismos..."
+"[VoiceMate] ⚠ Falha ao gravar na área de transferência com "
+"'{writer_name}' ({exc}); tentando os outros mecanismos..."
 
 #: app/setup/ct2_rocm.py:45
 #, python-brace-format
