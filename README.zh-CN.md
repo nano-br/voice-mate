@@ -86,11 +86,11 @@ make run ARGS="--output-lang en"
 **应用自身的消息**（日志、CLI 帮助文本）同样通过 `gettext` + Babel 进行本地化。默认语言为 PT-BR；可通过环境变量切换：
 
 ```bash
-# 应用日志使用英语（或用 `es` 切换为西班牙语）
+# 应用日志使用英语（或 `es`、`ru`、`zh-CN`）
 VOICEMATE_LANG=en make run
 ```
 
-可用的翻译目录：`pt_BR`、`en` 和 `es`。每个面向用户的字符串都必须存在于这三个翻译目录中；`pt_BR` 和 `es` 提供翻译，`en` 的 `msgstr` 保持为空（英语 msgid 本身就是文本）。
+可用的翻译目录：`pt_BR`、`en`、`es`、`ru` 和 `zh_CN`。每个面向用户的字符串都必须存在于所有这些翻译目录中；除 `en` 以外的每个翻译目录都提供翻译，`en` 的 `msgstr` 保持为空（英语 msgid 本身就是文本）。
 
 编辑 / 重新生成翻译目录：
 
@@ -100,7 +100,7 @@ make i18n-update      # 将新的键同步到现有的 .po 文件
 make i18n-compile     # 将 .po 编译为 .mo（gettext 在运行时加载 .mo）
 ```
 
-翻译目录文件位于 `app/i18n/locales/{pt_BR,en,es}/LC_MESSAGES/voicemate.po`。
+翻译目录文件位于 `app/i18n/locales/{pt_BR,en,es,ru,zh_CN}/LC_MESSAGES/voicemate.po`。
 
 ### 代码约定
 
@@ -285,7 +285,7 @@ poetry run voice-mate --listener-refresh-seconds 30 --watchdog-timeout 60
 
 ### 在 Windows 上安装
 
-**使用安装程序（推荐）。** 运行 `VoiceMate-Setup-<version>.exe`。它只为你的用户安装（不会弹出管理员权限提示），安装到 `%LOCALAPPDATA%\Programs\VoiceMate`，并将 VoiceMate 添加到“开始”菜单；桌面快捷方式和登录时启动是可选的（首次安装时会提供后者，之后由设置中的 **登录时启动 VoiceMate** 控制）。安装程序支持英语、葡萄牙语和西班牙语。如需自行构建（需要 Python 3.12+ 和 Inno Setup 6.3+，`winget install JRSoftware.InnoSetup`）：
+**使用安装程序（推荐）。** 运行 `VoiceMate-Setup-<version>.exe`。它只为你的用户安装（不会弹出管理员权限提示），安装到 `%LOCALAPPDATA%\Programs\VoiceMate`，并将 VoiceMate 添加到“开始”菜单；桌面快捷方式和登录时启动是可选的（首次安装时会提供后者，之后由设置中的 **登录时启动 VoiceMate** 控制）。安装程序支持英语、葡萄牙语、西班牙语、俄语和简体中文。如需自行构建（需要 Python 3.12+ 和 Inno Setup 6.3+，`winget install JRSoftware.InnoSetup`）：
 
 ```powershell
 make companion-venv        # 只需一次：.venv-companion，包含固定版本的 PySide6 和 PyInstaller
