@@ -102,7 +102,7 @@ jobs:
           passed=$(gh run list --workflow ci.yml --branch main --event push --commit "$sha" \
             --status success --json databaseId --jq length | tr -d '\r')
           if [ "${passed:-0}" -lt 1 ]; then
-            echo "::error::CI has not passed on $sha ($TAG): wait for it (or fix main and tag again), then re-run this workflow (docs/releasing.md)"
+            echo "::error::CI has not passed on $sha ($TAG). Still running or cancelled: let it finish (or re-run it), then re-run the failed jobs of this run. Red: fix main, delete the tag and tag again (docs/releasing.md, Re-running a release)"
             exit 1
           fi
 

@@ -142,9 +142,11 @@ Example for `0.2.0`; replace it everywhere.
   replaced. Fix the problem on `main` through a PR, then
   `git push --delete origin v0.2.0 && git tag -d v0.2.0` and tag again (step 7). A
   dispatch cannot help here: it builds the tag's own content.
-- **CI had not passed on the tagged commit** (still running, or red): nothing was
-  published. If CI was only still running, re-run the failed jobs once it is green. If
-  it was red, fix `main` through a PR and tag the new commit as in the previous case.
+- **CI had not passed on the tagged commit** (still running, cancelled or red): nothing
+  was published. If CI was still running, re-run the failed jobs once it is green. If
+  its run was cancelled (a newer push to `main` replaced it while it was queued), re-run
+  that CI run from the Actions tab, then re-run the failed jobs. If it was red, fix
+  `main` through a PR and tag the new commit as in the previous case.
 - **The release is published and only its text is wrong**: fix the notes in a PR, then
   edit the release directly instead of rebuilding (a rebuilt installer has a different
   checksum than the one people may have already verified):
@@ -161,9 +163,11 @@ Example for `0.2.0`; replace it everywhere.
 
 The build job asks GitHub for the `CI` workflow runs of the tagged commit
 (`gh run list --workflow ci.yml --branch main --event push --commit <sha> --status
-success`) and fails when there is none. CI runs on every push to `main` and tags are
-only accepted on `main`, so every legitimate tag has such a run. Dispatching the
-workflow for an older tag checks that tag's commit the same way. This needs the
+success`) and fails when there is none. CI runs on every push to `main`, for the tip
+of that push only, so every tag of the `main` tip has such a run (tag the tip, as
+step 7 does). An older commit of `main` that was never the tip of a push has no run and
+is refused. Dispatching the workflow for an older tag checks that tag's commit the same
+way. This needs the
 `actions: read` permission of the build job and nothing else; the lint and tests are
 not run a second time in the release workflow.
 
