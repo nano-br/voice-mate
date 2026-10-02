@@ -6,7 +6,7 @@ AppIndicator extension) it is the main window, and closing it quits VoiceMate.
 
 from __future__ import annotations
 
-from PySide6.QtCore import QEvent, Qt
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent, QColor, QFont, QKeyEvent, QPalette
 from PySide6.QtWidgets import (
     QFormLayout,
@@ -241,15 +241,8 @@ class StatusWindow(QWidget):
         self._ensure_fits()
 
     def _render_icon(self) -> None:
-        glyph = self.palette().color(QPalette.ColorRole.WindowText)
-        pixmap = state_pixmap(self._snapshot.tray_state, glyph, HEADER_ICON_SIZE, self.devicePixelRatioF())
+        pixmap = state_pixmap(self._snapshot.tray_state, HEADER_ICON_SIZE, self.devicePixelRatioF())
         self.state_icon.setPixmap(pixmap)
-
-    def changeEvent(self, event: QEvent) -> None:
-        # Light/dark switch: the glyph follows the text color.
-        if event.type() == QEvent.Type.PaletteChange and hasattr(self, "state_icon"):
-            self._render_icon()
-        super().changeEvent(event)
 
     def _ensure_fits(self) -> None:
         """Grow (never shrink) to fit banners that just appeared. The layout's minimum size

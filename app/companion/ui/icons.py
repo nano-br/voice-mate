@@ -10,7 +10,7 @@ States differ by SHAPE (dot, ring, open ring, ellipsis, sparkle, bubble, check, 
 symbol, corner triangle or disc) and their color only reinforces it, so they stay
 distinguishable for color-blind users and in high contrast.
 
-Every size is painted on its own (no scaling of a big bitmap): 16 and 24 px have their
+Every size is painted on its own (no scaling of a big bitmap): 16, 20 and 24 px have their
 own pixel-grid designs with straight edges on pixel boundaries, the other sizes use the
 smooth 32-unit geometry. `tools/gen_icon.py` writes the packaged icon from `brand_image`,
 so the exe, the windows and the tray all show the same mark.
@@ -19,7 +19,6 @@ so the exe, the windows and the tray all show the same mark.
 from __future__ import annotations
 
 import math
-import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,7 +28,6 @@ from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import (
     QBrush,
     QColor,
-    QGuiApplication,
     QIcon,
     QImage,
     QLinearGradient,
@@ -44,10 +42,6 @@ from PySide6.QtGui import (
 import app.companion
 from app.companion.contract import TrayState
 
-# The taskbar's theme: "light" = a dark taskbar, "dark" = a light taskbar. The colored
-# tile reads on both, so the drawing no longer depends on it; the tray still reads it
-# (and caches icons per tone) so the API stays stable if a tone-specific detail returns.
-GlyphTone = Literal["light", "dark"]
 Signal = Literal[
     "off",
     "ring",
@@ -142,6 +136,27 @@ _DESIGN_16: Final = _Design(
     line=1.4,
 )
 
+# 20 px (the tray at 125 %): a 2 px wave on whole pixels (3..17 x 7..17), symmetric about
+# x = 10; no margin, like 16 px.
+_DESIGN_20: Final = _Design(
+    grid=20,
+    margin=0.0,
+    corner=4.5,
+    stroke=2.0,
+    wave=((4.0, 16.0), (7.0, 8.0), (10.0, 13.0), (13.0, 8.0), (16.0, 16.0)),
+    light=(10.0, 5.0),
+    dot=2.0,
+    record=(2.25, 3.5),
+    ellipsis=(4.5, 3.5, 1.15),
+    sparkle=(4.5, 1.8),
+    bubble=(4.5, 8.0, 5.0, 1.8),
+    check=((6.25, 4.5), (8.75, 7.0), (13.75, 2.0)),
+    ring=(2.75, 1.25),
+    badge=(15.0, 15.0, 5.0),
+    gap=1.0,
+    line=1.6,
+)
+
 # 24 px: a 3 px wave with its centre line on half pixels, so its outer edges are whole
 # pixels (3..21 x 9..20); 1 px margin.
 _DESIGN_24: Final = _Design(
@@ -175,7 +190,7 @@ _DESIGN_SMOOTH: Final = _Design(
     record=(3.4, 5.0),
     ellipsis=(7.5, 5.0, 1.7),
     sparkle=(6.25, 2.5),
-    bubble=(7.5, 10.0, 7.0, 2.5),
+    bubble=(6.75, 10.0, 7.0, 2.5),
     check=((10.5, 7.0), (14.25, 10.75), (21.5, 3.5)),
     ring=(3.75, 1.75),
     badge=(24.0, 24.0, 7.0),
@@ -185,54 +200,25 @@ _DESIGN_SMOOTH: Final = _Design(
 
 
 def _design_for(pixels: int) -> _Design:
-    return {16: _DESIGN_16, 24: _DESIGN_24}.get(pixels, _DESIGN_SMOOTH)
+    return {16: _DESIGN_16, 20: _DESIGN_20, 24: _DESIGN_24}.get(pixels, _DESIGN_SMOOTH)
 
 
-def taskbar_glyph_tone() -> GlyphTone:
-    """The taskbar's tone: Windows reads SystemUsesLightTheme (the taskbar's own theme,
-    which may differ from the apps' theme); elsewhere the Qt color scheme."""
-    if sys.platform == "win32":
-        light_taskbar = _windows_taskbar_is_light()
-        if light_taskbar is not None:
-            return "dark" if light_taskbar else "light"
-    hints = QGuiApplication.styleHints()
-    return "dark" if hints.colorScheme() == Qt.ColorScheme.Light else "light"
-
-
-def _windows_taskbar_is_light() -> bool | None:
-    if sys.platform != "win32":
-        return None
-    import winreg
-
-    try:
-        with winreg.OpenKey(
-            winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
-        ) as key:
-            value, _kind = winreg.QueryValueEx(key, "SystemUsesLightTheme")
-    except OSError:
-        return None
-    return bool(value)
-
-
-def tray_icon(state: TrayState, tone: GlyphTone) -> QIcon:
+def tray_icon(state: TrayState) -> QIcon:
+    """The tray glyph of `state` at every tray size. The tile carries its own colors, so
+    one glyph reads on dark and light taskbars alike: there are no theme variants."""
     icon = QIcon()
     for size in TRAY_SIZES:
-        icon.addPixmap(tray_pixmap(state, tone, size))
+        icon.addPixmap(tray_pixmap(state, size))
     return icon
 
 
-def tray_pixmap(state: TrayState, tone: GlyphTone, size: int) -> QPixmap:
-    """The tray glyph of `state`. The tile carries its own colors, so `tone` does not
-    change it: it reads on dark and light taskbars alike."""
-    del tone
+def tray_pixmap(state: TrayState, size: int) -> QPixmap:
     return QPixmap.fromImage(brand_image(size, state))
 
 
-def state_pixmap(state: TrayState, glyph: QColor, size: int, device_pixel_ratio: float = 1.0) -> QPixmap:
+def state_pixmap(state: TrayState, size: int, device_pixel_ratio: float = 1.0) -> QPixmap:
     """The tray glyph of `state` for a window (the status window's header), painted for
-    `device_pixel_ratio`. `glyph` (the window's text color) is not needed any more: the
-    tile carries its own colors; the parameter stays for the callers."""
-    del glyph
+    `device_pixel_ratio`."""
     pixels = max(int(round(size * device_pixel_ratio)), 1)
     pixmap = QPixmap.fromImage(brand_image(pixels, state))
     pixmap.setDevicePixelRatio(device_pixel_ratio)
@@ -398,7 +384,9 @@ def _paint_bubble(painter: QPainter, design: _Design) -> None:
     path.addRoundedRect(body, corner, corner)
     # The tail points down into the valley of the M: the companion is the one talking.
     tail = height * 0.5
-    path.addPolygon(
+    # A union, not a second subpath: with the odd-even fill the overlap would be a hole.
+    tail_path = QPainterPath()
+    tail_path.addPolygon(
         QPolygonF(
             [
                 QPointF(cx - tail * 0.7, body.bottom() - 0.5),
@@ -409,7 +397,7 @@ def _paint_bubble(painter: QPainter, design: _Design) -> None:
     )
     painter.setPen(Qt.PenStyle.NoPen)
     painter.setBrush(_CYAN)
-    painter.drawPath(path.simplified())
+    painter.drawPath(path.united(tail_path))
 
 
 def _paint_check(painter: QPainter, design: _Design) -> None:

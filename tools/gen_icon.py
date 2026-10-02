@@ -9,7 +9,7 @@ Writes `app/companion/assets/voicemate-<size>.png` for every size and
 entries and 256 as PNG, the classic layout that every Windows tool reads
 (PyInstaller and Inno Setup included).
 
-Each size is drawn on its own pixel grid instead of being downscaled: 16 and 24 px
+Each size is drawn on its own pixel grid instead of being downscaled: 16, 20 and 24 px
 have their own designs with straight edges on pixel boundaries, the other sizes use
 the smooth 32-unit geometry. The output is deterministic, so re-running it only
 changes files when the drawing changes.

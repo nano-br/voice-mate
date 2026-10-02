@@ -22,7 +22,8 @@ not a device.
 The code is the source of truth: `app/companion/ui/icons.py` draws the mark and the
 tray glyphs, and `tools/gen_icon.py` (`python -m tools.gen_icon`) writes the packaged
 `app/companion/assets/voicemate.ico` and `voicemate-<size>.png` from the same code.
-`tests/companion/ui/test_ui_icons.py` fails when the PNGs are older than the drawing.
+`tests/companion/ui/test_ui_icons.py` fails when the PNGs or the `.ico` entries are older than
+the drawing.
 
 ### Colors
 
@@ -45,16 +46,17 @@ tray glyphs, and `tools/gen_icon.py` (`python -m tools.gen_icon`) writes the pac
 Designed on a 32-unit grid (y grows downwards); every size is painted on its own,
 never downscaled from a big bitmap.
 
-| | 32-unit grid (20, 32, 40, 48, 64, 128, 256 px) | 24 px grid | 16 px grid |
-|---|---|---|---|
-| Tile | 1..31, corner radius 7 (22 %) | 1..23, radius 5 | 0..16, radius 3.5 |
-| Wave stroke | 4 | 3 | 2 |
-| Wave points | (6, 22.5) (10.75, 12.5) (16, 20) (21.25, 12.5) (26, 22.5) | (4.5, 18.5) (8.5, 10.5) (12, 16.5) (15.5, 10.5) (19.5, 18.5) | (3, 13) (5.5, 7) (8, 11) (10.5, 7) (13, 13) |
-| Dot | centre (16, 9.5), radius 2.6 | centre (12, 5.5), radius 2.5 | centre (8, 4), radius 2 |
+| | 32-unit grid (32, 40, 48, 64, 128, 256 px) | 24 px grid | 20 px grid | 16 px grid |
+|---|---|---|---|---|
+| Tile | 1..31, corner radius 7 (22 %) | 1..23, radius 5 | 0..20, radius 4.5 | 0..16, radius 3.5 |
+| Wave stroke | 4 | 3 | 2 | 2 |
+| Wave points | (6, 22.5) (10.75, 12.5) (16, 20) (21.25, 12.5) (26, 22.5) | (4.5, 18.5) (8.5, 10.5) (12, 16.5) (15.5, 10.5) (19.5, 18.5) | (4, 16) (7, 8) (10, 13) (13, 8) (16, 16) | (3, 13) (5.5, 7) (8, 11) (10.5, 7) (13, 13) |
+| Dot | centre (16, 9.5), radius 2.6 | centre (12, 5.5), radius 2.5 | centre (10, 5), radius 2 | centre (8, 4), radius 2 |
 
-- The 16 and 24 px designs are drawn on their own pixel grids: the wave's outer edges
-  and the tile land on whole pixels, and the mark is symmetric about the centre line.
-  16 px has no transparent margin (half a pixel would only blur the tile's edge).
+- The 16, 20 and 24 px designs (the tray at 100, 125 and 150 %) are drawn on their own
+  pixel grids: the wave's outer edges and the tile land on whole pixels, and the mark is
+  symmetric about the centre line. 16 and 20 px have no transparent margin (a fraction of
+  a pixel would only blur the tile's edge).
 - The dot sits between the peaks, slightly above them, with a clear gap to the wave.
 
 ## The status light (tray)
@@ -65,7 +67,7 @@ own SHAPE; the color only reinforces it.
 | `TrayState` | Signal | Shape |
 |---|---|---|
 | `idle` | brand dot | the coral dot: listening for the hotkey |
-| `recording` | record | a bigger red dot inside a white ring, the most prominent state |
+| `recording` | record | a red dot inside a white ring (the biggest light), the most prominent state |
 | `transcribing` | ellipsis | three small amber dots in a row |
 | `thinking` | sparkle | a cyan four-point sparkle (Claude is thinking) |
 | `speaking` | bubble | a cyan speech bubble whose tail points into the M (the answer is read aloud) |
@@ -84,7 +86,7 @@ No animation by default.
 
 - **Do** keep the mark on its tile, with the dot above the valley of the M.
 - **Do** tell a state by shape first. A new state gets a new silhouette, and
-  `tests/companion/ui/test_ui_icons.py` checks every pair at 16, 24 and 32 px with the
+  `tests/companion/ui/test_ui_icons.py` checks every pair at 16, 20, 24 and 32 px with the
   hue removed (luma and coverage only).
 - **Do** check new artwork at 16 px on a dark (`#202020`) and a light (`#F3F3F3`)
   taskbar before shipping it.

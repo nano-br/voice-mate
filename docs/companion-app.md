@@ -281,9 +281,8 @@ they belong to:
 
 The tray shows the VoiceMate mark (the M wave on the indigo tile) and tells the state
 with the dot above the M, the "status light"; see [brand.md](brand.md). States differ
-by shape, not only color. The tile carries its own colors, so the glyph is the same on
-dark and light taskbars (the tray still reads `SystemUsesLightTheme`, but the drawing
-ignores it).
+by shape, not only color. The tile carries its own colors, so one glyph serves dark and
+light taskbars: the tray does not follow the taskbar theme.
 No animation by default.
 
 An event's cue REPLACES the cue on entering the tray state (never two cues). A
