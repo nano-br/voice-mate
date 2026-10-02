@@ -327,7 +327,7 @@ _BADGE_ART: Final[dict[tuple[int, Badge], tuple[QColor, tuple[str, ...]]]] = {
     (16, "ring"): (_GREY, (".BBBB.", "BB..BB", "B....B", "B....B", "BB..BB", ".BBBB.")),
     (16, "arrows"): (_GREY, (".BBBBB", "BB..BB", "B..BBB", "B.....", "BB..B.", ".BBB..")),
     (16, "record"): (_RED, (".BBBB.", "BBBBBB", "BBBBBB", "BBBBBB", "BBBBBB", ".BBBB.")),
-    (16, "hourglass"): (_AMBER, (".BBBB.", ".BBBB.", "..BB..", "..BB..", ".BBBB.", ".BBBB.")),
+    (16, "hourglass"): (_AMBER, (".BBBBB", "..BBB.", "...B..", "...B..", "..BBB.", ".BBBBB")),
     (16, "bubble"): (_VIOLET, (".BBBB.", "BBBBBB", "BBBBBB", ".BBBB.", ".BB...", ".B....")),
     (16, "speaker"): (_VIOLET, ("...B..", "..BB.B", "BBBB.B", "BBBB.B", "..BB.B", "...B..")),
     (16, "check"): (_GREEN, (".BBBB.", "BBBBWB", "BBBBWB", "BWBWBB", "BBWBBB", ".BBBB.")),
@@ -365,7 +365,7 @@ _BADGE_ART: Final[dict[tuple[int, Badge], tuple[QColor, tuple[str, ...]]]] = {
     ),
     (24, "bubble"): (
         _VIOLET,
-        (".BBBBBB.", "BBBBBBBB", "BBBBBBBB", "BWBBWBBW", "BBBBBBBB", ".BBBBBB.", ".BBB....", ".B......"),
+        (".BBBBBB.", "BBBBBBBB", "BBBBBBBB", "BWBWBWBB", "BBBBBBBB", ".BBBBBB.", ".BBB....", ".B......"),
     ),
     (24, "speaker"): (
         _VIOLET,
