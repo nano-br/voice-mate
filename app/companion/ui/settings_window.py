@@ -181,7 +181,7 @@ class HotkeysPage(QWidget):
         flows = displayed_flows(snapshot, settings)
         for index, flow in enumerate(flows):
             title = texts.flow_title(flow, flows)
-            label = QLabel(title + ":")
+            label = QLabel(_("{action}:").format(action=title))
             edit = HotkeyEdit(chord_for(flow, snapshot, settings))
             edit.setAccessibleName(_("Shortcut for {action}").format(action=title))
             edit.set_editable(not self._engine_owned and not read_only)

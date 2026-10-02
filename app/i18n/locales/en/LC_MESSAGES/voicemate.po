@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-02 03:38-0300\n"
+"POT-Creation-Date: 2026-10-02 05:02-0300\n"
 "PO-Revision-Date: 2026-05-21 14:42-0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -276,7 +276,7 @@ msgstr ""
 msgid "Error"
 msgstr ""
 
-#: app/companion/main.py:120
+#: app/companion/main.py:130
 #, python-brace-format
 msgid ""
 "VoiceMate cannot find its data folder: {variable} is not set and the home"
@@ -284,20 +284,20 @@ msgid ""
 "start VoiceMate again."
 msgstr ""
 
-#: app/companion/main.py:183
+#: app/companion/main.py:193
 msgid "Settings"
 msgstr ""
 
-#: app/companion/main.py:183 app/companion/ui/status_window.py:122
+#: app/companion/main.py:193 app/companion/ui/status_window.py:122
 #: app/companion/ui/status_window.py:177 app/companion/ui/tray.py:97
 msgid "Restart engine"
 msgstr ""
 
-#: app/companion/main.py:185 app/companion/ui/tray.py:99
+#: app/companion/main.py:195 app/companion/ui/tray.py:99
 msgid "Restart WSL..."
 msgstr ""
 
-#: app/companion/main.py:186 app/companion/ui/status_window.py:181
+#: app/companion/main.py:196 app/companion/ui/status_window.py:181
 #: app/companion/ui/tray.py:107
 msgid "Quit VoiceMate"
 msgstr ""
@@ -763,7 +763,7 @@ msgstr ""
 msgid "Notifications"
 msgstr ""
 
-#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:647
+#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:650
 msgid "Hotkeys"
 msgstr ""
 
@@ -855,7 +855,7 @@ msgid ""
 msgstr ""
 
 #: app/companion/ui/app.py:187 app/companion/ui/app.py:286
-#: app/companion/ui/settings_window.py:662
+#: app/companion/ui/settings_window.py:665
 #: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:79
 msgid "Cancel"
 msgstr ""
@@ -914,19 +914,19 @@ msgstr ""
 msgid "Restart WSL to bring the microphone back."
 msgstr ""
 
-#: app/companion/ui/hotkey_edit.py:55
+#: app/companion/ui/hotkey_edit.py:65
 msgid "Press Enter, then the new shortcut. Esc cancels, Backspace clears."
 msgstr ""
 
-#: app/companion/ui/hotkey_edit.py:85
+#: app/companion/ui/hotkey_edit.py:95 app/companion/ui/hotkey_edit.py:189
 msgid "Press the new shortcut..."
 msgstr ""
 
-#: app/companion/ui/hotkey_edit.py:146
+#: app/companion/ui/hotkey_edit.py:156 app/companion/ui/hotkey_edit.py:189
 msgid "This key cannot be used"
 msgstr ""
 
-#: app/companion/ui/hotkey_edit.py:166
+#: app/companion/ui/hotkey_edit.py:189 app/companion/ui/hotkey_edit.py:193
 msgid "No shortcut"
 msgstr ""
 
@@ -940,6 +940,11 @@ msgstr ""
 
 #: app/companion/ui/settings_window.py:157
 msgid "Restore defaults"
+msgstr ""
+
+#: app/companion/ui/settings_window.py:184
+#, python-brace-format
+msgid "{action}:"
 msgstr ""
 
 #: app/companion/ui/settings_window.py:186
@@ -968,7 +973,7 @@ msgid "Master volume"
 msgstr ""
 
 #: app/companion/ui/settings_window.py:363
-#: app/companion/ui/settings_window.py:648
+#: app/companion/ui/settings_window.py:651
 msgid "Sounds"
 msgstr ""
 
@@ -1112,38 +1117,38 @@ msgstr ""
 msgid "VoiceMate Settings"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:639
+#: app/companion/ui/settings_window.py:642
 msgid ""
 "These settings were saved by a newer version of VoiceMate. They are shown"
 " read-only."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:649
+#: app/companion/ui/settings_window.py:652
 msgid "General"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:661
+#: app/companion/ui/settings_window.py:664
 msgid "OK"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:663
+#: app/companion/ui/settings_window.py:666
 msgid "Apply"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:744
+#: app/companion/ui/settings_window.py:747
 msgid "Saving..."
 msgstr ""
 
-#: app/companion/ui/settings_window.py:756
+#: app/companion/ui/settings_window.py:759
 #, python-brace-format
 msgid "Unexpected error: {error}"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:763
+#: app/companion/ui/settings_window.py:766
 msgid "The settings were not saved:"
 msgstr ""
 
-#: app/companion/ui/settings_window.py:775
+#: app/companion/ui/settings_window.py:778
 msgid "Settings saved."
 msgstr ""
 

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-02 03:38-0300\n"
+"POT-Creation-Date: 2026-10-02 05:02-0300\n"
 "PO-Revision-Date: 2026-10-01 16:49-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: es\n"
@@ -303,7 +303,7 @@ msgstr "Advertencia"
 msgid "Error"
 msgstr "Error"
 
-#: app/companion/main.py:120
+#: app/companion/main.py:130
 #, python-brace-format
 msgid ""
 "VoiceMate cannot find its data folder: {variable} is not set and the home"
@@ -314,20 +314,20 @@ msgstr ""
 " la carpeta personal es desconocida. Define {variable} o {home_variable} "
 "para tu usuario y vuelve a abrir VoiceMate."
 
-#: app/companion/main.py:183
+#: app/companion/main.py:193
 msgid "Settings"
 msgstr "Configuración"
 
-#: app/companion/main.py:183 app/companion/ui/status_window.py:122
+#: app/companion/main.py:193 app/companion/ui/status_window.py:122
 #: app/companion/ui/status_window.py:177 app/companion/ui/tray.py:97
 msgid "Restart engine"
 msgstr "Reiniciar el motor"
 
-#: app/companion/main.py:185 app/companion/ui/tray.py:99
+#: app/companion/main.py:195 app/companion/ui/tray.py:99
 msgid "Restart WSL..."
 msgstr "Reiniciar WSL..."
 
-#: app/companion/main.py:186 app/companion/ui/status_window.py:181
+#: app/companion/main.py:196 app/companion/ui/status_window.py:181
 #: app/companion/ui/tray.py:107
 msgid "Quit VoiceMate"
 msgstr "Salir de VoiceMate"
@@ -854,7 +854,7 @@ msgstr "Reinicio de WSL"
 msgid "Notifications"
 msgstr "Notificaciones"
 
-#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:647
+#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:650
 msgid "Hotkeys"
 msgstr "Atajos"
 
@@ -952,7 +952,7 @@ msgstr ""
 "vuelve a iniciar el motor."
 
 #: app/companion/ui/app.py:187 app/companion/ui/app.py:286
-#: app/companion/ui/settings_window.py:662
+#: app/companion/ui/settings_window.py:665
 #: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:79
 msgid "Cancel"
 msgstr "Cancelar"
@@ -1013,19 +1013,19 @@ msgstr "No se graba nada: los estados cambian solos."
 msgid "Restart WSL to bring the microphone back."
 msgstr "Reinicia WSL para recuperar el micrófono."
 
-#: app/companion/ui/hotkey_edit.py:55
+#: app/companion/ui/hotkey_edit.py:65
 msgid "Press Enter, then the new shortcut. Esc cancels, Backspace clears."
 msgstr "Pulsa Enter y luego el nuevo atajo. Esc cancela, Retroceso borra."
 
-#: app/companion/ui/hotkey_edit.py:85
+#: app/companion/ui/hotkey_edit.py:95 app/companion/ui/hotkey_edit.py:189
 msgid "Press the new shortcut..."
 msgstr "Pulsa el nuevo atajo..."
 
-#: app/companion/ui/hotkey_edit.py:146
+#: app/companion/ui/hotkey_edit.py:156 app/companion/ui/hotkey_edit.py:189
 msgid "This key cannot be used"
 msgstr "Esta tecla no se puede usar"
 
-#: app/companion/ui/hotkey_edit.py:166
+#: app/companion/ui/hotkey_edit.py:189 app/companion/ui/hotkey_edit.py:193
 msgid "No shortcut"
 msgstr "Sin atajo"
 
@@ -1042,6 +1042,11 @@ msgstr "Estos atajos los define el motor. Cámbialos en su configuración."
 #: app/companion/ui/settings_window.py:157
 msgid "Restore defaults"
 msgstr "Restaurar predeterminados"
+
+#: app/companion/ui/settings_window.py:184
+#, python-brace-format
+msgid "{action}:"
+msgstr "{action}:"
 
 #: app/companion/ui/settings_window.py:186
 #, python-brace-format
@@ -1069,7 +1074,7 @@ msgid "Master volume"
 msgstr "Volumen general"
 
 #: app/companion/ui/settings_window.py:363
-#: app/companion/ui/settings_window.py:648
+#: app/companion/ui/settings_window.py:651
 msgid "Sounds"
 msgstr "Sonidos"
 
@@ -1219,7 +1224,7 @@ msgstr "Reiniciar WSL si falla el audio"
 msgid "VoiceMate Settings"
 msgstr "Configuración de VoiceMate"
 
-#: app/companion/ui/settings_window.py:639
+#: app/companion/ui/settings_window.py:642
 msgid ""
 "These settings were saved by a newer version of VoiceMate. They are shown"
 " read-only."
@@ -1227,32 +1232,32 @@ msgstr ""
 "Esta configuración la guardó una versión más nueva de VoiceMate y se "
 "muestra solo para lectura."
 
-#: app/companion/ui/settings_window.py:649
+#: app/companion/ui/settings_window.py:652
 msgid "General"
 msgstr "General"
 
-#: app/companion/ui/settings_window.py:661
+#: app/companion/ui/settings_window.py:664
 msgid "OK"
 msgstr "Aceptar"
 
-#: app/companion/ui/settings_window.py:663
+#: app/companion/ui/settings_window.py:666
 msgid "Apply"
 msgstr "Aplicar"
 
-#: app/companion/ui/settings_window.py:744
+#: app/companion/ui/settings_window.py:747
 msgid "Saving..."
 msgstr "Guardando..."
 
-#: app/companion/ui/settings_window.py:756
+#: app/companion/ui/settings_window.py:759
 #, python-brace-format
 msgid "Unexpected error: {error}"
 msgstr "Error inesperado: {error}"
 
-#: app/companion/ui/settings_window.py:763
+#: app/companion/ui/settings_window.py:766
 msgid "The settings were not saved:"
 msgstr "La configuración no se guardó:"
 
-#: app/companion/ui/settings_window.py:775
+#: app/companion/ui/settings_window.py:778
 msgid "Settings saved."
 msgstr "Configuración guardada."
 

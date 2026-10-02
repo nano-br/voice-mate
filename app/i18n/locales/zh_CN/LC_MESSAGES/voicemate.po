@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-02 03:34-0300\n"
+"POT-Creation-Date: 2026-10-02 05:02-0300\n"
 "PO-Revision-Date: 2026-10-02 03:34-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: zh_CN\n"
@@ -287,7 +287,7 @@ msgstr "警告"
 msgid "Error"
 msgstr "错误"
 
-#: app/companion/main.py:120
+#: app/companion/main.py:130
 #, python-brace-format
 msgid ""
 "VoiceMate cannot find its data folder: {variable} is not set and the home"
@@ -297,20 +297,20 @@ msgstr ""
 "VoiceMate 找不到其数据文件夹：未设置 {variable}，且主文件夹未知。请为你的用户设置 {variable} 或 "
 "{home_variable}，然后重新启动 VoiceMate。"
 
-#: app/companion/main.py:183
+#: app/companion/main.py:193
 msgid "Settings"
 msgstr "设置"
 
-#: app/companion/main.py:183 app/companion/ui/status_window.py:122
+#: app/companion/main.py:193 app/companion/ui/status_window.py:122
 #: app/companion/ui/status_window.py:177 app/companion/ui/tray.py:97
 msgid "Restart engine"
 msgstr "重启引擎"
 
-#: app/companion/main.py:185 app/companion/ui/tray.py:99
+#: app/companion/main.py:195 app/companion/ui/tray.py:99
 msgid "Restart WSL..."
 msgstr "重启 WSL..."
 
-#: app/companion/main.py:186 app/companion/ui/status_window.py:181
+#: app/companion/main.py:196 app/companion/ui/status_window.py:181
 #: app/companion/ui/tray.py:107
 msgid "Quit VoiceMate"
 msgstr "退出 VoiceMate"
@@ -782,7 +782,7 @@ msgstr "WSL 重启"
 msgid "Notifications"
 msgstr "通知"
 
-#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:647
+#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:650
 msgid "Hotkeys"
 msgstr "快捷键"
 
@@ -874,7 +874,7 @@ msgid ""
 msgstr "这会停止所有正在运行的 WSL 发行版（包括 Docker），然后重新启动引擎。"
 
 #: app/companion/ui/app.py:187 app/companion/ui/app.py:286
-#: app/companion/ui/settings_window.py:662
+#: app/companion/ui/settings_window.py:665
 #: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:79
 msgid "Cancel"
 msgstr "取消"
@@ -933,19 +933,19 @@ msgstr "不会录制任何内容：状态会自动变化。"
 msgid "Restart WSL to bring the microphone back."
 msgstr "重启 WSL 以恢复麦克风。"
 
-#: app/companion/ui/hotkey_edit.py:55
+#: app/companion/ui/hotkey_edit.py:65
 msgid "Press Enter, then the new shortcut. Esc cancels, Backspace clears."
 msgstr "按 Enter，然后按新的快捷键。Esc 取消，Backspace 清除。"
 
-#: app/companion/ui/hotkey_edit.py:85
+#: app/companion/ui/hotkey_edit.py:95 app/companion/ui/hotkey_edit.py:189
 msgid "Press the new shortcut..."
 msgstr "请按新的快捷键..."
 
-#: app/companion/ui/hotkey_edit.py:146
+#: app/companion/ui/hotkey_edit.py:156 app/companion/ui/hotkey_edit.py:189
 msgid "This key cannot be used"
 msgstr "此按键无法使用"
 
-#: app/companion/ui/hotkey_edit.py:166
+#: app/companion/ui/hotkey_edit.py:189 app/companion/ui/hotkey_edit.py:193
 msgid "No shortcut"
 msgstr "无快捷键"
 
@@ -960,6 +960,11 @@ msgstr "这些快捷键由引擎管理。请在引擎配置中更改。"
 #: app/companion/ui/settings_window.py:157
 msgid "Restore defaults"
 msgstr "恢复默认值"
+
+#: app/companion/ui/settings_window.py:184
+#, python-brace-format
+msgid "{action}:"
+msgstr "{action}："
 
 #: app/companion/ui/settings_window.py:186
 #, python-brace-format
@@ -987,7 +992,7 @@ msgid "Master volume"
 msgstr "主音量"
 
 #: app/companion/ui/settings_window.py:363
-#: app/companion/ui/settings_window.py:648
+#: app/companion/ui/settings_window.py:651
 msgid "Sounds"
 msgstr "声音"
 
@@ -1133,38 +1138,38 @@ msgstr "音频故障时重启 WSL"
 msgid "VoiceMate Settings"
 msgstr "VoiceMate 设置"
 
-#: app/companion/ui/settings_window.py:639
+#: app/companion/ui/settings_window.py:642
 msgid ""
 "These settings were saved by a newer version of VoiceMate. They are shown"
 " read-only."
 msgstr "这些设置由更新版本的 VoiceMate 保存，仅以只读方式显示。"
 
-#: app/companion/ui/settings_window.py:649
+#: app/companion/ui/settings_window.py:652
 msgid "General"
 msgstr "常规"
 
-#: app/companion/ui/settings_window.py:661
+#: app/companion/ui/settings_window.py:664
 msgid "OK"
 msgstr "确定"
 
-#: app/companion/ui/settings_window.py:663
+#: app/companion/ui/settings_window.py:666
 msgid "Apply"
 msgstr "应用"
 
-#: app/companion/ui/settings_window.py:744
+#: app/companion/ui/settings_window.py:747
 msgid "Saving..."
 msgstr "正在保存..."
 
-#: app/companion/ui/settings_window.py:756
+#: app/companion/ui/settings_window.py:759
 #, python-brace-format
 msgid "Unexpected error: {error}"
 msgstr "意外错误：{error}"
 
-#: app/companion/ui/settings_window.py:763
+#: app/companion/ui/settings_window.py:766
 msgid "The settings were not saved:"
 msgstr "设置未保存："
 
-#: app/companion/ui/settings_window.py:775
+#: app/companion/ui/settings_window.py:778
 msgid "Settings saved."
 msgstr "设置已保存。"
 
@@ -1347,67 +1352,67 @@ msgstr "咔嗒"
 msgid "Automatic (system language)"
 msgstr "自动（系统语言）"
 
-#: app/companion/ui/texts.py:179
+#: app/companion/ui/texts.py:181
 msgid "Start it in WSL"
 msgstr "在 WSL 中启动"
 
-#: app/companion/ui/texts.py:180
+#: app/companion/ui/texts.py:182
 msgid "Start it on this computer"
 msgstr "在此电脑上启动"
 
-#: app/companion/ui/texts.py:181
+#: app/companion/ui/texts.py:183
 msgid "Connect only"
 msgstr "仅连接"
 
-#: app/companion/ui/texts.py:186
+#: app/companion/ui/texts.py:188
 msgid "Automatically"
 msgstr "自动"
 
-#: app/companion/ui/texts.py:186
+#: app/companion/ui/texts.py:188
 msgid "Ask first"
 msgstr "先询问"
 
-#: app/companion/ui/texts.py:186
+#: app/companion/ui/texts.py:188
 msgid "Never"
 msgstr "从不"
 
-#: app/companion/ui/texts.py:191
+#: app/companion/ui/texts.py:193
 msgid "All"
 msgstr "全部"
 
-#: app/companion/ui/texts.py:192
+#: app/companion/ui/texts.py:194
 msgid "Warnings and errors"
 msgstr "警告和错误"
 
-#: app/companion/ui/texts.py:193
+#: app/companion/ui/texts.py:195
 msgid "Errors only"
 msgstr "仅错误"
 
-#: app/companion/ui/texts.py:194
+#: app/companion/ui/texts.py:196
 msgid "None"
 msgstr "无"
 
-#: app/companion/ui/texts.py:200
+#: app/companion/ui/texts.py:202
 msgid "Available"
 msgstr "可用"
 
-#: app/companion/ui/texts.py:201
+#: app/companion/ui/texts.py:203
 msgid "Used by another app"
 msgstr "已被其他应用占用"
 
-#: app/companion/ui/texts.py:202
+#: app/companion/ui/texts.py:204
 msgid "Used by another action"
 msgstr "已被其他操作占用"
 
-#: app/companion/ui/texts.py:203
+#: app/companion/ui/texts.py:205
 msgid "Not allowed"
 msgstr "不允许"
 
-#: app/companion/ui/texts.py:204
+#: app/companion/ui/texts.py:206
 msgid "Set by the engine"
 msgstr "由引擎设置"
 
-#: app/companion/ui/texts.py:209
+#: app/companion/ui/texts.py:211
 msgid ""
 "Use Ctrl, Alt, Shift or Win with a key, or a function key alone. F12 is "
 "reserved by Windows."
@@ -1756,38 +1761,38 @@ msgstr "[KokoroSpeaker] 正在加载 Kokoro（lang={lang_code}，{device}，首�
 msgid "[KokoroSpeaker] Model ready."
 msgstr "[KokoroSpeaker] 模型已就绪。"
 
-#: app/features/tts/omnivoice_speaker.py:104
+#: app/features/tts/omnivoice_speaker.py:105
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] error while speaking: {exc}"
 msgstr "[OmniVoiceSpeaker] 朗读时出错：{exc}"
 
-#: app/features/tts/omnivoice_speaker.py:113
+#: app/features/tts/omnivoice_speaker.py:114
 msgid ""
 "[OmniVoiceSpeaker] ⚠ AudioPlayer drain timed out — audio may have been "
 "left incomplete."
 msgstr "[OmniVoiceSpeaker] ⚠ AudioPlayer 排空超时，音频可能不完整。"
 
-#: app/features/tts/omnivoice_speaker.py:135
+#: app/features/tts/omnivoice_speaker.py:136
 msgid ""
 "[OmniVoiceSpeaker] Warmup (tuning ROCm kernels; only the 1st time is "
 "slow)..."
 msgstr "[OmniVoiceSpeaker] 正在预热（调优 ROCm 内核；只有第 1 次较慢）..."
 
-#: app/features/tts/omnivoice_speaker.py:137
+#: app/features/tts/omnivoice_speaker.py:138
 msgid "[OmniVoiceSpeaker] Warmup done — synthesis ready (realtime)."
 msgstr "[OmniVoiceSpeaker] 预热完成，语音合成已就绪（实时）。"
 
-#: app/features/tts/omnivoice_speaker.py:139
+#: app/features/tts/omnivoice_speaker.py:140
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ warmup failed (continuing): {exc}"
 msgstr "[OmniVoiceSpeaker] ⚠ 预热失败（继续运行）：{exc}"
 
-#: app/features/tts/omnivoice_speaker.py:168
+#: app/features/tts/omnivoice_speaker.py:169
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ Failed to load OmniVoice: {exc}"
 msgstr "[OmniVoiceSpeaker] ⚠ 加载 OmniVoice 失败：{exc}"
 
-#: app/features/tts/omnivoice_speaker.py:180
+#: app/features/tts/omnivoice_speaker.py:181
 msgid ""
 "[OmniVoiceSpeaker] ROCm — TunableOp enabled: each new sentence length "
 "gets a small tune (~1-2s) the 1st time; after that it is realtime (RTF "
@@ -1796,18 +1801,18 @@ msgstr ""
 "[OmniVoiceSpeaker] ROCm：已启用 TunableOp。每种新的句子长度在第 1 次出现时都会进行一次小规模调优（约 1-2 "
 "秒），之后即可实时合成（RTF 约 0.7）。"
 
-#: app/features/tts/omnivoice_speaker.py:186
+#: app/features/tts/omnivoice_speaker.py:187
 #, python-brace-format
 msgid ""
 "[OmniVoiceSpeaker] Loading OmniVoice ({device_map}, first run downloads "
 "weights)..."
 msgstr "[OmniVoiceSpeaker] 正在加载 OmniVoice（{device_map}，首次运行会下载权重）..."
 
-#: app/features/tts/omnivoice_speaker.py:191
+#: app/features/tts/omnivoice_speaker.py:192
 msgid "[OmniVoiceSpeaker] Model ready."
 msgstr "[OmniVoiceSpeaker] 模型已就绪。"
 
-#: app/features/tts/omnivoice_speaker.py:223
+#: app/features/tts/omnivoice_speaker.py:224
 msgid ""
 "[OmniVoiceSpeaker] ⚠ PyTorch without GPU acceleration — OmniVoice will "
 "run on CPU (much slower synthesis). Run `make configure` to install the "
@@ -1816,40 +1821,40 @@ msgstr ""
 "[OmniVoiceSpeaker] ⚠ PyTorch 没有 GPU 加速，OmniVoice 将在 CPU 上运行（合成会慢得多）。请运行 "
 "`make configure` 安装适合你 GPU 的 torch。"
 
-#: app/features/tts/omnivoice_speaker.py:281
+#: app/features/tts/omnivoice_speaker.py:282
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] Auto-seed loaded from {cached_wav}"
 msgstr "[OmniVoiceSpeaker] 已从 {cached_wav} 加载自动参考音频"
 
-#: app/features/tts/omnivoice_speaker.py:283
+#: app/features/tts/omnivoice_speaker.py:284
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ Failed to read auto-seed: {exc}"
 msgstr "[OmniVoiceSpeaker] ⚠ 读取自动参考音频失败：{exc}"
 
-#: app/features/tts/omnivoice_speaker.py:303
+#: app/features/tts/omnivoice_speaker.py:304
 msgid "[OmniVoiceSpeaker] soundfile not installed — could not save auto-seed."
 msgstr "[OmniVoiceSpeaker] 未安装 soundfile，无法保存自动参考音频。"
 
-#: app/features/tts/omnivoice_speaker.py:312
+#: app/features/tts/omnivoice_speaker.py:313
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ Failed to save auto-seed: {exc}"
 msgstr "[OmniVoiceSpeaker] ⚠ 保存自动参考音频失败：{exc}"
 
-#: app/features/tts/omnivoice_speaker.py:316
+#: app/features/tts/omnivoice_speaker.py:317
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] Auto-seed saved to {wav_path}"
 msgstr "[OmniVoiceSpeaker] 自动参考音频已保存到 {wav_path}"
 
-#: app/features/tts/omnivoice_speaker.py:322
+#: app/features/tts/omnivoice_speaker.py:323
 msgid "[OmniVoiceSpeaker] soundfile not installed — could not save audio."
 msgstr "[OmniVoiceSpeaker] 未安装 soundfile，无法保存音频。"
 
-#: app/features/tts/omnivoice_speaker.py:328
+#: app/features/tts/omnivoice_speaker.py:329
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] Audio saved to {path}"
 msgstr "[OmniVoiceSpeaker] 音频已保存到 {path}"
 
-#: app/features/tts/omnivoice_speaker.py:352
+#: app/features/tts/omnivoice_speaker.py:353
 #, python-brace-format
 msgid ""
 "[OmniVoiceSpeaker] VRAM ({label}): alloc={allocated:.2f}GB, "
@@ -2860,20 +2865,20 @@ msgstr "  1) clipboard：语音转为剪贴板中的文本（仅转写）"
 msgid "  2) claude_chat — voice → Claude → spoken response (+ clipboard)"
 msgstr "  2) claude_chat：语音 → Claude → 语音回复（+ 剪贴板）"
 
-#: app/setup/gpu_bootstrap.py:368
+#: app/setup/gpu_bootstrap.py:373
 msgid "[Y/n]"
 msgstr "[Y/n]"
 
-#: app/setup/gpu_bootstrap.py:368
+#: app/setup/gpu_bootstrap.py:373
 msgid "[y/N]"
 msgstr "[y/N]"
 
-#: app/setup/gpu_bootstrap.py:419
+#: app/setup/gpu_bootstrap.py:424
 #, python-brace-format
 msgid "[setup] Removed {name} from torch (the WSL HSA runtime is the system's)."
 msgstr "[setup] 已从 torch 中移除 {name}（WSL 的 HSA 运行时使用系统自带的版本）。"
 
-#: app/setup/gpu_bootstrap.py:433
+#: app/setup/gpu_bootstrap.py:438
 #, python-brace-format
 msgid ""
 "[setup] ⚠ The ROCm Linux wheels are cp312 (this Python is {ver}). "
@@ -2883,23 +2888,23 @@ msgstr ""
 "[setup] ⚠ ROCm Linux wheel 包为 cp312（当前 Python 为 {ver}）。请用 3.12 "
 "重新创建环境（`poetry env use 3.12`），然后运行 `make configure`。"
 
-#: app/setup/gpu_bootstrap.py:440
+#: app/setup/gpu_bootstrap.py:445
 msgid ""
 "[setup] ✓ ROCm torch already present and accelerating — keeping the "
 "validated install."
 msgstr "[setup] ✓ ROCm 版 torch 已存在且加速正常，保留已验证的安装。"
 
-#: app/setup/gpu_bootstrap.py:441
+#: app/setup/gpu_bootstrap.py:446
 msgid ""
 "[setup]   (to force a reinstall: pip uninstall torch and run `make "
 "configure`)"
 msgstr "[setup]   （如需强制重新安装：pip uninstall torch，然后运行 `make configure`）"
 
-#: app/setup/gpu_bootstrap.py:445
+#: app/setup/gpu_bootstrap.py:450
 msgid "Installing ROCm torch (official AMD wheels for Linux/WSL2)..."
 msgstr "正在安装 ROCm 版 torch（AMD 官方 Linux/WSL2 wheel 包）..."
 
-#: app/setup/gpu_bootstrap.py:458
+#: app/setup/gpu_bootstrap.py:463
 #, python-brace-format
 msgid ""
 "[setup] ⚠ The ROCm wheels require Python 3.12 (this is {ver}). Recreate "
@@ -2909,115 +2914,115 @@ msgstr ""
 "[setup] ⚠ ROCm wheel 包需要 Python 3.12（当前为 {ver}）。请用 3.12 重新创建环境（`poetry "
 "env use 3.12`），然后运行 `make configure`。"
 
-#: app/setup/gpu_bootstrap.py:465
+#: app/setup/gpu_bootstrap.py:470
 msgid "Installing ROCm SDK (AMD runtime)..."
 msgstr "正在安装 ROCm SDK（AMD 运行时）..."
 
-#: app/setup/gpu_bootstrap.py:470
+#: app/setup/gpu_bootstrap.py:475
 msgid "Installing ROCm torch (AMD)..."
 msgstr "正在安装 ROCm 版 torch（AMD）..."
 
-#: app/setup/gpu_bootstrap.py:474
+#: app/setup/gpu_bootstrap.py:479
 msgid "Installing CUDA torch (NVIDIA)..."
 msgstr "正在安装 CUDA 版 torch（NVIDIA）..."
 
-#: app/setup/gpu_bootstrap.py:474
+#: app/setup/gpu_bootstrap.py:479
 msgid "Installing CPU torch..."
 msgstr "正在安装 CPU 版 torch..."
 
-#: app/setup/gpu_bootstrap.py:482
+#: app/setup/gpu_bootstrap.py:487
 msgid "Installing dependencies (poetry)..."
 msgstr "正在安装依赖（poetry）..."
 
-#: app/setup/gpu_bootstrap.py:490
+#: app/setup/gpu_bootstrap.py:495
 #, python-brace-format
 msgid "[setup] ⚠ Could not verify torch: {exc}"
 msgstr "[setup] ⚠ 无法验证 torch：{exc}"
 
-#: app/setup/gpu_bootstrap.py:494
+#: app/setup/gpu_bootstrap.py:499
 msgid "[setup] torch check:"
 msgstr "[setup] torch 检查："
 
-#: app/setup/gpu_bootstrap.py:500
+#: app/setup/gpu_bootstrap.py:505
 msgid ""
 "[setup] ⚠ The GPU was not recognized by torch — the app will fall back to"
 " CPU. Check the driver and run `make configure`."
 msgstr "[setup] ⚠ torch 无法识别 GPU，应用将回退到 CPU。请检查驱动并运行 `make configure`。"
 
-#: app/setup/gpu_bootstrap.py:506
+#: app/setup/gpu_bootstrap.py:511
 msgid "[setup] ✓ GPU ready for torch."
 msgstr "[setup] ✓ GPU 已可供 torch 使用。"
 
-#: app/setup/gpu_bootstrap.py:515
+#: app/setup/gpu_bootstrap.py:520
 #, python-brace-format
 msgid "[setup] whisper.cpp already present in {dir}."
 msgstr "[setup] whisper.cpp 已存在于 {dir}。"
 
-#: app/setup/gpu_bootstrap.py:517
+#: app/setup/gpu_bootstrap.py:522
 msgid ""
 "[setup] Installing whisper.cpp + Vulkan (binary ~17 MB + turbo fp16 model"
 " ~1.5 GB)..."
 msgstr "[setup] 正在安装 whisper.cpp + Vulkan（程序约 17 MB + turbo fp16 模型约 1.5 GB）..."
 
-#: app/setup/gpu_bootstrap.py:526
+#: app/setup/gpu_bootstrap.py:531
 #, python-brace-format
 msgid "[setup] ✓ whisper.cpp ready in {dir}"
 msgstr "[setup] ✓ whisper.cpp 已就绪，位于 {dir}"
 
-#: app/setup/gpu_bootstrap.py:548
+#: app/setup/gpu_bootstrap.py:553
 #, python-brace-format
 msgid "[setup] ⚠ Missing tools to compile whisper.cpp: {tools}"
 msgstr "[setup] ⚠ 缺少编译 whisper.cpp 所需的工具：{tools}"
 
-#: app/setup/gpu_bootstrap.py:551
+#: app/setup/gpu_bootstrap.py:556
 #, python-brace-format
 msgid "[setup]   Install with: {hint}"
 msgstr "[setup]   安装方法：{hint}"
 
-#: app/setup/gpu_bootstrap.py:565
+#: app/setup/gpu_bootstrap.py:570
 #, python-brace-format
 msgid "[setup] ✓ whisper.cpp (Linux/Vulkan) ready in {dir}"
 msgstr "[setup] ✓ whisper.cpp（Linux/Vulkan）已就绪，位于 {dir}"
 
-#: app/setup/gpu_bootstrap.py:575
+#: app/setup/gpu_bootstrap.py:580
 #, python-brace-format
 msgid "Cloning whisper.cpp {tag}..."
 msgstr "正在克隆 whisper.cpp {tag}..."
 
-#: app/setup/gpu_bootstrap.py:590
+#: app/setup/gpu_bootstrap.py:595
 msgid "Configuring the whisper.cpp build (cmake + Vulkan)..."
 msgstr "正在配置 whisper.cpp 构建（cmake + Vulkan）..."
 
-#: app/setup/gpu_bootstrap.py:596
+#: app/setup/gpu_bootstrap.py:601
 msgid "Compiling whisper.cpp (a few minutes)..."
 msgstr "正在编译 whisper.cpp（需要几分钟）..."
 
-#: app/setup/gpu_bootstrap.py:608
+#: app/setup/gpu_bootstrap.py:613
 #, python-brace-format
 msgid "[setup] ⚠ Binary not found after the build: {path}"
 msgstr "[setup] ⚠ 构建后未找到程序：{path}"
 
-#: app/setup/gpu_bootstrap.py:622
+#: app/setup/gpu_bootstrap.py:627
 #, python-brace-format
 msgid "[setup] downloading {url}"
 msgstr "[setup] 正在下载 {url}"
 
-#: app/setup/gpu_bootstrap.py:627
+#: app/setup/gpu_bootstrap.py:632
 #, python-brace-format
 msgid "[setup] ⚠ download failed: {exc}"
 msgstr "[setup] ⚠ 下载失败：{exc}"
 
-#: app/setup/gpu_bootstrap.py:632
+#: app/setup/gpu_bootstrap.py:637
 #, python-brace-format
 msgid "[setup] ⚠ SHA-256 mismatch for {name} (got {digest}); removing."
 msgstr "[setup] ⚠ {name} 的 SHA-256 不匹配（实际为 {digest}）；正在删除。"
 
-#: app/setup/gpu_bootstrap.py:662
+#: app/setup/gpu_bootstrap.py:667
 #, python-brace-format
 msgid "[setup] ⚠ Failed to execute: {exc}"
 msgstr "[setup] ⚠ 执行失败：{exc}"
 
-#: app/setup/gpu_bootstrap.py:665
+#: app/setup/gpu_bootstrap.py:670
 #, python-brace-format
 msgid "[setup] ⚠ Command returned code {code}."
 msgstr "[setup] ⚠ 命令返回代码 {code}。"
