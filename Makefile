@@ -1,12 +1,12 @@
 .PHONY: all setup configure doctor setup_env setup_env_minimal setup_env_claude setup_env_tts setup_env_custom lock \
         format lint test stt-eval run run-large run-turbo run-vozes-aleatorias run-reset-voz \
-        i18n-extract i18n-init-pt i18n-init-en i18n-init-es i18n-update i18n-compile i18n-mo clean \
+        i18n-extract i18n-init-pt i18n-init-en i18n-init-es i18n-init-ru i18n-init-zh i18n-update i18n-compile i18n-mo clean \
         companion-venv companion-test companion-lint run-tray companion-build companion-installer
 
 all: format lint test
 
 # Compiled catalogs (.mo) are gitignored: build each one from its .po whenever the
-# .po changes, so a fresh clone speaks pt-BR, en and es instead of only English.
+# .po changes, so a fresh clone speaks pt-BR, en, es, ru and zh-CN instead of only English.
 MO_FILES := $(patsubst %.po,%.mo,$(wildcard app/i18n/locales/*/LC_MESSAGES/voicemate.po))
 
 # ─── Setup recomendado ───────────────────────────────────────────────────────
@@ -66,6 +66,12 @@ i18n-init-en:
 
 i18n-init-es:
 	poetry run pybabel init -i app/i18n/locales/voicemate.pot -d app/i18n/locales -D voicemate -l es
+
+i18n-init-ru:
+	poetry run pybabel init -i app/i18n/locales/voicemate.pot -d app/i18n/locales -D voicemate -l ru
+
+i18n-init-zh:
+	poetry run pybabel init -i app/i18n/locales/voicemate.pot -d app/i18n/locales -D voicemate -l zh_CN
 
 i18n-update:
 	poetry run pybabel update -i app/i18n/locales/voicemate.pot -d app/i18n/locales -D voicemate

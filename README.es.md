@@ -1,4 +1,4 @@
-[English](README.md) | [Português](README.pt-BR.md) | **Español**
+[English](README.md) | [Português](README.pt-BR.md) | **Español** | [Русский](README.ru.md) | [简体中文](README.zh-CN.md)
 
 # VoiceMate
 
@@ -87,11 +87,11 @@ Internamente, el prompt canónico (escrito en inglés) tiene un placeholder `{ou
 **Los mensajes de la propia app** (logs, textos de ayuda del CLI) también están localizados mediante `gettext` + Babel. El idioma predeterminado es PT-BR; cámbialo con una variable de entorno:
 
 ```bash
-# Logs de la app en inglés (o `es` para español)
+# Logs de la app en inglés (o `es`, `ru`, `zh-CN`)
 VOICEMATE_LANG=en make run
 ```
 
-Catálogos disponibles: `pt_BR`, `en` y `es`. Todo texto que ve el usuario debe existir en los tres; `pt_BR` y `es` lo traducen, y `en` deja el `msgstr` vacío (el msgid en inglés ya es el texto).
+Catálogos disponibles: `pt_BR`, `en`, `es`, `ru` y `zh_CN`. Todo texto que ve el usuario debe existir en todos; todos menos `en` lo traducen, y `en` deja el `msgstr` vacío (el msgid en inglés ya es el texto).
 
 Para editar / regenerar el catálogo de traducciones:
 
@@ -101,7 +101,7 @@ make i18n-update      # propaga las claves nuevas a los .po existentes
 make i18n-compile     # compila .po → .mo (gettext carga el .mo en tiempo de ejecución)
 ```
 
-Los catálogos están en `app/i18n/locales/{pt_BR,en,es}/LC_MESSAGES/voicemate.po`.
+Los catálogos están en `app/i18n/locales/{pt_BR,en,es,ru,zh_CN}/LC_MESSAGES/voicemate.po`.
 
 ### Convenciones de código
 
@@ -297,7 +297,7 @@ El companion es una pequeña aplicación de escritorio (PySide6) que vive en la 
 
 ### Instalación en Windows
 
-**Con el instalador (recomendado).** Ejecuta `VoiceMate-Setup-<versión>.exe`. Instala solo para tu usuario (sin pedir administrador) en `%LOCALAPPDATA%\Programs\VoiceMate` y agrega VoiceMate al menú Inicio; un acceso directo en el escritorio e iniciar junto con Windows son opcionales (la primera instalación ofrece lo segundo; después lo controla **Iniciar VoiceMate al iniciar sesión**, en la Configuración). El instalador habla español, inglés y portugués. Para generarlo tú mismo (Python 3.12+ e Inno Setup 6.3+, `winget install JRSoftware.InnoSetup`):
+**Con el instalador (recomendado).** Ejecuta `VoiceMate-Setup-<versión>.exe`. Instala solo para tu usuario (sin pedir administrador) en `%LOCALAPPDATA%\Programs\VoiceMate` y agrega VoiceMate al menú Inicio; un acceso directo en el escritorio e iniciar junto con Windows son opcionales (la primera instalación ofrece lo segundo; después lo controla **Iniciar VoiceMate al iniciar sesión**, en la Configuración). El instalador habla español, inglés, portugués, ruso y chino simplificado. Para generarlo tú mismo (Python 3.12+ e Inno Setup 6.3+, `winget install JRSoftware.InnoSetup`):
 
 ```powershell
 make companion-venv        # una vez: .venv-companion con PySide6 y PyInstaller en las versiones fijadas

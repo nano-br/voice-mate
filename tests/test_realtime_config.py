@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from app.cli.args import parse_args
 from app.cli.config_builder import build_config
 from app.setup.persisted_config import PersistedConfig
@@ -21,6 +23,17 @@ def test_transcription_language_derived_from_output_lang_en() -> None:
 def test_transcription_language_derived_strips_region() -> None:
     config = build_config(parse_args(["--output-lang", "es-ES"]))
     assert config.transcription_language == "es"
+
+
+@pytest.mark.parametrize(("output_lang", "expected"), [("ru", "ru"), ("ru-RU", "ru"), ("zh-CN", "zh"), ("zh-TW", "zh")])
+def test_transcription_language_derived_for_russian_and_chinese(output_lang: str, expected: str) -> None:
+    config = build_config(parse_args(["--output-lang", output_lang]))
+    assert config.transcription_language == expected
+
+
+def test_transcription_language_accepts_russian() -> None:
+    config = build_config(parse_args(["--output-lang", "en", "--transcription-language", "ru"]))
+    assert config.transcription_language == "ru"
 
 
 def test_transcription_language_unknown_falls_back_to_auto() -> None:

@@ -60,10 +60,10 @@ No Windows, registre as hotkeys:
 - **PowerShell** (recomendado — também seta o clipboard nativo via `/result`):
   `powershell -ExecutionPolicy Bypass -File scripts\windows\voicemate-hotkeys.ps1`
   Para iniciar com o Windows, crie um atalho em `shell:startup` (veja o cabeçalho
-  do script). As mensagens saem em pt-BR, en ou es: por padrão o script
+  do script). As mensagens saem em pt-BR, en, es, ru ou zh-CN: por padrão o script
   fala o mesmo idioma do daemon (o `lang` do `/health`), para não misturar idiomas
   ao repassar as mensagens dele; antes de conectar, usa o idioma do Windows. Para
-  fixar, use `-Language pt-BR|en|es` ou defina `VOICEMATE_LANG` no Windows.
+  fixar, use `-Language pt-BR|en|es|ru|zh-CN` ou defina `VOICEMATE_LANG` no Windows.
   Avisos importantes (sem microfone, áudio do WSL travado, transcrição que não
   entrou no clipboard) também viram notificação do Windows; `-NoToast` desliga.
 - **AutoHotkey v2**: dê dois cliques em `scripts\windows\voicemate-hotkeys.ahk`.

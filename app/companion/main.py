@@ -10,7 +10,8 @@ Startup order (app/companion/contract.py, docs/companion-app.md):
 3. The command channel listens at once; commands wait until the UI exists.
 4. The controller (lazy import, so a forwarded command never loads the core;
    `--demo` uses the fake controller) -> `settings()` -> `app.i18n.set_language`
-   (plus Qt's own qtbase translations) -> build the UI -> `controller.start()`.
+   (plus Qt's own qtbase translations and, for Chinese, a Han font) -> build the UI ->
+   `controller.start()`.
 A `--command` never starts VoiceMate: with nothing running it exits 0.
 """
 
@@ -53,7 +54,15 @@ RETRY_INTERVAL_S: Final = 0.25
 # cap is 15 s), then releases the lock. Past this, start like a plain launch would.
 RESTART_WAIT_S: Final = 40.0
 # Qt's own strings (context menus, file dialogs) come from these catalogs.
-_QT_CATALOGS: Final = ("pt_BR", "es")
+_QT_CATALOGS: Final = ("pt_BR", "es", "ru", "zh_CN")
+# Fonts tried after the UI font (Segoe UI on Windows has no Han glyphs) for catalogs in a
+# script it lacks. Without them Qt's own fallback may take the Han characters from a
+# Japanese or Traditional Chinese font (other glyph shapes, mixed fonts) on a Windows
+# that is not in Chinese. Windows 10/11 ship Microsoft YaHei in every language; the
+# others are the usual Linux packages. Missing families are skipped.
+_SCRIPT_FONTS: Final[dict[str, tuple[str, ...]]] = {
+    "zh_CN": ("Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Micro Hei"),
+}
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -113,6 +122,7 @@ def _report_missing_data_dir(app: QApplication, error: DataDirError) -> None:
     log.error("%s", error)
     set_language("auto")
     qt_translator = install_qt_translations(app)
+    install_script_fonts(app)
     QMessageBox.critical(
         None,
         "VoiceMate",
@@ -192,8 +202,8 @@ def jump_list_updater() -> Callable[[CompanionSettings], None] | None:
 def install_qt_translations(app: QApplication) -> QTranslator | None:
     """Qt's built-in strings (standard context menus, file dialogs) in the UI language.
 
-    Only `qtbase_*` ships with the frozen build (pt_BR and es). Keep the returned object
-    alive: an installed translator that gets garbage-collected stops translating.
+    Only `qtbase_*` ships with the frozen build (pt_BR, es, ru and zh_CN). Keep the returned
+    object alive: an installed translator that gets garbage-collected stops translating.
     """
     catalog = active_language()
     if catalog not in _QT_CATALOGS:
@@ -205,6 +215,18 @@ def install_qt_translations(app: QApplication) -> QTranslator | None:
         return None
     app.installTranslator(translator)
     return translator
+
+
+def install_script_fonts(app: QApplication) -> None:
+    """Add the UI language's own fonts after the application font's families, so its
+    script renders with the right glyphs while Latin text keeps the platform UI font."""
+    fallbacks = _SCRIPT_FONTS.get(active_language())
+    if not fallbacks:
+        return
+    font = app.font()
+    families = font.families() or [font.family()]
+    font.setFamilies([*families, *(family for family in fallbacks if family not in families)])
+    app.setFont(font)
 
 
 def _has_console() -> bool:
@@ -262,6 +284,7 @@ def _run(app: QApplication, args: argparse.Namespace, suffix: str) -> int:
         return 1
     set_language(controller.settings().language)
     qt_translator = install_qt_translations(app)
+    install_script_fonts(app)
     launch_args = sys.argv[1:]
     ui = CompanionUi(
         controller,

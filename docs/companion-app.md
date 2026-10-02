@@ -32,11 +32,19 @@ the Windows side is a PowerShell script. Problems this design addresses:
   clipboard delivery with verification, notifications, supervision, settings.
 - **Transport:** HTTP on loopback with a long-poll `GET /events`.
 - **i18n:** every user-facing string through `app.i18n._` (msgid English; catalogs
-  pt_BR, en, es; the en msgstr stays empty). Our widgets get their text from `_()`;
-  only Qt's built-in strings (standard context menus, file dialogs) use Qt's own
-  qtbase translations (`qtbase_pt_BR.qm`, `qtbase_es.qm`, installed with a
-  `QTranslator` after `set_language`). The companion picks its language ONCE at
-  startup with `app.i18n.set_language(lang)` (owned by `app/i18n`, called by
+  pt_BR, en, es, ru, zh_CN; the en msgstr stays empty). The `language` setting
+  (`UiLanguage`) is `auto`, `pt-BR`, `en`, `es`, `ru` or `zh-CN`; `auto` maps the OS
+  UI language by prefix (`pt*` to pt_BR, `es*` to es, `ru*` to ru, any `zh*`, zh_TW
+  and zh_HK included, to zh_CN, anything else to English). Our widgets get their text
+  from `_()`; only Qt's built-in strings (standard context menus, file dialogs) use
+  Qt's own qtbase translations (`qtbase_pt_BR.qm`, `qtbase_es.qm`, `qtbase_ru.qm`,
+  `qtbase_zh_CN.qm`, installed with a `QTranslator` after `set_language`). For zh_CN,
+  `install_script_fonts` appends Han fonts (Microsoft YaHei UI, then the usual Linux
+  CJK families) to the application font: Segoe UI has no Han glyphs, and on a Windows
+  that is not in Chinese Qt's own fallback draws them from a Japanese font. Windows grow
+  with their texts (the settings dialog has no fixed minimum size; the shortcut fields fit
+  their longest prompt), since Russian labels run longer than English. The
+  companion picks its language ONCE at startup with `app.i18n.set_language(lang)` (owned by `app/i18n`, called by
   `app/companion/main.py`; ignores `VOICEMATE_LANG`; `setup_locale` keeps its
   behavior for the engine):
   the `language` setting, or for `auto` the OS UI language. It never flips mid
@@ -670,7 +678,12 @@ as "not found".
   rendered cues and `pending.json*` from `%LOCALAPPDATA%\VoiceMate` (the settings in
   `%APPDATA%\VoiceMate` are kept). ISCC is not installed by
   default: `make companion-installer` explains how to get it
-  (`winget install JRSoftware.InnoSetup`).
+  (`winget install JRSoftware.InnoSetup`). The wizard speaks English, Brazilian
+  Portuguese, Spanish, Russian (Inno Setup's own translations) and Simplified Chinese:
+  Inno Setup ships no Chinese translation, so the unofficial one from the JRSoftware
+  translations page is vendored in `packaging/windows/languages/` (see its README).
+  Every `[Messages]`/`[CustomMessages]` entry of the script exists in all five
+  (`tests/test_companion_packaging.py` checks it).
 - Reproducible builds: exact pins in `requirements/companion-constraints.txt`.
 - Icons: `app/companion/assets/voicemate.ico` (16 to 256 px) and
   `voicemate-<size>.png`, drawn by `tools/gen_icon.py` (`python -m tools.gen_icon`) with
@@ -684,7 +697,8 @@ as "not found".
   - No SVG: QtSvg, the `iconengines` plugins and `imageformats/qsvg` are dropped.
   - Images: PNG (built into QtGui) and ICO (the `qico` plugin) only. Platform plugin:
     `qwindows` only.
-  - Qt translations: only `qtbase_pt_BR.qm` and `qtbase_es.qm` are kept, in Qt's
+  - Qt translations: only `qtbase_pt_BR.qm`, `qtbase_es.qm`, `qtbase_ru.qm` and
+    `qtbase_zh_CN.qm` are kept, in Qt's
     translations path (`QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)`),
     so `main.py` can install a `QTranslator` for Qt's own texts (the Undo/Cut/Copy/Paste
     context menu of text fields). Everything else comes from gettext.

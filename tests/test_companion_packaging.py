@@ -12,6 +12,7 @@ from typing import Any
 
 import pytest
 
+from app import i18n
 from app.companion import paths
 from app.companion.contract import (
     APP_USER_MODEL_ID,
@@ -24,6 +25,16 @@ from tools import build_installer
 _ROOT = Path(__file__).resolve().parents[1]
 _REQUIREMENTS = _ROOT / "requirements"
 _ISS = _ROOT / "packaging" / "windows" / "voicemate-companion.iss"
+_SPEC = _ROOT / "packaging" / "windows" / "voicemate-companion.spec"
+# Installer languages: one per catalog of the app (Inno Setup's names).
+_INSTALLER_LANGUAGES = {
+    "english": "en",
+    "brazilianportuguese": "pt_BR",
+    "spanish": "es",
+    "russian": "ru",
+    "chinesesimplified": "zh_CN",
+}
+_DASHES = (chr(0x2014), chr(0x2013))  # em dash, en dash
 _ASSETS = _ROOT / "app" / "companion" / "assets"
 _ICON_SIZES = {16, 24, 32, 48, 64, 256}
 
@@ -126,6 +137,71 @@ def test_uninstaller_removes_the_not_copied_list() -> None:
     pending = next(i for i, line in enumerate(entries) if "pending.json" in line)
     folder = entries.index(r'Type: dirifempty; Name: "{localappdata}\{#AppName}"')
     assert pending < folder
+
+
+def _installer_languages() -> dict[str, str]:
+    """{language name: MessagesFile} of the [Languages] section."""
+    languages: dict[str, str] = {}
+    for line in _iss_section("Languages"):
+        match = re.fullmatch(r'Name: "([^"]+)"; MessagesFile: "([^"]+)"', line)
+        assert match, f"unexpected [Languages] line: {line!r}"
+        languages[match.group(1)] = match.group(2)
+    return languages
+
+
+def test_installer_speaks_every_app_language() -> None:
+    languages = _installer_languages()
+    assert set(languages) == set(_INSTALLER_LANGUAGES)
+    assert set(_INSTALLER_LANGUAGES.values()) == set(i18n._UI_LANGUAGE_CATALOGS.values())
+    assert next(iter(languages)) == "english", "English first: the fallback language"
+    for name, messages_file in languages.items():
+        if not messages_file.startswith("compiler:"):
+            # Vendored (Inno Setup ships no such translation): relative to the script.
+            vendored = _ISS.parent / messages_file.replace("\\", "/")
+            assert vendored.is_file(), f"{name}: {messages_file} not found"
+            text = vendored.read_bytes().decode("utf-8")
+            assert "[LangOptions]" in text and "[Messages]" in text, f"{name}: not an Inno Setup messages file"
+    assert languages["chinesesimplified"] == r"languages\ChineseSimplified.isl"
+    chinese = (_ISS.parent / "languages" / "ChineseSimplified.isl").read_text(encoding="utf-8")
+    assert re.search(r"^LanguageID=\$0804$", chinese, re.MULTILINE), "not Simplified Chinese (LCID 0x0804)"
+    assert (_ISS.parent / "languages" / "README.md").is_file(), "document where the vendored translation comes from"
+
+
+@pytest.mark.parametrize("section", ["Messages", "CustomMessages"])
+def test_installer_messages_exist_in_every_language(section: str) -> None:
+    """A message defined for one language must be defined for all of them: a missing one
+    falls back to Inno Setup's default text (English or the stock FinishedLabel)."""
+    names: dict[str, set[str]] = {}
+    for line in _iss_section(section):
+        match = re.fullmatch(r"(\w+)\.(\w+)=(.+)", line)
+        assert match, f"[{section}] entries must be language-qualified: {line!r}"
+        language, name, text = match.groups()
+        assert language in _INSTALLER_LANGUAGES, f"unknown language {language!r}"
+        assert not any(dash in text for dash in _DASHES), f"em/en dash in {language}.{name}"
+        names.setdefault(name, set()).add(language)
+    assert names, f"[{section}] is empty"
+    for name, languages in names.items():
+        assert languages == set(_INSTALLER_LANGUAGES), (
+            f"{name}: missing {sorted(set(_INSTALLER_LANGUAGES) - languages)}"
+        )
+
+
+def test_installer_script_is_utf8_without_bom() -> None:
+    # ISCC reads a BOM-less script as UTF-8 since 6.3 (the #if VER check); a BOM or
+    # another encoding would garble the Russian and Chinese messages.
+    data = _ISS.read_bytes()
+    assert not data.startswith(b"\xef\xbb\xbf")
+    data.decode("utf-8")
+    assert b"\r\n" not in data
+
+
+def test_frozen_build_keeps_the_qt_translation_of_every_language() -> None:
+    """The spec drops Qt's translations except qtbase for each translated catalog
+    (main.py installs it for Qt's own texts)."""
+    match = re.search(r"translations/\(\?!qtbase_\(([^)]*)\)", _SPEC.read_text(encoding="utf-8"))
+    assert match, "qtbase translation filter not found in the spec"
+    kept = set(match.group(1).split("|"))
+    assert kept == {catalog.lower() for catalog in i18n._UI_LANGUAGE_CATALOGS.values()} - {"en"}
 
 
 def test_icon_has_every_size() -> None:

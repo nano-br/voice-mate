@@ -26,14 +26,16 @@ if TYPE_CHECKING:
 _LOCALES_DIR = Path(__file__).parent / "locales"
 _DOMAIN = "voicemate"
 _translation: _gettext.NullTranslations = _gettext.NullTranslations()
-# Catalog actually in use ("pt_BR", "es", "en"); English when none loaded (msgids are English).
+# Catalog actually in use ("pt_BR", "es", "ru", "zh_CN", "en"); English when none loaded
+# (msgids are English).
 _active_language = "en"
 
 # Companion UI languages (`UiLanguage`) -> catalog names.
-_UI_LANGUAGE_CATALOGS: dict[str, str] = {"pt-BR": "pt_BR", "en": "en", "es": "es"}
-# OS language prefix -> catalog, for `set_language("auto")`: any Portuguese reads pt_BR
-# better than English, any Spanish reads `es`; everything else gets English.
-_OS_LANGUAGE_CATALOGS: dict[str, str] = {"pt": "pt_BR", "es": "es", "en": "en"}
+_UI_LANGUAGE_CATALOGS: dict[str, str] = {"pt-BR": "pt_BR", "en": "en", "es": "es", "ru": "ru", "zh-CN": "zh_CN"}
+# Language prefix -> catalog, for `set_language("auto")` and VOICEMATE_LANG: any Portuguese
+# reads pt_BR better than English, any Spanish reads `es`, any Chinese (zh_TW and zh_HK
+# included) reads Simplified Chinese better than English; everything else gets English.
+_OS_LANGUAGE_CATALOGS: dict[str, str] = {"pt": "pt_BR", "es": "es", "en": "en", "ru": "ru", "zh": "zh_CN"}
 
 
 def _load_first(languages: list[str]) -> None:
@@ -63,7 +65,18 @@ def setup_locale(default_lang: str = "pt-BR") -> None:
     of an exception).
     """
     lang = os.environ.get("VOICEMATE_LANG", default_lang)
-    _load_first([lang.replace("-", "_"), default_lang.replace("-", "_")])
+    _load_first([_catalog_name(lang), _catalog_name(default_lang)])
+
+
+def _catalog_name(lang: str) -> str:
+    """A BCP-47 or POSIX language name -> the catalog to try first.
+
+    A known language prefix picks its catalog ("pt-PT" -> pt_BR, "zh-TW" -> zh_CN,
+    "ru_RU.UTF-8" -> ru); anything else keeps its own name ("fr-FR" -> fr_FR), which
+    finds no catalog and falls through to the next candidate.
+    """
+    name = _locale_name(lang).replace("-", "_")
+    return _OS_LANGUAGE_CATALOGS.get(name.split("_")[0].lower(), name)
 
 
 def set_language(lang: UiLanguage) -> None:
@@ -77,7 +90,7 @@ def set_language(lang: UiLanguage) -> None:
 
 
 def catalog_for(lang: UiLanguage) -> str:
-    """The catalog `set_language(lang)` loads ("pt_BR", "es", "en"), without loading it.
+    """The catalog `set_language(lang)` loads ("pt_BR", "es", "ru", "zh_CN", "en"), without loading it.
 
     "auto" follows the OS UI language; a language without a compiled catalog means
     English. The companion compares it with `active_language()` to tell whether a new
@@ -94,7 +107,7 @@ def catalog_for(lang: UiLanguage) -> str:
 
 
 def _os_ui_language() -> str | None:
-    """The OS UI language as a POSIX-style name ("pt_BR", "es_MX"), or None if unknown:
+    """The OS UI language as a POSIX-style name ("pt_BR", "es_MX", "zh_TW"), or None if unknown:
     the Windows display language, elsewhere `_posix_ui_language(os.environ)`."""
     if sys.platform == "win32":
         import ctypes
@@ -129,7 +142,7 @@ def _locale_name(value: str) -> str:
 
 
 def active_language() -> str:
-    """The catalog in use after `setup_locale` (e.g. "pt_BR", "es", "en").
+    """The catalog in use after `setup_locale` (e.g. "pt_BR", "es", "ru", "zh_CN", "en").
 
     Published in the daemon's `/health` so the Windows script can speak the same
     language as the daemon messages it relays.

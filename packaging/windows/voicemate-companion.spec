@@ -97,11 +97,11 @@ QT_EXCLUDES = [
 # Files the Qt hooks collect anyway (plugins of QtGui/QtNetwork and their dependencies)
 # that the companion does not need. Matched against the destination path, lower case,
 # with forward slashes. The UI takes its own strings from gettext (`app.i18n._`); of
-# Qt's translations only qtbase pt_BR and es stay, so main.py can install a QTranslator
+# Qt's translations only qtbase pt_BR, es, ru and zh_CN stay, so main.py can install a QTranslator
 # for Qt's standard texts (the Undo/Cut/Copy/Paste context menu of text fields).
 QT_UNUSED_FILES = re.compile(
     r"^pyside6/("
-    r"translations/(?!qtbase_(pt_br|es)\.qm$)"
+    r"translations/(?!qtbase_(pt_br|es|ru|zh_cn)\.qm$)"
     r"|opengl32sw\.dll$"  # software OpenGL: the widgets paint with the raster engine
     r"|d3dcompiler_47\.dll$"  # Windows 10+ ships its own copy
     r"|qt6(pdf|svg|qml|quick|opengl|virtualkeyboard)[a-z0-9]*\.dll$"

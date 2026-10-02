@@ -40,6 +40,18 @@ def test_every_literal_option_has_a_label() -> None:
     assert set(texts.hotkey_check_labels()) == set(get_args(HotkeyCheck))
 
 
+def test_language_names_are_written_in_their_own_language() -> None:
+    """Never translated: anyone must find their language in a UI they cannot read."""
+    labels = texts.language_labels()
+    assert {code: name for code, name in labels.items() if code != "auto"} == {
+        "pt-BR": "Português (Brasil)",
+        "en": "English",
+        "es": "Español",
+        "ru": "Русский",
+        "zh-CN": "中文（简体）",
+    }
+
+
 @pytest.mark.parametrize("state", get_args(TrayState))
 def test_every_state_has_a_status_line(state: TrayState) -> None:
     assert texts.status_line(CompanionSnapshot(tray_state=state), "ctrl+alt+v", now=0.0)

@@ -1,4 +1,4 @@
-# Spanish translations for VoiceMate.
+# Russian translations for VoiceMate.
 # Copyright (C) 2026 Álli Terhorst
 # This file is distributed under the same license as the VoiceMate project.
 #
@@ -7,11 +7,12 @@ msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
 "POT-Creation-Date: 2026-10-02 05:02-0300\n"
-"PO-Revision-Date: 2026-10-01 16:49-0300\n"
+"PO-Revision-Date: 2026-10-02 03:38-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
-"Language: es\n"
-"Language-Team: es <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language: ru\n"
+"Language-Team: ru <LL@li.org>\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -20,31 +21,31 @@ msgstr ""
 #: app/main.py:137
 #, python-brace-format
 msgid "[VoiceMate] ❌ Could not read or create the API token ({path}): {exc}"
-msgstr "[VoiceMate] ❌ No se pudo leer ni crear el token de la API ({path}): {exc}"
+msgstr "[VoiceMate] ❌ Не удалось прочитать или создать токен API ({path}): {exc}"
 
 #: app/main.py:144
 #, python-brace-format
 msgid "[VoiceMate] API token required (taken from {env})."
-msgstr "[VoiceMate] Token de la API requerido (tomado de {env})."
+msgstr "[VoiceMate] Требуется токен API (взят из {env})."
 
 #: app/main.py:146
 #, python-brace-format
 msgid "[VoiceMate] API token required (Bearer), stored in {path}."
-msgstr "[VoiceMate] Token de la API requerido (Bearer), guardado en {path}."
+msgstr "[VoiceMate] Требуется токен API (Bearer), он хранится в {path}."
 
 #: app/main.py:165
 #, python-brace-format
 msgid "[VoiceMate] ❌ Could not open the HTTP API on 127.0.0.1:{port}: {exc}"
-msgstr "[VoiceMate] ❌ No se pudo abrir la API HTTP en 127.0.0.1:{port}: {exc}"
+msgstr "[VoiceMate] ❌ Не удалось открыть HTTP API на 127.0.0.1:{port}: {exc}"
 
 #: app/main.py:171
 #, python-brace-format
 msgid "[VoiceMate] HTTP API on http://127.0.0.1:{port}; loading the engine..."
-msgstr "[VoiceMate] API HTTP en http://127.0.0.1:{port}; cargando el motor..."
+msgstr "[VoiceMate] HTTP API на http://127.0.0.1:{port}; загрузка движка..."
 
 #: app/main.py:195
 msgid "[VoiceMate] No handler available; exiting."
-msgstr "[VoiceMate] No hay ningún handler disponible; saliendo."
+msgstr "[VoiceMate] Нет доступных обработчиков; выход."
 
 #: app/main.py:218
 #, python-brace-format
@@ -53,66 +54,66 @@ msgid ""
 "[VoiceMate] Ready. Input: {input_method}"
 msgstr ""
 "\n"
-"[VoiceMate] Listo. Entrada: {input_method}"
+"[VoiceMate] Готово. Ввод: {input_method}"
 
 #: app/main.py:220
 #, python-brace-format
 msgid "[VoiceMate] Platform: {platform} (trigger: {trigger})"
-msgstr "[VoiceMate] Plataforma: {platform} (disparador: {trigger})"
+msgstr "[VoiceMate] Платформа: {platform} (триггер: {trigger})"
 
 #: app/main.py:225
 #, python-brace-format
 msgid "[VoiceMate] Daemon listening on http://127.0.0.1:{port} (POST /trigger)."
-msgstr "[VoiceMate] Daemon escuchando en http://127.0.0.1:{port} (POST /trigger)."
+msgstr "[VoiceMate] Демон слушает http://127.0.0.1:{port} (POST /trigger)."
 
 #: app/main.py:228
 msgid ""
 "[VoiceMate] Register the Windows-side hotkeys with scripts/windows"
 "/voicemate-hotkeys.ahk (or .ps1)."
 msgstr ""
-"[VoiceMate] Registra los atajos del lado de Windows con scripts/windows"
-"/voicemate-hotkeys.ahk (o .ps1)."
+"[VoiceMate] Зарегистрируйте горячие клавиши на стороне Windows с помощью "
+"scripts/windows/voicemate-hotkeys.ahk (или .ps1)."
 
 #: app/main.py:232
 msgid "clipboard"
-msgstr "portapapeles"
+msgstr "буфер обмена"
 
 #: app/main.py:232
 msgid "Claude (multi-turn)"
-msgstr "Claude (multiturno)"
+msgstr "Claude (многоходовой диалог)"
 
 #: app/main.py:233
 #, python-brace-format
 msgid "[VoiceMate] Hotkey {hotkey}: → {label}"
-msgstr "[VoiceMate] Atajo {hotkey}: → {label}"
+msgstr "[VoiceMate] Горячая клавиша {hotkey}: → {label}"
 
 #: app/main.py:235
 #, python-brace-format
 msgid "[VoiceMate] HTTP API on http://127.0.0.1:{port}."
-msgstr "[VoiceMate] API HTTP en http://127.0.0.1:{port}."
+msgstr "[VoiceMate] HTTP API на http://127.0.0.1:{port}."
 
 #: app/main.py:236
 #, python-brace-format
 msgid "[VoiceMate] Max recording: {seconds}s"
-msgstr "[VoiceMate] Tiempo máximo de grabación: {seconds}s"
+msgstr "[VoiceMate] Максимальная длительность записи: {seconds} с"
 
 #: app/main.py:238
 msgid "[VoiceMate] Ctrl+C to exit.\n"
-msgstr "[VoiceMate] Ctrl+C para salir.\n"
+msgstr "[VoiceMate] Ctrl+C для выхода.\n"
 
 #: app/main.py:251
 #, python-brace-format
 msgid "[VoiceMate] Failed to close handler: {exc}"
-msgstr "[VoiceMate] No se pudo cerrar el handler: {exc}"
+msgstr "[VoiceMate] Не удалось закрыть обработчик: {exc}"
 
 #: app/main.py:259
 #, python-brace-format
 msgid "[VoiceMate] Failed to close transcriber: {exc}"
-msgstr "[VoiceMate] No se pudo cerrar el transcriptor: {exc}"
+msgstr "[VoiceMate] Не удалось закрыть модуль распознавания: {exc}"
 
 #: app/main.py:293
 msgid "[VoiceMate] Supervised: closing stdin shuts the engine down."
-msgstr "[VoiceMate] Modo supervisado: cerrar stdin apaga el motor."
+msgstr "[VoiceMate] Режим под управлением: закрытие stdin останавливает движок."
 
 #: app/main.py:312 app/main.py:383
 msgid ""
@@ -120,88 +121,84 @@ msgid ""
 "[VoiceMate] Shutting down."
 msgstr ""
 "\n"
-"[VoiceMate] Finalizando."
+"[VoiceMate] Завершение работы."
 
 #: app/main.py:318
 #, python-brace-format
 msgid "[VoiceMate] ❌ The engine failed to start: {exc}"
-msgstr "[VoiceMate] ❌ El motor no pudo iniciarse: {exc}"
+msgstr "[VoiceMate] ❌ Не удалось запустить движок: {exc}"
 
 #: app/main.py:370
 #, python-brace-format
 msgid "[VoiceMate] Failed to stop the listener: {exc}"
-msgstr "[VoiceMate] No se pudo detener el listener: {exc}"
+msgstr "[VoiceMate] Не удалось остановить слушатель ввода: {exc}"
 
 #: app/cli/config_builder.py:108
 msgid "[VoiceMate] ⚠ Claude flow requires input-method=keyboard. Disabling."
-msgstr ""
-"[VoiceMate] ⚠ El flujo de Claude requiere input-method=keyboard. "
-"Desactivándolo."
+msgstr "[VoiceMate] ⚠ Режиму Claude нужен input-method=keyboard. Режим отключён."
 
 #: app/cli/config_builder.py:127
 msgid ""
 "[VoiceMate] ⚠ --claude-no-system-prompt and --claude-system-prompt were "
 "passed together; using --claude-no-system-prompt."
 msgstr ""
-"[VoiceMate] ⚠ Se pasaron --claude-no-system-prompt y --claude-system-"
-"prompt juntos; usando --claude-no-system-prompt."
+"[VoiceMate] ⚠ Переданы одновременно --claude-no-system-prompt и --claude-"
+"system-prompt; используется --claude-no-system-prompt."
 
 #: app/cli/config_builder.py:237
 #, python-brace-format
 msgid "[VoiceMate] Auto-seed removed: {path}"
-msgstr "[VoiceMate] Auto-seed eliminado: {path}"
+msgstr "[VoiceMate] Автообразец голоса удалён: {path}"
 
 #: app/cli/config_builder.py:240
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Failed to remove {path}: {exc}"
-msgstr "[VoiceMate] ⚠ No se pudo eliminar {path}: {exc}"
+msgstr "[VoiceMate] ⚠ Не удалось удалить {path}: {exc}"
 
 #: app/cli/wiring.py:60
 #, python-brace-format
 msgid "[VoiceMate] ⚠ openai-whisper failed: {exc}"
-msgstr "[VoiceMate] ⚠ Falló openai-whisper: {exc}"
+msgstr "[VoiceMate] ⚠ Ошибка openai-whisper: {exc}"
 
 #: app/cli/wiring.py:67
 msgid ""
 "[VoiceMate] ⚠ whisper.cpp not found (run `make configure`); trying "
 "fallback."
 msgstr ""
-"[VoiceMate] ⚠ No se encontró whisper.cpp (ejecuta `make configure`); "
-"probando la alternativa."
+"[VoiceMate] ⚠ whisper.cpp не найден (выполните `make configure`); пробуем"
+" резервный вариант."
 
 #: app/cli/wiring.py:74
 #, python-brace-format
 msgid "[VoiceMate] ⚠ whisper.cpp failed; falling back: {exc}"
-msgstr "[VoiceMate] ⚠ Falló whisper.cpp; recurriendo a la alternativa: {exc}"
+msgstr "[VoiceMate] ⚠ Ошибка whisper.cpp; переход на резервный вариант: {exc}"
 
 #: app/cli/wiring.py:94
 #, python-brace-format
 msgid "[VoiceMate] ⚠ faster-whisper (CT2-ROCm) failed on the AMD GPU: {exc}"
-msgstr "[VoiceMate] ⚠ faster-whisper (CT2-ROCm) falló en la GPU AMD: {exc}"
+msgstr "[VoiceMate] ⚠ faster-whisper (CT2-ROCm) не работает на GPU AMD: {exc}"
 
 #: app/cli/wiring.py:97
 msgid "[VoiceMate]   Disabling until the next `make configure`."
-msgstr "[VoiceMate]   Desactivado hasta el próximo `make configure`."
+msgstr "[VoiceMate]   Отключён до следующего запуска `make configure`."
 
 #: app/cli/wiring.py:104
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Failed to persist ct2_rocm_ok: {persist_exc}"
-msgstr "[VoiceMate] ⚠ No se pudo guardar ct2_rocm_ok: {persist_exc}"
+msgstr "[VoiceMate] ⚠ Не удалось сохранить ct2_rocm_ok: {persist_exc}"
 
 #: app/cli/wiring.py:145
 msgid ""
 "[VoiceMate] ⚠ No GPU backend available on AMD; using faster-whisper on "
 "CPU."
 msgstr ""
-"[VoiceMate] ⚠ No hay ningún backend de GPU disponible en AMD; usando "
-"faster-whisper en la CPU."
+"[VoiceMate] ⚠ Для AMD нет доступного GPU-бэкенда; используется faster-"
+"whisper на CPU."
 
 #: app/cli/wiring.py:182
 #, python-brace-format
 msgid "[VoiceMate] ⚠ TTS disabled: engine '{engine}' packages not installed."
-msgstr ""
-"[VoiceMate] ⚠ TTS desactivado: los paquetes del motor '{engine}' no están"
-" instalados."
+msgstr "[VoiceMate] ⚠ TTS отключён: пакеты движка '{engine}' не установлены."
 
 #: app/cli/wiring.py:186
 #, python-brace-format
@@ -209,15 +206,13 @@ msgid ""
 "[VoiceMate]   Install with: poetry install --extras {extra} (or run with "
 "--no-tts)."
 msgstr ""
-"[VoiceMate]   Instala con: poetry install --extras {extra} (o ejecuta con"
-" --no-tts)."
+"[VoiceMate]   Установите: poetry install --extras {extra} (или запустите "
+"с --no-tts)."
 
 #: app/cli/wiring.py:196
 #, python-brace-format
 msgid "[VoiceMate] ⚠ TTS disabled (failed to start engine '{engine}'): {exc}"
-msgstr ""
-"[VoiceMate] ⚠ TTS desactivado (no se pudo iniciar el motor '{engine}'): "
-"{exc}"
+msgstr "[VoiceMate] ⚠ TTS отключён (не удалось запустить движок '{engine}'): {exc}"
 
 #: app/cli/wiring.py:203
 #, python-brace-format
@@ -225,28 +220,28 @@ msgid ""
 "[VoiceMate]   Check `poetry install --extras {extra}`, GPU availability, "
 "or run with `--no-tts`."
 msgstr ""
-"[VoiceMate]   Verifica `poetry install --extras {extra}`, la "
-"disponibilidad de la GPU, o ejecuta con `--no-tts`."
+"[VoiceMate]   Проверьте `poetry install --extras {extra}`, доступность "
+"GPU или запустите с `--no-tts`."
 
 #: app/cli/wiring.py:243
 msgid "[VoiceMate] ⚠ Claude flow disabled: extra 'claude' not installed."
-msgstr ""
-"[VoiceMate] ⚠ Flujo de Claude desactivado: el extra 'claude' no está "
-"instalado."
+msgstr "[VoiceMate] ⚠ Режим Claude отключён: extra 'claude' не установлен."
 
 #: app/cli/wiring.py:247
 msgid "[VoiceMate]   Install with: poetry install --extras claude"
-msgstr "[VoiceMate]   Instala con: poetry install --extras claude"
+msgstr "[VoiceMate]   Установите: poetry install --extras claude"
 
 #: app/cli/wiring.py:263
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Failed to start Claude (run `claude login`): {exc}"
-msgstr "[VoiceMate] ⚠ No se pudo iniciar Claude (ejecuta `claude login`): {exc}"
+msgstr ""
+"[VoiceMate] ⚠ Не удалось запустить Claude (выполните `claude login`): "
+"{exc}"
 
 #: app/cli/wiring.py:275
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Unknown flow ignored: {kind}"
-msgstr "[VoiceMate] ⚠ Flujo desconocido ignorado: {kind}"
+msgstr "[VoiceMate] ⚠ Неизвестный режим пропущен: {kind}"
 
 #: app/cli/wiring.py:314
 #, python-brace-format
@@ -254,54 +249,54 @@ msgid ""
 "[VoiceMate] ⚠ --input-method mouse is only supported on Windows "
 "(trigger={trigger}); using keyboard hotkeys."
 msgstr ""
-"[VoiceMate] ⚠ --input-method mouse solo es compatible con Windows "
-"(trigger={trigger}); usando atajos de teclado."
+"[VoiceMate] ⚠ --input-method mouse поддерживается только в Windows "
+"(trigger={trigger}); используются горячие клавиши."
 
 #: app/companion/controller.py:607
 msgid ""
 "The settings file was written by a newer version of VoiceMate, so it is "
 "read-only here."
 msgstr ""
-"El archivo de configuración lo escribió una versión más nueva de "
-"VoiceMate, así que aquí es de solo lectura."
+"Файл настроек записан более новой версией VoiceMate, поэтому здесь он "
+"доступен только для чтения."
 
 #: app/companion/controller.py:626
 msgid "Could not save the settings file."
-msgstr "No se pudo guardar el archivo de configuración."
+msgstr "Не удалось сохранить файл настроек."
 
 #: app/companion/controller.py:654
 #, python-brace-format
 msgid "{hotkey} is already used by another app."
-msgstr "Otra aplicación ya usa {hotkey}."
+msgstr "{hotkey} уже используется другим приложением."
 
 #: app/companion/controller.py:719
 msgid "Could not change the start at login setting."
-msgstr "No se pudo cambiar la opción de iniciar al entrar en la sesión."
+msgstr "Не удалось изменить параметр запуска при входе в систему."
 
 #: app/companion/cues.py:80 app/companion/ui/texts.py:150
 msgid "Recording started"
-msgstr "Grabación iniciada"
+msgstr "Запись началась"
 
 #: app/companion/cues.py:81 app/companion/ui/texts.py:151
 msgid "Transcribing"
-msgstr "Transcribiendo"
+msgstr "Расшифровка"
 
 #: app/companion/cues.py:82 app/companion/ui/texts.py:105
 #: app/companion/ui/texts.py:152
 msgid "Copied"
-msgstr "Copiado"
+msgstr "Скопировано"
 
 #: app/companion/cues.py:83 app/companion/ui/texts.py:153
 msgid "Claude answered"
-msgstr "Claude respondió"
+msgstr "Claude ответил"
 
 #: app/companion/cues.py:84 app/companion/ui/texts.py:154
 msgid "Warning"
-msgstr "Advertencia"
+msgstr "Предупреждение"
 
 #: app/companion/cues.py:85 app/companion/ui/texts.py:155
 msgid "Error"
-msgstr "Error"
+msgstr "Ошибка"
 
 #: app/companion/main.py:130
 #, python-brace-format
@@ -310,207 +305,207 @@ msgid ""
 " folder is unknown. Set {variable} or {home_variable} for your user and "
 "start VoiceMate again."
 msgstr ""
-"VoiceMate no encuentra su carpeta de datos: {variable} no está definida y"
-" la carpeta personal es desconocida. Define {variable} o {home_variable} "
-"para tu usuario y vuelve a abrir VoiceMate."
+"VoiceMate не может найти папку данных: переменная {variable} не задана, а"
+" домашняя папка неизвестна. Задайте {variable} или {home_variable} для "
+"своего пользователя и запустите VoiceMate снова."
 
 #: app/companion/main.py:193
 msgid "Settings"
-msgstr "Configuración"
+msgstr "Настройки"
 
 #: app/companion/main.py:193 app/companion/ui/status_window.py:122
 #: app/companion/ui/status_window.py:177 app/companion/ui/tray.py:97
 msgid "Restart engine"
-msgstr "Reiniciar el motor"
+msgstr "Перезапустить движок"
 
 #: app/companion/main.py:195 app/companion/ui/tray.py:99
 msgid "Restart WSL..."
-msgstr "Reiniciar WSL..."
+msgstr "Перезапустить WSL..."
 
 #: app/companion/main.py:196 app/companion/ui/status_window.py:181
 #: app/companion/ui/tray.py:107
 msgid "Quit VoiceMate"
-msgstr "Salir de VoiceMate"
+msgstr "Выйти из VoiceMate"
 
 #: app/companion/model.py:592
 msgid "Engine not responding"
-msgstr "El motor no responde"
+msgstr "Движок не отвечает"
 
 #: app/companion/model.py:592
 msgid "No answer from the engine. VoiceMate restarts it if this continues."
-msgstr "El motor no responde. VoiceMate lo reiniciará si esto continúa."
+msgstr "Нет ответа от движка. Если так продолжится, VoiceMate перезапустит его."
 
 #: app/companion/model.py:594 app/companion/model.py:790
 msgid "Engine is outdated"
-msgstr "Motor desactualizado"
+msgstr "Движок устарел"
 
 #: app/companion/model.py:594
 msgid "The engine is older than this app. Update it, then use Restart engine."
 msgstr ""
-"El motor es más antiguo que esta aplicación. Actualízalo y luego usa "
-"Reiniciar el motor."
+"Движок старше этого приложения. Обновите его, затем нажмите "
+"«Перезапустить движок»."
 
 #: app/companion/model.py:597 app/companion/model.py:896
 #: app/companion/ui/texts.py:108
 msgid "No microphone"
-msgstr "Sin micrófono"
+msgstr "Нет микрофона"
 
 #: app/companion/model.py:597
 msgid "Connect a microphone to record."
-msgstr "Conecta un micrófono para grabar."
+msgstr "Подключите микрофон, чтобы записывать."
 
 #: app/companion/model.py:600 app/companion/model.py:883
 #: app/companion/ui/demo_controller.py:333 app/companion/ui/texts.py:110
 msgid "WSL audio stopped"
-msgstr "El audio de WSL se detuvo"
+msgstr "Звук в WSL остановлен"
 
 #: app/companion/model.py:600
 msgid "WSL lost its audio bridge. Restarting WSL brings it back."
-msgstr "WSL perdió su puente de audio. Reiniciar WSL lo recupera."
+msgstr "WSL потерял аудиомост. Перезапуск WSL вернёт его."
 
 #: app/companion/model.py:601 app/companion/model.py:889
 msgid "Audio server is down"
-msgstr "El servidor de audio no funciona"
+msgstr "Аудиосервер не работает"
 
 #: app/companion/model.py:601
 msgid "The engine cannot reach the audio server."
-msgstr "El motor no puede acceder al servidor de audio."
+msgstr "Движок не может подключиться к аудиосерверу."
 
 #: app/companion/model.py:603 app/companion/model.py:607
 #: app/companion/model.py:608 app/companion/model.py:869
 msgid "Microphone unavailable"
-msgstr "Micrófono no disponible"
+msgstr "Микрофон недоступен"
 
 #: app/companion/model.py:604
 msgid ""
 "Check the privacy settings for microphone access by desktop apps, and "
 "close any app that holds the microphone."
 msgstr ""
-"Revisa en la configuración de privacidad si las aplicaciones de "
-"escritorio pueden usar el micrófono y cierra cualquier aplicación que lo "
-"esté ocupando."
+"Проверьте параметры конфиденциальности: доступ классических приложений к "
+"микрофону должен быть разрешён. Закройте приложения, которые заняли "
+"микрофон."
 
 #: app/companion/model.py:607
 msgid "WSL cannot open the microphone. Restarting WSL fixes it."
-msgstr "WSL no puede abrir el micrófono. Reiniciar WSL lo soluciona."
+msgstr "WSL не может открыть микрофон. Перезапуск WSL это исправит."
 
 #: app/companion/model.py:608
 msgid "The engine cannot open the microphone."
-msgstr "El motor no puede abrir el micrófono."
+msgstr "Движок не может открыть микрофон."
 
 #: app/companion/model.py:613
 msgid "The engine stopped unexpectedly."
-msgstr "El motor se detuvo inesperadamente."
+msgstr "Движок неожиданно остановился."
 
 #: app/companion/model.py:614
 msgid "The engine stopped answering."
-msgstr "El motor dejó de responder."
+msgstr "Движок перестал отвечать."
 
 #: app/companion/model.py:615
 msgid "The engine took too long to start."
-msgstr "El motor tardó demasiado en iniciar."
+msgstr "Движок слишком долго запускался."
 
 #: app/companion/model.py:616
 msgid "Restarting WSL to recover the audio."
-msgstr "Reiniciando WSL para recuperar el audio."
+msgstr "Перезапуск WSL для восстановления звука."
 
 #: app/companion/model.py:617
 msgid "Restart requested."
-msgstr "Reinicio solicitado."
+msgstr "Запрошен перезапуск."
 
 #: app/companion/model.py:618
 msgid "Restarting WSL."
-msgstr "Reiniciando WSL."
+msgstr "Перезапуск WSL."
 
 #: app/companion/model.py:619
 msgid "The engine is restarting."
-msgstr "El motor se está reiniciando."
+msgstr "Движок перезапускается."
 
 #: app/companion/model.py:626 app/companion/model.py:752
 msgid "Engine folder not found"
-msgstr "No se encontró la carpeta del motor"
+msgstr "Папка движка не найдена"
 
 #: app/companion/model.py:626
 msgid "Set the engine folder in Settings."
-msgstr "Indica la carpeta del motor en Configuración."
+msgstr "Укажите папку движка в настройках."
 
 #: app/companion/model.py:628 app/companion/model.py:631
 msgid "Engine failed"
-msgstr "Falló el motor"
+msgstr "Сбой движка"
 
 #: app/companion/model.py:629
 msgid ""
 "Restarting WSL did not help. Check the engine log, then use Restart "
 "WSL... in the Engine menu."
 msgstr ""
-"Reiniciar WSL no ayudó. Revisa el registro del motor y luego usa "
-"Reiniciar WSL... en el menú Motor."
+"Перезапуск WSL не помог. Посмотрите журнал движка, затем выберите "
+"«Перезапустить WSL...» в меню «Движок»."
 
 #: app/companion/model.py:631 app/companion/model.py:737
 msgid ""
 "The engine failed too many times. Check the engine log, then use Restart "
 "engine."
 msgstr ""
-"El motor falló demasiadas veces. Revisa el registro del motor y luego usa"
-" Reiniciar el motor."
+"Движок слишком часто давал сбой. Посмотрите журнал движка, затем нажмите "
+"«Перезапустить движок»."
 
 #: app/companion/model.py:637 app/companion/model.py:729
 #: app/companion/ui/texts.py:86
 msgid "VoiceMate is stopped"
-msgstr "VoiceMate está detenido"
+msgstr "VoiceMate остановлен"
 
 #: app/companion/model.py:639 app/companion/ui/texts.py:88
 msgid "Starting engine..."
-msgstr "Iniciando el motor..."
+msgstr "Запуск движка..."
 
 #: app/companion/model.py:641
 #, python-brace-format
 msgid "Waiting for the engine on port {port}."
-msgstr "Esperando al motor en el puerto {port}."
+msgstr "Ожидание движка на порту {port}."
 
 #: app/companion/model.py:643 app/companion/ui/texts.py:92
 #, python-brace-format
 msgid "Restarting (attempt {attempt})"
-msgstr "Reiniciando (intento {attempt})"
+msgstr "Перезапуск (попытка {attempt})"
 
 #: app/companion/model.py:647
 #, python-brace-format
 msgid "Listening for {hotkey}"
-msgstr "Esperando {hotkey}"
+msgstr "Ожидание нажатия {hotkey}"
 
 #: app/companion/model.py:647 app/companion/ui/texts.py:97
 msgid "Ready"
-msgstr "Listo"
+msgstr "Готов к работе"
 
 #: app/companion/model.py:650 app/companion/ui/texts.py:78
 #, python-brace-format
 msgid "Recording {elapsed}"
-msgstr "Grabando {elapsed}"
+msgstr "Запись {elapsed}"
 
 #: app/companion/model.py:652 app/companion/ui/texts.py:99
 msgid "Transcribing..."
-msgstr "Transcribiendo..."
+msgstr "Расшифровка..."
 
 #: app/companion/model.py:654 app/companion/ui/texts.py:101
 msgid "Claude is answering..."
-msgstr "Claude está respondiendo..."
+msgstr "Claude отвечает..."
 
 #: app/companion/model.py:656 app/companion/ui/texts.py:104
 #, python-brace-format
 msgid "Copied: {text}"
-msgstr "Copiado: {text}"
+msgstr "Скопировано: {text}"
 
 #: app/companion/model.py:662
 msgid ""
 "WSL needs a restart to recover the audio. Use Restart WSL now... in the "
 "menu."
 msgstr ""
-"WSL necesita reiniciarse para recuperar el audio. Usa Reiniciar WSL "
-"ahora... en el menú."
+"Чтобы вернуть звук, нужно перезапустить WSL. Выберите в меню "
+"«Перезапустить WSL сейчас...»."
 
 #: app/companion/model.py:699
 msgid "No microphone is connected. Connect one and try again."
-msgstr "No hay ningún micrófono conectado. Conecta uno e inténtalo de nuevo."
+msgstr "Микрофон не подключён. Подключите его и повторите попытку."
 
 #: app/companion/model.py:703
 msgid ""
@@ -518,101 +513,99 @@ msgid ""
 "microphone in the Windows privacy settings, and close any app that holds "
 "it exclusively."
 msgstr ""
-"El motor no pudo abrir el micrófono. Permite que las aplicaciones de "
-"escritorio usen el micrófono en la configuración de privacidad de Windows"
-" y cierra cualquier aplicación que lo use en exclusiva."
+"Движку не удалось открыть микрофон. Разрешите классическим приложениям "
+"доступ к микрофону в параметрах конфиденциальности Windows и закройте "
+"приложения, которые используют его монопольно."
 
 #: app/companion/model.py:706
 msgid ""
 "The engine could not open the microphone. Close any app that holds it "
 "exclusively."
 msgstr ""
-"El motor no pudo abrir el micrófono. Cierra cualquier aplicación que lo "
-"use en exclusiva."
+"Движку не удалось открыть микрофон. Закройте приложения, которые "
+"используют его монопольно."
 
 #: app/companion/model.py:708
 msgid ""
 "The engine could not open the microphone: the audio server is not "
 "responding."
-msgstr "El motor no pudo abrir el micrófono: el servidor de audio no responde."
+msgstr "Движку не удалось открыть микрофон: аудиосервер не отвечает."
 
 #: app/companion/model.py:711
 msgid ""
 "Windows has a microphone, but WSL cannot open it: its audio bridge is "
 "stuck. Restarting WSL fixes it."
 msgstr ""
-"Windows tiene un micrófono, pero WSL no puede abrirlo: su puente de audio"
-" se bloqueó. Reiniciar WSL lo soluciona."
+"В Windows есть микрофон, но WSL не может его открыть: аудиомост завис. "
+"Перезапуск WSL это исправит."
 
 #: app/companion/model.py:713
 msgid ""
 "WSL cannot open the microphone. If one is connected, restarting WSL fixes"
 " it."
 msgstr ""
-"WSL no puede abrir el micrófono. Si hay uno conectado, reiniciar WSL lo "
-"soluciona."
+"WSL не может открыть микрофон. Если микрофон подключён, перезапуск WSL "
+"это исправит."
 
 #: app/companion/model.py:722
 msgid "VoiceMate is starting"
-msgstr "VoiceMate se está iniciando"
+msgstr "VoiceMate запускается"
 
 #: app/companion/model.py:723
 msgid "The engine is still loading. Try again in a moment."
-msgstr "El motor todavía se está cargando. Inténtalo de nuevo en un momento."
+msgstr "Движок ещё загружается. Повторите попытку через несколько секунд."
 
 #: app/companion/model.py:730
 msgid "The engine is not running. Use Restart engine in the menu."
-msgstr "El motor no está en ejecución. Usa Reiniciar el motor en el menú."
+msgstr "Движок не запущен. Выберите в меню «Перезапустить движок»."
 
 #: app/companion/model.py:736 app/companion/model.py:743
 msgid "VoiceMate stopped retrying"
-msgstr "VoiceMate dejó de reintentar"
+msgstr "VoiceMate прекратил попытки"
 
 #: app/companion/model.py:745
 msgid ""
 "Restarting WSL did not bring the audio back. Check the engine log, then "
 "use Restart WSL... in the Engine menu."
 msgstr ""
-"Reiniciar WSL no recuperó el audio. Revisa el registro del motor y luego "
-"usa Reiniciar WSL... en el menú Motor."
+"Перезапуск WSL не вернул звук. Посмотрите журнал движка, затем выберите "
+"«Перезапустить WSL...» в меню «Движок»."
 
 #: app/companion/model.py:753
 msgid "VoiceMate could not find the engine. Set the engine folder in Settings."
-msgstr ""
-"VoiceMate no encontró el motor. Indica la carpeta del motor en "
-"Configuración."
+msgstr "VoiceMate не нашёл движок. Укажите папку движка в настройках."
 
 #: app/companion/model.py:759
 msgid "Could not start the engine"
-msgstr "No se pudo iniciar el motor"
+msgstr "Не удалось запустить движок"
 
 #: app/companion/model.py:760
 msgid ""
 "Starting the engine failed. VoiceMate will try again; the engine log has "
 "the details."
 msgstr ""
-"Falló el inicio del motor. VoiceMate lo volverá a intentar; el registro "
-"del motor tiene los detalles."
+"Не удалось запустить движок. VoiceMate попробует снова; подробности в "
+"журнале движка."
 
 #: app/companion/model.py:766
 msgid "Restarting WSL"
-msgstr "Reiniciando WSL"
+msgstr "Перезапуск WSL"
 
 #: app/companion/model.py:767
 msgid ""
 "WSL lost its audio, so VoiceMate is restarting it. This takes a few "
 "seconds."
 msgstr ""
-"WSL perdió el audio, así que VoiceMate lo está reiniciando. Esto tarda "
-"unos segundos."
+"WSL потерял звук, поэтому VoiceMate перезапускает его. Это займёт "
+"несколько секунд."
 
 #: app/companion/model.py:773 app/companion/model.py:780
 msgid "WSL needs a restart"
-msgstr "WSL necesita reiniciarse"
+msgstr "Нужно перезапустить WSL"
 
 #: app/companion/model.py:774
 msgid "WSL lost its audio. Choose Restart WSL now... in the VoiceMate menu."
-msgstr "WSL perdió el audio. Elige Reiniciar WSL ahora... en el menú de VoiceMate."
+msgstr "WSL потерял звук. Выберите «Перезапустить WSL сейчас...» в меню VoiceMate."
 
 #: app/companion/model.py:782
 #, python-brace-format
@@ -620,20 +613,20 @@ msgid ""
 "WSL lost its audio, but restarting it also stops {distros}. Choose "
 "Restart WSL now... in the VoiceMate menu when convenient."
 msgstr ""
-"WSL perdió el audio, pero reiniciarlo también detiene {distros}. Elige "
-"Reiniciar WSL ahora... en el menú de VoiceMate cuando te convenga."
+"WSL потерял звук, но его перезапуск остановит и {distros}. Выберите "
+"«Перезапустить WSL сейчас...» в меню VoiceMate, когда будет удобно."
 
 #: app/companion/model.py:791
 msgid ""
 "The engine is older than this app. Update it, then use Restart engine in "
 "the menu."
 msgstr ""
-"El motor es más antiguo que esta aplicación. Actualízalo y luego usa "
-"Reiniciar el motor en el menú."
+"Движок старше этого приложения. Обновите его, затем выберите в меню "
+"«Перезапустить движок»."
 
 #: app/companion/model.py:797
 msgid "Engine run by systemd"
-msgstr "Motor ejecutado por systemd"
+msgstr "Движок запущен через systemd"
 
 #: app/companion/model.py:799
 msgid ""
@@ -641,13 +634,13 @@ msgid ""
 "VoiceMate manage it, run `systemctl --user disable --now voicemate` in "
 "WSL."
 msgstr ""
-"Un servicio de systemd ejecuta el motor, así que VoiceMate se conecta a "
-"él. Para que VoiceMate lo gestione, ejecuta `systemctl --user disable "
-"--now voicemate` en WSL."
+"Движок запущен службой systemd, поэтому VoiceMate подключается к нему. "
+"Чтобы VoiceMate управлял движком сам, выполните `systemctl --user disable"
+" --now voicemate` в WSL."
 
 #: app/companion/model.py:807
 msgid "Engine access denied"
-msgstr "Acceso al motor denegado"
+msgstr "Доступ к движку запрещён"
 
 #: app/companion/model.py:809
 msgid ""
@@ -655,13 +648,13 @@ msgid ""
 "`~/.config/voicemate/api-token` again every 30 seconds; the engine log "
 "has the details."
 msgstr ""
-"El motor rechazó el token de acceso de VoiceMate. VoiceMate vuelve a leer"
-" `~/.config/voicemate/api-token` cada 30 segundos; el registro del motor "
-"tiene los detalles."
+"Движок отклонил токен доступа VoiceMate. VoiceMate перечитывает "
+"`~/.config/voicemate/api-token` каждые 30 секунд; подробности в журнале "
+"движка."
 
 #: app/companion/model.py:817
 msgid "Settings reset"
-msgstr "Configuración restablecida"
+msgstr "Настройки сброшены"
 
 #: app/companion/model.py:819
 #, python-brace-format
@@ -669,13 +662,12 @@ msgid ""
 "The settings file could not be read, so VoiceMate started with the "
 "default settings. The old file was kept as {path}."
 msgstr ""
-"No se pudo leer el archivo de configuración, así que VoiceMate se inició "
-"con la configuración predeterminada. El archivo anterior se guardó como "
-"{path}."
+"Не удалось прочитать файл настроек, поэтому VoiceMate запущен с "
+"настройками по умолчанию. Старый файл сохранён как {path}."
 
 #: app/companion/model.py:827
 msgid "\"Not copied\" list reset"
-msgstr "Lista \"No copiadas\" restablecida"
+msgstr "Список «Нескопированные» сброшен"
 
 #: app/companion/model.py:829
 #, python-brace-format
@@ -683,112 +675,107 @@ msgid ""
 "The saved \"Not copied\" list could not be read, so it starts empty. The "
 "old file, with the transcriptions it held, was kept as {path}."
 msgstr ""
-"No se pudo leer la lista \"No copiadas\" guardada, así que empieza vacía."
-" El archivo anterior, con las transcripciones que tenía, se guardó como "
-"{path}."
+"Не удалось прочитать сохранённый список «Нескопированные», поэтому он "
+"очищен. Старый файл с его расшифровками сохранён как {path}."
 
 #: app/companion/model.py:837
 msgid "Engine unreachable"
-msgstr "Motor inaccesible"
+msgstr "Движок недоступен"
 
 #: app/companion/model.py:838
 msgid "The engine did not answer. VoiceMate keeps trying to reconnect."
-msgstr "El motor no respondió. VoiceMate sigue intentando reconectarse."
+msgstr "Движок не ответил. VoiceMate продолжает пытаться переподключиться."
 
 #: app/companion/model.py:844
 msgid "Engine busy"
-msgstr "Motor ocupado"
+msgstr "Движок занят"
 
 #: app/companion/model.py:845
 msgid "The engine did not answer in time. It may still act on this key press."
-msgstr "El motor no respondió a tiempo. Aún puede reaccionar a esta pulsación."
+msgstr "Движок не ответил вовремя. Он ещё может отреагировать на это нажатие."
 
 #: app/companion/model.py:851
 msgid "Request rejected"
-msgstr "Solicitud rechazada"
+msgstr "Запрос отклонён"
 
 #: app/companion/model.py:852
 #, python-brace-format
 msgid "The engine rejected the request (HTTP {status})."
-msgstr "El motor rechazó la solicitud (HTTP {status})."
+msgstr "Движок отклонил запрос (HTTP {status})."
 
 #: app/companion/model.py:856
 msgid "Engine error"
-msgstr "Error del motor"
+msgstr "Ошибка движка"
 
 #: app/companion/model.py:856
 msgid "The engine reported an internal error. See the engine log."
-msgstr "El motor informó un error interno. Revisa el registro del motor."
+msgstr "Движок сообщил о внутренней ошибке. Посмотрите журнал движка."
 
 #: app/companion/model.py:858
 msgid "Nothing transcribed"
-msgstr "Nada transcrito"
+msgstr "Ничего не распознано"
 
 #: app/companion/model.py:858
 msgid "No speech was detected in the recording."
-msgstr "No se detectó voz en la grabación."
+msgstr "В записи не обнаружена речь."
 
 #: app/companion/model.py:860
 msgid "Nothing recorded"
-msgstr "Nada grabado"
+msgstr "Ничего не записано"
 
 #: app/companion/model.py:860
 msgid "The recording captured no audio."
-msgstr "La grabación no capturó audio."
+msgstr "Запись не содержит звука."
 
 #: app/companion/model.py:864
 msgid "Slow transcription"
-msgstr "Transcripción lenta"
+msgstr "Медленная расшифровка"
 
 #: app/companion/model.py:865
 msgid ""
 "Transcription is running slower than usual. The engine log has the "
 "details."
-msgstr ""
-"La transcripción va más lenta de lo normal. El registro del motor tiene "
-"los detalles."
+msgstr "Расшифровка идёт медленнее обычного. Подробности в журнале движка."
 
 #: app/companion/model.py:873
 msgid "Transcription failed"
-msgstr "Falló la transcripción"
+msgstr "Ошибка расшифровки"
 
 #: app/companion/model.py:874
 msgid "The engine could not transcribe the recording. See the engine log."
-msgstr "El motor no pudo transcribir la grabación. Revisa el registro del motor."
+msgstr "Движку не удалось расшифровать запись. Посмотрите журнал движка."
 
 #: app/companion/model.py:878
 msgid "Claude did not answer"
-msgstr "Claude no respondió"
+msgstr "Claude не ответил"
 
 #: app/companion/model.py:878
 msgid "The request to Claude failed. See the engine log."
-msgstr "Falló la solicitud a Claude. Revisa el registro del motor."
+msgstr "Запрос к Claude не выполнен. Посмотрите журнал движка."
 
 #: app/companion/model.py:884
 msgid "The engine cannot reach the WSL audio server, so recording will fail."
 msgstr ""
-"El motor no puede acceder al servidor de audio de WSL, así que la "
-"grabación fallará."
+"Движок не может подключиться к аудиосерверу WSL, поэтому запись не "
+"удастся."
 
 #: app/companion/model.py:890
 msgid "The engine cannot reach the audio server, so recording will fail."
-msgstr ""
-"El motor no puede acceder al servidor de audio, así que la grabación "
-"fallará."
+msgstr "Движок не может подключиться к аудиосерверу, поэтому запись не удастся."
 
 #: app/companion/model.py:897
 msgid "No microphone is connected. Recording will fail until you connect one."
 msgstr ""
-"No hay ningún micrófono conectado. La grabación fallará hasta que "
-"conectes uno."
+"Микрофон не подключён. Запись не будет работать, пока вы его не "
+"подключите."
 
 #: app/companion/model.py:902
 msgid ""
 "A transcription was not copied to the clipboard. Open VoiceMate to copy "
 "it."
 msgstr ""
-"Una transcripción no se copió al portapapeles. Abre VoiceMate para "
-"copiarla."
+"Расшифровка не скопирована в буфер обмена. Откройте VoiceMate, чтобы "
+"скопировать её."
 
 #: app/companion/model.py:904
 #, python-brace-format
@@ -796,36 +783,36 @@ msgid ""
 "{count} transcriptions were not copied to the clipboard. Open VoiceMate "
 "to copy them."
 msgstr ""
-"{count} transcripciones no se copiaron al portapapeles. Abre VoiceMate "
-"para copiarlas."
+"Расшифровок, не скопированных в буфер обмена: {count}. Откройте "
+"VoiceMate, чтобы скопировать их."
 
 #: app/companion/model.py:907
 msgid "Not copied to the clipboard"
-msgstr "No se copió al portapapeles"
+msgstr "Не скопировано в буфер обмена"
 
 #: app/companion/model.py:909
 msgid "Copy failed"
-msgstr "No se pudo copiar"
+msgstr "Ошибка копирования"
 
 #: app/companion/model.py:909
 msgid "The text could not be copied to the clipboard. Try again."
-msgstr "No se pudo copiar el texto al portapapeles. Inténtalo de nuevo."
+msgstr "Не удалось скопировать текст в буфер обмена. Повторите попытку."
 
 #: app/companion/model.py:913
 msgid "Pin VoiceMate to the taskbar"
-msgstr "Ancla VoiceMate a la barra de tareas"
+msgstr "Закрепите VoiceMate на панели задач"
 
 #: app/companion/model.py:914
 msgid ""
 "Open Start, search for VoiceMate, right-click it and choose Pin to "
 "taskbar."
 msgstr ""
-"Abre Inicio, busca VoiceMate, haz clic derecho sobre él y elige Anclar a "
-"la barra de tareas."
+"Откройте меню «Пуск», найдите VoiceMate, щёлкните по нему правой кнопкой "
+"мыши и выберите «Закрепить на панели задач»."
 
 #: app/companion/model.py:920
 msgid "Hotkey unavailable"
-msgstr "Atajo no disponible"
+msgstr "Горячая клавиша недоступна"
 
 #: app/companion/model.py:922
 #, python-brace-format
@@ -834,214 +821,216 @@ msgid ""
 "script is running, close it and remove it from shell:startup, or choose "
 "other hotkeys in Settings."
 msgstr ""
-"Otra aplicación ya usa: {hotkeys}. Si el script antiguo de atajos de "
-"VoiceMate está en ejecución, ciérralo y quítalo de shell:startup, o elige"
-" otros atajos en Configuración."
+"Уже используются другим приложением: {hotkeys}. Если запущен старый "
+"скрипт горячих клавиш VoiceMate, закройте его и удалите из shell:startup "
+"или выберите другие горячие клавиши в настройках."
 
 #: app/companion/settings_store.py:88 app/companion/ui/settings_window.py:564
 msgid "Language"
-msgstr "Idioma"
+msgstr "Язык"
 
 #: app/companion/settings_store.py:89
 msgid "Engine mode"
-msgstr "Modo del motor"
+msgstr "Режим движка"
 
 #: app/companion/settings_store.py:90
 msgid "WSL restart"
-msgstr "Reinicio de WSL"
+msgstr "Перезапуск WSL"
 
 #: app/companion/settings_store.py:91 app/companion/ui/settings_window.py:565
 msgid "Notifications"
-msgstr "Notificaciones"
+msgstr "Уведомления"
 
 #: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:650
 msgid "Hotkeys"
-msgstr "Atajos"
+msgstr "Горячие клавиши"
 
 #: app/companion/settings_store.py:363 app/companion/settings_store.py:385
 #: app/companion/settings_store.py:401
 #, python-brace-format
 msgid "Invalid value for {setting}."
-msgstr "Valor no válido para {setting}."
+msgstr "Недопустимое значение параметра «{setting}»."
 
 #: app/companion/settings_store.py:367
 msgid "This engine mode is not available on this system."
-msgstr "Este modo del motor no está disponible en este sistema."
+msgstr "Этот режим движка недоступен в этой системе."
 
 #: app/companion/settings_store.py:369
 msgid ""
 "The engine folder cannot contain quotes, $, backticks, backslashes or "
 "line breaks."
 msgstr ""
-"La carpeta del motor no puede contener comillas, $, acentos graves, "
-"barras invertidas ni saltos de línea."
+"Папка движка не может содержать кавычки, $, обратные апострофы, обратные "
+"косые черты или переводы строк."
 
 #: app/companion/settings_store.py:371
 msgid "The WSL distribution name is not valid."
-msgstr "El nombre de la distribución de WSL no es válido."
+msgstr "Недопустимое имя дистрибутива WSL."
 
 #: app/companion/settings_store.py:373
 #, python-brace-format
 msgid "The port must be between {low} and {high}."
-msgstr "El puerto debe estar entre {low} y {high}."
+msgstr "Порт должен быть в диапазоне от {low} до {high}."
 
 #: app/companion/settings_store.py:375 app/companion/settings_store.py:397
 msgid "The volume must be between 0 and 1."
-msgstr "El volumen debe estar entre 0 y 1."
+msgstr "Громкость должна быть в диапазоне от 0 до 1."
 
 #: app/companion/settings_store.py:382 app/companion/ui/demo_controller.py:228
 #, python-brace-format
 msgid "{hotkey} is not a valid hotkey."
-msgstr "{hotkey} no es un atajo válido."
+msgstr "{hotkey} не является допустимой горячей клавишей."
 
 #: app/companion/settings_store.py:388
 #, python-brace-format
 msgid "The action {flow} has more than one hotkey."
-msgstr "La acción {flow} tiene más de un atajo."
+msgstr "У действия {flow} больше одной горячей клавиши."
 
 #: app/companion/settings_store.py:390
 #, python-brace-format
 msgid "{hotkey} is assigned to more than one action."
-msgstr "{hotkey} está asignado a más de una acción."
+msgstr "{hotkey} назначена нескольким действиям."
 
 #: app/companion/settings_store.py:408
 #, python-brace-format
 msgid "The sound file for the {cue} cue was not found."
-msgstr "No se encontró el archivo de sonido de la señal {cue}."
+msgstr "Звуковой файл для сигнала «{cue}» не найден."
 
 #: app/companion/settings_store.py:410
 #, python-brace-format
 msgid "The sound file for the {cue} cue must be a PCM 8 or 16-bit WAV file."
-msgstr "El archivo de sonido de la señal {cue} debe ser un WAV PCM de 8 o 16 bits."
+msgstr "Звуковой файл для сигнала «{cue}» должен быть WAV-файлом PCM 8 или 16 бит."
 
 #: app/companion/settings_store.py:413
 #, python-brace-format
 msgid "The sound file for the {cue} cue is longer than {seconds} seconds."
-msgstr "El archivo de sonido de la señal {cue} dura más de {seconds} segundos."
+msgstr "Звуковой файл для сигнала «{cue}» длиннее {seconds} с."
 
 #: app/companion/ui/app.py:158
 msgid "Restart WSL now?"
-msgstr "¿Reiniciar WSL ahora?"
+msgstr "Перезапустить WSL сейчас?"
 
 #: app/companion/ui/app.py:159 app/companion/ui/status_window.py:128
 msgid ""
 "WSL audio is not working. Restarting WSL fixes it, but it also stops "
 "every running distro."
 msgstr ""
-"El audio de WSL no funciona. Reiniciar WSL lo arregla, pero también "
-"detiene todas las distros en ejecución."
+"Звук в WSL не работает. Перезапуск WSL это исправит, но при этом "
+"остановятся все запущенные дистрибутивы."
 
 #: app/companion/ui/app.py:160 app/companion/ui/app.py:186
 msgid "Restart WSL"
-msgstr "Reiniciar WSL"
+msgstr "Перезапустить WSL"
 
 #: app/companion/ui/app.py:161 app/companion/ui/status_window.py:132
 msgid "Not now"
-msgstr "Ahora no"
+msgstr "Не сейчас"
 
 #: app/companion/ui/app.py:184
 msgid "Restart WSL?"
-msgstr "¿Reiniciar WSL?"
+msgstr "Перезапустить WSL?"
 
 #: app/companion/ui/app.py:185
 msgid ""
 "This stops every running WSL distro, Docker included, and starts the "
 "engine again."
 msgstr ""
-"Esto detiene todas las distros de WSL en ejecución, Docker incluido, y "
-"vuelve a iniciar el motor."
+"Будут остановлены все запущенные дистрибутивы WSL, включая Docker, а "
+"затем движок запустится снова."
 
 #: app/companion/ui/app.py:187 app/companion/ui/app.py:286
 #: app/companion/ui/settings_window.py:665
 #: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:79
 msgid "Cancel"
-msgstr "Cancelar"
+msgstr "Отмена"
 
 #: app/companion/ui/app.py:211
 msgid "Could not change the sounds"
-msgstr "No se pudieron cambiar los sonidos"
+msgstr "Не удалось изменить звуки"
 
 #: app/companion/ui/app.py:228
 msgid "Restart VoiceMate?"
-msgstr "¿Reiniciar VoiceMate?"
+msgstr "Перезапустить VoiceMate?"
 
 #: app/companion/ui/app.py:229
 msgid "VoiceMate needs to restart to change the language. Restart now?"
-msgstr "VoiceMate necesita reiniciarse para cambiar el idioma. ¿Reiniciar ahora?"
+msgstr "Чтобы сменить язык, нужно перезапустить VoiceMate. Перезапустить сейчас?"
 
 #: app/companion/ui/app.py:230
 msgid "Restart now"
-msgstr "Reiniciar ahora"
+msgstr "Перезапустить сейчас"
 
 #: app/companion/ui/app.py:231
 msgid "Later"
-msgstr "Más tarde"
+msgstr "Позже"
 
 #: app/companion/ui/app.py:265
 msgid "Could not restart VoiceMate"
-msgstr "No se pudo reiniciar VoiceMate"
+msgstr "Не удалось перезапустить VoiceMate"
 
 #: app/companion/ui/app.py:266
 msgid "Quit VoiceMate and start it again to change the language."
-msgstr "Sal de VoiceMate y vuelve a abrirlo para cambiar el idioma."
+msgstr "Чтобы сменить язык, выйдите из VoiceMate и запустите его снова."
 
 #: app/companion/ui/app.py:283
 msgid "Clear the \"Not copied\" list?"
-msgstr "¿Vaciar la lista \"No copiadas\"?"
+msgstr "Очистить список «Нескопированные»?"
 
 #: app/companion/ui/app.py:284
 msgid ""
 "These transcriptions never reached the clipboard. Once cleared, they "
 "cannot be copied any more."
 msgstr ""
-"Estas transcripciones nunca llegaron al portapapeles. Después de vaciar "
-"la lista, ya no podrás copiarlas."
+"Эти расшифровки так и не попали в буфер обмена. После очистки скопировать"
+" их будет нельзя."
 
 #: app/companion/ui/app.py:285 app/companion/ui/tray.py:199
 msgid "Clear list"
-msgstr "Vaciar lista"
+msgstr "Очистить список"
 
 #: app/companion/ui/demo_controller.py:145
 msgid "VoiceMate demo"
-msgstr "Demostración de VoiceMate"
+msgstr "Демонстрация VoiceMate"
 
 #: app/companion/ui/demo_controller.py:146
 msgid "Nothing is recorded: the states change by themselves."
-msgstr "No se graba nada: los estados cambian solos."
+msgstr "Ничего не записывается: состояния меняются сами."
 
 #: app/companion/ui/demo_controller.py:334
 msgid "Restart WSL to bring the microphone back."
-msgstr "Reinicia WSL para recuperar el micrófono."
+msgstr "Перезапустите WSL, чтобы вернуть микрофон."
 
 #: app/companion/ui/hotkey_edit.py:65
 msgid "Press Enter, then the new shortcut. Esc cancels, Backspace clears."
-msgstr "Pulsa Enter y luego el nuevo atajo. Esc cancela, Retroceso borra."
+msgstr ""
+"Нажмите Enter, затем новое сочетание клавиш. Esc отменяет, Backspace "
+"очищает."
 
 #: app/companion/ui/hotkey_edit.py:95 app/companion/ui/hotkey_edit.py:189
 msgid "Press the new shortcut..."
-msgstr "Pulsa el nuevo atajo..."
+msgstr "Нажмите новое сочетание клавиш..."
 
 #: app/companion/ui/hotkey_edit.py:156 app/companion/ui/hotkey_edit.py:189
 msgid "This key cannot be used"
-msgstr "Esta tecla no se puede usar"
+msgstr "Эту клавишу нельзя использовать"
 
 #: app/companion/ui/hotkey_edit.py:189 app/companion/ui/hotkey_edit.py:193
 msgid "No shortcut"
-msgstr "Sin atajo"
+msgstr "Нет сочетания"
 
 #: app/companion/ui/settings_window.py:141
 msgid "Click a shortcut, then press the new keys. Esc cancels, Backspace clears."
 msgstr ""
-"Haz clic en un atajo y pulsa las nuevas teclas. Esc cancela, Retroceso "
-"borra."
+"Щёлкните поле сочетания клавиш, затем нажмите новые клавиши. Esc "
+"отменяет, Backspace очищает."
 
 #: app/companion/ui/settings_window.py:144
 msgid "The engine owns these shortcuts. Change them in the engine configuration."
-msgstr "Estos atajos los define el motor. Cámbialos en su configuración."
+msgstr "Эти сочетания клавиш задаёт движок. Измените их в конфигурации движка."
 
 #: app/companion/ui/settings_window.py:157
 msgid "Restore defaults"
-msgstr "Restaurar predeterminados"
+msgstr "По умолчанию"
 
 #: app/companion/ui/settings_window.py:184
 #, python-brace-format
@@ -1051,106 +1040,106 @@ msgstr "{action}:"
 #: app/companion/ui/settings_window.py:186
 #, python-brace-format
 msgid "Shortcut for {action}"
-msgstr "Atajo para {action}"
+msgstr "Сочетание клавиш для действия «{action}»"
 
 #: app/companion/ui/settings_window.py:259
 msgid "No shortcut: use the menu"
-msgstr "Sin atajo: usa el menú"
+msgstr "Нет сочетания: используйте меню"
 
 #: app/companion/ui/settings_window.py:264
 msgid "Checking..."
-msgstr "Comprobando..."
+msgstr "Проверка..."
 
 #: app/companion/ui/settings_window.py:346
 msgid "Play sound cues"
-msgstr "Reproducir sonidos de aviso"
+msgstr "Воспроизводить звуковые сигналы"
 
 #: app/companion/ui/settings_window.py:350
 msgid "Volume:"
-msgstr "Volumen:"
+msgstr "Громкость:"
 
 #: app/companion/ui/settings_window.py:351
 msgid "Master volume"
-msgstr "Volumen general"
+msgstr "Общая громкость"
 
 #: app/companion/ui/settings_window.py:363
 #: app/companion/ui/settings_window.py:651
 msgid "Sounds"
-msgstr "Sonidos"
+msgstr "Звуки"
 
 #: app/companion/ui/settings_window.py:380
 msgid "Custom sounds must be WAV files (PCM, 8 or 16 bit)."
-msgstr "Los sonidos propios deben ser archivos WAV (PCM, 8 o 16 bits)."
+msgstr "Свои звуки должны быть WAV-файлами (PCM, 8 или 16 бит)."
 
 #: app/companion/ui/settings_window.py:387
 #, python-brace-format
 msgid "Source: {sound}"
-msgstr "Origen: {sound}"
+msgstr "Источник: {sound}"
 
 #: app/companion/ui/settings_window.py:389
 #, python-brace-format
 msgid "Built-in sound: {sound}"
-msgstr "Sonido integrado: {sound}"
+msgstr "Встроенный звук: {sound}"
 
 #: app/companion/ui/settings_window.py:392
 msgid "No file chosen"
-msgstr "Ningún archivo elegido"
+msgstr "Файл не выбран"
 
 #: app/companion/ui/settings_window.py:393
 #, python-brace-format
 msgid "Sound file: {sound}"
-msgstr "Archivo de sonido: {sound}"
+msgstr "Звуковой файл: {sound}"
 
 #: app/companion/ui/settings_window.py:395
 msgid "Browse..."
-msgstr "Examinar..."
+msgstr "Обзор..."
 
 #: app/companion/ui/settings_window.py:396
 #, python-brace-format
 msgid "Choose a file for {sound}"
-msgstr "Elegir un archivo para {sound}"
+msgstr "Выберите файл для сигнала «{sound}»"
 
 #: app/companion/ui/settings_window.py:408
 #, python-brace-format
 msgid "Volume: {sound}"
-msgstr "Volumen: {sound}"
+msgstr "Громкость: {sound}"
 
 #: app/companion/ui/settings_window.py:414
 msgid "Preview"
-msgstr "Escuchar"
+msgstr "Прослушать"
 
 #: app/companion/ui/settings_window.py:415
 #, python-brace-format
 msgid "Preview: {sound}"
-msgstr "Escuchar: {sound}"
+msgstr "Прослушать: {sound}"
 
 #: app/companion/ui/settings_window.py:479
 msgid "Choose a sound file"
-msgstr "Elige un archivo de sonido"
+msgstr "Выберите звуковой файл"
 
 #: app/companion/ui/settings_window.py:479
 msgid "WAV audio"
-msgstr "Audio WAV"
+msgstr "Аудиофайлы WAV"
 
 #: app/companion/ui/settings_window.py:508
 msgid "Language:"
-msgstr "Idioma:"
+msgstr "Язык:"
 
 #: app/companion/ui/settings_window.py:510
 msgid "Takes effect after VoiceMate restarts."
-msgstr "Se aplica cuando VoiceMate se reinicie."
+msgstr "Вступит в силу после перезапуска VoiceMate."
 
 #: app/companion/ui/settings_window.py:515
 msgid "Notifications:"
-msgstr "Notificaciones:"
+msgstr "Уведомления:"
 
 #: app/companion/ui/settings_window.py:516
 msgid "Start VoiceMate when I sign in"
-msgstr "Iniciar VoiceMate al iniciar sesión"
+msgstr "Запускать VoiceMate при входе в систему"
 
 #: app/companion/ui/settings_window.py:521
 msgid "Always show the VoiceMate icon on the taskbar"
-msgstr "Mostrar siempre el icono de VoiceMate en la barra de tareas"
+msgstr "Всегда показывать значок VoiceMate на панели задач"
 
 #: app/companion/ui/settings_window.py:524
 msgid ""
@@ -1159,180 +1148,180 @@ msgid ""
 "Windows taskbar settings stays hidden until you turn this off, click "
 "Apply and turn it on again."
 msgstr ""
-"Muestra el icono con el estado de la grabación y la transcripción junto "
-"al reloj, en lugar de ocultarlo detrás de la flecha. Un icono oculto en "
-"la configuración de la barra de tareas de Windows sigue oculto hasta que "
-"desmarques esta opción, hagas clic en Aplicar y vuelvas a marcarla."
+"Показывает значок с состоянием записи и расшифровки рядом с часами, а не "
+"прячет его под стрелкой. Значок, скрытый в параметрах панели задач "
+"Windows, остаётся скрытым, пока вы не снимете этот флажок, не нажмёте "
+"«Применить» и не установите его снова."
 
 #: app/companion/ui/settings_window.py:533 app/companion/ui/tray.py:96
 msgid "Engine"
-msgstr "Motor"
+msgstr "Движок"
 
 #: app/companion/ui/settings_window.py:540
 msgid "Mode:"
-msgstr "Modo:"
+msgstr "Режим:"
 
 #: app/companion/ui/settings_window.py:542
 msgid "Default distro"
-msgstr "Distro predeterminada"
+msgstr "Дистрибутив по умолчанию"
 
 #: app/companion/ui/settings_window.py:543
 msgid "WSL distro:"
-msgstr "Distro de WSL:"
+msgstr "Дистрибутив WSL:"
 
 #: app/companion/ui/settings_window.py:545
 msgid "Detect automatically"
-msgstr "Detectar automáticamente"
+msgstr "Определять автоматически"
 
 #: app/companion/ui/settings_window.py:546
 msgid "The voice-mate folder: relative to your home folder, or absolute."
-msgstr "La carpeta de voice-mate: relativa a tu carpeta personal, o absoluta."
+msgstr "Папка voice-mate: относительно домашней папки или абсолютный путь."
 
 #: app/companion/ui/settings_window.py:547
 msgid "Engine folder:"
-msgstr "Carpeta del motor:"
+msgstr "Папка движка:"
 
 #: app/companion/ui/settings_window.py:550
 msgid ""
 "Restarting WSL brings its audio back, but it stops every running distro, "
 "Docker included."
 msgstr ""
-"Reiniciar WSL recupera el audio, pero detiene todas las distros en "
-"ejecución, Docker incluido."
+"Перезапуск WSL возвращает звук, но останавливает все запущенные "
+"дистрибутивы, включая Docker."
 
 #: app/companion/ui/settings_window.py:552
 msgid "Restart WSL when audio fails:"
-msgstr "Reiniciar WSL si falla el audio:"
+msgstr "Перезапускать WSL при сбое звука:"
 
 #: app/companion/ui/settings_window.py:566
 msgid "Mode"
-msgstr "Modo"
+msgstr "Режим"
 
 #: app/companion/ui/settings_window.py:567
 msgid "WSL distro"
-msgstr "Distro de WSL"
+msgstr "Дистрибутив WSL"
 
 #: app/companion/ui/settings_window.py:568
 msgid "Engine folder"
-msgstr "Carpeta del motor"
+msgstr "Папка движка"
 
 #: app/companion/ui/settings_window.py:569
 msgid "Restart WSL when audio fails"
-msgstr "Reiniciar WSL si falla el audio"
+msgstr "Перезапускать WSL при сбое звука"
 
 #: app/companion/ui/settings_window.py:631
 msgid "VoiceMate Settings"
-msgstr "Configuración de VoiceMate"
+msgstr "Настройки VoiceMate"
 
 #: app/companion/ui/settings_window.py:642
 msgid ""
 "These settings were saved by a newer version of VoiceMate. They are shown"
 " read-only."
 msgstr ""
-"Esta configuración la guardó una versión más nueva de VoiceMate y se "
-"muestra solo para lectura."
+"Эти настройки сохранены более новой версией VoiceMate. Они показаны "
+"только для чтения."
 
 #: app/companion/ui/settings_window.py:652
 msgid "General"
-msgstr "General"
+msgstr "Общие"
 
 #: app/companion/ui/settings_window.py:664
 msgid "OK"
-msgstr "Aceptar"
+msgstr "ОК"
 
 #: app/companion/ui/settings_window.py:666
 msgid "Apply"
-msgstr "Aplicar"
+msgstr "Применить"
 
 #: app/companion/ui/settings_window.py:747
 msgid "Saving..."
-msgstr "Guardando..."
+msgstr "Сохранение..."
 
 #: app/companion/ui/settings_window.py:759
 #, python-brace-format
 msgid "Unexpected error: {error}"
-msgstr "Error inesperado: {error}"
+msgstr "Непредвиденная ошибка: {error}"
 
 #: app/companion/ui/settings_window.py:766
 msgid "The settings were not saved:"
-msgstr "La configuración no se guardó:"
+msgstr "Настройки не сохранены:"
 
 #: app/companion/ui/settings_window.py:778
 msgid "Settings saved."
-msgstr "Configuración guardada."
+msgstr "Настройки сохранены."
 
 #: app/companion/ui/status_window.py:121
 msgid "The engine is older than this app. Restart or update it."
-msgstr "El motor es más antiguo que esta aplicación. Reinícialo o actualízalo."
+msgstr "Движок старше этого приложения. Перезапустите или обновите его."
 
 #: app/companion/ui/status_window.py:130
 msgid "Restart WSL now"
-msgstr "Reiniciar WSL ahora"
+msgstr "Перезапустить WSL сейчас"
 
 #: app/companion/ui/status_window.py:137
 msgid "Dismiss"
-msgstr "Cerrar"
+msgstr "Скрыть"
 
 #: app/companion/ui/status_window.py:157
 msgid "Engine:"
-msgstr "Motor:"
+msgstr "Движок:"
 
 #: app/companion/ui/status_window.py:158
 msgid "Audio:"
-msgstr "Audio:"
+msgstr "Звук:"
 
 #: app/companion/ui/status_window.py:159
 msgid "Microphones:"
-msgstr "Micrófonos:"
+msgstr "Микрофоны:"
 
 #: app/companion/ui/status_window.py:160
 msgid "Restarts:"
-msgstr "Reinicios:"
+msgstr "Перезапуски:"
 
 #: app/companion/ui/status_window.py:163 app/companion/ui/tray.py:86
 #: app/companion/ui/tray.py:149
 msgid "Not copied"
-msgstr "No copiadas"
+msgstr "Нескопированные"
 
 #: app/companion/ui/status_window.py:164
 msgid "Transcriptions that never reached the clipboard. Copy them from here."
-msgstr "Transcripciones que nunca llegaron al portapapeles. Cópialas desde aquí."
+msgstr "Расшифровки, которые так и не попали в буфер обмена. Скопируйте их отсюда."
 
 #: app/companion/ui/status_window.py:165
 msgid "Clear"
-msgstr "Vaciar"
+msgstr "Очистить"
 
 #: app/companion/ui/status_window.py:170 app/companion/ui/tray.py:83
 msgid "Recent"
-msgstr "Recientes"
+msgstr "Недавние"
 
 #: app/companion/ui/status_window.py:175 app/companion/ui/tray.py:104
 msgid "Settings..."
-msgstr "Configuración..."
+msgstr "Настройки..."
 
 #: app/companion/ui/status_window.py:179 app/companion/ui/tray.py:102
 msgid "Open logs"
-msgstr "Abrir registros"
+msgstr "Открыть журналы"
 
 #: app/companion/ui/status_window.py:200
 msgid "Copy"
-msgstr "Copiar"
+msgstr "Копировать"
 
 #: app/companion/ui/status_window.py:239 app/companion/ui/tray.py:192
 msgid "No transcriptions yet"
-msgstr "Aún no hay transcripciones"
+msgstr "Расшифровок пока нет"
 
 #: app/companion/ui/status_window.py:349 app/companion/ui/tray.py:229
 msgid "Quitting..."
-msgstr "Saliendo..."
+msgstr "Выход..."
 
 #: app/companion/ui/texts.py:51
 msgid "Dictate"
-msgstr "Dictar"
+msgstr "Диктовка"
 
 #: app/companion/ui/texts.py:51
 msgid "Ask Claude"
-msgstr "Preguntar a Claude"
+msgstr "Спросить Claude"
 
 #: app/companion/ui/texts.py:58
 #, python-brace-format
@@ -1341,193 +1330,193 @@ msgstr "{title} ({flow})"
 
 #: app/companion/ui/texts.py:64
 msgid "Stop and copy"
-msgstr "Detener y copiar"
+msgstr "Остановить и скопировать"
 
 #: app/companion/ui/texts.py:64
 msgid "Stop and ask Claude"
-msgstr "Detener y preguntar a Claude"
+msgstr "Остановить и спросить Claude"
 
 #: app/companion/ui/texts.py:76
 msgid "Recording"
-msgstr "Grabando"
+msgstr "Запись"
 
 #: app/companion/ui/texts.py:93
 msgid "Restarting engine..."
-msgstr "Reiniciando el motor..."
+msgstr "Перезапуск движка..."
 
 #: app/companion/ui/texts.py:96
 #, python-brace-format
 msgid "Listening for {chord}"
-msgstr "Esperando {chord}"
+msgstr "Ожидание нажатия {chord}"
 
 #: app/companion/ui/texts.py:111
 msgid "Check the microphone"
-msgstr "Revisa el micrófono"
+msgstr "Проверьте микрофон"
 
 #: app/companion/ui/texts.py:113
 msgid "The engine stopped working"
-msgstr "El motor dejó de funcionar"
+msgstr "Движок перестал работать"
 
 #: app/companion/ui/texts.py:119
 msgid "Shortcuts paused"
-msgstr "Atajos en pausa"
+msgstr "Горячие клавиши приостановлены"
 
 #: app/companion/ui/texts.py:126
 msgid "Stopped"
-msgstr "Detenido"
+msgstr "Остановлен"
 
 #: app/companion/ui/texts.py:127
 msgid "Starting"
-msgstr "Iniciando"
+msgstr "Запускается"
 
 #: app/companion/ui/texts.py:128
 msgid "Running"
-msgstr "En ejecución"
+msgstr "Работает"
 
 #: app/companion/ui/texts.py:129
 msgid "Not responding"
-msgstr "No responde"
+msgstr "Не отвечает"
 
 #: app/companion/ui/texts.py:130
 msgid "Restarting"
-msgstr "Reiniciando"
+msgstr "Перезапускается"
 
 #: app/companion/ui/texts.py:131
 msgid "Waiting to restart"
-msgstr "Esperando para reiniciar"
+msgstr "Ожидает перезапуска"
 
 #: app/companion/ui/texts.py:132
 msgid "Failed"
-msgstr "Falló"
+msgstr "Сбой"
 
 #: app/companion/ui/texts.py:137
 msgid "Working"
-msgstr "Funciona"
+msgstr "Работает"
 
 #: app/companion/ui/texts.py:137
 msgid "Not working"
-msgstr "No funciona"
+msgstr "Не работает"
 
 #: app/companion/ui/texts.py:137 app/companion/ui/texts.py:142
 msgid "Unknown"
-msgstr "Desconocido"
+msgstr "Неизвестно"
 
 #: app/companion/ui/texts.py:144
 msgid "None found"
-msgstr "Ninguno"
+msgstr "Не найдены"
 
 #: app/companion/ui/texts.py:160
 msgid "Built-in"
-msgstr "Integrado"
+msgstr "Встроенный"
 
 #: app/companion/ui/texts.py:160
 msgid "Custom file"
-msgstr "Archivo propio"
+msgstr "Свой файл"
 
 #: app/companion/ui/texts.py:164
 msgid "Classic"
-msgstr "Clásico"
+msgstr "Классический"
 
 #: app/companion/ui/texts.py:164
 msgid "Soft"
-msgstr "Suave"
+msgstr "Мягкий"
 
 #: app/companion/ui/texts.py:164
 msgid "Click"
-msgstr "Clic"
+msgstr "Щелчок"
 
 #: app/companion/ui/texts.py:170
 msgid "Automatic (system language)"
-msgstr "Automático (idioma del sistema)"
+msgstr "Автоматически (язык системы)"
 
 #: app/companion/ui/texts.py:181
 msgid "Start it in WSL"
-msgstr "Iniciar en WSL"
+msgstr "Запускать в WSL"
 
 #: app/companion/ui/texts.py:182
 msgid "Start it on this computer"
-msgstr "Iniciar en este equipo"
+msgstr "Запускать на этом компьютере"
 
 #: app/companion/ui/texts.py:183
 msgid "Connect only"
-msgstr "Solo conectar"
+msgstr "Только подключаться"
 
 #: app/companion/ui/texts.py:188
 msgid "Automatically"
-msgstr "Automáticamente"
+msgstr "Автоматически"
 
 #: app/companion/ui/texts.py:188
 msgid "Ask first"
-msgstr "Preguntar antes"
+msgstr "Сначала спрашивать"
 
 #: app/companion/ui/texts.py:188
 msgid "Never"
-msgstr "Nunca"
+msgstr "Никогда"
 
 #: app/companion/ui/texts.py:193
 msgid "All"
-msgstr "Todas"
+msgstr "Все"
 
 #: app/companion/ui/texts.py:194
 msgid "Warnings and errors"
-msgstr "Advertencias y errores"
+msgstr "Предупреждения и ошибки"
 
 #: app/companion/ui/texts.py:195
 msgid "Errors only"
-msgstr "Solo errores"
+msgstr "Только ошибки"
 
 #: app/companion/ui/texts.py:196
 msgid "None"
-msgstr "Ninguna"
+msgstr "Не показывать"
 
 #: app/companion/ui/texts.py:202
 msgid "Available"
-msgstr "Disponible"
+msgstr "Свободно"
 
 #: app/companion/ui/texts.py:203
 msgid "Used by another app"
-msgstr "En uso por otra aplicación"
+msgstr "Занято другим приложением"
 
 #: app/companion/ui/texts.py:204
 msgid "Used by another action"
-msgstr "Ya lo usa otra acción"
+msgstr "Занято другим действием"
 
 #: app/companion/ui/texts.py:205
 msgid "Not allowed"
-msgstr "No permitido"
+msgstr "Недопустимо"
 
 #: app/companion/ui/texts.py:206
 msgid "Set by the engine"
-msgstr "Definido por el motor"
+msgstr "Задано движком"
 
 #: app/companion/ui/texts.py:211
 msgid ""
 "Use Ctrl, Alt, Shift or Win with a key, or a function key alone. F12 is "
 "reserved by Windows."
 msgstr ""
-"Usa Ctrl, Alt, Shift o Win con una tecla, o una tecla de función sola. "
-"F12 está reservada por Windows."
+"Используйте Ctrl, Alt, Shift или Win вместе с клавишей либо одну "
+"функциональную клавишу. F12 зарезервирована Windows."
 
 #: app/companion/ui/tray.py:76
 msgid "Open VoiceMate"
-msgstr "Abrir VoiceMate"
+msgstr "Открыть VoiceMate"
 
 #: app/companion/ui/tray.py:89
 msgid "Restart WSL now..."
-msgstr "Reiniciar WSL ahora..."
+msgstr "Перезапустить WSL сейчас..."
 
 #: app/companion/ui/tray.py:93
 msgid "Mute sounds"
-msgstr "Silenciar sonidos"
+msgstr "Выключить звуки"
 
 #: app/companion/ui/tray.py:149
 #, python-brace-format
 msgid "Not copied ({count})"
-msgstr "No copiadas ({count})"
+msgstr "Нескопированные ({count})"
 
 #: app/companion/ui/tray.py:196
 msgid "Nothing to copy"
-msgstr "Nada que copiar"
+msgstr "Нечего копировать"
 
 #: app/companion/ui/tray.py:242
 #, python-brace-format
@@ -1539,42 +1528,42 @@ msgid ""
 "the audio system is not responding (a previous microphone open is still "
 "stuck; on WSL2 run `wsl --shutdown`)"
 msgstr ""
-"el sistema de audio no responde (una apertura anterior del micrófono "
-"sigue bloqueada; en WSL2 ejecuta `wsl --shutdown`)"
+"аудиосистема не отвечает (предыдущее открытие микрофона всё ещё зависло; "
+"в WSL2 выполните `wsl --shutdown`)"
 
 #: app/core/recorder.py:151
 #, python-brace-format
 msgid "timed out opening the microphone after {seconds:.0f}s"
-msgstr "se agotó el tiempo de espera al abrir el micrófono tras {seconds:.0f}s"
+msgstr "истекло время ожидания открытия микрофона ({seconds:.0f} с)"
 
 #: app/core/recorder.py:181
 #, python-brace-format
 msgid "[VoiceMate] ❌ Could not open the microphone ({reason})."
-msgstr "[VoiceMate] ❌ No se pudo abrir el micrófono ({reason})."
+msgstr "[VoiceMate] ❌ Не удалось открыть микрофон ({reason})."
 
 #: app/core/recording_session.py:113
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Unknown handler: {handler_id}"
-msgstr "[VoiceMate] ⚠ Handler desconocido: {handler_id}"
+msgstr "[VoiceMate] ⚠ Неизвестный обработчик: {handler_id}"
 
 #: app/core/recording_session.py:160
 #, python-brace-format
 msgid "[VoiceMate] ✗ Operation {op_seq} cancelled."
-msgstr "[VoiceMate] ✗ Operación {op_seq} cancelada."
+msgstr "[VoiceMate] ✗ Операция {op_seq} отменена."
 
 #: app/core/recording_session.py:167
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Could not stop the microphone: {exc}"
-msgstr "[VoiceMate] ⚠ No se pudo detener el micrófono: {exc}"
+msgstr "[VoiceMate] ⚠ Не удалось остановить микрофон: {exc}"
 
 #: app/core/recording_session.py:216
 msgid "[VoiceMate] 🎙  Recording... (press to stop)"
-msgstr "[VoiceMate] 🎙  Grabando... (presiona para detener)"
+msgstr "[VoiceMate] 🎙  Запись... (нажмите, чтобы остановить)"
 
 #: app/core/recording_session.py:247
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Could not play the start beep ({exc})."
-msgstr "[VoiceMate] ⚠ No se pudo reproducir el pitido de inicio ({exc})."
+msgstr "[VoiceMate] ⚠ Не удалось воспроизвести сигнал начала записи ({exc})."
 
 #: app/core/recording_session.py:268
 #, python-brace-format
@@ -1582,57 +1571,57 @@ msgid ""
 "[VoiceMate] 🎙 ✗ Microphone unavailable ({reason}). Check that a "
 "microphone is connected and enabled, then press the hotkey again."
 msgstr ""
-"[VoiceMate] 🎙 ✗ Micrófono no disponible ({reason}). Verifica que haya un "
-"micrófono conectado y activado y vuelve a presionar el atajo."
+"[VoiceMate] 🎙 ✗ Микрофон недоступен ({reason}). Убедитесь, что микрофон "
+"подключён и включён, затем снова нажмите горячую клавишу."
 
 #: app/core/recording_session.py:278
 #, python-brace-format
 msgid "Microphone unavailable: {reason}"
-msgstr "Micrófono no disponible: {reason}"
+msgstr "Микрофон недоступен: {reason}"
 
 #: app/core/recording_session.py:324
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Recording will end in {remaining:.0f}s"
-msgstr "[VoiceMate] ⚠ La grabación terminará en {remaining:.0f}s"
+msgstr "[VoiceMate] ⚠ Запись завершится через {remaining:.0f} с"
 
 #: app/core/recording_session.py:330
 #, python-brace-format
 msgid "Recording will end in {remaining:.0f}s."
-msgstr "La grabación terminará en {remaining:.0f}s."
+msgstr "Запись завершится через {remaining:.0f} с."
 
 #: app/core/recording_session.py:340
 msgid "[VoiceMate] ⏰ Maximum time reached. Ending recording..."
-msgstr "[VoiceMate] ⏰ Tiempo máximo alcanzado. Finalizando la grabación..."
+msgstr "[VoiceMate] ⏰ Достигнуто максимальное время. Завершение записи..."
 
 #: app/core/recording_session.py:360
 msgid "[VoiceMate] No audio captured."
-msgstr "[VoiceMate] No se capturó audio."
+msgstr "[VoiceMate] Звук не записан."
 
 #: app/core/recording_session.py:361
 msgid "No audio captured."
-msgstr "No se capturó audio."
+msgstr "Звук не записан."
 
 #: app/core/recording_session.py:365
 #, python-brace-format
 msgid "[VoiceMate] ⏳ Transcribing {duration:.1f}s of audio..."
-msgstr "[VoiceMate] ⏳ Transcribiendo {duration:.1f}s de audio..."
+msgstr "[VoiceMate] ⏳ Расшифровка {duration:.1f} с аудио..."
 
 #: app/core/recording_session.py:378
 msgid "[VoiceMate] No speech detected."
-msgstr "[VoiceMate] No se detectó voz."
+msgstr "[VoiceMate] Речь не обнаружена."
 
 #: app/core/recording_session.py:379
 msgid "No speech detected."
-msgstr "No se detectó voz."
+msgstr "Речь не обнаружена."
 
 #: app/core/recording_session.py:384
 msgid "[VoiceMate] ❌ Error processing the recording:"
-msgstr "[VoiceMate] ❌ Error al procesar la grabación:"
+msgstr "[VoiceMate] ❌ Ошибка при обработке записи:"
 
 #: app/core/recording_session.py:389
 #, python-brace-format
 msgid "Transcription failed: {detail}"
-msgstr "La transcripción falló: {detail}"
+msgstr "Ошибка расшифровки: {detail}"
 
 #: app/core/recording_session.py:420
 #, python-brace-format
@@ -1641,38 +1630,38 @@ msgid ""
 "({elapsed:.0f}s for {audio_seconds:.0f}s) — the backend is probably "
 "running WITHOUT GPU. Run `make doctor` for diagnosis."
 msgstr ""
-"[VoiceMate] ⚠ Transcripción {ratio:.0f}× más lenta que el audio "
-"({elapsed:.0f}s para {audio_seconds:.0f}s): probablemente el backend se "
-"está ejecutando SIN GPU. Ejecuta `make doctor` para diagnosticarlo."
+"[VoiceMate] ⚠ Расшифровка идёт медленнее аудио (коэффициент {ratio:.0f}, "
+"{elapsed:.0f} с на {audio_seconds:.0f} с): скорее всего, бэкенд работает "
+"БЕЗ GPU. Для диагностики выполните `make doctor`."
 
 #: app/core/recording_session.py:430
 msgid ""
 "Transcription is much slower than the audio: the backend is probably "
 "running without a GPU."
 msgstr ""
-"La transcripción es mucho más lenta que el audio: probablemente el "
-"backend se ejecuta sin GPU."
+"Расшифровка идёт намного медленнее аудио: скорее всего, бэкенд работает "
+"без GPU."
 
 #: app/core/transcriber.py:26
 #, python-brace-format
 msgid "[VoiceMate] Loading Whisper '{model_size}' on {device} ({compute_type})..."
 msgstr ""
-"[VoiceMate] Cargando Whisper '{model_size}' en {device} "
+"[VoiceMate] Загрузка Whisper '{model_size}' на {device} "
 "({compute_type})..."
 
 #: app/core/transcriber.py:30 app/features/openai_whisper/backend.py:41
 msgid "[VoiceMate] (first run downloads the model automatically)"
-msgstr "[VoiceMate] (la primera ejecución descarga el modelo automáticamente)"
+msgstr "[VoiceMate] (при первом запуске модель скачивается автоматически)"
 
 #: app/core/transcriber.py:34 app/features/openai_whisper/backend.py:43
 #: app/features/whispercpp/backend.py:49
 msgid "[VoiceMate] Model ready."
-msgstr "[VoiceMate] Modelo listo."
+msgstr "[VoiceMate] Модель готова."
 
 #: app/core/transcription_handler.py:47
 #, python-brace-format
 msgid "[VoiceMate] ✓ Copied: {preview}"
-msgstr "[VoiceMate] ✓ Copiado: {preview}"
+msgstr "[VoiceMate] ✓ Скопировано: {preview}"
 
 #: app/core/transcription_handler.py:50
 #, python-brace-format
@@ -1680,13 +1669,13 @@ msgid ""
 "[VoiceMate] ✓ Transcribed (the clipboard lease holder copies it): "
 "{preview}"
 msgstr ""
-"[VoiceMate] ✓ Transcrito (lo copia quien tiene la concesión del "
-"portapapeles): {preview}"
+"[VoiceMate] ✓ Расшифровано (в буфер обмена копирует владелец аренды "
+"буфера): {preview}"
 
 #: app/daemon/hub.py:316
 #, python-brace-format
 msgid "[VoiceMate] Client {client} registered (leases: {leases})."
-msgstr "[VoiceMate] Cliente {client} registrado (concesiones: {leases})."
+msgstr "[VoiceMate] Клиент {client} зарегистрирован (аренды: {leases})."
 
 #: app/daemon/hub.py:436
 #, python-brace-format
@@ -1694,8 +1683,8 @@ msgid ""
 "[VoiceMate] ⚠ Lease '{lease}' of client {client} expired: the daemon "
 "takes that job back."
 msgstr ""
-"[VoiceMate] ⚠ La concesión '{lease}' del cliente {client} expiró: el "
-"daemon retoma esa tarea."
+"[VoiceMate] ⚠ Аренда '{lease}' клиента {client} истекла: демон снова "
+"берёт эту задачу на себя."
 
 #: app/daemon/hub.py:442
 #, python-brace-format
@@ -1703,71 +1692,67 @@ msgid ""
 "[VoiceMate] Lease '{lease}' released by client {client}: the daemon takes"
 " that job back."
 msgstr ""
-"[VoiceMate] Concesión '{lease}' liberada por el cliente {client}: el "
-"daemon retoma esa tarea."
+"[VoiceMate] Клиент {client} освободил аренду '{lease}': демон снова берёт"
+" эту задачу на себя."
 
 #: app/daemon/lifecycle.py:76
 msgid "[VoiceMate] Shutdown requested while the engine loads: exiting now."
-msgstr "[VoiceMate] Cierre solicitado mientras el motor carga: saliendo ahora."
+msgstr "[VoiceMate] Запрошено завершение во время загрузки движка: выход."
 
 #: app/daemon/lifecycle.py:113
 msgid "[VoiceMate] stdin closed: shutting down."
-msgstr "[VoiceMate] stdin cerrado: apagando."
+msgstr "[VoiceMate] stdin закрыт: завершение работы."
 
 #: app/daemon/server.py:437
 #, python-brace-format
 msgid "[VoiceMate] Client {client} unregistered."
-msgstr "[VoiceMate] Cliente {client} dado de baja."
+msgstr "[VoiceMate] Регистрация клиента {client} отменена."
 
 #: app/daemon/server.py:466
 #, python-brace-format
 msgid "[VoiceMate] ❌ Error in trigger for flow '{flow}':"
-msgstr "[VoiceMate] ❌ Error en el disparador del flujo '{flow}':"
+msgstr "[VoiceMate] ❌ Ошибка в триггере режима '{flow}':"
 
 #: app/daemon/server.py:523
 msgid "[VoiceMate] Shutdown requested over HTTP."
-msgstr "[VoiceMate] Cierre solicitado por HTTP."
+msgstr "[VoiceMate] Завершение работы запрошено по HTTP."
 
 #: app/features/claude/chat_handler.py:56
 #, python-brace-format
 msgid "[VoiceMate] ⏳ Claude processing... ({elapsed:.0f}s)"
-msgstr "[VoiceMate] ⏳ Claude procesando... ({elapsed:.0f}s)"
+msgstr "[VoiceMate] ⏳ Claude обрабатывает запрос... ({elapsed:.0f} с)"
 
 #: app/features/claude/chat_handler.py:109
 #, python-brace-format
 msgid "[VoiceMate] ✓ Transcription: {preview}"
-msgstr "[VoiceMate] ✓ Transcripción: {preview}"
+msgstr "[VoiceMate] ✓ Расшифровка: {preview}"
 
 #: app/features/claude/chat_handler.py:117
 msgid "[VoiceMate] 📋 Transcription copied to clipboard."
-msgstr "[VoiceMate] 📋 Transcripción copiada al portapapeles."
+msgstr "[VoiceMate] 📋 Расшифровка скопирована в буфер обмена."
 
 #: app/features/claude/chat_handler.py:119
 #: app/features/claude/chat_handler.py:160
 msgid "[VoiceMate] 📋 The clipboard lease holder copies it to the clipboard."
-msgstr ""
-"[VoiceMate] 📋 Quien tiene la concesión del portapapeles lo copia al "
-"portapapeles."
+msgstr "[VoiceMate] 📋 В буфер обмена текст копирует владелец аренды буфера."
 
 #: app/features/claude/chat_handler.py:121
 msgid ""
 "[VoiceMate] Claude not called: the operation was cancelled or a new "
 "recording took over."
-msgstr ""
-"[VoiceMate] Claude no fue llamado: la operación se canceló o una nueva "
-"grabación tomó el relevo."
+msgstr "[VoiceMate] Claude не вызван: операция отменена или началась новая запись."
 
 #: app/features/claude/chat_handler.py:134
 msgid "[VoiceMate] 🤖 Calling Claude..."
-msgstr "[VoiceMate] 🤖 Llamando a Claude..."
+msgstr "[VoiceMate] 🤖 Обращение к Claude..."
 
 #: app/features/claude/chat_handler.py:147
 msgid "[VoiceMate] ✗ Claude response discarded (cancelled)."
-msgstr "[VoiceMate] ✗ Respuesta de Claude descartada (cancelada)."
+msgstr "[VoiceMate] ✗ Ответ Claude отброшен (операция отменена)."
 
 #: app/features/claude/chat_handler.py:150
 msgid "[VoiceMate] Claude returned an empty response."
-msgstr "[VoiceMate] Claude devolvió una respuesta vacía."
+msgstr "[VoiceMate] Claude вернул пустой ответ."
 
 #: app/features/claude/chat_handler.py:153
 #, python-brace-format
@@ -1777,86 +1762,84 @@ msgstr "[VoiceMate] 💬 Claude: {preview}"
 #: app/features/claude/chat_handler.py:154
 #, python-brace-format
 msgid "[VoiceMate] ⏱ Full response in {elapsed:.1f}s"
-msgstr "[VoiceMate] ⏱ Respuesta completa en {elapsed:.1f}s"
+msgstr "[VoiceMate] ⏱ Полный ответ за {elapsed:.1f} с"
 
 #: app/features/claude/chat_handler.py:158
 msgid "[VoiceMate] 📋 Claude response copied to clipboard."
-msgstr "[VoiceMate] 📋 Respuesta de Claude copiada al portapapeles."
+msgstr "[VoiceMate] 📋 Ответ Claude скопирован в буфер обмена."
 
 #: app/features/claude/chat_handler.py:164
 msgid "[VoiceMate] ✗ Claude call cancelled."
-msgstr "[VoiceMate] ✗ Llamada a Claude cancelada."
+msgstr "[VoiceMate] ✗ Обращение к Claude отменено."
 
 #: app/features/claude/chat_handler.py:167
 #, python-brace-format
 msgid "[VoiceMate] ⏱ Claude exceeded timeout ({timeout:.0f}s), discarding turn."
 msgstr ""
-"[VoiceMate] ⏱ Claude superó el tiempo de espera ({timeout:.0f}s), "
-"descartando el turno."
+"[VoiceMate] ⏱ Claude превысил время ожидания ({timeout:.0f} с), реплика "
+"отброшена."
 
 #: app/features/claude/chat_handler.py:176
 #, python-brace-format
 msgid "Claude did not answer within {timeout:.0f}s."
-msgstr "Claude no respondió en {timeout:.0f}s."
+msgstr "Claude не ответил за {timeout:.0f} с."
 
 #: app/features/claude/chat_handler.py:180
 #, python-brace-format
 msgid "[VoiceMate] ❌ Error talking to Claude: {exc}"
-msgstr "[VoiceMate] ❌ Error al comunicarse con Claude: {exc}"
+msgstr "[VoiceMate] ❌ Ошибка при обращении к Claude: {exc}"
 
 #: app/features/claude/chat_handler.py:184
 #, python-brace-format
 msgid "Error talking to Claude: {detail}"
-msgstr "Error al comunicarse con Claude: {detail}"
+msgstr "Ошибка при обращении к Claude: {detail}"
 
 #: app/features/claude/chat_handler.py:207
 msgid "[VoiceMate] 💬 Claude responding..."
-msgstr "[VoiceMate] 💬 Claude respondiendo..."
+msgstr "[VoiceMate] 💬 Claude отвечает..."
 
 #: app/features/openai_whisper/backend.py:37
 #, python-brace-format
 msgid "[VoiceMate] Loading Whisper '{model_size}' (openai-whisper) on {device}..."
 msgstr ""
-"[VoiceMate] Cargando Whisper '{model_size}' (openai-whisper) en "
+"[VoiceMate] Загрузка Whisper '{model_size}' (openai-whisper) на "
 "{device}..."
 
 #: app/features/openai_whisper/backend.py:101
 #, python-brace-format
 msgid "[VoiceMate] ⚠ openai-whisper warmup failed (continuing): {exc}"
-msgstr ""
-"[VoiceMate] ⚠ Falló el calentamiento de openai-whisper (continuando): "
-"{exc}"
+msgstr "[VoiceMate] ⚠ Прогрев openai-whisper не удался (продолжаем): {exc}"
 
 #: app/features/openai_whisper/vad.py:47
 #, python-brace-format
 msgid "[VoiceMate] ⚠ VAD failed (using full audio): {exc}"
-msgstr "[VoiceMate] ⚠ Falló el VAD (usando el audio completo): {exc}"
+msgstr "[VoiceMate] ⚠ Ошибка VAD (используется всё аудио): {exc}"
 
 #: app/features/tts/kokoro_speaker.py:80
 #, python-brace-format
 msgid "[KokoroSpeaker] error while speaking: {exc}"
-msgstr "[KokoroSpeaker] error al hablar: {exc}"
+msgstr "[KokoroSpeaker] ошибка при озвучивании: {exc}"
 
 #: app/features/tts/kokoro_speaker.py:89
 msgid ""
 "[KokoroSpeaker] ⚠ AudioPlayer drain timed out — audio may have been left "
 "incomplete."
 msgstr ""
-"[KokoroSpeaker] ⚠ Se agotó el tiempo de espera del drain del AudioPlayer:"
-" el audio puede haber quedado incompleto."
+"[KokoroSpeaker] ⚠ Истекло время ожидания AudioPlayer: звук мог "
+"воспроизвестись не полностью."
 
 #: app/features/tts/kokoro_speaker.py:102
 msgid "[KokoroSpeaker] Warmup..."
-msgstr "[KokoroSpeaker] Calentamiento..."
+msgstr "[KokoroSpeaker] Прогрев..."
 
 #: app/features/tts/kokoro_speaker.py:105
 msgid "[KokoroSpeaker] Warmup done — synthesis ready."
-msgstr "[KokoroSpeaker] Calentamiento completado: síntesis lista."
+msgstr "[KokoroSpeaker] Прогрев завершён: синтез готов."
 
 #: app/features/tts/kokoro_speaker.py:107
 #, python-brace-format
 msgid "[KokoroSpeaker] ⚠ warmup failed (continuing): {exc}"
-msgstr "[KokoroSpeaker] ⚠ falló el calentamiento (continuando): {exc}"
+msgstr "[KokoroSpeaker] ⚠ Прогрев не удался (продолжаем): {exc}"
 
 #: app/features/tts/kokoro_speaker.py:136
 #, python-brace-format
@@ -1864,8 +1847,8 @@ msgid ""
 "[KokoroSpeaker] ⚠ Failed to load Kokoro: {exc}\n"
 "[KokoroSpeaker]   PT-BR needs espeak-ng: sudo apt install -y espeak-ng"
 msgstr ""
-"[KokoroSpeaker] ⚠ No se pudo cargar Kokoro: {exc}\n"
-"[KokoroSpeaker]   PT-BR necesita espeak-ng: sudo apt install -y espeak-ng"
+"[KokoroSpeaker] ⚠ Не удалось загрузить Kokoro: {exc}\n"
+"[KokoroSpeaker]   Для PT-BR нужен espeak-ng: sudo apt install -y espeak-ng"
 
 #: app/features/tts/kokoro_speaker.py:150
 #, python-brace-format
@@ -1873,47 +1856,47 @@ msgid ""
 "[KokoroSpeaker] Loading Kokoro (lang={lang_code}, {device}, first run "
 "downloads weights)..."
 msgstr ""
-"[KokoroSpeaker] Cargando Kokoro (lang={lang_code}, {device}, la primera "
-"ejecución descarga los pesos)..."
+"[KokoroSpeaker] Загрузка Kokoro (lang={lang_code}, {device}, при первом "
+"запуске скачиваются веса)..."
 
 #: app/features/tts/kokoro_speaker.py:155
 msgid "[KokoroSpeaker] Model ready."
-msgstr "[KokoroSpeaker] Modelo listo."
+msgstr "[KokoroSpeaker] Модель готова."
 
 #: app/features/tts/omnivoice_speaker.py:105
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] error while speaking: {exc}"
-msgstr "[OmniVoiceSpeaker] error al hablar: {exc}"
+msgstr "[OmniVoiceSpeaker] ошибка при озвучивании: {exc}"
 
 #: app/features/tts/omnivoice_speaker.py:114
 msgid ""
 "[OmniVoiceSpeaker] ⚠ AudioPlayer drain timed out — audio may have been "
 "left incomplete."
 msgstr ""
-"[OmniVoiceSpeaker] ⚠ Se agotó el tiempo de espera del drain del "
-"AudioPlayer: el audio puede haber quedado incompleto."
+"[OmniVoiceSpeaker] ⚠ Истекло время ожидания AudioPlayer: звук мог "
+"воспроизвестись не полностью."
 
 #: app/features/tts/omnivoice_speaker.py:136
 msgid ""
 "[OmniVoiceSpeaker] Warmup (tuning ROCm kernels; only the 1st time is "
 "slow)..."
 msgstr ""
-"[OmniVoiceSpeaker] Calentamiento (ajustando kernels ROCm; solo la primera"
-" vez es lenta)..."
+"[OmniVoiceSpeaker] Прогрев (настройка ядер ROCm; медленно только в первый"
+" раз)..."
 
 #: app/features/tts/omnivoice_speaker.py:138
 msgid "[OmniVoiceSpeaker] Warmup done — synthesis ready (realtime)."
-msgstr "[OmniVoiceSpeaker] Calentamiento completado: síntesis lista (tiempo real)."
+msgstr "[OmniVoiceSpeaker] Прогрев завершён: синтез готов (в реальном времени)."
 
 #: app/features/tts/omnivoice_speaker.py:140
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ warmup failed (continuing): {exc}"
-msgstr "[OmniVoiceSpeaker] ⚠ falló el calentamiento (continuando): {exc}"
+msgstr "[OmniVoiceSpeaker] ⚠ Прогрев не удался (продолжаем): {exc}"
 
 #: app/features/tts/omnivoice_speaker.py:169
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ Failed to load OmniVoice: {exc}"
-msgstr "[OmniVoiceSpeaker] ⚠ No se pudo cargar OmniVoice: {exc}"
+msgstr "[OmniVoiceSpeaker] ⚠ Не удалось загрузить OmniVoice: {exc}"
 
 #: app/features/tts/omnivoice_speaker.py:181
 msgid ""
@@ -1921,9 +1904,9 @@ msgid ""
 "gets a small tune (~1-2s) the 1st time; after that it is realtime (RTF "
 "~0.7)."
 msgstr ""
-"[OmniVoiceSpeaker] ROCm con TunableOp activo: cada nueva longitud de "
-"frase recibe un pequeño ajuste (~1-2s) la primera vez; después funciona "
-"en tiempo real (RTF ~0.7)."
+"[OmniVoiceSpeaker] ROCm: TunableOp включён. Для каждой новой длины фразы "
+"в первый раз выполняется короткая настройка (~1-2 с); после этого синтез "
+"идёт в реальном времени (RTF ~0.7)."
 
 #: app/features/tts/omnivoice_speaker.py:187
 #, python-brace-format
@@ -1931,12 +1914,12 @@ msgid ""
 "[OmniVoiceSpeaker] Loading OmniVoice ({device_map}, first run downloads "
 "weights)..."
 msgstr ""
-"[OmniVoiceSpeaker] Cargando OmniVoice ({device_map}, la primera ejecución"
-" descarga los pesos)..."
+"[OmniVoiceSpeaker] Загрузка OmniVoice ({device_map}, при первом запуске "
+"скачиваются веса)..."
 
 #: app/features/tts/omnivoice_speaker.py:192
 msgid "[OmniVoiceSpeaker] Model ready."
-msgstr "[OmniVoiceSpeaker] Modelo listo."
+msgstr "[OmniVoiceSpeaker] Модель готова."
 
 #: app/features/tts/omnivoice_speaker.py:224
 msgid ""
@@ -1944,46 +1927,44 @@ msgid ""
 "run on CPU (much slower synthesis). Run `make configure` to install the "
 "torch for your GPU."
 msgstr ""
-"[OmniVoiceSpeaker] ⚠ PyTorch sin aceleración por GPU: OmniVoice se "
-"ejecutará en la CPU (síntesis mucho más lenta). Ejecuta `make configure` "
-"para instalar el torch de tu GPU."
+"[OmniVoiceSpeaker] ⚠ PyTorch без ускорения на GPU: OmniVoice будет "
+"работать на CPU (синтез намного медленнее). Выполните `make configure`, "
+"чтобы установить torch для вашей GPU."
 
 #: app/features/tts/omnivoice_speaker.py:282
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] Auto-seed loaded from {cached_wav}"
-msgstr "[OmniVoiceSpeaker] Auto-seed cargado desde {cached_wav}"
+msgstr "[OmniVoiceSpeaker] Автообразец голоса загружен из {cached_wav}"
 
 #: app/features/tts/omnivoice_speaker.py:284
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ Failed to read auto-seed: {exc}"
-msgstr "[OmniVoiceSpeaker] ⚠ No se pudo leer el auto-seed: {exc}"
+msgstr "[OmniVoiceSpeaker] ⚠ Не удалось прочитать автообразец голоса: {exc}"
 
 #: app/features/tts/omnivoice_speaker.py:304
 msgid "[OmniVoiceSpeaker] soundfile not installed — could not save auto-seed."
 msgstr ""
-"[OmniVoiceSpeaker] soundfile no está instalado: no se pudo guardar el "
-"auto-seed."
+"[OmniVoiceSpeaker] soundfile не установлен: не удалось сохранить "
+"автообразец голоса."
 
 #: app/features/tts/omnivoice_speaker.py:313
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ Failed to save auto-seed: {exc}"
-msgstr "[OmniVoiceSpeaker] ⚠ No se pudo guardar el auto-seed: {exc}"
+msgstr "[OmniVoiceSpeaker] ⚠ Не удалось сохранить автообразец голоса: {exc}"
 
 #: app/features/tts/omnivoice_speaker.py:317
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] Auto-seed saved to {wav_path}"
-msgstr "[OmniVoiceSpeaker] Auto-seed guardado en {wav_path}"
+msgstr "[OmniVoiceSpeaker] Автообразец голоса сохранён в {wav_path}"
 
 #: app/features/tts/omnivoice_speaker.py:323
 msgid "[OmniVoiceSpeaker] soundfile not installed — could not save audio."
-msgstr ""
-"[OmniVoiceSpeaker] soundfile no está instalado: no se pudo guardar el "
-"audio."
+msgstr "[OmniVoiceSpeaker] soundfile не установлен: не удалось сохранить аудио."
 
 #: app/features/tts/omnivoice_speaker.py:329
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] Audio saved to {path}"
-msgstr "[OmniVoiceSpeaker] Audio guardado en {path}"
+msgstr "[OmniVoiceSpeaker] Аудио сохранено в {path}"
 
 #: app/features/tts/omnivoice_speaker.py:353
 #, python-brace-format
@@ -1991,94 +1972,90 @@ msgid ""
 "[OmniVoiceSpeaker] VRAM ({label}): alloc={allocated:.2f}GB, "
 "reserved={reserved:.2f}GB"
 msgstr ""
-"[OmniVoiceSpeaker] VRAM ({label}): alloc={allocated:.2f}GB, "
-"reserved={reserved:.2f}GB"
+"[OmniVoiceSpeaker] VRAM ({label}): alloc={allocated:.2f} ГБ, "
+"reserved={reserved:.2f} ГБ"
 
 #: app/features/tts/voxcpm_speaker.py:75
 #, python-brace-format
 msgid "[VoxCPMSpeaker] ⚠ Failed to load VoxCPM2: {exc}"
-msgstr "[VoxCPMSpeaker] ⚠ No se pudo cargar VoxCPM2: {exc}"
+msgstr "[VoxCPMSpeaker] ⚠ Не удалось загрузить VoxCPM2: {exc}"
 
 #: app/features/tts/voxcpm_speaker.py:87
 msgid "cloning"
-msgstr "clonación"
+msgstr "клонирование"
 
 #: app/features/tts/voxcpm_speaker.py:87
 msgid "voice-design"
-msgstr "voice-design"
+msgstr "дизайн голоса"
 
 #: app/features/tts/voxcpm_speaker.py:88
 #, python-brace-format
 msgid "[VoxCPMSpeaker] 🔊 Synthesizing voice ({mode})..."
-msgstr "[VoxCPMSpeaker] 🔊 Sintetizando voz ({mode})..."
+msgstr "[VoxCPMSpeaker] 🔊 Синтез голоса ({mode})..."
 
 #: app/features/tts/voxcpm_speaker.py:99
 msgid ""
 "[VoxCPMSpeaker] ⚠ AudioPlayer drain timed out — flow recovered, audio may"
 " have been left incomplete."
 msgstr ""
-"[VoxCPMSpeaker] ⚠ Se agotó el tiempo de espera del drain del AudioPlayer:"
-" flujo recuperado, el audio puede haber quedado incompleto."
+"[VoxCPMSpeaker] ⚠ Истекло время ожидания AudioPlayer: поток восстановлен,"
+" звук мог воспроизвестись не полностью."
 
 #: app/features/tts/voxcpm_speaker.py:107
 #, python-brace-format
 msgid "[VoxCPMSpeaker] ✓ Playback finished ({elapsed:.1f}s)."
-msgstr "[VoxCPMSpeaker] ✓ Reproducción finalizada ({elapsed:.1f}s)."
+msgstr "[VoxCPMSpeaker] ✓ Воспроизведение завершено ({elapsed:.1f} с)."
 
 #: app/features/tts/voxcpm_speaker.py:109
 #, python-brace-format
 msgid "[VoxCPMSpeaker] error while speaking: {exc}"
-msgstr "[VoxCPMSpeaker] error al hablar: {exc}"
+msgstr "[VoxCPMSpeaker] ошибка при озвучивании: {exc}"
 
 #: app/features/tts/voxcpm_speaker.py:155
 #, python-brace-format
 msgid "[VoxCPMSpeaker] Auto-seed loaded from {cached_wav}"
-msgstr "[VoxCPMSpeaker] Auto-seed cargado desde {cached_wav}"
+msgstr "[VoxCPMSpeaker] Автообразец голоса загружен из {cached_wav}"
 
 #: app/features/tts/voxcpm_speaker.py:159
 #, python-brace-format
 msgid "[VoxCPMSpeaker] ⚠ Failed to read auto-seed: {exc}"
-msgstr "[VoxCPMSpeaker] ⚠ No se pudo leer el auto-seed: {exc}"
+msgstr "[VoxCPMSpeaker] ⚠ Не удалось прочитать автообразец голоса: {exc}"
 
 #: app/features/tts/voxcpm_speaker.py:181
 msgid "[VoxCPMSpeaker] Loading VoxCPM2 (first run downloads weights)..."
-msgstr ""
-"[VoxCPMSpeaker] Cargando VoxCPM2 (la primera ejecución descarga los "
-"pesos)..."
+msgstr "[VoxCPMSpeaker] Загрузка VoxCPM2 (при первом запуске скачиваются веса)..."
 
 #: app/features/tts/voxcpm_speaker.py:183
 msgid "[VoxCPMSpeaker] Model ready."
-msgstr "[VoxCPMSpeaker] Modelo listo."
+msgstr "[VoxCPMSpeaker] Модель готова."
 
 #: app/features/tts/voxcpm_speaker.py:210
 msgid ""
 "[VoxCPMSpeaker] ⚠ PyTorch without GPU acceleration — VoxCPM will run on "
 "CPU (synthesis ~50-100× slower than GPU)."
 msgstr ""
-"[VoxCPMSpeaker] ⚠ PyTorch sin aceleración por GPU: VoxCPM se ejecutará en"
-" la CPU (síntesis ~50-100× más lenta que en GPU)."
+"[VoxCPMSpeaker] ⚠ PyTorch без ускорения на GPU: VoxCPM будет работать на "
+"CPU (синтез в ~50-100 раз медленнее, чем на GPU)."
 
 #: app/features/tts/voxcpm_speaker.py:218
 msgid ""
 "[VoxCPMSpeaker]   For the AMD GPU, install torch ROCm (Adrenalin driver "
 ">= 26.2.2). Run: make configure"
 msgstr ""
-"[VoxCPMSpeaker]   Para la GPU AMD, instala torch ROCm (driver Adrenalin "
-">= 26.2.2). Ejecuta: make configure"
+"[VoxCPMSpeaker]   Для GPU AMD установите torch ROCm (драйвер Adrenalin >="
+" 26.2.2). Выполните: make configure"
 
 #: app/features/tts/voxcpm_speaker.py:225
 msgid ""
 "[VoxCPMSpeaker]   Wheels: https://repo.radeon.com/rocm/windows/ "
 "(torch/torchaudio +rocm, cp312, win_amd64)"
 msgstr ""
-"[VoxCPMSpeaker]   Wheels: https://repo.radeon.com/rocm/windows/ "
+"[VoxCPMSpeaker]   Пакеты wheel: https://repo.radeon.com/rocm/windows/ "
 "(torch/torchaudio +rocm, cp312, win_amd64)"
 
 #: app/features/tts/voxcpm_speaker.py:232
 msgid "[VoxCPMSpeaker]   For the NVIDIA GPU, reinstall PyTorch with a CUDA build:"
-msgstr ""
-"[VoxCPMSpeaker]   Para la GPU NVIDIA, reinstala PyTorch con una "
-"compilación para CUDA:"
+msgstr "[VoxCPMSpeaker]   Для GPU NVIDIA переустановите PyTorch со сборкой CUDA:"
 
 #: app/features/tts/voxcpm_speaker.py:237
 msgid ""
@@ -2091,23 +2068,23 @@ msgstr ""
 #: app/features/tts/voxcpm_speaker.py:260
 #, python-brace-format
 msgid "[VoxCPMSpeaker] ⚠ failed to close generator: {exc}"
-msgstr "[VoxCPMSpeaker] ⚠ no se pudo cerrar el generador: {exc}"
+msgstr "[VoxCPMSpeaker] ⚠ не удалось закрыть генератор: {exc}"
 
 #: app/features/tts/voxcpm_speaker.py:324
 msgid "[VoxCPMSpeaker] soundfile not installed — could not save auto-seed."
 msgstr ""
-"[VoxCPMSpeaker] soundfile no está instalado: no se pudo guardar el auto-"
-"seed."
+"[VoxCPMSpeaker] soundfile не установлен: не удалось сохранить автообразец"
+" голоса."
 
 #: app/features/tts/voxcpm_speaker.py:336
 #, python-brace-format
 msgid "[VoxCPMSpeaker] ⚠ Failed to save auto-seed: {exc}"
-msgstr "[VoxCPMSpeaker] ⚠ No se pudo guardar el auto-seed: {exc}"
+msgstr "[VoxCPMSpeaker] ⚠ Не удалось сохранить автообразец голоса: {exc}"
 
 #: app/features/tts/voxcpm_speaker.py:340
 #, python-brace-format
 msgid "[VoxCPMSpeaker] Auto-seed saved to {wav_path}"
-msgstr "[VoxCPMSpeaker] Auto-seed guardado en {wav_path}"
+msgstr "[VoxCPMSpeaker] Автообразец голоса сохранён в {wav_path}"
 
 #: app/features/tts/voxcpm_speaker.py:362
 #, python-brace-format
@@ -2115,17 +2092,17 @@ msgid ""
 "[VoxCPMSpeaker] VRAM ({label}): alloc={allocated:.2f}GB, "
 "reserved={reserved:.2f}GB"
 msgstr ""
-"[VoxCPMSpeaker] VRAM ({label}): alloc={allocated:.2f}GB, "
-"reserved={reserved:.2f}GB"
+"[VoxCPMSpeaker] VRAM ({label}): alloc={allocated:.2f} ГБ, "
+"reserved={reserved:.2f} ГБ"
 
 #: app/features/tts/voxcpm_speaker.py:379
 msgid "[VoxCPMSpeaker] soundfile not installed — could not save audio."
-msgstr "[VoxCPMSpeaker] soundfile no está instalado: no se pudo guardar el audio."
+msgstr "[VoxCPMSpeaker] soundfile не установлен: не удалось сохранить аудио."
 
 #: app/features/tts/voxcpm_speaker.py:388
 #, python-brace-format
 msgid "[VoxCPMSpeaker] Audio saved to {path}"
-msgstr "[VoxCPMSpeaker] Audio guardado en {path}"
+msgstr "[VoxCPMSpeaker] Аудио сохранено в {path}"
 
 #: app/features/whispercpp/__init__.py:102
 #, python-brace-format
@@ -2133,14 +2110,14 @@ msgid ""
 "[VoiceMate] ⚠ whisper-server failed to start ({exc}); falling back to "
 "whisper-cli."
 msgstr ""
-"[VoiceMate] ⚠ whisper-server no pudo iniciarse ({exc}); recurriendo a "
+"[VoiceMate] ⚠ Не удалось запустить whisper-server ({exc}); переход на "
 "whisper-cli."
 
 #: app/features/whispercpp/__init__.py:109
 msgid "[VoiceMate] ⚠ whisper-server.exe not found; using whisper-cli (cli mode)."
 msgstr ""
-"[VoiceMate] ⚠ No se encontró whisper-server.exe; usando whisper-cli (modo"
-" cli)."
+"[VoiceMate] ⚠ whisper-server.exe не найден; используется whisper-cli "
+"(режим cli)."
 
 #: app/features/whispercpp/backend.py:45
 #, python-brace-format
@@ -2148,8 +2125,8 @@ msgid ""
 "[VoiceMate] Loading Whisper '{model_stem}' (whisper.cpp + Vulkan, "
 "language={language})..."
 msgstr ""
-"[VoiceMate] Cargando Whisper '{model_stem}' (whisper.cpp + Vulkan, "
-"idioma={language})..."
+"[VoiceMate] Загрузка Whisper '{model_stem}' (whisper.cpp + Vulkan, "
+"язык={language})..."
 
 #: app/features/whispercpp/server_backend.py:191
 #, python-brace-format
@@ -2157,12 +2134,12 @@ msgid ""
 "[VoiceMate] Starting whisper-server '{model_stem}' (whisper.cpp, "
 "language={language}, vad={vad})..."
 msgstr ""
-"[VoiceMate] Iniciando whisper-server '{model_stem}' (whisper.cpp, "
-"idioma={language}, vad={vad})..."
+"[VoiceMate] Запуск whisper-server '{model_stem}' (whisper.cpp, "
+"язык={language}, vad={vad})..."
 
 #: app/features/whispercpp/server_backend.py:216
 msgid "[VoiceMate] Model ready (warm)."
-msgstr "[VoiceMate] Modelo listo (precalentado)."
+msgstr "[VoiceMate] Модель готова (загружена в память)."
 
 #: app/features/whispercpp/server_backend.py:226
 #, python-brace-format
@@ -2177,21 +2154,17 @@ msgstr "[VoiceMate] ⚠ {warning}"
 #: app/features/whispercpp/server_backend.py:252
 #, python-brace-format
 msgid "[VoiceMate] ⚠ whisper-server warmup failed (continuing): {exc}"
-msgstr ""
-"[VoiceMate] ⚠ Falló el calentamiento de whisper-server (continuando): "
-"{exc}"
+msgstr "[VoiceMate] ⚠ Прогрев whisper-server не удался (продолжаем): {exc}"
 
 #: app/i18n/windows_script_messages.py:28
 #, python-brace-format
 msgid "[VoiceMate] Windows audio device check unavailable: {0}"
-msgstr ""
-"[VoiceMate] La verificación de los dispositivos de audio de Windows no "
-"está disponible: {0}"
+msgstr "[VoiceMate] Проверка аудиоустройств Windows недоступна: {0}"
 
 #: app/i18n/windows_script_messages.py:29
 #, python-brace-format
 msgid "[VoiceMate] Connected to the daemon at {0}."
-msgstr "[VoiceMate] Conectado al daemon en {0}."
+msgstr "[VoiceMate] Подключено к демону по адресу {0}."
 
 #: app/i18n/windows_script_messages.py:30
 #, python-brace-format
@@ -2199,26 +2172,26 @@ msgid ""
 "[VoiceMate] Lost contact with the daemon at {0} (stopped or restarting?)."
 " Retrying every {1} s."
 msgstr ""
-"[VoiceMate] Se perdió la conexión con el daemon en {0} (¿detenido o "
-"reiniciándose?). Reintentando cada {1} s."
+"[VoiceMate] Потеряна связь с демоном по адресу {0} (остановлен или "
+"перезапускается?). Повтор каждые {1} с."
 
 #: app/i18n/windows_script_messages.py:31
 msgid "connection refused"
-msgstr "conexión rechazada"
+msgstr "соединение отклонено"
 
 #: app/i18n/windows_script_messages.py:32
 msgid "connection closed before the daemon answered"
-msgstr "conexión cerrada antes de que el daemon respondiera"
+msgstr "соединение закрыто до ответа демона"
 
 #: app/i18n/windows_script_messages.py:33
 #, python-brace-format
 msgid "nothing is listening on {0}"
-msgstr "no hay nada escuchando en {0}"
+msgstr "на {0} никто не слушает"
 
 #: app/i18n/windows_script_messages.py:34
 #, python-brace-format
 msgid "[VoiceMate] Registered with the daemon as consumer {0}."
-msgstr "[VoiceMate] Registrado en el daemon como consumidor {0}."
+msgstr "[VoiceMate] Зарегистрирован в демоне как потребитель {0}."
 
 #: app/i18n/windows_script_messages.py:35
 #, python-brace-format
@@ -2226,8 +2199,8 @@ msgid ""
 "[VoiceMate] Daemon restarted (instance {0} -> {1}): reading its results "
 "from the start."
 msgstr ""
-"[VoiceMate] Daemon reiniciado (instancia {0} -> {1}): leyendo sus "
-"resultados desde el principio."
+"[VoiceMate] Демон перезапущен (экземпляр {0} -> {1}): его результаты "
+"читаются с начала."
 
 #: app/i18n/windows_script_messages.py:36
 #, python-brace-format
@@ -2235,32 +2208,32 @@ msgid ""
 "[VoiceMate] Registered with the daemon as consumer {0} (assigned on the "
 "trigger)."
 msgstr ""
-"[VoiceMate] Registrado en el daemon como consumidor {0} (asignado en el "
-"disparador)."
+"[VoiceMate] Зарегистрирован в демоне как потребитель {0} (назначен при "
+"срабатывании триггера)."
 
 #: app/i18n/windows_script_messages.py:37
 #, python-brace-format
 msgid "[VoiceMate] > recording... (op {0})"
-msgstr "[VoiceMate] > grabando... (op {0})"
+msgstr "[VoiceMate] > запись... (оп. {0})"
 
 #: app/i18n/windows_script_messages.py:38
 #, python-brace-format
 msgid "[VoiceMate] # transcribing... (op {0})"
-msgstr "[VoiceMate] # transcribiendo... (op {0})"
+msgstr "[VoiceMate] # расшифровка... (оп. {0})"
 
 #: app/i18n/windows_script_messages.py:39
 #, python-brace-format
 msgid "[VoiceMate] ~ restarted (op {0})"
-msgstr "[VoiceMate] ~ reiniciado (op {0})"
+msgstr "[VoiceMate] ~ перезапущено (оп. {0})"
 
 #: app/i18n/windows_script_messages.py:40
 #, python-brace-format
 msgid "[VoiceMate] trigger '{0}' received."
-msgstr "[VoiceMate] disparador '{0}' recibido."
+msgstr "[VoiceMate] триггер '{0}' получен."
 
 #: app/i18n/windows_script_messages.py:41
 msgid "daemon offline"
-msgstr "daemon fuera de línea"
+msgstr "демон недоступен"
 
 #: app/i18n/windows_script_messages.py:42
 #, python-brace-format
@@ -2268,12 +2241,12 @@ msgid ""
 "{0}: daemon offline at {1} ({2}). Start it in WSL with `make run`, then "
 "press the hotkey again."
 msgstr ""
-"{0}: daemon fuera de línea en {1} ({2}). Inícialo en WSL con `make run` y"
-" vuelve a presionar el atajo."
+"{0}: демон недоступен по адресу {1} ({2}). Запустите его в WSL командой "
+"`make run`, затем снова нажмите горячую клавишу."
 
 #: app/i18n/windows_script_messages.py:43
 msgid "daemon busy"
-msgstr "daemon ocupado"
+msgstr "демон занят"
 
 #: app/i18n/windows_script_messages.py:45
 #, python-brace-format
@@ -2282,91 +2255,87 @@ msgid ""
 "may still act on this key press: check the WSL console before pressing "
 "again."
 msgstr ""
-"{0}: el daemon no respondió en {1} s (ocupado). Está en ejecución, así "
-"que aún puede actuar sobre este atajo: revisa la consola de WSL antes de "
-"volver a presionarlo."
+"{0}: демон не ответил за {1} с (занят). Он работает, поэтому ещё может "
+"отреагировать на это нажатие: проверьте консоль WSL, прежде чем нажимать "
+"снова."
 
 #: app/i18n/windows_script_messages.py:47
 msgid "daemon loading"
-msgstr "daemon cargando"
+msgstr "демон загружается"
 
 #: app/i18n/windows_script_messages.py:48
 #, python-brace-format
 msgid "{0}: the daemon is still loading the model, try again in a few seconds."
-msgstr ""
-"{0}: el daemon todavía está cargando el modelo, inténtalo de nuevo en "
-"unos segundos."
+msgstr "{0}: демон ещё загружает модель, повторите попытку через несколько секунд."
 
 #: app/i18n/windows_script_messages.py:49
 msgid "daemon error"
-msgstr "error del daemon"
+msgstr "ошибка демона"
 
 #: app/i18n/windows_script_messages.py:50
 #, python-brace-format
 msgid "{0}: daemon error ({1}). See the WSL console for details."
-msgstr "{0}: error del daemon ({1}). Revisa los detalles en la consola de WSL."
+msgstr "{0}: ошибка демона ({1}). Подробности в консоли WSL."
 
 #: app/i18n/windows_script_messages.py:51
 msgid "trigger rejected"
-msgstr "disparador rechazado"
+msgstr "триггер отклонён"
 
 #: app/i18n/windows_script_messages.py:52
 #, python-brace-format
 msgid "{0}: the daemon rejected the trigger ({1})."
-msgstr "{0}: el daemon rechazó el disparador ({1})."
+msgstr "{0}: демон отклонил триггер ({1})."
 
 #: app/i18n/windows_script_messages.py:53
 msgid "trigger failed"
-msgstr "falló el disparador"
+msgstr "сбой триггера"
 
 #: app/i18n/windows_script_messages.py:54
 #, python-brace-format
 msgid "{0}: unexpected error talking to the daemon at {1}: {2}"
-msgstr "{0}: error inesperado al comunicarse con el daemon en {1}: {2}"
+msgstr "{0}: непредвиденная ошибка при обращении к демону по адресу {1}: {2}"
 
 #: app/i18n/windows_script_messages.py:55
 #, python-brace-format
 msgid "The daemon reported an error ({0})."
-msgstr "El daemon informó un error ({0})."
+msgstr "Демон сообщил об ошибке ({0})."
 
 #: app/i18n/windows_script_messages.py:56
 #, python-brace-format
 msgid "[VoiceMate] {0} (seq {1}, op {2}, error '{3}'; clipboard untouched)"
-msgstr "[VoiceMate] {0} (seq {1}, op {2}, error '{3}'; portapapeles sin cambios)"
+msgstr "[VoiceMate] {0} (seq {1}, оп. {2}, ошибка '{3}'; буфер обмена не изменён)"
 
 #: app/i18n/windows_script_messages.py:57
 msgid "error"
-msgstr "error"
+msgstr "ошибка"
 
 #: app/i18n/windows_script_messages.py:58
 msgid "microphone unavailable"
-msgstr "micrófono no disponible"
+msgstr "микрофон недоступен"
 
 #: app/i18n/windows_script_messages.py:59
 msgid ""
 "No microphone is connected to Windows. Connect one and press the hotkey "
 "again."
 msgstr ""
-"No hay ningún micrófono conectado a Windows. Conecta uno y vuelve a "
-"presionar el atajo."
+"К Windows не подключён микрофон. Подключите его и снова нажмите горячую "
+"клавишу."
 
 #: app/i18n/windows_script_messages.py:61
 msgid ""
 "Windows has an active microphone, but WSL cannot open it: the WSLg audio "
 "bridge is stuck. Run `wsl --shutdown`, then start the daemon again."
 msgstr ""
-"Windows tiene un micrófono activo, pero WSL no puede abrirlo: el puente "
-"de audio de WSLg está bloqueado. Ejecuta `wsl --shutdown` y vuelve a "
-"iniciar el daemon."
+"В Windows есть активный микрофон, но WSL не может его открыть: аудиомост "
+"WSLg завис. Выполните `wsl --shutdown`, затем снова запустите демон."
 
 #: app/i18n/windows_script_messages.py:64
 msgid ""
 "Could not query the Windows audio devices. Check that a microphone is "
 "connected; if it is, run `wsl --shutdown` and start the daemon again."
 msgstr ""
-"No se pudieron consultar los dispositivos de audio de Windows. Verifica "
-"que haya un micrófono conectado; si lo hay, ejecuta `wsl --shutdown` y "
-"vuelve a iniciar el daemon."
+"Не удалось опросить аудиоустройства Windows. Проверьте, подключён ли "
+"микрофон; если да, выполните `wsl --shutdown` и снова запустите демон."
 
 #: app/i18n/windows_script_messages.py:67
 #, python-brace-format
@@ -2374,45 +2343,45 @@ msgid ""
 "[VoiceMate] Transcription could not be copied to the clipboard (seq {0}, "
 "op {1}) after {2} tries. Full text below, copy it manually:"
 msgstr ""
-"[VoiceMate] No se pudo copiar la transcripción al portapapeles (seq {0}, "
-"op {1}) tras {2} intentos. Texto completo abajo, cópialo manualmente:"
+"[VoiceMate] Не удалось скопировать расшифровку в буфер обмена (seq {0}, "
+"оп. {1}, попыток: {2}). Полный текст ниже, скопируйте его вручную:"
 
 #: app/i18n/windows_script_messages.py:69
 #, python-brace-format
 msgid "----- VoiceMate transcription (seq {0}) -----"
-msgstr "----- Transcripción de VoiceMate (seq {0}) -----"
+msgstr "----- Расшифровка VoiceMate (seq {0}) -----"
 
 #: app/i18n/windows_script_messages.py:70
 msgid "----- end -----"
-msgstr "----- fin -----"
+msgstr "----- конец -----"
 
 #: app/i18n/windows_script_messages.py:71
 msgid "Transcription could not be copied to the clipboard"
-msgstr "No se pudo copiar la transcripción al portapapeles"
+msgstr "Не удалось скопировать расшифровку в буфер обмена"
 
 #: app/i18n/windows_script_messages.py:72
 #, python-brace-format
 msgid "\"{0}\" (the full text is in the VoiceMate console window)"
-msgstr "\"{0}\" (el texto completo está en la ventana de consola de VoiceMate)"
+msgstr "«{0}» (полный текст в окне консоли VoiceMate)"
 
 #: app/i18n/windows_script_messages.py:73
 #, python-brace-format
 msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}, retry {2}): \"{3}\""
 msgstr ""
-"[VoiceMate] portapapeles confirmado (seq {0}, op {1}, reintento {2}): "
-"\"{3}\""
+"[VoiceMate] буфер обмена подтверждён (seq {0}, оп. {1}, попытка {2}): "
+"«{3}»"
 
 #: app/i18n/windows_script_messages.py:74
 #, python-brace-format
 msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}): \"{2}\""
-msgstr "[VoiceMate] portapapeles confirmado (seq {0}, op {1}): \"{2}\""
+msgstr "[VoiceMate] буфер обмена подтверждён (seq {0}, оп. {1}): «{2}»"
 
 #: app/i18n/windows_script_messages.py:75
 #, python-brace-format
 msgid "[VoiceMate] could not confirm the clipboard (seq {0}): \"{1}\"; retrying."
 msgstr ""
-"[VoiceMate] no se pudo confirmar el portapapeles (seq {0}): \"{1}\"; "
-"reintentando."
+"[VoiceMate] не удалось подтвердить буфер обмена (seq {0}): «{1}»; "
+"повторная попытка."
 
 #: app/i18n/windows_script_messages.py:77
 msgid ""
@@ -2420,38 +2389,38 @@ msgid ""
 "so recording will fail. Run `wsl --shutdown`, then start the daemon "
 "again."
 msgstr ""
-"El audio de WSL está bloqueado: el daemon no puede llegar al servidor "
-"PulseAudio de WSLg, así que la grabación fallará. Ejecuta `wsl "
-"--shutdown` y vuelve a iniciar el daemon."
+"Звук в WSL завис: демон не может подключиться к серверу PulseAudio в "
+"WSLg, поэтому запись не удастся. Выполните `wsl --shutdown`, затем снова "
+"запустите демон."
 
 #: app/i18n/windows_script_messages.py:79
 msgid "Windows has no microphone connected either: connect one first."
-msgstr "Windows tampoco tiene ningún micrófono conectado: conecta uno primero."
+msgstr "К Windows тоже не подключён микрофон: сначала подключите его."
 
 #: app/i18n/windows_script_messages.py:80
 msgid "WSL audio is down"
-msgstr "audio de WSL caído"
+msgstr "звук WSL не работает"
 
 #: app/i18n/windows_script_messages.py:81
 msgid "[VoiceMate] WSL audio is working again."
-msgstr "[VoiceMate] El audio de WSL volvió a funcionar."
+msgstr "[VoiceMate] Звук в WSL снова работает."
 
 #: app/i18n/windows_script_messages.py:82
 #, python-brace-format
 msgid "[VoiceMate] Unexpected error in the main loop (continuing): {0}"
-msgstr ""
-"[VoiceMate] Error inesperado en el bucle principal (continúa "
-"funcionando): {0}"
+msgstr "[VoiceMate] Непредвиденная ошибка в основном цикле (продолжаем): {0}"
 
 #: app/i18n/windows_script_messages.py:83
 #, python-brace-format
 msgid "[VoiceMate] Hotkeys active: {0} (clipboard) / {1} (Claude) -> {2}"
-msgstr "[VoiceMate] Atajos activos: {0} (portapapeles) / {1} (Claude) -> {2}"
+msgstr ""
+"[VoiceMate] Горячие клавиши активны: {0} (буфер обмена) / {1} (Claude) ->"
+" {2}"
 
 #: app/i18n/windows_script_messages.py:84
 #, python-brace-format
 msgid "(unregistered, retrying every {0} s)"
-msgstr "(sin registrar, reintentando cada {0} s)"
+msgstr "(не зарегистрирован, повтор каждые {0} с)"
 
 #: app/i18n/windows_script_messages.py:85
 #, python-brace-format
@@ -2459,8 +2428,8 @@ msgid ""
 "[VoiceMate] Consumer {0} | scope={1}. Clipboard set by Windows. Leave "
 "this window open."
 msgstr ""
-"[VoiceMate] Consumidor {0} | scope={1}. Windows escribe en el "
-"portapapeles. Deja esta ventana abierta."
+"[VoiceMate] Потребитель {0} | scope={1}. Буфер обмена заполняет Windows. "
+"Не закрывайте это окно."
 
 #: app/i18n/windows_script_messages.py:87
 #, python-brace-format
@@ -2469,22 +2438,22 @@ msgid ""
 "run`). The hotkeys stay active and this window connects as soon as it is "
 "up."
 msgstr ""
-"[VoiceMate] El daemon aún no está accesible en {0}: inícialo en WSL "
-"(`make run`). Los atajos siguen activos y esta ventana se conecta en "
-"cuanto esté listo."
+"[VoiceMate] Демон по адресу {0} пока недоступен: запустите его в WSL "
+"(`make run`). Горячие клавиши остаются активными, и это окно подключится,"
+" как только демон запустится."
 
 #: app/i18n/windows_script_messages.py:89
 msgid ""
 "[VoiceMate] Windows has no active microphone: recording will fail until "
 "you connect one."
 msgstr ""
-"[VoiceMate] Windows no tiene ningún micrófono activo: la grabación "
-"fallará hasta que conectes uno."
+"[VoiceMate] В Windows нет активного микрофона: запись не будет работать, "
+"пока вы его не подключите."
 
 #: app/i18n/windows_script_messages.py:90
 #, python-brace-format
 msgid "{0} is already registered by another app."
-msgstr "{0} ya está registrado por otra aplicación."
+msgstr "{0} уже зарегистрирована другим приложением."
 
 #: app/platform/clipboard.py:113
 #, python-brace-format
@@ -2492,95 +2461,97 @@ msgid ""
 "[VoiceMate] ⚠ clipboard '{writer_name}' failed ({exc}); retrying the "
 "other mechanisms..."
 msgstr ""
-"[VoiceMate] ⚠ Falló el portapapeles '{writer_name}' ({exc}); probando los"
-" demás mecanismos..."
+"[VoiceMate] ⚠ Сбой буфера обмена '{writer_name}' ({exc}); пробуем другие "
+"способы..."
 
 #: app/setup/ct2_rocm.py:45
 #, python-brace-format
 msgid "⚠ Missing tools for the CT2-ROCm build: {tools}"
-msgstr "⚠ Faltan herramientas para compilar CT2-ROCm: {tools}"
+msgstr "⚠ Не хватает инструментов для сборки CT2-ROCm: {tools}"
 
 #: app/setup/ct2_rocm.py:46
 #, python-brace-format
 msgid "  Install with: {hint}"
-msgstr "  Instala con: {hint}"
+msgstr "  Установите: {hint}"
 
 #: app/setup/ct2_rocm.py:47
 msgid "  (on WSL2, also install ROCm: https://rocm.docs.amd.com)"
-msgstr "  (en WSL2, instala también ROCm: https://rocm.docs.amd.com)"
+msgstr "  (в WSL2 также установите ROCm: https://rocm.docs.amd.com)"
 
 #: app/setup/ct2_rocm.py:50
 msgid "⚠ GPU gfx target not detected (rocminfo); using the fork's default list."
 msgstr ""
-"⚠ No se detectó el target gfx de la GPU (rocminfo); usando la lista "
-"predeterminada del fork."
+"⚠ Целевая архитектура gfx GPU не определена (rocminfo); используется "
+"список форка по умолчанию."
 
 #: app/setup/ct2_rocm.py:60
 msgid "⚠ Build completed but validation failed (import/GPU). See messages above."
 msgstr ""
-"⚠ La compilación terminó, pero la validación falló (import/GPU). Revisa "
-"los mensajes anteriores."
+"⚠ Сборка завершена, но проверка не пройдена (import/GPU). См. сообщения "
+"выше."
 
 #: app/setup/ct2_rocm.py:67
 msgid ""
 "✓ CTranslate2-ROCm installed and validated (faster-whisper accelerates on"
 " the AMD GPU)."
 msgstr ""
-"✓ CTranslate2-ROCm instalado y validado (faster-whisper acelera en la GPU"
-" AMD)."
+"✓ CTranslate2-ROCm установлен и проверен (faster-whisper ускоряется на "
+"GPU AMD)."
 
 #: app/setup/ct2_rocm.py:88
 #, python-brace-format
 msgid "⚠ CT2-ROCm validation did not run: {exc}"
-msgstr "⚠ La validación de CT2-ROCm no se ejecutó: {exc}"
+msgstr "⚠ Проверка CT2-ROCm не выполнена: {exc}"
 
 #: app/setup/ct2_rocm.py:125
 #, python-brace-format
 msgid "Source already cloned at {path} (reusing)."
-msgstr "Código fuente ya clonado en {path} (reutilizando)."
+msgstr "Исходный код уже клонирован в {path} (используется повторно)."
 
 #: app/setup/ct2_rocm.py:129
 msgid "Cloning CTranslate2-rocm (with submodules)..."
-msgstr "Clonando CTranslate2-rocm (con submódulos)..."
+msgstr "Клонирование CTranslate2-rocm (с подмодулями)..."
 
 #: app/setup/ct2_rocm.py:158
 msgid "Configuring build (cmake)..."
-msgstr "Configurando la compilación (cmake)..."
+msgstr "Настройка сборки (cmake)..."
 
 #: app/setup/ct2_rocm.py:163
 #, python-brace-format
 msgid ""
 "Compiling (parallel={jobs}; this can take a LONG time — grab a coffee "
 "☕)..."
-msgstr "Compilando (parallel={jobs}; esto puede tardar MUCHO, tómate un café ☕)..."
+msgstr ""
+"Компиляция (parallel={jobs}; это может занять ОЧЕНЬ много времени, самое "
+"время выпить кофе ☕)..."
 
 #: app/setup/ct2_rocm.py:169
 #, python-brace-format
 msgid "Installing into {path}..."
-msgstr "Instalando en {path}..."
+msgstr "Установка в {path}..."
 
 #: app/setup/ct2_rocm.py:181
 msgid "Installing the CTranslate2-ROCm python wrapper into the venv..."
-msgstr "Instalando el wrapper de Python de CTranslate2-ROCm en el venv..."
+msgstr "Установка Python-обёртки CTranslate2-ROCm в venv..."
 
 #: app/setup/ct2_rocm.py:192
 #, python-brace-format
 msgid "⚠ Failed to execute: {exc}"
-msgstr "⚠ No se pudo ejecutar: {exc}"
+msgstr "⚠ Не удалось выполнить: {exc}"
 
 #: app/setup/ct2_rocm.py:195
 #, python-brace-format
 msgid "⚠ Command returned code {code}."
-msgstr "⚠ El comando devolvió el código {code}."
+msgstr "⚠ Команда вернула код {code}."
 
 #: app/setup/doctor.py:40
 msgid "Platform detected"
-msgstr "Plataforma detectada"
+msgstr "Обнаруженная платформа"
 
 #: app/setup/doctor.py:42
 #, python-brace-format
 msgid "{platform} (trigger: {trigger})"
-msgstr "{platform} (disparador: {trigger})"
+msgstr "{platform} (триггер: {trigger})"
 
 #: app/setup/doctor.py:73
 msgid "espeak-ng (Kokoro PT-BR)"
@@ -2588,182 +2559,184 @@ msgstr "espeak-ng (Kokoro PT-BR)"
 
 #: app/setup/doctor.py:75
 msgid "found"
-msgstr "encontrado"
+msgstr "найден"
 
 #: app/setup/doctor.py:75
 msgid "missing — Kokoro PT-BR fails without it"
-msgstr "ausente: Kokoro PT-BR falla sin él"
+msgstr "отсутствует: без него Kokoro PT-BR не работает"
 
 #: app/setup/doctor.py:90
 msgid "WSLg PulseServer (socket)"
-msgstr "WSLg PulseServer (socket)"
+msgstr "WSLg PulseServer (сокет)"
 
 #: app/setup/doctor.py:92
 msgid "socket does not exist"
-msgstr "el socket no existe"
+msgstr "сокет не существует"
 
 #: app/setup/doctor.py:93
 msgid ""
 "Update WSL (`wsl --update` on Windows) and check guiApplications in "
 ".wslconfig."
 msgstr ""
-"Actualiza WSL (`wsl --update` en Windows) y verifica guiApplications en "
+"Обновите WSL (`wsl --update` в Windows) и проверьте guiApplications в "
 ".wslconfig."
 
 #: app/setup/doctor.py:98
 msgid "PULSE_SERVER in the environment"
-msgstr "PULSE_SERVER en el entorno"
+msgstr "PULSE_SERVER в окружении"
 
 #: app/setup/doctor.py:100
 msgid "(empty — the ALSA shim may handle it, but exporting is recommended)"
-msgstr "(vacío: el shim de ALSA puede resolverlo, pero se recomienda exportarlo)"
+msgstr ""
+"(пусто: прослойка ALSA может справиться, но экспортировать переменную "
+"рекомендуется)"
 
 #: app/setup/doctor.py:113
 msgid "ALSA→Pulse plugin (for PortAudio)"
-msgstr "Plugin ALSA→Pulse (para PortAudio)"
+msgstr "Плагин ALSA→Pulse (для PortAudio)"
 
 #: app/setup/doctor.py:133
 msgid "only clip.exe via interop (uncertain fallback)"
-msgstr "solo clip.exe vía interop (alternativa incierta)"
+msgstr "только clip.exe через interop (ненадёжный запасной вариант)"
 
 #: app/setup/doctor.py:135
 msgid "none (clip.exe fails without the WSLInterop binfmt)"
-msgstr "ninguno (clip.exe falla sin el binfmt WSLInterop)"
+msgstr "нет (clip.exe не работает без binfmt WSLInterop)"
 
 #: app/setup/doctor.py:138
 msgid "Native clipboard (WSLg)"
-msgstr "Portapapeles nativo (WSLg)"
+msgstr "Встроенный буфер обмена (WSLg)"
 
 #: app/setup/doctor.py:141
 msgid ""
 "sudo apt install -y wl-clipboard   # wl-copy works via WSLg and syncs "
 "with Windows"
 msgstr ""
-"sudo apt install -y wl-clipboard   # wl-copy funciona vía WSLg y se "
-"sincroniza con Windows"
+"sudo apt install -y wl-clipboard   # wl-copy работает через WSLg и "
+"синхронизируется с Windows"
 
 #: app/setup/doctor.py:150
 msgid "Windows interop (clip.exe direct)"
-msgstr "Interop de Windows (clip.exe directo)"
+msgstr "Interop с Windows (clip.exe напрямую)"
 
 #: app/setup/doctor.py:152
 msgid "registered"
-msgstr "registrado"
+msgstr "зарегистрирован"
 
 #: app/setup/doctor.py:152
 msgid "WSLInterop missing — clip.exe won't run"
-msgstr "falta WSLInterop: clip.exe no se ejecutará"
+msgstr "WSLInterop отсутствует: clip.exe не запустится"
 
 #: app/setup/doctor.py:154
 msgid ""
 "wsl --update (on Windows) fixes it in most cases; or register: sudo sh -c"
 " 'echo :WSLInterop:M::MZ::/init:PF > /proc/sys/fs/binfmt_misc/register'"
 msgstr ""
-"wsl --update (en Windows) lo resuelve en la mayoría de los casos; o "
-"regístralo: sudo sh -c 'echo :WSLInterop:M::MZ::/init:PF > "
+"wsl --update (в Windows) в большинстве случаев это исправляет; или "
+"зарегистрируйте: sudo sh -c 'echo :WSLInterop:M::MZ::/init:PF > "
 "/proc/sys/fs/binfmt_misc/register'"
 
 #: app/setup/doctor.py:174 app/setup/doctor.py:179
 msgid "Audio (sounddevice)"
-msgstr "Audio (sounddevice)"
+msgstr "Звук (sounddevice)"
 
 #: app/setup/doctor.py:174
 msgid "poetry install (core dependencies)"
-msgstr "poetry install (dependencias principales)"
+msgstr "poetry install (основные зависимости)"
 
 #: app/setup/doctor.py:192
 msgid "Microphone (input device)"
-msgstr "Micrófono (dispositivo de entrada)"
+msgstr "Микрофон (устройство ввода)"
 
 #: app/setup/doctor.py:194
 msgid "no input device"
-msgstr "ningún dispositivo de entrada"
+msgstr "нет устройства ввода"
 
 #: app/setup/doctor.py:196
 msgid ""
 "WSL2: enable the WSLg mic (wsl --update; `pactl list sources short` "
 "should show RDPSource). Linux: check PulseAudio/PipeWire."
 msgstr ""
-"WSL2: habilita el micrófono de WSLg (wsl --update; `pactl list sources "
-"short` debería mostrar RDPSource). Linux: verifica PulseAudio/PipeWire."
+"WSL2: включите микрофон WSLg (wsl --update; `pactl list sources short` "
+"должна показать RDPSource). Linux: проверьте PulseAudio/PipeWire."
 
 #: app/setup/doctor.py:201
 msgid "Audio output (output device)"
-msgstr "Salida de audio (dispositivo de salida)"
+msgstr "Вывод звука (устройство вывода)"
 
 #: app/setup/doctor.py:203
 msgid "no output device"
-msgstr "ningún dispositivo de salida"
+msgstr "нет устройства вывода"
 
 #: app/setup/doctor.py:204
 msgid "WSL2: `pactl list sinks short` should show RDPSink (wsl --update if not)."
 msgstr ""
-"WSL2: `pactl list sinks short` debería mostrar RDPSink (si no, wsl "
-"--update)."
+"WSL2: `pactl list sinks short` должна показать RDPSink (если нет, "
+"выполните wsl --update)."
 
 #: app/setup/doctor.py:216
 msgid "Access to /dev/input (evdev)"
-msgstr "Acceso a /dev/input (evdev)"
+msgstr "Доступ к /dev/input (evdev)"
 
 #: app/setup/doctor.py:218
 #, python-brace-format
 msgid "{count} device(s)"
-msgstr "{count} dispositivo(s)"
+msgstr "устройств: {count}"
 
 #: app/setup/doctor.py:218
 msgid "no event* devices"
-msgstr "ningún dispositivo event*"
+msgstr "нет устройств event*"
 
 #: app/setup/doctor.py:219
 msgid "sudo usermod -aG input $USER  # then re-login (or `newgrp input`)"
 msgstr ""
-"sudo usermod -aG input $USER  # luego vuelve a iniciar sesión (o `newgrp "
-"input`)"
+"sudo usermod -aG input $USER  # затем войдите в систему заново (или "
+"`newgrp input`)"
 
 #: app/setup/doctor.py:225
 msgid "Trigger via HTTP daemon"
-msgstr "Disparador vía daemon HTTP"
+msgstr "Триггер через HTTP-демон"
 
 #: app/setup/doctor.py:227
 msgid ""
 "hotkeys on Windows: the companion app; without it, scripts/windows"
 "/voicemate-hotkeys.ahk (or .ps1)"
 msgstr ""
-"atajos en Windows: la aplicación companion; sin ella, scripts/windows"
-"/voicemate-hotkeys.ahk (o .ps1)"
+"горячие клавиши в Windows: приложение-компаньон; без него scripts/windows"
+"/voicemate-hotkeys.ahk (или .ps1)"
 
 #: app/setup/doctor.py:234
 msgid "X11 session (DISPLAY) for pynput"
-msgstr "Sesión X11 (DISPLAY) para pynput"
+msgstr "Сеанс X11 (DISPLAY) для pynput"
 
 #: app/setup/doctor.py:237
 msgid "No X11? Use --trigger evdev (Wayland) — requires the input group."
-msgstr "¿Sin X11? Usa --trigger evdev (Wayland); requiere el grupo input."
+msgstr "Нет X11? Используйте --trigger evdev (Wayland); нужна группа input."
 
 #: app/setup/doctor.py:240
 msgid "Trigger (Windows hooks)"
-msgstr "Disparador (hooks de Windows)"
+msgstr "Триггер (перехватчики Windows)"
 
 #: app/setup/doctor.py:240
 msgid "keyboard/mouse libs"
-msgstr "bibliotecas de teclado/mouse"
+msgstr "библиотеки клавиатуры и мыши"
 
 #: app/setup/doctor.py:268 app/setup/doctor.py:274 app/setup/doctor.py:286
 msgid "Vulkan (GPU for whisper.cpp)"
-msgstr "Vulkan (GPU para whisper.cpp)"
+msgstr "Vulkan (GPU для whisper.cpp)"
 
 #: app/setup/doctor.py:268
 msgid "vulkaninfo missing (vulkan-tools)"
-msgstr "falta vulkaninfo (vulkan-tools)"
+msgstr "vulkaninfo отсутствует (vulkan-tools)"
 
 #: app/setup/doctor.py:274 app/setup/doctor.py:340
 #, python-brace-format
 msgid "not verified: {exc}"
-msgstr "no verificado: {exc}"
+msgstr "не проверено: {exc}"
 
 #: app/setup/doctor.py:277
 msgid "no devices"
-msgstr "ningún dispositivo"
+msgstr "нет устройств"
 
 #: app/setup/doctor.py:280
 msgid ""
@@ -2771,52 +2744,50 @@ msgid ""
 "whisper/CT2-ROCm (make configure). On native Linux: install the GPU's "
 "Vulkan driver (mesa-vulkan-drivers)."
 msgstr ""
-"En WSL2 esto es lo esperado: Vulkan no tiene acceso a la GPU; usa openai-"
-"whisper/CT2-ROCm (make configure). En Linux nativo: instala el driver "
-"Vulkan de la GPU (mesa-vulkan-drivers)."
+"В WSL2 это ожидаемо: Vulkan не видит GPU, поэтому используйте openai-"
+"whisper/CT2-ROCm (make configure). В обычном Linux установите драйвер "
+"Vulkan для GPU (mesa-vulkan-drivers)."
 
 #: app/setup/doctor.py:284
 msgid ""
 "Install the GPU's Vulkan driver (mesa-vulkan-drivers) or use openai-"
 "whisper."
 msgstr ""
-"Instala el driver Vulkan de la GPU (mesa-vulkan-drivers) o usa openai-"
-"whisper."
+"Установите драйвер Vulkan для GPU (mesa-vulkan-drivers) или используйте "
+"openai-whisper."
 
 #: app/setup/doctor.py:299
 msgid "whisper.cpp (binary + model)"
-msgstr "whisper.cpp (binario + modelo)"
+msgstr "whisper.cpp (исполняемый файл + модель)"
 
 #: app/setup/doctor.py:301
 #, python-brace-format
 msgid "{exe} / {model} in {dir}"
-msgstr "{exe} / {model} en {dir}"
+msgstr "{exe} / {model} в {dir}"
 
 #: app/setup/doctor.py:304
 msgid "make configure  # downloads/builds whisper.cpp and the model"
-msgstr "make configure  # descarga/compila whisper.cpp y el modelo"
+msgstr "make configure  # скачивает/собирает whisper.cpp и модель"
 
 #: app/setup/doctor.py:310
 msgid "VAD (silero) for whisper.cpp"
-msgstr "VAD (silero) para whisper.cpp"
+msgstr "VAD (silero) для whisper.cpp"
 
 #: app/setup/doctor.py:312
 msgid "no VAD model (ok on Windows; recommended on Linux)"
-msgstr "sin modelo VAD (ok en Windows; recomendado en Linux)"
+msgstr "нет модели VAD (в Windows это нормально; в Linux рекомендуется)"
 
 #: app/setup/doctor.py:313
 msgid "make configure  # downloads ggml-silero (silence-based trimming)"
-msgstr "make configure  # descarga ggml-silero (recorte basado en silencio)"
+msgstr "make configure  # скачивает ggml-silero (обрезка по тишине)"
 
 #: app/setup/doctor.py:327
 msgid "Claude CLI (claude_chat flow)"
-msgstr "Claude CLI (flujo claude_chat)"
+msgstr "Claude CLI (режим claude_chat)"
 
 #: app/setup/doctor.py:330
 msgid "npm install -g @anthropic-ai/claude-code && claude  # interactive login"
-msgstr ""
-"npm install -g @anthropic-ai/claude-code && claude  # inicio de sesión "
-"interactivo"
+msgstr "npm install -g @anthropic-ai/claude-code && claude  # интерактивный вход"
 
 #: app/setup/doctor.py:340 app/setup/doctor.py:344
 msgid "PyTorch (TTS)"
@@ -2824,51 +2795,51 @@ msgstr "PyTorch (TTS)"
 
 #: app/setup/doctor.py:346
 msgid "torch not installed (ok if TTS is disabled)"
-msgstr "torch no está instalado (ok si el TTS está desactivado)"
+msgstr "torch не установлен (нормально, если TTS отключён)"
 
 #: app/setup/doctor.py:347
 msgid "make configure  # installs the torch for your GPU"
-msgstr "make configure  # instala el torch de tu GPU"
+msgstr "make configure  # устанавливает torch для вашей GPU"
 
 #: app/setup/doctor.py:354
 msgid "PyTorch with GPU (realtime TTS)"
-msgstr "PyTorch con GPU (TTS en tiempo real)"
+msgstr "PyTorch с GPU (TTS в реальном времени)"
 
 #: app/setup/doctor.py:357
 msgid "make configure  # reinstalls the CUDA/ROCm torch; check the driver"
-msgstr "make configure  # reinstala el torch CUDA/ROCm; verifica el driver"
+msgstr "make configure  # переустанавливает torch для CUDA/ROCm; проверьте драйвер"
 
 #: app/setup/doctor.py:367
 msgid "[doctor] VoiceMate environment diagnostics\n"
-msgstr "[doctor] Diagnóstico del entorno de VoiceMate\n"
+msgstr "[doctor] Диагностика окружения VoiceMate\n"
 
 #: app/setup/doctor.py:380
 #, python-brace-format
 msgid "      ↳ fix: {fix}"
-msgstr "      ↳ solución: {fix}"
+msgstr "      ↳ исправление: {fix}"
 
 #: app/setup/doctor.py:383
 #, python-brace-format
 msgid "[doctor] {count} problem(s) found — suggested fixes above."
-msgstr "[doctor] {count} problema(s) encontrado(s); soluciones sugeridas arriba."
+msgstr "[doctor] Найдено проблем: {count}. Предлагаемые исправления указаны выше."
 
 #: app/setup/doctor.py:385
 msgid "[doctor] All good! Run: make run"
-msgstr "[doctor] ¡Todo bien! Ejecuta: make run"
+msgstr "[doctor] Всё в порядке! Выполните: make run"
 
 #: app/setup/gpu_bootstrap.py:127
 #, python-brace-format
 msgid "[setup] Platform: {platform} (default trigger: {trigger})"
-msgstr "[setup] Plataforma: {platform} (disparador predeterminado: {trigger})"
+msgstr "[setup] Платформа: {platform} (триггер по умолчанию: {trigger})"
 
 #: app/setup/gpu_bootstrap.py:131
 #, python-brace-format
 msgid "[setup] GPU detected: {vendor}{name}{gfx}"
-msgstr "[setup] GPU detectada: {vendor}{name}{gfx}"
+msgstr "[setup] Обнаружена GPU: {vendor}{name}{gfx}"
 
 #: app/setup/gpu_bootstrap.py:147
 msgid "Enable TTS (spoken Claude response)?"
-msgstr "¿Habilitar TTS (respuesta de Claude hablada)?"
+msgstr "Включить TTS (озвучивание ответа Claude)?"
 
 #: app/setup/gpu_bootstrap.py:167
 #, python-brace-format
@@ -2878,7 +2849,7 @@ msgid ""
 "transcription={backend}, flow={flow}, tts={tts}, extras=[{extras}]"
 msgstr ""
 "\n"
-"[setup] Plan: platform={platform}, vendor={vendor}, "
+"[setup] План: platform={platform}, vendor={vendor}, "
 "transcription={backend}, flow={flow}, tts={tts}, extras=[{extras}]"
 
 #: app/setup/gpu_bootstrap.py:185
@@ -2886,9 +2857,9 @@ msgid ""
 "[setup] ⚠ The GPU torch install failed (see the error above). Without it "
 "the app falls back to CPU. Fix it and run `make configure`."
 msgstr ""
-"[setup] ⚠ Falló la instalación del torch para GPU (consulta el error "
-"anterior). Sin él, la aplicación recurre a la CPU. Corrígelo y ejecuta "
-"`make configure`."
+"[setup] ⚠ Не удалось установить torch для GPU (см. ошибку выше). Без него"
+" приложение перейдёт на CPU. Исправьте ошибку и выполните `make "
+"configure`."
 
 #: app/setup/gpu_bootstrap.py:202
 msgid ""
@@ -2896,15 +2867,15 @@ msgid ""
 "Save these choices for the next run?"
 msgstr ""
 "\n"
-"¿Guardar estas opciones para la próxima ejecución?"
+"Сохранить этот выбор для следующего запуска?"
 
 #: app/setup/gpu_bootstrap.py:217
 msgid "[setup] ✓ Choices saved to ~/.config/voicemate/config.toml"
-msgstr "[setup] ✓ Opciones guardadas en ~/.config/voicemate/config.toml"
+msgstr "[setup] ✓ Выбор сохранён в ~/.config/voicemate/config.toml"
 
 #: app/setup/gpu_bootstrap.py:219
 msgid "[setup] Choices not saved (apply to this install only)."
-msgstr "[setup] Opciones no guardadas (solo se aplican a esta instalación)."
+msgstr "[setup] Выбор не сохранён (действует только для этой установки)."
 
 #: app/setup/gpu_bootstrap.py:224
 msgid ""
@@ -2912,17 +2883,19 @@ msgid ""
 "[setup] Done! Run:  make run"
 msgstr ""
 "\n"
-"[setup] ¡Listo! Ejecuta:  make run"
+"[setup] Готово! Выполните:  make run"
 
 #: app/setup/gpu_bootstrap.py:225
 msgid "[setup] Environment diagnostics (audio/mic/hotkeys):  make doctor"
-msgstr "[setup] Diagnóstico del entorno (audio/micrófono/atajos):  make doctor"
+msgstr ""
+"[setup] Диагностика окружения (звук/микрофон/горячие клавиши):  make "
+"doctor"
 
 #: app/setup/gpu_bootstrap.py:227
 msgid "[setup] WSL2: register the hotkeys on the Windows side — see docs/wsl2.md."
 msgstr ""
-"[setup] WSL2: registra los atajos del lado de Windows (consulta "
-"docs/wsl2.md)."
+"[setup] WSL2: зарегистрируйте горячие клавиши на стороне Windows, см. "
+"docs/wsl2.md."
 
 #: app/setup/gpu_bootstrap.py:236
 msgid ""
@@ -2930,33 +2903,35 @@ msgid ""
 "Install the systemd service (daemon starts with WSL)?"
 msgstr ""
 "\n"
-"¿Instalar el servicio de systemd (el daemon se inicia junto con WSL)?"
+"Установить службу systemd (демон запускается вместе с WSL)?"
 
 #: app/setup/gpu_bootstrap.py:237
 msgid "[setup] systemd service not installed (instructions in docs/wsl2.md)."
-msgstr "[setup] servicio de systemd no instalado (instrucciones en docs/wsl2.md)."
+msgstr "[setup] Служба systemd не установлена (инструкции в docs/wsl2.md)."
 
 #: app/setup/gpu_bootstrap.py:246
 msgid "Reloading systemd units (user)..."
-msgstr "Recargando las unidades de systemd (usuario)..."
+msgstr "Перезагрузка юнитов systemd (пользовательских)..."
 
 #: app/setup/gpu_bootstrap.py:248
 msgid "Enabling the voicemate service..."
-msgstr "Habilitando el servicio voicemate..."
+msgstr "Включение службы voicemate..."
 
 #: app/setup/gpu_bootstrap.py:249
 msgid "[setup] ✓ Service installed. Logs: journalctl --user -u voicemate -f"
-msgstr "[setup] ✓ Servicio instalado. Logs: journalctl --user -u voicemate -f"
+msgstr "[setup] ✓ Служба установлена. Журнал: journalctl --user -u voicemate -f"
 
 #: app/setup/gpu_bootstrap.py:250
 msgid "[setup]   To survive without an open session: loginctl enable-linger $USER"
 msgstr ""
-"[setup]   Para que siga activo sin una sesión abierta: loginctl enable-"
+"[setup]   Чтобы служба работала без открытого сеанса: loginctl enable-"
 "linger $USER"
 
 #: app/setup/gpu_bootstrap.py:257
 msgid "[setup] CTranslate2-ROCm already installed and validated (reusing)."
-msgstr "[setup] CTranslate2-ROCm ya instalado y validado (reutilizando)."
+msgstr ""
+"[setup] CTranslate2-ROCm уже установлен и проверен (используется "
+"повторно)."
 
 #: app/setup/gpu_bootstrap.py:262
 msgid ""
@@ -2967,61 +2942,59 @@ msgid ""
 "over.)"
 msgstr ""
 "\n"
-"¿Instalar CTranslate2-ROCm? (faster-whisper en la GPU AMD, máxima "
-"calidad;\n"
-"compilación LENTA desde el código fuente. Si lo omites o falla, "
-"whisper.cpp toma el relevo.)"
+"Установить CTranslate2-ROCm? (faster-whisper на GPU AMD: максимальное "
+"качество;\n"
+"МЕДЛЕННАЯ сборка из исходного кода. Если пропустить её или она не "
+"удастся, будет использоваться whisper.cpp.)"
 
 #: app/setup/gpu_bootstrap.py:269
 msgid "[setup] CT2-ROCm skipped (whisper.cpp will be the transcription backend)."
-msgstr "[setup] CT2-ROCm omitido (whisper.cpp será el backend de transcripción)."
+msgstr "[setup] CT2-ROCm пропущен (бэкендом расшифровки будет whisper.cpp)."
 
 #: app/setup/gpu_bootstrap.py:275
 msgid ""
 "[setup] ⚠ CT2-ROCm failed — continuing with whisper.cpp (without "
 "aborting). Fix the prerequisites and run `make configure` to retry."
 msgstr ""
-"[setup] ⚠ CT2-ROCm falló; se continúa con whisper.cpp (sin abortar). "
-"Corrige los requisitos previos y ejecuta `make configure` para "
-"reintentar."
+"[setup] ⚠ Сбой CT2-ROCm: продолжаем с whisper.cpp (без прерывания). "
+"Устраните проблемы с зависимостями и выполните `make configure`, чтобы "
+"попробовать снова."
 
 #: app/setup/gpu_bootstrap.py:286
 msgid ""
 "Detect the GPU, install the right torch (CUDA/ROCm/CPU) and remember the "
 "choice."
 msgstr ""
-"Detectar la GPU, instalar el torch adecuado (CUDA/ROCm/CPU) y recordar la"
-" elección."
+"Определить GPU, установить подходящий torch (CUDA/ROCm/CPU) и запомнить "
+"выбор."
 
 #: app/setup/gpu_bootstrap.py:288
 msgid "Skip detection/prompt."
-msgstr "Omitir la detección/pregunta."
+msgstr "Пропустить определение и вопрос."
 
 #: app/setup/gpu_bootstrap.py:289
 msgid "Non-interactive: accept the defaults (detected/saved)."
-msgstr ""
-"No interactivo: aceptar los valores predeterminados "
-"(detectados/guardados)."
+msgstr "Без вопросов: принять значения по умолчанию (определённые/сохранённые)."
 
 #: app/setup/gpu_bootstrap.py:290
 msgid "Re-ask the choices (used by make configure)."
-msgstr "Volver a preguntar las opciones (usado por make configure)."
+msgstr "Снова задать вопросы о выборе (используется make configure)."
 
 #: app/setup/gpu_bootstrap.py:291
 msgid "Override the poetry extras (e.g. \"all\")."
-msgstr "Sobrescribir los extras de poetry (p. ej., \"all\")."
+msgstr "Переопределить extras для poetry (например, \"all\")."
 
 #: app/setup/gpu_bootstrap.py:317
 msgid "NVIDIA (CUDA — faster-whisper on the GPU)"
-msgstr "NVIDIA (CUDA: faster-whisper en la GPU)"
+msgstr "NVIDIA (CUDA: faster-whisper на GPU)"
 
 #: app/setup/gpu_bootstrap.py:318
 msgid "AMD (ROCm — VoxCPM on the GPU + openai-whisper)"
-msgstr "AMD (ROCm: VoxCPM en la GPU + openai-whisper)"
+msgstr "AMD (ROCm: VoxCPM на GPU + openai-whisper)"
 
 #: app/setup/gpu_bootstrap.py:319
 msgid "CPU (no GPU)"
-msgstr "CPU (sin GPU)"
+msgstr "CPU (без GPU)"
 
 #: app/setup/gpu_bootstrap.py:322
 msgid ""
@@ -3029,16 +3002,16 @@ msgid ""
 "Which configuration to install?"
 msgstr ""
 "\n"
-"¿Qué configuración instalar?"
+"Какую конфигурацию установить?"
 
 #: app/setup/gpu_bootstrap.py:324
 msgid "  (detected/suggested)"
-msgstr "  (detectado/sugerido)"
+msgstr "  (определено/рекомендуется)"
 
 #: app/setup/gpu_bootstrap.py:326
 #, python-brace-format
 msgid "Choose [1-3] (Enter = {default}): "
-msgstr "Elige [1-3] (Enter = {default}): "
+msgstr "Выберите [1-3] (Enter = {default}): "
 
 #: app/setup/gpu_bootstrap.py:341
 msgid ""
@@ -3046,28 +3019,28 @@ msgid ""
 "Which TTS engine (voice of Claude's response)?"
 msgstr ""
 "\n"
-"¿Qué motor de TTS (voz de la respuesta de Claude)?"
+"Какой движок TTS (голос ответа Claude)?"
 
 #: app/setup/gpu_bootstrap.py:342
 msgid ""
 "  1) kokoro — light, runs on the CPU, realtime, does NOT saturate the GPU"
 " (no crackle). Fixed voices."
 msgstr ""
-"  1) kokoro: ligero, se ejecuta en la CPU, en tiempo real, NO satura la "
-"GPU (sin chasquidos). Voces fijas."
+"  1) kokoro: лёгкий, работает на CPU, в реальном времени, НЕ нагружает "
+"GPU (без треска). Фиксированные голоса."
 
 #: app/setup/gpu_bootstrap.py:343
 msgid ""
 "  2) omnivoice — clones a voice, high quality, but heavy on the GPU (may "
 "crackle on WSL2)."
 msgstr ""
-"  2) omnivoice: clona una voz, alta calidad, pero exigente con la GPU "
-"(puede tener chasquidos en WSL2)."
+"  2) omnivoice: клонирует голос, высокое качество, но сильно нагружает "
+"GPU (в WSL2 возможен треск)."
 
 #: app/setup/gpu_bootstrap.py:344 app/setup/gpu_bootstrap.py:355
 #, python-brace-format
 msgid "Choose [1-2] (Enter = {default}): "
-msgstr "Elige [1-2] (Enter = {default}): "
+msgstr "Выберите [1-2] (Enter = {default}): "
 
 #: app/setup/gpu_bootstrap.py:352
 msgid ""
@@ -3075,32 +3048,32 @@ msgid ""
 "Which main flow?"
 msgstr ""
 "\n"
-"¿Qué flujo principal?"
+"Какой основной режим?"
 
 #: app/setup/gpu_bootstrap.py:353
 msgid "  1) clipboard — voice becomes text on the clipboard (transcription only)"
 msgstr ""
-"  1) clipboard: la voz se convierte en texto en el portapapeles (solo "
-"transcripción)"
+"  1) clipboard: голос превращается в текст в буфере обмена (только "
+"расшифровка)"
 
 #: app/setup/gpu_bootstrap.py:354
 msgid "  2) claude_chat — voice → Claude → spoken response (+ clipboard)"
-msgstr "  2) claude_chat: voz → Claude → respuesta hablada (+ portapapeles)"
+msgstr "  2) claude_chat: голос → Claude → озвученный ответ (+ буфер обмена)"
 
 #: app/setup/gpu_bootstrap.py:373
 msgid "[Y/n]"
-msgstr "[S/n]"
+msgstr "[Д/н]"
 
 #: app/setup/gpu_bootstrap.py:373
 msgid "[y/N]"
-msgstr "[s/N]"
+msgstr "[д/Н]"
 
 #: app/setup/gpu_bootstrap.py:424
 #, python-brace-format
 msgid "[setup] Removed {name} from torch (the WSL HSA runtime is the system's)."
 msgstr ""
-"[setup] Se eliminó {name} de torch (el runtime HSA de WSL es el del "
-"sistema)."
+"[setup] {name} удалён из torch (среда выполнения HSA для WSL берётся из "
+"системы)."
 
 #: app/setup/gpu_bootstrap.py:438
 #, python-brace-format
@@ -3109,29 +3082,29 @@ msgid ""
 "Recreate the environment with 3.12 (`poetry env use 3.12`) and run `make "
 "configure`."
 msgstr ""
-"[setup] ⚠ Los wheels ROCm para Linux son cp312 (este Python es {ver}). "
-"Recrea el entorno con 3.12 (`poetry env use 3.12`) y ejecuta `make "
-"configure`."
+"[setup] ⚠ Пакеты wheel ROCm для Linux собраны под cp312 (а этот Python "
+"{ver}). Пересоздайте окружение с 3.12 (`poetry env use 3.12`) и выполните"
+" `make configure`."
 
 #: app/setup/gpu_bootstrap.py:445
 msgid ""
 "[setup] ✓ ROCm torch already present and accelerating — keeping the "
 "validated install."
 msgstr ""
-"[setup] ✓ torch ROCm ya presente y acelerando: se mantiene la instalación"
-" validada."
+"[setup] ✓ torch с ROCm уже установлен и ускоряет работу: проверенная "
+"установка сохраняется."
 
 #: app/setup/gpu_bootstrap.py:446
 msgid ""
 "[setup]   (to force a reinstall: pip uninstall torch and run `make "
 "configure`)"
 msgstr ""
-"[setup]   (para forzar la reinstalación: pip uninstall torch y ejecuta "
-"`make configure`)"
+"[setup]   (для принудительной переустановки выполните pip uninstall torch"
+" и `make configure`)"
 
 #: app/setup/gpu_bootstrap.py:450
 msgid "Installing ROCm torch (official AMD wheels for Linux/WSL2)..."
-msgstr "Instalando torch ROCm (wheels oficiales de AMD para Linux/WSL2)..."
+msgstr "Установка torch с ROCm (официальные пакеты wheel AMD для Linux/WSL2)..."
 
 #: app/setup/gpu_bootstrap.py:463
 #, python-brace-format
@@ -3140,127 +3113,128 @@ msgid ""
 "the environment with 3.12 (`poetry env use 3.12`) and run `make "
 "configure`."
 msgstr ""
-"[setup] ⚠ Los wheels ROCm requieren Python 3.12 (este es {ver}). Recrea "
-"el entorno con 3.12 (`poetry env use 3.12`) y ejecuta `make configure`."
+"[setup] ⚠ Пакетам wheel ROCm нужен Python 3.12 (а это {ver}). "
+"Пересоздайте окружение с 3.12 (`poetry env use 3.12`) и выполните `make "
+"configure`."
 
 #: app/setup/gpu_bootstrap.py:470
 msgid "Installing ROCm SDK (AMD runtime)..."
-msgstr "Instalando el ROCm SDK (runtime de AMD)..."
+msgstr "Установка ROCm SDK (среда выполнения AMD)..."
 
 #: app/setup/gpu_bootstrap.py:475
 msgid "Installing ROCm torch (AMD)..."
-msgstr "Instalando torch ROCm (AMD)..."
+msgstr "Установка torch с ROCm (AMD)..."
 
 #: app/setup/gpu_bootstrap.py:479
 msgid "Installing CUDA torch (NVIDIA)..."
-msgstr "Instalando torch CUDA (NVIDIA)..."
+msgstr "Установка torch с CUDA (NVIDIA)..."
 
 #: app/setup/gpu_bootstrap.py:479
 msgid "Installing CPU torch..."
-msgstr "Instalando torch CPU..."
+msgstr "Установка torch для CPU..."
 
 #: app/setup/gpu_bootstrap.py:487
 msgid "Installing dependencies (poetry)..."
-msgstr "Instalando dependencias (poetry)..."
+msgstr "Установка зависимостей (poetry)..."
 
 #: app/setup/gpu_bootstrap.py:495
 #, python-brace-format
 msgid "[setup] ⚠ Could not verify torch: {exc}"
-msgstr "[setup] ⚠ No se pudo verificar torch: {exc}"
+msgstr "[setup] ⚠ Не удалось проверить torch: {exc}"
 
 #: app/setup/gpu_bootstrap.py:499
 msgid "[setup] torch check:"
-msgstr "[setup] verificación de torch:"
+msgstr "[setup] проверка torch:"
 
 #: app/setup/gpu_bootstrap.py:505
 msgid ""
 "[setup] ⚠ The GPU was not recognized by torch — the app will fall back to"
 " CPU. Check the driver and run `make configure`."
 msgstr ""
-"[setup] ⚠ torch no reconoció la GPU: la aplicación recurrirá a la CPU. "
-"Verifica el driver y ejecuta `make configure`."
+"[setup] ⚠ torch не распознал GPU: приложение перейдёт на CPU. Проверьте "
+"драйвер и выполните `make configure`."
 
 #: app/setup/gpu_bootstrap.py:511
 msgid "[setup] ✓ GPU ready for torch."
-msgstr "[setup] ✓ GPU lista para torch."
+msgstr "[setup] ✓ GPU готова для torch."
 
 #: app/setup/gpu_bootstrap.py:520
 #, python-brace-format
 msgid "[setup] whisper.cpp already present in {dir}."
-msgstr "[setup] whisper.cpp ya presente en {dir}."
+msgstr "[setup] whisper.cpp уже есть в {dir}."
 
 #: app/setup/gpu_bootstrap.py:522
 msgid ""
 "[setup] Installing whisper.cpp + Vulkan (binary ~17 MB + turbo fp16 model"
 " ~1.5 GB)..."
 msgstr ""
-"[setup] Instalando whisper.cpp + Vulkan (binario ~17 MB + modelo turbo "
-"fp16 ~1.5 GB)..."
+"[setup] Установка whisper.cpp + Vulkan (исполняемый файл ~17 МБ + модель "
+"turbo fp16 ~1.5 ГБ)..."
 
 #: app/setup/gpu_bootstrap.py:531
 #, python-brace-format
 msgid "[setup] ✓ whisper.cpp ready in {dir}"
-msgstr "[setup] ✓ whisper.cpp listo en {dir}"
+msgstr "[setup] ✓ whisper.cpp готов в {dir}"
 
 #: app/setup/gpu_bootstrap.py:553
 #, python-brace-format
 msgid "[setup] ⚠ Missing tools to compile whisper.cpp: {tools}"
-msgstr "[setup] ⚠ Faltan herramientas para compilar whisper.cpp: {tools}"
+msgstr "[setup] ⚠ Не хватает инструментов для компиляции whisper.cpp: {tools}"
 
 #: app/setup/gpu_bootstrap.py:556
 #, python-brace-format
 msgid "[setup]   Install with: {hint}"
-msgstr "[setup]   Instala con: {hint}"
+msgstr "[setup]   Установите: {hint}"
 
 #: app/setup/gpu_bootstrap.py:570
 #, python-brace-format
 msgid "[setup] ✓ whisper.cpp (Linux/Vulkan) ready in {dir}"
-msgstr "[setup] ✓ whisper.cpp (Linux/Vulkan) listo en {dir}"
+msgstr "[setup] ✓ whisper.cpp (Linux/Vulkan) готов в {dir}"
 
 #: app/setup/gpu_bootstrap.py:580
 #, python-brace-format
 msgid "Cloning whisper.cpp {tag}..."
-msgstr "Clonando whisper.cpp {tag}..."
+msgstr "Клонирование whisper.cpp {tag}..."
 
 #: app/setup/gpu_bootstrap.py:595
 msgid "Configuring the whisper.cpp build (cmake + Vulkan)..."
-msgstr "Configurando la compilación de whisper.cpp (cmake + Vulkan)..."
+msgstr "Настройка сборки whisper.cpp (cmake + Vulkan)..."
 
 #: app/setup/gpu_bootstrap.py:601
 msgid "Compiling whisper.cpp (a few minutes)..."
-msgstr "Compilando whisper.cpp (unos minutos)..."
+msgstr "Компиляция whisper.cpp (несколько минут)..."
 
 #: app/setup/gpu_bootstrap.py:613
 #, python-brace-format
 msgid "[setup] ⚠ Binary not found after the build: {path}"
-msgstr "[setup] ⚠ No se encontró el binario después de la compilación: {path}"
+msgstr "[setup] ⚠ Исполняемый файл не найден после сборки: {path}"
 
 #: app/setup/gpu_bootstrap.py:627
 #, python-brace-format
 msgid "[setup] downloading {url}"
-msgstr "[setup] descargando {url}"
+msgstr "[setup] скачивание {url}"
 
 #: app/setup/gpu_bootstrap.py:632
 #, python-brace-format
 msgid "[setup] ⚠ download failed: {exc}"
-msgstr "[setup] ⚠ falló la descarga: {exc}"
+msgstr "[setup] ⚠ ошибка скачивания: {exc}"
 
 #: app/setup/gpu_bootstrap.py:637
 #, python-brace-format
 msgid "[setup] ⚠ SHA-256 mismatch for {name} (got {digest}); removing."
 msgstr ""
-"[setup] ⚠ El SHA-256 de {name} no coincide (se obtuvo {digest}); "
-"eliminando."
+"[setup] ⚠ SHA-256 не совпадает для {name} (получено {digest}); файл "
+"удаляется."
 
 #: app/setup/gpu_bootstrap.py:667
 #, python-brace-format
 msgid "[setup] ⚠ Failed to execute: {exc}"
-msgstr "[setup] ⚠ No se pudo ejecutar: {exc}"
+msgstr "[setup] ⚠ Не удалось выполнить: {exc}"
 
 #: app/setup/gpu_bootstrap.py:670
 #, python-brace-format
 msgid "[setup] ⚠ Command returned code {code}."
-msgstr "[setup] ⚠ El comando devolvió el código {code}."
+msgstr "[setup] ⚠ Команда вернула код {code}."
 
 #: app/setup/gpu_detect.py:258
 #, python-brace-format
@@ -3270,9 +3244,9 @@ msgid ""
 "Linux/WSL2, ROCm (rocminfo should list the GPU). Installation continues "
 "regardless — if the GPU is not used, the app falls back to CPU."
 msgstr ""
-"[VoiceMate] ⚠ No se pudo confirmar el driver AMD/ROCm. Para que la GPU "
-"acelere, instala el driver Adrenalin >= {version} ({url}) y, en "
-"Linux/WSL2, ROCm (rocminfo debería listar la GPU). La instalación "
-"continúa de todos modos: si no se usa la GPU, la aplicación recurre a la "
+"[VoiceMate] ⚠ Не удалось проверить драйвер AMD/ROCm. Чтобы GPU ускоряла "
+"работу, установите драйвер Adrenalin >= {version} ({url}), а в Linux/WSL2"
+" также ROCm (rocminfo должна показывать GPU). Установка продолжится в "
+"любом случае: если GPU не будет использоваться, приложение перейдёт на "
 "CPU."
 

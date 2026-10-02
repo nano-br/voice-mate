@@ -5,11 +5,19 @@ import tomllib
 import wave
 from dataclasses import replace
 from pathlib import Path
+from typing import get_args
 
 import pytest
 from companion_core_fakes import use_english
 
-from app.companion.contract import CUE_NAMES, SETTINGS_VERSION, CompanionSettings, CueSettings, HotkeyBinding
+from app.companion.contract import (
+    CUE_NAMES,
+    SETTINGS_VERSION,
+    CompanionSettings,
+    CueSettings,
+    HotkeyBinding,
+    UiLanguage,
+)
 from app.companion.settings_store import (
     SettingsStore,
     dump_settings,
@@ -233,6 +241,16 @@ def test_save_keeps_the_client_key_and_writes_lf(tmp_path: Path) -> None:
     raw = path.read_bytes()
     assert b"\r\n" not in raw
     assert SettingsStore(path).get().language == "es"
+
+
+@pytest.mark.parametrize("language", get_args(UiLanguage))
+def test_every_ui_language_round_trips(tmp_path: Path, language: UiLanguage) -> None:
+    path = tmp_path / "companion.toml"
+    store = SettingsStore(path)
+    store.save(replace(store.get(), language=language))
+    assert f'language = "{language}"' in path.read_text(encoding="utf-8")
+    assert SettingsStore(path).get().language == language
+    assert validate_settings(replace(store.get(), language=language)) == []
 
 
 @pytest.mark.parametrize("bad", ['a"b', "a$b", "a`b", "a\nb", "a\rb", "a\\b", "ai-lab\\"])

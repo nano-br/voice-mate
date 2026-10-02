@@ -81,7 +81,14 @@ def relaunches() -> list[int]:
 
 
 # A deterministic `catalog_for`: "auto" reads as an English Windows, every catalog exists.
-TEST_CATALOGS: dict[str, str] = {"auto": "en", "pt-BR": "pt_BR", "en": "en", "es": "es"}
+TEST_CATALOGS: dict[str, str] = {
+    "auto": "en",
+    "pt-BR": "pt_BR",
+    "en": "en",
+    "es": "es",
+    "ru": "ru",
+    "zh-CN": "zh_CN",
+}
 
 
 @pytest.fixture

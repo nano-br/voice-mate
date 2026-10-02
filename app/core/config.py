@@ -50,12 +50,12 @@ WhispercppMode = Literal["server", "cli"]
 # of Portuguese) still come out correct. Pinning (instead of "auto") gives
 # stability — it stops the detector from misclassifying a whole short utterance
 # in the wrong language. The default is derived from output_lang in cli.config_builder.
-TranscriptionLanguage = Literal["auto", "pt", "en", "es", "fr", "de", "it", "ja", "zh"]
+TranscriptionLanguage = Literal["auto", "pt", "en", "es", "fr", "de", "it", "ja", "ru", "zh"]
 
 # Default language code injected into LLM system prompts (placeholder
 # `{output_lang}`). The assistant replies in this language — switching it
 # is enough to change the response language without keeping translated
-# copies of the prompt. Format follows BCP-47 (e.g. "pt-BR", "en", "es").
+# copies of the prompt. Format follows BCP-47 (e.g. "pt-BR", "en", "es", "ru", "zh-CN").
 DEFAULT_OUTPUT_LANG = "pt-BR"
 
 # Default voice description used by VoxCPM2 when there is no seed (modes

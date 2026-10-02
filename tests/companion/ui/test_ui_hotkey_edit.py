@@ -7,7 +7,7 @@ import pytest
 pytest.importorskip("PySide6")
 
 from PySide6.QtCore import QEvent, Qt  # noqa: E402
-from PySide6.QtGui import QKeyEvent  # noqa: E402
+from PySide6.QtGui import QFontMetrics, QKeyEvent  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QApplication, QDialog, QVBoxLayout  # noqa: E402
 
@@ -126,3 +126,36 @@ def test_read_only_never_captures(dialog: tuple[QDialog, HotkeyEdit, list[str]])
     assert not edit.capturing
     assert edit.chord == "ctrl+alt+v"
     assert events == []
+
+
+def test_field_fits_its_longest_translated_prompt(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Translations of "Press the new shortcut..." can be twice as long (Russian): the
+    field asks for the room to show the whole prompt instead of clipping it."""
+    short = HotkeyEdit("ctrl+alt+v")
+    assert short.minimumSizeHint().width() >= 170
+    prompt = "Press the new shortcut, a much longer translation of it..."
+    from app.companion.ui import hotkey_edit
+
+    monkeypatch.setattr(hotkey_edit, "_", lambda text: prompt if text == "Press the new shortcut..." else text)
+    edit = HotkeyEdit("ctrl+alt+v")
+    italic = edit.font()
+    italic.setItalic(True)
+    needed = QFontMetrics(italic).horizontalAdvance(prompt)
+    assert edit.minimumSizeHint().width() > needed
+    assert edit.sizeHint().width() > needed
+
+
+@pytest.mark.parametrize(("catalog", "italic"), [("en", True), ("ru", True), ("zh_CN", False)])
+def test_capture_prompt_is_upright_where_the_font_has_no_italic(
+    qapp: QApplication, monkeypatch: pytest.MonkeyPatch, catalog: str, italic: bool
+) -> None:
+    """Microsoft YaHei has no italic: Chinese would get synthetically slanted glyphs."""
+    from app.companion.ui import hotkey_edit
+
+    monkeypatch.setattr(hotkey_edit, "active_language", lambda: catalog)
+    edit = HotkeyEdit("ctrl+alt+v")
+    edit.start_capture()
+    assert edit.capturing
+    assert edit.font().italic() is italic
+    edit.finish_capture(None)
+    assert not edit.font().italic()

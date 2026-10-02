@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import cast
+from typing import cast, get_args
 
 from app.core.config import (
     ClaudeChatConfig,
@@ -30,7 +30,7 @@ _DISABLED_SYSTEM_PROMPT = ""
 
 # Languages the TranscriptionLanguage enum supports (minus "auto") — used to
 # derive the transcription language from output_lang (BCP-47).
-_KNOWN_TRANSCRIPTION_LANGS = frozenset({"pt", "en", "es", "fr", "de", "it", "ja", "zh"})
+_KNOWN_TRANSCRIPTION_LANGS = frozenset(get_args(TranscriptionLanguage)) - {"auto"}
 
 
 def _resolve_gpu_vendor(args: argparse.Namespace, persisted: PersistedConfig) -> GpuVendor:

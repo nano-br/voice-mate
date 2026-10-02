@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-02 03:27-0300\n"
+"POT-Creation-Date: 2026-10-02 05:02-0300\n"
 "PO-Revision-Date: 2026-10-01 16:49-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: pt_BR\n"
@@ -295,7 +295,7 @@ msgstr "Aviso"
 msgid "Error"
 msgstr "Erro"
 
-#: app/companion/main.py:120
+#: app/companion/main.py:130
 #, python-brace-format
 msgid ""
 "VoiceMate cannot find its data folder: {variable} is not set and the home"
@@ -306,20 +306,20 @@ msgstr ""
 " a pasta pessoal é desconhecida. Defina {variable} ou {home_variable} "
 "para o seu usuário e abra o VoiceMate de novo."
 
-#: app/companion/main.py:183
+#: app/companion/main.py:193
 msgid "Settings"
 msgstr "Configurações"
 
-#: app/companion/main.py:183 app/companion/ui/status_window.py:122
+#: app/companion/main.py:193 app/companion/ui/status_window.py:122
 #: app/companion/ui/status_window.py:177 app/companion/ui/tray.py:97
 msgid "Restart engine"
 msgstr "Reiniciar o motor"
 
-#: app/companion/main.py:185 app/companion/ui/tray.py:99
+#: app/companion/main.py:195 app/companion/ui/tray.py:99
 msgid "Restart WSL..."
 msgstr "Reiniciar o WSL..."
 
-#: app/companion/main.py:186 app/companion/ui/status_window.py:181
+#: app/companion/main.py:196 app/companion/ui/status_window.py:181
 #: app/companion/ui/tray.py:107
 msgid "Quit VoiceMate"
 msgstr "Sair do VoiceMate"
@@ -848,7 +848,7 @@ msgstr "Reinício do WSL"
 msgid "Notifications"
 msgstr "Notificações"
 
-#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:647
+#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:650
 msgid "Hotkeys"
 msgstr "Atalhos"
 
@@ -946,7 +946,7 @@ msgstr ""
 "inicia o motor de novo."
 
 #: app/companion/ui/app.py:187 app/companion/ui/app.py:286
-#: app/companion/ui/settings_window.py:662
+#: app/companion/ui/settings_window.py:665
 #: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:79
 msgid "Cancel"
 msgstr "Cancelar"
@@ -1007,19 +1007,19 @@ msgstr "Nada é gravado: os estados mudam sozinhos."
 msgid "Restart WSL to bring the microphone back."
 msgstr "Reinicie o WSL para recuperar o microfone."
 
-#: app/companion/ui/hotkey_edit.py:55
+#: app/companion/ui/hotkey_edit.py:65
 msgid "Press Enter, then the new shortcut. Esc cancels, Backspace clears."
 msgstr "Pressione Enter e depois o novo atalho. Esc cancela, Backspace limpa."
 
-#: app/companion/ui/hotkey_edit.py:85
+#: app/companion/ui/hotkey_edit.py:95 app/companion/ui/hotkey_edit.py:189
 msgid "Press the new shortcut..."
 msgstr "Pressione o novo atalho..."
 
-#: app/companion/ui/hotkey_edit.py:146
+#: app/companion/ui/hotkey_edit.py:156 app/companion/ui/hotkey_edit.py:189
 msgid "This key cannot be used"
 msgstr "Esta tecla não pode ser usada"
 
-#: app/companion/ui/hotkey_edit.py:166
+#: app/companion/ui/hotkey_edit.py:189 app/companion/ui/hotkey_edit.py:193
 msgid "No shortcut"
 msgstr "Sem atalho"
 
@@ -1036,6 +1036,11 @@ msgstr "Estes atalhos são do motor. Altere-os na configuração do motor."
 #: app/companion/ui/settings_window.py:157
 msgid "Restore defaults"
 msgstr "Restaurar padrões"
+
+#: app/companion/ui/settings_window.py:184
+#, python-brace-format
+msgid "{action}:"
+msgstr "{action}:"
 
 #: app/companion/ui/settings_window.py:186
 #, python-brace-format
@@ -1063,7 +1068,7 @@ msgid "Master volume"
 msgstr "Volume geral"
 
 #: app/companion/ui/settings_window.py:363
-#: app/companion/ui/settings_window.py:648
+#: app/companion/ui/settings_window.py:651
 msgid "Sounds"
 msgstr "Sons"
 
@@ -1213,7 +1218,7 @@ msgstr "Reiniciar o WSL se o áudio falhar"
 msgid "VoiceMate Settings"
 msgstr "Configurações do VoiceMate"
 
-#: app/companion/ui/settings_window.py:639
+#: app/companion/ui/settings_window.py:642
 msgid ""
 "These settings were saved by a newer version of VoiceMate. They are shown"
 " read-only."
@@ -1221,32 +1226,32 @@ msgstr ""
 "Estas configurações foram salvas por uma versão mais nova do VoiceMate e "
 "aparecem só para leitura."
 
-#: app/companion/ui/settings_window.py:649
+#: app/companion/ui/settings_window.py:652
 msgid "General"
 msgstr "Geral"
 
-#: app/companion/ui/settings_window.py:661
+#: app/companion/ui/settings_window.py:664
 msgid "OK"
 msgstr "OK"
 
-#: app/companion/ui/settings_window.py:663
+#: app/companion/ui/settings_window.py:666
 msgid "Apply"
 msgstr "Aplicar"
 
-#: app/companion/ui/settings_window.py:744
+#: app/companion/ui/settings_window.py:747
 msgid "Saving..."
 msgstr "Salvando..."
 
-#: app/companion/ui/settings_window.py:756
+#: app/companion/ui/settings_window.py:759
 #, python-brace-format
 msgid "Unexpected error: {error}"
 msgstr "Erro inesperado: {error}"
 
-#: app/companion/ui/settings_window.py:763
+#: app/companion/ui/settings_window.py:766
 msgid "The settings were not saved:"
 msgstr "As configurações não foram salvas:"
 
-#: app/companion/ui/settings_window.py:775
+#: app/companion/ui/settings_window.py:778
 msgid "Settings saved."
 msgstr "Configurações salvas."
 
@@ -1429,67 +1434,67 @@ msgstr "Clique"
 msgid "Automatic (system language)"
 msgstr "Automático (idioma do sistema)"
 
-#: app/companion/ui/texts.py:179
+#: app/companion/ui/texts.py:181
 msgid "Start it in WSL"
 msgstr "Iniciar no WSL"
 
-#: app/companion/ui/texts.py:180
+#: app/companion/ui/texts.py:182
 msgid "Start it on this computer"
 msgstr "Iniciar neste computador"
 
-#: app/companion/ui/texts.py:181
+#: app/companion/ui/texts.py:183
 msgid "Connect only"
 msgstr "Só conectar"
 
-#: app/companion/ui/texts.py:186
+#: app/companion/ui/texts.py:188
 msgid "Automatically"
 msgstr "Automaticamente"
 
-#: app/companion/ui/texts.py:186
+#: app/companion/ui/texts.py:188
 msgid "Ask first"
 msgstr "Perguntar antes"
 
-#: app/companion/ui/texts.py:186
+#: app/companion/ui/texts.py:188
 msgid "Never"
 msgstr "Nunca"
 
-#: app/companion/ui/texts.py:191
+#: app/companion/ui/texts.py:193
 msgid "All"
 msgstr "Todas"
 
-#: app/companion/ui/texts.py:192
+#: app/companion/ui/texts.py:194
 msgid "Warnings and errors"
 msgstr "Avisos e erros"
 
-#: app/companion/ui/texts.py:193
+#: app/companion/ui/texts.py:195
 msgid "Errors only"
 msgstr "Só erros"
 
-#: app/companion/ui/texts.py:194
+#: app/companion/ui/texts.py:196
 msgid "None"
 msgstr "Nenhuma"
 
-#: app/companion/ui/texts.py:200
+#: app/companion/ui/texts.py:202
 msgid "Available"
 msgstr "Disponível"
 
-#: app/companion/ui/texts.py:201
+#: app/companion/ui/texts.py:203
 msgid "Used by another app"
 msgstr "Em uso por outro aplicativo"
 
-#: app/companion/ui/texts.py:202
+#: app/companion/ui/texts.py:204
 msgid "Used by another action"
 msgstr "Já usado por outra ação"
 
-#: app/companion/ui/texts.py:203
+#: app/companion/ui/texts.py:205
 msgid "Not allowed"
 msgstr "Não permitido"
 
-#: app/companion/ui/texts.py:204
+#: app/companion/ui/texts.py:206
 msgid "Set by the engine"
 msgstr "Definido pelo motor"
 
-#: app/companion/ui/texts.py:209
+#: app/companion/ui/texts.py:211
 msgid ""
 "Use Ctrl, Alt, Shift or Win with a key, or a function key alone. F12 is "
 "reserved by Windows."
@@ -1631,7 +1636,7 @@ msgid ""
 "running WITHOUT GPU. Run `make doctor` for diagnosis."
 msgstr ""
 "[VoiceMate] ⚠ Transcrição {ratio:.0f}× mais lenta que o áudio "
-"({elapsed:.0f}s p/ {audio_seconds:.0f}s) — o backend provavelmente está "
+"({elapsed:.0f}s p/ {audio_seconds:.0f}s): o backend provavelmente está "
 "SEM GPU. Rode `make doctor` para diagnóstico."
 
 #: app/core/recording_session.py:430
@@ -1829,7 +1834,7 @@ msgid ""
 "[KokoroSpeaker] ⚠ AudioPlayer drain timed out — audio may have been left "
 "incomplete."
 msgstr ""
-"[KokoroSpeaker] ⚠ drain do AudioPlayer estourou — áudio pode ter ficado "
+"[KokoroSpeaker] ⚠ drain do AudioPlayer estourou: o áudio pode ter ficado "
 "incompleto."
 
 #: app/features/tts/kokoro_speaker.py:102
@@ -1838,7 +1843,7 @@ msgstr "[KokoroSpeaker] Warmup..."
 
 #: app/features/tts/kokoro_speaker.py:105
 msgid "[KokoroSpeaker] Warmup done — synthesis ready."
-msgstr "[KokoroSpeaker] Warmup concluído — síntese pronta."
+msgstr "[KokoroSpeaker] Warmup concluído: síntese pronta."
 
 #: app/features/tts/kokoro_speaker.py:107
 #, python-brace-format
@@ -1868,50 +1873,50 @@ msgstr ""
 msgid "[KokoroSpeaker] Model ready."
 msgstr "[KokoroSpeaker] Modelo pronto."
 
-#: app/features/tts/omnivoice_speaker.py:104
+#: app/features/tts/omnivoice_speaker.py:105
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] error while speaking: {exc}"
 msgstr "[OmniVoiceSpeaker] erro ao falar: {exc}"
 
-#: app/features/tts/omnivoice_speaker.py:113
+#: app/features/tts/omnivoice_speaker.py:114
 msgid ""
 "[OmniVoiceSpeaker] ⚠ AudioPlayer drain timed out — audio may have been "
 "left incomplete."
 msgstr ""
-"[OmniVoiceSpeaker] ⚠ drain do AudioPlayer estourou — áudio pode ter "
+"[OmniVoiceSpeaker] ⚠ drain do AudioPlayer estourou: o áudio pode ter "
 "ficado incompleto."
 
-#: app/features/tts/omnivoice_speaker.py:135
+#: app/features/tts/omnivoice_speaker.py:136
 msgid ""
 "[OmniVoiceSpeaker] Warmup (tuning ROCm kernels; only the 1st time is "
 "slow)..."
 msgstr "[OmniVoiceSpeaker] Warmup (tuna kernels ROCm; só a 1ª vez é lenta)..."
 
-#: app/features/tts/omnivoice_speaker.py:137
+#: app/features/tts/omnivoice_speaker.py:138
 msgid "[OmniVoiceSpeaker] Warmup done — synthesis ready (realtime)."
-msgstr "[OmniVoiceSpeaker] Warmup concluído — síntese pronta (realtime)."
+msgstr "[OmniVoiceSpeaker] Warmup concluído: síntese pronta (realtime)."
 
-#: app/features/tts/omnivoice_speaker.py:139
+#: app/features/tts/omnivoice_speaker.py:140
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ warmup failed (continuing): {exc}"
 msgstr "[OmniVoiceSpeaker] ⚠ warmup falhou (seguindo): {exc}"
 
-#: app/features/tts/omnivoice_speaker.py:168
+#: app/features/tts/omnivoice_speaker.py:169
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ Failed to load OmniVoice: {exc}"
 msgstr "[OmniVoiceSpeaker] ⚠ Falha ao carregar OmniVoice: {exc}"
 
-#: app/features/tts/omnivoice_speaker.py:180
+#: app/features/tts/omnivoice_speaker.py:181
 msgid ""
 "[OmniVoiceSpeaker] ROCm — TunableOp enabled: each new sentence length "
 "gets a small tune (~1-2s) the 1st time; after that it is realtime (RTF "
 "~0.7)."
 msgstr ""
-"[OmniVoiceSpeaker] ROCm — TunableOp ativo: cada comprimento de frase novo"
-" tem um pequeno ajuste (~1-2s) na 1ª vez; depois fica realtime (RTF "
+"[OmniVoiceSpeaker] ROCm com TunableOp ativo: cada comprimento de frase "
+"novo tem um pequeno ajuste (~1-2s) na 1ª vez; depois fica realtime (RTF "
 "~0.7)."
 
-#: app/features/tts/omnivoice_speaker.py:186
+#: app/features/tts/omnivoice_speaker.py:187
 #, python-brace-format
 msgid ""
 "[OmniVoiceSpeaker] Loading OmniVoice ({device_map}, first run downloads "
@@ -1920,58 +1925,58 @@ msgstr ""
 "[OmniVoiceSpeaker] Carregando OmniVoice ({device_map}, primeira execução "
 "baixa pesos)..."
 
-#: app/features/tts/omnivoice_speaker.py:191
+#: app/features/tts/omnivoice_speaker.py:192
 msgid "[OmniVoiceSpeaker] Model ready."
 msgstr "[OmniVoiceSpeaker] Modelo pronto."
 
-#: app/features/tts/omnivoice_speaker.py:223
+#: app/features/tts/omnivoice_speaker.py:224
 msgid ""
 "[OmniVoiceSpeaker] ⚠ PyTorch without GPU acceleration — OmniVoice will "
 "run on CPU (much slower synthesis). Run `make configure` to install the "
 "torch for your GPU."
 msgstr ""
-"[OmniVoiceSpeaker] ⚠ PyTorch sem aceleração de GPU — OmniVoice rodará em "
-"CPU (síntese bem mais lenta). Rode `make configure` para instalar o torch"
-" da sua GPU."
+"[OmniVoiceSpeaker] ⚠ PyTorch sem aceleração de GPU: o OmniVoice rodará em"
+" CPU (síntese bem mais lenta). Rode `make configure` para instalar o "
+"torch da sua GPU."
 
-#: app/features/tts/omnivoice_speaker.py:281
+#: app/features/tts/omnivoice_speaker.py:282
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] Auto-seed loaded from {cached_wav}"
 msgstr "[OmniVoiceSpeaker] Auto-seed carregado de {cached_wav}"
 
-#: app/features/tts/omnivoice_speaker.py:283
+#: app/features/tts/omnivoice_speaker.py:284
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ Failed to read auto-seed: {exc}"
 msgstr "[OmniVoiceSpeaker] ⚠ Falha ao ler auto-seed: {exc}"
 
-#: app/features/tts/omnivoice_speaker.py:303
+#: app/features/tts/omnivoice_speaker.py:304
 msgid "[OmniVoiceSpeaker] soundfile not installed — could not save auto-seed."
 msgstr ""
-"[OmniVoiceSpeaker] soundfile não instalado — não foi possível salvar "
+"[OmniVoiceSpeaker] soundfile não instalado: não foi possível salvar o "
 "auto-seed."
 
-#: app/features/tts/omnivoice_speaker.py:312
+#: app/features/tts/omnivoice_speaker.py:313
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] ⚠ Failed to save auto-seed: {exc}"
 msgstr "[OmniVoiceSpeaker] ⚠ Falha ao salvar auto-seed: {exc}"
 
-#: app/features/tts/omnivoice_speaker.py:316
+#: app/features/tts/omnivoice_speaker.py:317
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] Auto-seed saved to {wav_path}"
 msgstr "[OmniVoiceSpeaker] Auto-seed salvo em {wav_path}"
 
-#: app/features/tts/omnivoice_speaker.py:322
+#: app/features/tts/omnivoice_speaker.py:323
 msgid "[OmniVoiceSpeaker] soundfile not installed — could not save audio."
 msgstr ""
-"[OmniVoiceSpeaker] soundfile não instalado — não foi possível salvar "
+"[OmniVoiceSpeaker] soundfile não instalado: não foi possível salvar o "
 "áudio."
 
-#: app/features/tts/omnivoice_speaker.py:328
+#: app/features/tts/omnivoice_speaker.py:329
 #, python-brace-format
 msgid "[OmniVoiceSpeaker] Audio saved to {path}"
 msgstr "[OmniVoiceSpeaker] Áudio salvo em {path}"
 
-#: app/features/tts/omnivoice_speaker.py:352
+#: app/features/tts/omnivoice_speaker.py:353
 #, python-brace-format
 msgid ""
 "[OmniVoiceSpeaker] VRAM ({label}): alloc={allocated:.2f}GB, "
@@ -2003,8 +2008,8 @@ msgid ""
 "[VoxCPMSpeaker] ⚠ AudioPlayer drain timed out — flow recovered, audio may"
 " have been left incomplete."
 msgstr ""
-"[VoxCPMSpeaker] ⚠ drain do AudioPlayer estourou — fluxo recuperado, áudio"
-" pode ter ficado incompleto."
+"[VoxCPMSpeaker] ⚠ drain do AudioPlayer estourou: fluxo recuperado, o "
+"áudio pode ter ficado incompleto."
 
 #: app/features/tts/voxcpm_speaker.py:107
 #, python-brace-format
@@ -2039,7 +2044,7 @@ msgid ""
 "[VoxCPMSpeaker] ⚠ PyTorch without GPU acceleration — VoxCPM will run on "
 "CPU (synthesis ~50-100× slower than GPU)."
 msgstr ""
-"[VoxCPMSpeaker] ⚠ PyTorch sem aceleração de GPU — VoxCPM rodará em CPU "
+"[VoxCPMSpeaker] ⚠ PyTorch sem aceleração de GPU: o VoxCPM rodará em CPU "
 "(síntese ~50-100× mais lenta que GPU)."
 
 #: app/features/tts/voxcpm_speaker.py:218
@@ -2078,7 +2083,7 @@ msgstr "[VoxCPMSpeaker] ⚠ falha ao fechar generator: {exc}"
 #: app/features/tts/voxcpm_speaker.py:324
 msgid "[VoxCPMSpeaker] soundfile not installed — could not save auto-seed."
 msgstr ""
-"[VoxCPMSpeaker] soundfile não instalado — não foi possível salvar auto-"
+"[VoxCPMSpeaker] soundfile não instalado: não foi possível salvar o auto-"
 "seed."
 
 #: app/features/tts/voxcpm_speaker.py:336
@@ -2102,7 +2107,7 @@ msgstr ""
 
 #: app/features/tts/voxcpm_speaker.py:379
 msgid "[VoxCPMSpeaker] soundfile not installed — could not save audio."
-msgstr "[VoxCPMSpeaker] soundfile não instalado — não foi possível salvar áudio."
+msgstr "[VoxCPMSpeaker] soundfile não instalado: não foi possível salvar o áudio."
 
 #: app/features/tts/voxcpm_speaker.py:388
 #, python-brace-format
@@ -2527,7 +2532,7 @@ msgstr "Configurando o build (cmake)..."
 msgid ""
 "Compiling (parallel={jobs}; this can take a LONG time — grab a coffee "
 "☕)..."
-msgstr "Compilando (parallel={jobs}; isso pode demorar MUITO — pegue um café ☕)..."
+msgstr "Compilando (parallel={jobs}; isso pode demorar MUITO, pegue um café ☕)..."
 
 #: app/setup/ct2_rocm.py:169
 #, python-brace-format
@@ -2567,7 +2572,7 @@ msgstr "encontrado"
 
 #: app/setup/doctor.py:75
 msgid "missing — Kokoro PT-BR fails without it"
-msgstr "ausente — o Kokoro PT-BR falha sem ele"
+msgstr "ausente: o Kokoro PT-BR falha sem ele"
 
 #: app/setup/doctor.py:90
 msgid "WSLg PulseServer (socket)"
@@ -2591,7 +2596,7 @@ msgstr "PULSE_SERVER no ambiente"
 
 #: app/setup/doctor.py:100
 msgid "(empty — the ALSA shim may handle it, but exporting is recommended)"
-msgstr "(vazio — o shim do ALSA pode resolver, mas é recomendado exportar)"
+msgstr "(vazio: o shim do ALSA pode resolver, mas é recomendado exportar)"
 
 #: app/setup/doctor.py:113
 msgid "ALSA→Pulse plugin (for PortAudio)"
@@ -2627,7 +2632,7 @@ msgstr "registrado"
 
 #: app/setup/doctor.py:152
 msgid "WSLInterop missing — clip.exe won't run"
-msgstr "WSLInterop ausente — clip.exe não vai rodar"
+msgstr "WSLInterop ausente: o clip.exe não vai rodar"
 
 #: app/setup/doctor.py:154
 msgid ""
@@ -2711,7 +2716,7 @@ msgstr "Sessão X11 (DISPLAY) para o pynput"
 
 #: app/setup/doctor.py:237
 msgid "No X11? Use --trigger evdev (Wayland) — requires the input group."
-msgstr "Sem X11? Use --trigger evdev (Wayland) — requer o grupo input."
+msgstr "Sem X11? Use --trigger evdev (Wayland), que requer o grupo input."
 
 #: app/setup/doctor.py:240
 msgid "Trigger (Windows hooks)"
@@ -2744,7 +2749,7 @@ msgid ""
 "whisper/CT2-ROCm (make configure). On native Linux: install the GPU's "
 "Vulkan driver (mesa-vulkan-drivers)."
 msgstr ""
-"No WSL2 isso é esperado: o Vulkan não alcança a GPU — use openai-"
+"No WSL2 isso é esperado: o Vulkan não alcança a GPU, então use openai-"
 "whisper/CT2-ROCm (make configure). No Linux nativo: instale o driver "
 "Vulkan da GPU (mesa-vulkan-drivers)."
 
@@ -2821,7 +2826,7 @@ msgstr "      ↳ correção: {fix}"
 #: app/setup/doctor.py:383
 #, python-brace-format
 msgid "[doctor] {count} problem(s) found — suggested fixes above."
-msgstr "[doctor] {count} problema(s) encontrado(s) — correções sugeridas acima."
+msgstr "[doctor] {count} problema(s) encontrado(s); correções sugeridas acima."
 
 #: app/setup/doctor.py:385
 msgid "[doctor] All good! Run: make run"
@@ -2890,7 +2895,7 @@ msgstr "[setup] Diagnóstico do ambiente (áudio/mic/hotkeys):  make doctor"
 
 #: app/setup/gpu_bootstrap.py:227
 msgid "[setup] WSL2: register the hotkeys on the Windows side — see docs/wsl2.md."
-msgstr "[setup] WSL2: registre as hotkeys do lado Windows — veja docs/wsl2.md."
+msgstr "[setup] WSL2: registre as hotkeys do lado Windows (veja docs/wsl2.md)."
 
 #: app/setup/gpu_bootstrap.py:236
 msgid ""
@@ -2935,7 +2940,7 @@ msgid ""
 "over.)"
 msgstr ""
 "\n"
-"Instalar o CTranslate2-ROCm? (faster-whisper na GPU AMD — qualidade "
+"Instalar o CTranslate2-ROCm? (faster-whisper na GPU AMD, qualidade "
 "máxima;\n"
 "build a partir do código-fonte é LENTO. Se você pular ou falhar, o "
 "whisper.cpp assume.)"
@@ -2949,7 +2954,7 @@ msgid ""
 "[setup] ⚠ CT2-ROCm failed — continuing with whisper.cpp (without "
 "aborting). Fix the prerequisites and run `make configure` to retry."
 msgstr ""
-"[setup] ⚠ CT2-ROCm falhou — seguindo com o whisper.cpp (sem abortar). "
+"[setup] ⚠ CT2-ROCm falhou: seguindo com o whisper.cpp (sem abortar). "
 "Corrija os pré-requisitos e rode `make configure` para tentar de novo."
 
 #: app/setup/gpu_bootstrap.py:286
@@ -2978,11 +2983,11 @@ msgstr "Sobrescrever os extras do poetry (ex.: \"all\")."
 
 #: app/setup/gpu_bootstrap.py:317
 msgid "NVIDIA (CUDA — faster-whisper on the GPU)"
-msgstr "NVIDIA (CUDA — faster-whisper na GPU)"
+msgstr "NVIDIA (CUDA: faster-whisper na GPU)"
 
 #: app/setup/gpu_bootstrap.py:318
 msgid "AMD (ROCm — VoxCPM on the GPU + openai-whisper)"
-msgstr "AMD (ROCm — VoxCPM na GPU + openai-whisper)"
+msgstr "AMD (ROCm: VoxCPM na GPU + openai-whisper)"
 
 #: app/setup/gpu_bootstrap.py:319
 msgid "CPU (no GPU)"
@@ -3018,15 +3023,15 @@ msgid ""
 "  1) kokoro — light, runs on the CPU, realtime, does NOT saturate the GPU"
 " (no crackle). Fixed voices."
 msgstr ""
-"  1) kokoro — leve, roda na CPU, realtime, NÃO satura a GPU (sem chiado)."
-" Vozes fixas."
+"  1) kokoro: leve, roda na CPU, realtime, NÃO satura a GPU (sem chiado). "
+"Vozes fixas."
 
 #: app/setup/gpu_bootstrap.py:343
 msgid ""
 "  2) omnivoice — clones a voice, high quality, but heavy on the GPU (may "
 "crackle on WSL2)."
 msgstr ""
-"  2) omnivoice — clona uma voz, alta qualidade, mas pesado na GPU (pode "
+"  2) omnivoice: clona uma voz, alta qualidade, mas pesado na GPU (pode "
 "chiar no WSL2)."
 
 #: app/setup/gpu_bootstrap.py:344 app/setup/gpu_bootstrap.py:355
@@ -3044,26 +3049,26 @@ msgstr ""
 
 #: app/setup/gpu_bootstrap.py:353
 msgid "  1) clipboard — voice becomes text on the clipboard (transcription only)"
-msgstr "  1) clipboard — a voz vira texto no clipboard (só transcrição)"
+msgstr "  1) clipboard: a voz vira texto no clipboard (só transcrição)"
 
 #: app/setup/gpu_bootstrap.py:354
 msgid "  2) claude_chat — voice → Claude → spoken response (+ clipboard)"
-msgstr "  2) claude_chat — voz → Claude → resposta falada (+ clipboard)"
+msgstr "  2) claude_chat: voz → Claude → resposta falada (+ clipboard)"
 
-#: app/setup/gpu_bootstrap.py:368
+#: app/setup/gpu_bootstrap.py:373
 msgid "[Y/n]"
 msgstr "[S/n]"
 
-#: app/setup/gpu_bootstrap.py:368
+#: app/setup/gpu_bootstrap.py:373
 msgid "[y/N]"
 msgstr "[s/N]"
 
-#: app/setup/gpu_bootstrap.py:419
+#: app/setup/gpu_bootstrap.py:424
 #, python-brace-format
 msgid "[setup] Removed {name} from torch (the WSL HSA runtime is the system's)."
 msgstr "[setup] Removido {name} do torch (o runtime HSA do WSL é o do sistema)."
 
-#: app/setup/gpu_bootstrap.py:433
+#: app/setup/gpu_bootstrap.py:438
 #, python-brace-format
 msgid ""
 "[setup] ⚠ The ROCm Linux wheels are cp312 (this Python is {ver}). "
@@ -3074,15 +3079,15 @@ msgstr ""
 "Recrie o ambiente com 3.12 (`poetry env use 3.12`) e rode `make "
 "configure`."
 
-#: app/setup/gpu_bootstrap.py:440
+#: app/setup/gpu_bootstrap.py:445
 msgid ""
 "[setup] ✓ ROCm torch already present and accelerating — keeping the "
 "validated install."
 msgstr ""
-"[setup] ✓ torch ROCm já presente e acelerando — mantendo a instalação "
+"[setup] ✓ torch ROCm já presente e acelerando: mantendo a instalação "
 "validada."
 
-#: app/setup/gpu_bootstrap.py:441
+#: app/setup/gpu_bootstrap.py:446
 msgid ""
 "[setup]   (to force a reinstall: pip uninstall torch and run `make "
 "configure`)"
@@ -3090,11 +3095,11 @@ msgstr ""
 "[setup]   (para forçar reinstalação: pip uninstall torch e rode `make "
 "configure`)"
 
-#: app/setup/gpu_bootstrap.py:445
+#: app/setup/gpu_bootstrap.py:450
 msgid "Installing ROCm torch (official AMD wheels for Linux/WSL2)..."
 msgstr "Instalando torch ROCm (wheels oficiais da AMD para Linux/WSL2)..."
 
-#: app/setup/gpu_bootstrap.py:458
+#: app/setup/gpu_bootstrap.py:463
 #, python-brace-format
 msgid ""
 "[setup] ⚠ The ROCm wheels require Python 3.12 (this is {ver}). Recreate "
@@ -3104,36 +3109,36 @@ msgstr ""
 "[setup] ⚠ Os wheels ROCm exigem Python 3.12 (este é {ver}). Recrie o "
 "ambiente com 3.12 (`poetry env use 3.12`) e rode `make configure`."
 
-#: app/setup/gpu_bootstrap.py:465
+#: app/setup/gpu_bootstrap.py:470
 msgid "Installing ROCm SDK (AMD runtime)..."
 msgstr "Instalando o ROCm SDK (runtime AMD)..."
 
-#: app/setup/gpu_bootstrap.py:470
+#: app/setup/gpu_bootstrap.py:475
 msgid "Installing ROCm torch (AMD)..."
 msgstr "Instalando torch ROCm (AMD)..."
 
-#: app/setup/gpu_bootstrap.py:474
+#: app/setup/gpu_bootstrap.py:479
 msgid "Installing CUDA torch (NVIDIA)..."
 msgstr "Instalando torch CUDA (NVIDIA)..."
 
-#: app/setup/gpu_bootstrap.py:474
+#: app/setup/gpu_bootstrap.py:479
 msgid "Installing CPU torch..."
 msgstr "Instalando torch CPU..."
 
-#: app/setup/gpu_bootstrap.py:482
+#: app/setup/gpu_bootstrap.py:487
 msgid "Installing dependencies (poetry)..."
 msgstr "Instalando dependências (poetry)..."
 
-#: app/setup/gpu_bootstrap.py:490
+#: app/setup/gpu_bootstrap.py:495
 #, python-brace-format
 msgid "[setup] ⚠ Could not verify torch: {exc}"
 msgstr "[setup] ⚠ Não foi possível verificar o torch: {exc}"
 
-#: app/setup/gpu_bootstrap.py:494
+#: app/setup/gpu_bootstrap.py:499
 msgid "[setup] torch check:"
 msgstr "[setup] verificação do torch:"
 
-#: app/setup/gpu_bootstrap.py:500
+#: app/setup/gpu_bootstrap.py:505
 msgid ""
 "[setup] ⚠ The GPU was not recognized by torch — the app will fall back to"
 " CPU. Check the driver and run `make configure`."
@@ -3141,16 +3146,16 @@ msgstr ""
 "[setup] ⚠ A GPU não foi reconhecida pelo torch: o aplicativo vai cair "
 "para CPU. Verifique o driver e rode `make configure`."
 
-#: app/setup/gpu_bootstrap.py:506
+#: app/setup/gpu_bootstrap.py:511
 msgid "[setup] ✓ GPU ready for torch."
 msgstr "[setup] ✓ GPU pronta para o torch."
 
-#: app/setup/gpu_bootstrap.py:515
+#: app/setup/gpu_bootstrap.py:520
 #, python-brace-format
 msgid "[setup] whisper.cpp already present in {dir}."
 msgstr "[setup] whisper.cpp já presente em {dir}."
 
-#: app/setup/gpu_bootstrap.py:517
+#: app/setup/gpu_bootstrap.py:522
 msgid ""
 "[setup] Installing whisper.cpp + Vulkan (binary ~17 MB + turbo fp16 model"
 " ~1.5 GB)..."
@@ -3158,65 +3163,65 @@ msgstr ""
 "[setup] Instalando whisper.cpp + Vulkan (binário ~17 MB + modelo turbo "
 "fp16 ~1.5 GB)..."
 
-#: app/setup/gpu_bootstrap.py:526
+#: app/setup/gpu_bootstrap.py:531
 #, python-brace-format
 msgid "[setup] ✓ whisper.cpp ready in {dir}"
 msgstr "[setup] ✓ whisper.cpp pronto em {dir}"
 
-#: app/setup/gpu_bootstrap.py:548
+#: app/setup/gpu_bootstrap.py:553
 #, python-brace-format
 msgid "[setup] ⚠ Missing tools to compile whisper.cpp: {tools}"
 msgstr "[setup] ⚠ Ferramentas ausentes para compilar o whisper.cpp: {tools}"
 
-#: app/setup/gpu_bootstrap.py:551
+#: app/setup/gpu_bootstrap.py:556
 #, python-brace-format
 msgid "[setup]   Install with: {hint}"
 msgstr "[setup]   Instale com: {hint}"
 
-#: app/setup/gpu_bootstrap.py:565
+#: app/setup/gpu_bootstrap.py:570
 #, python-brace-format
 msgid "[setup] ✓ whisper.cpp (Linux/Vulkan) ready in {dir}"
 msgstr "[setup] ✓ whisper.cpp (Linux/Vulkan) pronto em {dir}"
 
-#: app/setup/gpu_bootstrap.py:575
+#: app/setup/gpu_bootstrap.py:580
 #, python-brace-format
 msgid "Cloning whisper.cpp {tag}..."
 msgstr "Clonando whisper.cpp {tag}..."
 
-#: app/setup/gpu_bootstrap.py:590
+#: app/setup/gpu_bootstrap.py:595
 msgid "Configuring the whisper.cpp build (cmake + Vulkan)..."
 msgstr "Configurando o build do whisper.cpp (cmake + Vulkan)..."
 
-#: app/setup/gpu_bootstrap.py:596
+#: app/setup/gpu_bootstrap.py:601
 msgid "Compiling whisper.cpp (a few minutes)..."
 msgstr "Compilando o whisper.cpp (alguns minutos)..."
 
-#: app/setup/gpu_bootstrap.py:608
+#: app/setup/gpu_bootstrap.py:613
 #, python-brace-format
 msgid "[setup] ⚠ Binary not found after the build: {path}"
 msgstr "[setup] ⚠ Binário não encontrado após o build: {path}"
 
-#: app/setup/gpu_bootstrap.py:622
+#: app/setup/gpu_bootstrap.py:627
 #, python-brace-format
 msgid "[setup] downloading {url}"
 msgstr "[setup] baixando {url}"
 
-#: app/setup/gpu_bootstrap.py:627
+#: app/setup/gpu_bootstrap.py:632
 #, python-brace-format
 msgid "[setup] ⚠ download failed: {exc}"
 msgstr "[setup] ⚠ download falhou: {exc}"
 
-#: app/setup/gpu_bootstrap.py:632
+#: app/setup/gpu_bootstrap.py:637
 #, python-brace-format
 msgid "[setup] ⚠ SHA-256 mismatch for {name} (got {digest}); removing."
 msgstr "[setup] ⚠ SHA-256 não confere para {name} (obtido {digest}); removendo."
 
-#: app/setup/gpu_bootstrap.py:662
+#: app/setup/gpu_bootstrap.py:667
 #, python-brace-format
 msgid "[setup] ⚠ Failed to execute: {exc}"
 msgstr "[setup] ⚠ Falha ao executar: {exc}"
 
-#: app/setup/gpu_bootstrap.py:665
+#: app/setup/gpu_bootstrap.py:670
 #, python-brace-format
 msgid "[setup] ⚠ Command returned code {code}."
 msgstr "[setup] ⚠ O comando retornou código {code}."
