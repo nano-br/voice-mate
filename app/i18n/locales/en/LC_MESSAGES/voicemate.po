@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-02 02:29-0300\n"
+"POT-Creation-Date: 2026-10-02 02:44-0300\n"
 "PO-Revision-Date: 2026-05-21 14:42-0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -797,56 +797,56 @@ msgstr ""
 msgid "The sound file for the {cue} cue is longer than {seconds} seconds."
 msgstr ""
 
-#: app/companion/ui/app.py:158
+#: app/companion/ui/app.py:157
 msgid "Restart WSL now?"
 msgstr ""
 
-#: app/companion/ui/app.py:159 app/companion/ui/status_window.py:128
+#: app/companion/ui/app.py:158 app/companion/ui/status_window.py:128
 msgid ""
 "WSL audio is not working. Restarting WSL fixes it, but it also stops "
 "every running distro."
 msgstr ""
 
-#: app/companion/ui/app.py:160 app/companion/ui/app.py:186
+#: app/companion/ui/app.py:159 app/companion/ui/app.py:185
 msgid "Restart WSL"
 msgstr ""
 
-#: app/companion/ui/app.py:161 app/companion/ui/status_window.py:132
+#: app/companion/ui/app.py:160 app/companion/ui/status_window.py:132
 msgid "Not now"
 msgstr ""
 
-#: app/companion/ui/app.py:184
+#: app/companion/ui/app.py:183
 msgid "Restart WSL?"
 msgstr ""
 
-#: app/companion/ui/app.py:185
+#: app/companion/ui/app.py:184
 msgid ""
 "This stops every running WSL distro, Docker included, and starts the "
 "engine again."
 msgstr ""
 
-#: app/companion/ui/app.py:187 app/companion/ui/settings_window.py:642
+#: app/companion/ui/app.py:186 app/companion/ui/settings_window.py:642
 #: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:79
 msgid "Cancel"
 msgstr ""
 
-#: app/companion/ui/app.py:211
+#: app/companion/ui/app.py:210
 msgid "Could not change the sounds"
 msgstr ""
 
-#: app/companion/ui/app.py:228
+#: app/companion/ui/app.py:227
 msgid "Restart VoiceMate?"
 msgstr ""
 
-#: app/companion/ui/app.py:229
+#: app/companion/ui/app.py:228
 msgid "VoiceMate needs to restart to change the language. Restart now?"
 msgstr ""
 
-#: app/companion/ui/app.py:230
+#: app/companion/ui/app.py:229
 msgid "Restart now"
 msgstr ""
 
-#: app/companion/ui/app.py:231
+#: app/companion/ui/app.py:230
 msgid "Later"
 msgstr ""
 

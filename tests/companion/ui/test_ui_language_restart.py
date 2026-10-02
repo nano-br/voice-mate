@@ -19,6 +19,7 @@ from app.companion.contract import UiLanguage  # noqa: E402
 from app.companion.ui.app import CompanionUi  # noqa: E402
 from app.companion.ui.demo_controller import FakeController  # noqa: E402
 from app.companion.ui.settings_window import SettingsDialog  # noqa: E402
+from app.i18n import catalog_for  # noqa: E402
 
 HINT = "Takes effect after VoiceMate restarts."
 
@@ -239,16 +240,9 @@ def test_the_running_catalog_defaults_to_the_active_language(qapp: QApplication,
         ui.deleteLater()
 
 
-def test_ui_catalog_matches_what_set_language_loads(monkeypatch: pytest.MonkeyPatch) -> None:
-    import app.i18n as i18n
-    from app.companion.ui import language as language_module
-
-    languages: tuple[UiLanguage, ...] = ("pt-BR", "en", "es", "auto")
-    for language in languages:
-        i18n.set_language(language)
-        assert language_module.ui_catalog(language) == i18n.active_language()
-
-    monkeypatch.setattr(language_module, "_os_ui_language", lambda: "es_MX")
-    monkeypatch.setattr(i18n, "_os_ui_language", lambda: "es_MX")
-    i18n.set_language("auto")
-    assert language_module.ui_catalog("auto") == i18n.active_language()
+def test_the_catalog_resolution_is_the_one_set_language_uses(qapp: QApplication, fake: FakeController) -> None:
+    ui = CompanionUi(fake, tray_available=False)
+    try:
+        assert ui._language_catalog is catalog_for  # tested with set_language in tests/test_i18n.py
+    finally:
+        ui.deleteLater()

@@ -86,9 +86,10 @@ def spawn_detached(
         flags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
         try:
             popen(list(argv), creationflags=flags | CREATE_BREAKAWAY_FROM_JOB, **common)
-        except OSError:
-            # Inside a job that does not allow breakaway (access denied): a plain detached
-            # process is the best we can do there.
+        except PermissionError:
+            # Inside a job that does not allow breakaway (ERROR_ACCESS_DENIED): a plain
+            # detached process is the best we can do there. Any other failure (the
+            # executable is gone, say) propagates: retrying would fail the same way.
             log.info("could not break away from the job; starting the new instance without it")
             popen(list(argv), creationflags=flags, **common)
         return

@@ -88,6 +88,19 @@ def test_windows_spawn_failure_raises() -> None:
         spawn_detached(["VoiceMate.exe"], platform="win32", popen=_Popen(fail_always=True))
 
 
+def test_windows_spawn_does_not_retry_a_missing_executable() -> None:
+    """Only access denied (a job without breakaway) is retried; a moved exe fails at once."""
+    calls: list[int] = []
+
+    def popen(argv: list[str], **kwargs: object) -> object:
+        calls.append(0)
+        raise FileNotFoundError(2, "The system cannot find the file specified")
+
+    with pytest.raises(FileNotFoundError):
+        spawn_detached(["VoiceMate.exe"], platform="win32", popen=popen)
+    assert len(calls) == 1
+
+
 def test_linux_spawn_gets_its_own_session() -> None:
     popen = _Popen()
     spawn_detached(["python", "-m", "app.companion.main"], platform="linux", popen=popen)

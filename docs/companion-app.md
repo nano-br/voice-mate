@@ -43,8 +43,9 @@ the Windows side is a PowerShell script. Problems this design addresses:
   session, and it never relays the daemon's localized `message` text: it builds
   its own strings from error/warning codes (the daemon may speak another language).
   So a language change asks to restart: when Apply/OK saves a language that selects
-  another catalog than the running one (`app/companion/ui/language.py`; `auto` and
-  the explicit choice of the same catalog need no restart), the app asks "Restart
+  another catalog than the running one (`app.i18n.catalog_for`, shared with
+  `set_language`; `auto` and the explicit choice of the same catalog need no
+  restart), the app asks "Restart
   VoiceMate?" with "Restart now" / "Later". "Later" keeps the setting saved, and the
   Language row shows "Takes effect after VoiceMate restarts." while the selected
   language differs from the running one. "Restart now" restarts the companion (see

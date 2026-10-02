@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-02 02:29-0300\n"
+"POT-Creation-Date: 2026-10-02 02:44-0300\n"
 "PO-Revision-Date: 2026-10-01 16:49-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: pt_BR\n"
@@ -876,11 +876,11 @@ msgstr "O arquivo de som do sinal {cue} deve ser um WAV PCM de 8 ou 16 bits."
 msgid "The sound file for the {cue} cue is longer than {seconds} seconds."
 msgstr "O arquivo de som do sinal {cue} passa de {seconds} segundos."
 
-#: app/companion/ui/app.py:158
+#: app/companion/ui/app.py:157
 msgid "Restart WSL now?"
 msgstr "Reiniciar o WSL agora?"
 
-#: app/companion/ui/app.py:159 app/companion/ui/status_window.py:128
+#: app/companion/ui/app.py:158 app/companion/ui/status_window.py:128
 msgid ""
 "WSL audio is not working. Restarting WSL fixes it, but it also stops "
 "every running distro."
@@ -888,19 +888,19 @@ msgstr ""
 "O áudio do WSL não está funcionando. Reiniciar o WSL resolve, mas também "
 "para todas as distros em execução."
 
-#: app/companion/ui/app.py:160 app/companion/ui/app.py:186
+#: app/companion/ui/app.py:159 app/companion/ui/app.py:185
 msgid "Restart WSL"
 msgstr "Reiniciar o WSL"
 
-#: app/companion/ui/app.py:161 app/companion/ui/status_window.py:132
+#: app/companion/ui/app.py:160 app/companion/ui/status_window.py:132
 msgid "Not now"
 msgstr "Agora não"
 
-#: app/companion/ui/app.py:184
+#: app/companion/ui/app.py:183
 msgid "Restart WSL?"
 msgstr "Reiniciar o WSL?"
 
-#: app/companion/ui/app.py:185
+#: app/companion/ui/app.py:184
 msgid ""
 "This stops every running WSL distro, Docker included, and starts the "
 "engine again."
@@ -908,28 +908,28 @@ msgstr ""
 "Isso para todas as distros do WSL em execução, inclusive o Docker, e "
 "inicia o motor de novo."
 
-#: app/companion/ui/app.py:187 app/companion/ui/settings_window.py:642
+#: app/companion/ui/app.py:186 app/companion/ui/settings_window.py:642
 #: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:79
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: app/companion/ui/app.py:211
+#: app/companion/ui/app.py:210
 msgid "Could not change the sounds"
 msgstr "Não foi possível alterar os sons"
 
-#: app/companion/ui/app.py:228
+#: app/companion/ui/app.py:227
 msgid "Restart VoiceMate?"
 msgstr "Reiniciar o VoiceMate?"
 
-#: app/companion/ui/app.py:229
+#: app/companion/ui/app.py:228
 msgid "VoiceMate needs to restart to change the language. Restart now?"
 msgstr "O VoiceMate precisa reiniciar para mudar o idioma. Reiniciar agora?"
 
-#: app/companion/ui/app.py:230
+#: app/companion/ui/app.py:229
 msgid "Restart now"
 msgstr "Reiniciar agora"
 
-#: app/companion/ui/app.py:231
+#: app/companion/ui/app.py:230
 msgid "Later"
 msgstr "Depois"
 

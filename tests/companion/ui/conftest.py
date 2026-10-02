@@ -80,7 +80,7 @@ def relaunches() -> list[int]:
     return []
 
 
-# A deterministic `ui_catalog`: "auto" reads as an English Windows, every catalog exists.
+# A deterministic `catalog_for`: "auto" reads as an English Windows, every catalog exists.
 TEST_CATALOGS: dict[str, str] = {"auto": "en", "pt-BR": "pt_BR", "en": "en", "es": "es"}
 
 

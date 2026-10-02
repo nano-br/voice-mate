@@ -24,12 +24,11 @@ from app.companion.contract import (
 )
 from app.companion.ui.bridge import ControllerBridge
 from app.companion.ui.icons import app_icon
-from app.companion.ui.language import ui_catalog
 from app.companion.ui.notifications import NotificationPresenter
 from app.companion.ui.settings_window import SettingsDialog
 from app.companion.ui.status_window import StatusWindow
 from app.companion.ui.tray import TrayIcon
-from app.i18n import _, active_language
+from app.i18n import _, active_language, catalog_for
 
 log = logging.getLogger(__name__)
 
@@ -49,7 +48,7 @@ JumpListUpdater = Callable[[CompanionSettings], None]
 # Starts a new detached companion that takes over once this one quits (main.py passes
 # `app.companion.relaunch.relaunch_companion`); raises when it cannot start.
 Relauncher = Callable[[], None]
-# The catalog a language setting selects (`app.companion.ui.language.ui_catalog`).
+# The catalog a language setting selects (`app.i18n.catalog_for`).
 LanguageCatalog = Callable[[UiLanguage], str]
 
 
@@ -68,7 +67,7 @@ class CompanionUi(QObject):
         exit_app: Callable[[], None] = QCoreApplication.quit,
         update_jump_list: JumpListUpdater | None = None,
         relaunch: Relauncher | None = None,
-        language_catalog: LanguageCatalog = ui_catalog,
+        language_catalog: LanguageCatalog = catalog_for,
         running_catalog: str | None = None,
         parent: QObject | None = None,
     ) -> None:
@@ -434,9 +433,9 @@ class CompanionUi(QObject):
 
 
 def _question(title: str, text: str, accept: str, reject: str) -> tuple[QMessageBox, QAbstractButton]:
-    """A non-modal question with our own (translated) button texts. The default (Enter) is
-    `reject`: restarting stops things (every WSL distro, the engine), so it must be an
-    explicit click."""
+    """A question shown with show() (never exec()), with our own (translated) button texts;
+    the caller picks the modality. The default (Enter) is `reject`: restarting stops things
+    (every WSL distro, the engine), so it must be an explicit click."""
     box = QMessageBox(QMessageBox.Icon.Question, title, text)
     box.setWindowIcon(app_icon())
     accept_button = box.addButton(accept, QMessageBox.ButtonRole.AcceptRole)

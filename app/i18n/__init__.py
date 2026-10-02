@@ -73,12 +73,24 @@ def set_language(lang: UiLanguage) -> None:
     the companion has its own `language` setting). A language without a catalog
     gets English, the msgids. Called once at startup: the UI never flips mid session.
     """
+    _load_first([catalog_for(lang)])
+
+
+def catalog_for(lang: UiLanguage) -> str:
+    """The catalog `set_language(lang)` loads ("pt_BR", "es", "en"), without loading it.
+
+    "auto" follows the OS UI language; a language without a compiled catalog means
+    English. The companion compares it with `active_language()` to tell whether a new
+    `language` setting needs a restart ("auto" and an explicit choice can select the
+    same catalog).
+    """
     if lang == "auto":
         os_language = _os_ui_language() or ""
         catalog = _OS_LANGUAGE_CATALOGS.get(os_language.split("_")[0].lower(), "en")
     else:
         catalog = _UI_LANGUAGE_CATALOGS.get(lang, "en")
-    _load_first([catalog])
+    found = _gettext.find(_DOMAIN, localedir=str(_LOCALES_DIR), languages=[catalog])
+    return Path(found).parents[1].name if found else "en"
 
 
 def _os_ui_language() -> str | None:
