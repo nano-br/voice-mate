@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import threading
 from collections.abc import Iterator
@@ -169,6 +170,61 @@ def test_stale_unacked_results_are_dismissed_and_kept_for_manual_copy(
     assert parts.clipboard.texts[-1] == "dictated while the app was closed"
     assert wait_until(lambda: recorder.last.pending_unacked == 0)
     assert controller.pending_results() == []
+
+
+def _stored_texts(path: Path) -> list[str] | None:
+    """The texts in pending.json (None while it is missing or unreadable)."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return [entry["text"] for entry in data["items"]]
+
+
+def test_the_not_copied_list_survives_a_restart(make_controller: ControllerKit, daemon: FakeDaemon) -> None:
+    seq = daemon.add_old_unacked("dictated before the app quit", age_s=45)
+    controller, _parts, _backend = make_controller(daemon)
+    controller.start()
+    assert wait_until(lambda: daemon.ack_status(seq) == "dismissed")  # the daemon forgets it now
+    assert wait_until(lambda: _stored_texts(make_controller.pending_path) == ["dictated before the app quit"])
+    done = threading.Event()
+    controller.quit(done.set)
+    assert done.wait(6)
+
+    again, parts, _backend = make_controller(daemon)
+    (item,) = again.pending_results()  # back before start(): the UI shows it at once
+    assert item.record["text"] == "dictated before the app quit"
+    assert (item.instance, item.record["result_seq"]) == (daemon.instance, seq)
+    assert again.snapshot().pending_unacked == 1
+    recorder = Recorder(again)
+    again.start()
+    assert wait_until(lambda: _connected(again, daemon))
+    again.copy_result(item.instance, item.record["result_seq"])
+    assert wait_until(lambda: parts.clipboard.texts == ["dictated before the app quit"])
+    assert wait_until(lambda: daemon.ack_status(seq) == "delivered")
+    assert wait_until(lambda: recorder.last.pending_unacked == 0)
+    assert again.pending_results() == []
+    assert wait_until(lambda: not make_controller.pending_path.exists())  # copied: gone from disk too
+
+
+def test_a_pending_list_that_cannot_be_saved_does_not_break_delivery(
+    make_controller: ControllerKit, daemon: FakeDaemon, tmp_path: Path
+) -> None:
+    blocker = tmp_path / "blocker"
+    blocker.write_text("a file where the folder should be", encoding="utf-8")
+    make_controller.pending_path = blocker / "pending.json"
+    seq = daemon.add_old_unacked("stale", age_s=45)
+    controller, parts, _backend = make_controller(daemon)
+    recorder = Recorder(controller)
+    controller.start()
+    assert wait_until(lambda: daemon.ack_status(seq) == "dismissed")
+    assert wait_until(lambda: recorder.last.pending_unacked == 1)  # still offered, in memory
+    fresh = daemon.add_old_unacked("fresh", age_s=1)
+    assert wait_until(lambda: daemon.ack_status(fresh) == "delivered", timeout=3)
+    controller.copy_result(daemon.instance, seq)
+    assert wait_until(lambda: daemon.ack_status(seq) == "delivered")
+    assert parts.clipboard.texts == ["fresh", "stale"]
+    assert wait_until(lambda: recorder.last.pending_unacked == 0)
 
 
 def test_reconciliation_picks_up_a_missed_result(make_controller: ControllerKit, daemon: FakeDaemon) -> None:
@@ -603,6 +659,7 @@ def test_create_controller_uses_the_settings_file_and_starts_companion_log(
         logging.getLogger("app.companion.test").info("hello companion log")
         log_file = paths.companion_log_path()
         assert str(log_file).startswith(str(tmp_path))
+        assert str(paths.pending_path()).startswith(str(tmp_path))
         assert "hello companion log" in log_file.read_text(encoding="utf-8")
     finally:
         done = threading.Event()

@@ -1,8 +1,10 @@
 """Where the companion keeps its files (docs/companion-app.md, "Settings" and "Supervisor").
 
-Windows: settings in %APPDATA%\\VoiceMate, logs and rendered cues in %LOCALAPPDATA%\\VoiceMate.
-Linux: settings in ~/.config/voicemate, logs in ${XDG_STATE_HOME:-~/.local/state}/voicemate/logs,
-cues in ~/.cache/voicemate/cues (XDG variables honored).
+Windows: settings in %APPDATA%\\VoiceMate; logs, rendered cues and the Not copied list
+(pending.json) in %LOCALAPPDATA%\\VoiceMate.
+Linux: settings in ~/.config/voicemate; logs and pending.json in
+${XDG_STATE_HOME:-~/.local/state}/voicemate, cues in ~/.cache/voicemate/cues (XDG
+variables honored).
 
 The environment variable always wins, and the home directory is only looked up when it
 is missing: a process started without USERPROFILE/HOME (PowerShell
@@ -21,6 +23,7 @@ from pathlib import Path
 SETTINGS_FILE_NAME = "companion.toml"
 ENGINE_LOG_NAME = "engine.log"
 COMPANION_LOG_NAME = "companion.log"
+PENDING_FILE_NAME = "pending.json"
 
 
 class DataDirError(RuntimeError):
@@ -62,7 +65,7 @@ def settings_path() -> Path:
 
 
 def state_dir() -> Path:
-    """Per-user local data that is not settings (logs)."""
+    """Per-user local data that is not settings: logs and the Not copied list."""
     if sys.platform == "win32":
         return _env_dir("LOCALAPPDATA", lambda home: home / "AppData" / "Local") / "VoiceMate"
     return _env_dir("XDG_STATE_HOME", lambda home: home / ".local" / "state") / "voicemate"
@@ -84,3 +87,8 @@ def engine_log_path() -> Path:
 
 def companion_log_path() -> Path:
     return logs_dir() / COMPANION_LOG_NAME
+
+
+def pending_path() -> Path:
+    """The Not copied list (transcription text): see app/companion/pending_store.py."""
+    return state_dir() / PENDING_FILE_NAME

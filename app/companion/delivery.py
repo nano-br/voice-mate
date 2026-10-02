@@ -12,11 +12,16 @@ Rules from docs/companion-app.md, "Delivery, ACK and reconciliation":
 - reconciliation (`state=unacked`): younger than STALE_AFTER_S -> deliver; older -> ACK
   `dismissed`, keep it as pending for a manual copy, and tell the user once. Stale text is
   never written over the user's clipboard automatically.
+- the pending list outlives the process: the controller saves it on every change
+  (app/companion/pending_store.py) and hands it back through `restore_pending`. A
+  restored result the daemon still reports as unacked (its ACK was lost with the old
+  run) is ACKed `dismissed` again and stays pending.
 """
 
 from __future__ import annotations
 
 from collections import OrderedDict
+from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 from typing import Final
 
@@ -167,6 +172,15 @@ class DeliveryQueue:
 
     # --- inputs ---------------------------------------------------------------------
 
+    def restore_pending(self, items: Iterable[RecentItem]) -> None:
+        """The Not copied list saved by a previous run (app/companion/pending_store.py),
+        oldest first. Those results were ACKed (or their instance is gone) before the
+        restart, so they only come back as pending, for a manual copy."""
+        for item in items:
+            key = (item.instance, item.record["result_seq"])
+            if key not in self._pending:
+                self._add_pending(key, item.record)
+
     def set_instance(self, instance: str, now: float) -> list[DeliveryEffect]:
         """A new daemon instance: queued results of the old one cannot be ACKed any more,
         so they move to the pending list (manual copy) instead of being written late."""
@@ -224,11 +238,17 @@ class DeliveryQueue:
         if instance != self.instance:
             return []
         stale: list[ResultRecord] = []
+        resync: list[int] = []
         for record in records:
             if record.get("delivery") != "pending":
                 continue
             key = (instance, record["result_seq"])
             if self.is_known(key):
+                if key in self._pending and key not in self._acked:
+                    # Restored from disk, but its ACK never reached the daemon (the old run
+                    # quit or crashed first): it is already offered for a manual copy.
+                    self._set_status(key, "dismissed", record)
+                    resync.append(record["result_seq"])
                 continue
             self._remember(instance, record)
             if record["age_s"] < STALE_AFTER_S:
@@ -237,6 +257,8 @@ class DeliveryQueue:
             else:
                 stale.append(record)
         effects: list[DeliveryEffect] = []
+        if resync:
+            effects.append(SendAck(instance, tuple(_ack(seq, "dismissed") for seq in resync)))
         if stale:
             for record in stale:
                 self._set_status((instance, record["result_seq"]), "dismissed", record)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.companion.contract import RecentItem
 from app.companion.delivery import (
     IN_FLIGHT_TIMEOUT_S,
     PENDING_LIMIT,
@@ -248,3 +249,42 @@ def test_recent_and_pending_are_bounded() -> None:
     q.on_unacked(INSTANCE, [record(seq, 99.0) for seq in range(100, 100 + PENDING_LIMIT + 5)], 0.0)
     assert len(q.pending()) == PENDING_LIMIT
     assert q.pending()[0].record["result_seq"] == 105  # oldest dropped first
+
+
+def restored(seq: int, instance: str = INSTANCE, delivery: str = "failed") -> RecentItem:
+    """A pending item read back from pending.json (age_s is not stored)."""
+    return RecentItem(instance, record(seq, 0.0, delivery))
+
+
+def test_restored_pending_items_are_offered_for_a_manual_copy() -> None:
+    q = DeliveryQueue()
+    q.restore_pending([restored(3, "inst-old"), restored(4, "inst-old", "dismissed"), restored(3, "inst-old")])
+    assert [(i.instance, i.record["result_seq"]) for i in q.pending()] == [("inst-old", 3), ("inst-old", 4)]
+    assert q.set_instance("inst-new", 0.0) == []  # nothing queued: no "not copied" again
+    assert started(q.on_result("inst-new", result(3), 0.0, 0.0)) == [3]  # same seq, new instance: another result
+    q.on_delivery_done(("inst-new", 3), True, 0.5)
+    effects = q.copy("inst-old", 4, 1.0)
+    (job,) = [e.job for e in effects if isinstance(e, StartDelivery)]
+    assert job.manual and job.text == "old 4"
+    effects = q.on_delivery_done(("inst-old", 4), True, 1.2)
+    assert acks(effects) == []  # its instance is gone: copied only
+    assert [(i.instance, i.record["result_seq"]) for i in q.pending()] == [("inst-old", 3)]
+
+
+def test_restored_items_respect_the_pending_limit() -> None:
+    q = DeliveryQueue()
+    q.restore_pending([restored(seq) for seq in range(PENDING_LIMIT + 3)])
+    assert len(q.pending()) == PENDING_LIMIT
+    assert q.pending()[0].record["result_seq"] == 3
+
+
+def test_a_restored_item_the_daemon_still_reports_is_acked_again_not_delivered() -> None:
+    q = DeliveryQueue()
+    q.restore_pending([restored(7)])  # the old run quit before its ACK went out
+    q.set_instance(INSTANCE, 0.0)  # the same daemon is still running
+    effects = q.on_unacked(INSTANCE, [record(7, 1.0)], 0.5)  # fresh, but already offered
+    assert started(effects) == []
+    assert acks(effects) == [(7, "dismissed")]
+    assert not any(isinstance(e, NotCopied) for e in effects)  # the user already sees it
+    assert [i.record["result_seq"] for i in q.pending()] == [7]
+    assert q.on_unacked(INSTANCE, [record(7, 11.0)], 10.0) == []  # only once
