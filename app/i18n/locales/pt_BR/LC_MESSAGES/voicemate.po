@@ -70,7 +70,7 @@ msgid ""
 "[VoiceMate] Register the Windows-side hotkeys with scripts/windows"
 "/voicemate-hotkeys.ahk (or .ps1)."
 msgstr ""
-"[VoiceMate] Registre as hotkeys do lado Windows com scripts/windows"
+"[VoiceMate] Registre os atalhos do lado Windows com scripts/windows"
 "/voicemate-hotkeys.ahk (ou .ps1)."
 
 #: app/main.py:232
@@ -247,7 +247,7 @@ msgid ""
 "(trigger={trigger}); using keyboard hotkeys."
 msgstr ""
 "[VoiceMate] ⚠ --input-method mouse só é suportado no Windows "
-"(trigger={trigger}); usando hotkeys de teclado."
+"(trigger={trigger}); usando atalhos de teclado."
 
 #: app/companion/controller.py:616
 msgid ""
@@ -1718,7 +1718,7 @@ msgid ""
 "[VoiceMate] ✓ Transcribed (the clipboard lease holder copies it): "
 "{preview}"
 msgstr ""
-"[VoiceMate] ✓ Transcrito (quem detém a concessão do clipboard copia): "
+"[VoiceMate] ✓ Transcrito (quem detém a concessão da área de transferência copia): "
 "{preview}"
 
 #: app/daemon/hub.py:316
@@ -1780,14 +1780,14 @@ msgstr "[VoiceMate] ✓ Transcrição: {preview}"
 
 #: app/features/claude/chat_handler.py:117
 msgid "[VoiceMate] 📋 Transcription copied to clipboard."
-msgstr "[VoiceMate] 📋 Transcrição copiada para o clipboard."
+msgstr "[VoiceMate] 📋 Transcrição copiada para a área de transferência."
 
 #: app/features/claude/chat_handler.py:119
 #: app/features/claude/chat_handler.py:160
 msgid "[VoiceMate] 📋 The clipboard lease holder copies it to the clipboard."
 msgstr ""
-"[VoiceMate] 📋 Quem detém a concessão do clipboard copia o texto para o "
-"clipboard."
+"[VoiceMate] 📋 Quem detém a concessão da área de transferência copia o texto "
+"para lá."
 
 #: app/features/claude/chat_handler.py:121
 msgid ""
@@ -1821,7 +1821,7 @@ msgstr "[VoiceMate] ⏱ Resposta completa em {elapsed:.1f}s"
 
 #: app/features/claude/chat_handler.py:158
 msgid "[VoiceMate] 📋 Claude response copied to clipboard."
-msgstr "[VoiceMate] 📋 Resposta do Claude copiada para o clipboard."
+msgstr "[VoiceMate] 📋 Resposta do Claude copiada para a área de transferência."
 
 #: app/features/claude/chat_handler.py:164
 msgid "[VoiceMate] ✗ Claude call cancelled."
@@ -2361,7 +2361,7 @@ msgstr "O daemon reportou um erro ({0})."
 #: app/i18n/windows_script_messages.py:56
 #, python-brace-format
 msgid "[VoiceMate] {0} (seq {1}, op {2}, error '{3}'; clipboard untouched)"
-msgstr "[VoiceMate] {0} (seq {1}, op {2}, erro '{3}'; clipboard intocado)"
+msgstr "[VoiceMate] {0} (seq {1}, op {2}, erro '{3}'; área de transferência intacta)"
 
 #: app/i18n/windows_script_messages.py:57
 msgid "error"
@@ -2403,7 +2403,7 @@ msgid ""
 "[VoiceMate] Transcription could not be copied to the clipboard (seq {0}, "
 "op {1}) after {2} tries. Full text below, copy it manually:"
 msgstr ""
-"[VoiceMate] Não foi possível copiar a transcrição para o clipboard (seq "
+"[VoiceMate] Não foi possível copiar a transcrição para a área de transferência (seq "
 "{0}, op {1}) após {2} tentativas. Texto completo abaixo, copie "
 "manualmente:"
 
@@ -2418,7 +2418,7 @@ msgstr "----- fim -----"
 
 #: app/i18n/windows_script_messages.py:71
 msgid "Transcription could not be copied to the clipboard"
-msgstr "Não foi possível copiar a transcrição para o clipboard"
+msgstr "Não foi possível copiar a transcrição para a área de transferência"
 
 #: app/i18n/windows_script_messages.py:72
 #, python-brace-format
@@ -2428,18 +2428,18 @@ msgstr "\"{0}\" (o texto completo está na janela de console do VoiceMate)"
 #: app/i18n/windows_script_messages.py:73
 #, python-brace-format
 msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}, retry {2}): \"{3}\""
-msgstr "[VoiceMate] clipboard confirmado (seq {0}, op {1}, tentativa {2}): \"{3}\""
+msgstr "[VoiceMate] área de transferência confirmada (seq {0}, op {1}, tentativa {2}): \"{3}\""
 
 #: app/i18n/windows_script_messages.py:74
 #, python-brace-format
 msgid "[VoiceMate] clipboard confirmed (seq {0}, op {1}): \"{2}\""
-msgstr "[VoiceMate] clipboard confirmado (seq {0}, op {1}): \"{2}\""
+msgstr "[VoiceMate] área de transferência confirmada (seq {0}, op {1}): \"{2}\""
 
 #: app/i18n/windows_script_messages.py:75
 #, python-brace-format
 msgid "[VoiceMate] could not confirm the clipboard (seq {0}): \"{1}\"; retrying."
 msgstr ""
-"[VoiceMate] não foi possível confirmar o clipboard (seq {0}): \"{1}\"; "
+"[VoiceMate] não foi possível confirmar a área de transferência (seq {0}): \"{1}\"; "
 "tentando de novo."
 
 #: app/i18n/windows_script_messages.py:77
@@ -2472,7 +2472,7 @@ msgstr "[VoiceMate] Erro inesperado no loop principal (seguindo em frente): {0}"
 #: app/i18n/windows_script_messages.py:83
 #, python-brace-format
 msgid "[VoiceMate] Hotkeys active: {0} (clipboard) / {1} (Claude) -> {2}"
-msgstr "[VoiceMate] Atalhos ativos: {0} (clipboard) / {1} (Claude) -> {2}"
+msgstr "[VoiceMate] Atalhos ativos: {0} (área de transferência) / {1} (Claude) -> {2}"
 
 #: app/i18n/windows_script_messages.py:84
 #, python-brace-format
@@ -2485,7 +2485,7 @@ msgid ""
 "[VoiceMate] Consumer {0} | scope={1}. Clipboard set by Windows. Leave "
 "this window open."
 msgstr ""
-"[VoiceMate] Consumidor {0} | scope={1}. O Windows grava o clipboard. "
+"[VoiceMate] Consumidor {0} | scope={1}. O Windows grava na área de transferência. "
 "Deixe esta janela aberta."
 
 #: app/i18n/windows_script_messages.py:87
@@ -2518,7 +2518,7 @@ msgid ""
 "[VoiceMate] ⚠ clipboard '{writer_name}' failed ({exc}); retrying the "
 "other mechanisms..."
 msgstr ""
-"[VoiceMate] ⚠ clipboard '{writer_name}' falhou ({exc}); re-tentando os "
+"[VoiceMate] ⚠ Falha na área de transferência '{writer_name}' ({exc}); tentando os "
 "outros mecanismos..."
 
 #: app/setup/ct2_rocm.py:45
@@ -2656,7 +2656,7 @@ msgstr "nenhum (clip.exe falha sem o binfmt WSLInterop)"
 
 #: app/setup/doctor.py:138
 msgid "Native clipboard (WSLg)"
-msgstr "Clipboard nativo (WSLg)"
+msgstr "Área de transferência nativa (WSLg)"
 
 #: app/setup/doctor.py:141
 msgid ""
@@ -2751,7 +2751,7 @@ msgid ""
 "hotkeys on Windows: the companion app; without it, scripts/windows"
 "/voicemate-hotkeys.ahk (or .ps1)"
 msgstr ""
-"hotkeys no Windows: o aplicativo companion; sem ele, scripts/windows"
+"atalhos no Windows: o aplicativo companion; sem ele, scripts/windows"
 "/voicemate-hotkeys.ahk (ou .ps1)"
 
 #: app/setup/doctor.py:234
@@ -2832,7 +2832,7 @@ msgstr "make configure  # baixa o ggml-silero (corte baseado em silêncio)"
 
 #: app/setup/doctor.py:327
 msgid "Claude CLI (claude_chat flow)"
-msgstr "Claude CLI (flow claude_chat)"
+msgstr "Claude CLI (fluxo claude_chat)"
 
 #: app/setup/doctor.py:330
 msgid "npm install -g @anthropic-ai/claude-code && claude  # interactive login"
@@ -2935,11 +2935,11 @@ msgstr ""
 
 #: app/setup/gpu_bootstrap.py:225
 msgid "[setup] Environment diagnostics (audio/mic/hotkeys):  make doctor"
-msgstr "[setup] Diagnóstico do ambiente (áudio/mic/hotkeys):  make doctor"
+msgstr "[setup] Diagnóstico do ambiente (áudio/mic/atalhos):  make doctor"
 
 #: app/setup/gpu_bootstrap.py:227
 msgid "[setup] WSL2: register the hotkeys on the Windows side — see docs/wsl2.md."
-msgstr "[setup] WSL2: registre as hotkeys do lado Windows (veja docs/wsl2.md)."
+msgstr "[setup] WSL2: registre os atalhos do lado Windows (veja docs/wsl2.md)."
 
 #: app/setup/gpu_bootstrap.py:236
 msgid ""
@@ -3089,15 +3089,15 @@ msgid ""
 "Which main flow?"
 msgstr ""
 "\n"
-"Qual flow principal?"
+"Qual fluxo principal?"
 
 #: app/setup/gpu_bootstrap.py:353
 msgid "  1) clipboard — voice becomes text on the clipboard (transcription only)"
-msgstr "  1) clipboard: a voz vira texto no clipboard (só transcrição)"
+msgstr "  1) clipboard: a voz vira texto na área de transferência (só transcrição)"
 
 #: app/setup/gpu_bootstrap.py:354
 msgid "  2) claude_chat — voice → Claude → spoken response (+ clipboard)"
-msgstr "  2) claude_chat: voz → Claude → resposta falada (+ clipboard)"
+msgstr "  2) claude_chat: voz → Claude → resposta falada (+ área de transferência)"
 
 #: app/setup/gpu_bootstrap.py:373
 msgid "[Y/n]"
