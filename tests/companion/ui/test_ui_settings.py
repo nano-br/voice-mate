@@ -475,3 +475,28 @@ def test_tray_icon_checkbox_only_on_windows(qapp: QApplication) -> None:
 def test_the_settings_dialog_follows_the_running_os(ui: CompanionUi) -> None:
     dialog = _open(ui)
     assert (dialog.general_page.tray_icon_visible is not None) == (sys.platform == "win32")
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="the checkbox exists on Windows only")
+def test_bringing_back_the_tray_icon_takes_off_apply_then_on(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    """What the tooltip tells the user: off, Apply, on again (off and on in one edit sends nothing)."""
+    dialog = _open(ui)
+    checkbox = dialog.general_page.tray_icon_visible
+    assert checkbox is not None and checkbox.isChecked()
+    assert "turn this off, click Apply and turn it on again" in checkbox.toolTip()
+    checkbox.setChecked(False)
+    checkbox.setChecked(True)
+    assert not dialog.apply_button.isEnabled()  # back to the saved value: nothing to send
+    checkbox.setChecked(False)
+    dialog.apply_button.click()
+    assert process_events(lambda: dialog.error_text == "Settings saved.")  # the baseline is reloaded
+    assert fake.settings().tray_icon_visible is False
+    checkbox.setChecked(True)
+    assert dialog.apply_button.isEnabled()
+    dialog.ok_button.click()
+    assert process_events(lambda: len(fake.called("apply_settings")) == 2)
+    sent = [call[0] for call in fake.called("apply_settings")]
+    assert [s.tray_icon_visible for s in sent if isinstance(s, CompanionSettings)] == [False, True]
+    assert fake.settings().tray_icon_visible is True

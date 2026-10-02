@@ -301,7 +301,10 @@ writes 1 only where the value is absent (`only_if_unset`): an icon the user hid
 in the Windows taskbar settings (`IsPromoted` = 0) stays hidden. A change of our
 setting is the user's explicit choice and forces the value (true writes 1, false
 writes 0 at once, whatever is there). Turning the setting off hides the icon for
-good: with it off, startup writes nothing. Windows 10 has no such key: nothing
+good: with it off, startup writes nothing. The settings window only sends what
+differs from the saved settings and the core only acts on a change, so bringing
+back an icon hidden in Windows takes two applies: turn the option off, click
+"Apply", turn it on again and click "OK" (the checkbox tooltip says so). Windows 10 has no such key: nothing
 happens there. Errors are logged, never raised.
 
 An event's cue REPLACES the cue on entering the tray state (never two cues). A
