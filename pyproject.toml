@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "voice-mate"
 version = "0.1.0"
-description = "Voice assistant for Windows: press a hotkey, speak, and the transcription lands in your clipboard. Local Whisper with GPU acceleration."
+description = "Local voice dictation to the clipboard with Whisper, with a Windows tray companion: press a hotkey, speak, paste."
 license = "MIT"
 authors = ["Álli Terhorst <alli.terhorst@gmail.com>"]
 readme = "README.md"
@@ -12,27 +12,27 @@ packages = [{ include = "app" }]
 
 [tool.poetry.scripts]
 voice-mate = "app.main:main"
-# Companion (tray app): needs the `ui` extra (PySide6), see README "Companion app".
+# Companion (tray app): needs the `ui` extra (PySide6), see docs/installation.md "Companion from source (Windows)".
 voice-mate-tray = "app.companion.main:main"
 
 [tool.poetry.dependencies]
-# Travado em 3.12: os wheels ROCm da AMD (torch/torchaudio) são cp312-only e o
-# voxcpm exige <3.13. Em 3.13 o `make setup` instala torch CPU silenciosamente.
+# Pinned to 3.12: the AMD ROCm wheels (torch/torchaudio) exist for cp312 only and
+# voxcpm requires <3.13. On 3.13 `make setup` would silently install CPU-only torch.
 python = ">=3.12,<3.13"
-# Core: sem essas deps o app nem sobe
+# Core: the app does not even start without these
 faster-whisper = "*"
 sounddevice = "*"
 numpy = "*"
 pyperclip = "*"
 keyboard = "*"
 mouse = "*"
-# PyTorch (torch/torchaudio) NÃO é declarado aqui de propósito: o build correto
-# depende da placa (CUDA cu128 p/ NVIDIA, ROCm p/ AMD, CPU como fallback) e os
-# wheels ROCm nem estão no PyPI. Quem instala é `app.setup.gpu_bootstrap`, via
-# `make setup` / `make configure`, que detecta a GPU e roda o pip certo.
-# omnivoice/voxcpm/openai-whisper dependem de torch — o setup instala o torch por
-# último (--force-reinstall) para o build da placa prevalecer sobre o CPU-only do PyPI.
-# Extras opt-in (não instalam por padrão; ver [tool.poetry.extras])
+# PyTorch (torch/torchaudio) is NOT declared here on purpose: the right build
+# depends on the GPU (CUDA cu128 for NVIDIA, ROCm for AMD, CPU as the fallback) and
+# the ROCm wheels are not on PyPI. `app.setup.gpu_bootstrap` installs it, through
+# `make setup` / `make configure`, which detects the GPU and runs the right pip.
+# omnivoice/voxcpm/openai-whisper depend on torch: setup installs torch last
+# (--force-reinstall) so the GPU build wins over the CPU-only one from PyPI.
+# Opt-in extras (not installed by default; see [tool.poetry.extras])
 claude-agent-sdk = { version = "*", optional = true }
 omnivoice = { version = "*", optional = true }
 kokoro = { version = "*", optional = true }
@@ -40,7 +40,7 @@ voxcpm = { version = "*", python = "<3.13", optional = true }
 soundfile = { version = "*", optional = true }
 openai-whisper = { version = "*", optional = true }
 silero-vad = { version = "*", optional = true }
-# Linux: hotkeys globais (pynput p/ X11, evdev p/ Wayland — evdev só compila em Linux)
+# Linux: global hotkeys (pynput for X11, evdev for Wayland; evdev only builds on Linux)
 pynput = { version = "*", optional = true }
 evdev = { version = "*", optional = true, markers = "sys_platform == 'linux'" }
 # Companion (tray app), optional on Linux. Mirrors requirements/companion.txt, the
@@ -50,16 +50,16 @@ pywin32 = { version = ">=306", optional = true, markers = "sys_platform == 'win3
 
 [tool.poetry.extras]
 claude = ["claude-agent-sdk"]
-# tts = engine padrão (OmniVoice). Engines alternativos: kokoro (leve, vozes
-# fixas — precisa de espeak-ng no sistema) e voxcpm (mais pesado).
+# tts = the engine used when nothing is saved (OmniVoice). Alternatives: kokoro
+# (light, fixed voices, needs espeak-ng on the system) and voxcpm (heavier).
 tts = ["omnivoice", "soundfile"]
 kokoro = ["kokoro", "soundfile"]
 voxcpm = ["voxcpm", "soundfile"]
-# Whisper na GPU AMD: openai-whisper roda sobre o torch+ROCm que o setup instala.
-# silero-vad corta silêncio em áudio longo (o openai-whisper não tem VAD embutido).
+# Whisper on the AMD GPU: openai-whisper runs on the torch+ROCm build that setup installs.
+# silero-vad trims silence in long audio (openai-whisper has no built-in VAD).
 whisper-gpu = ["openai-whisper", "silero-vad"]
-# Linux nativo/WSL2: listeners de hotkey (pynput/evdev). No WSL2 o gatilho é o
-# daemon HTTP (sem dependência extra), mas o extra cobre o Linux nativo.
+# Native Linux/WSL2: hotkey listeners (pynput/evdev). On WSL2 the trigger is the
+# HTTP daemon (no extra dependency), but the extra covers native Linux.
 linux = ["pynput", "evdev"]
 # Companion (tray app): `poetry install --extras ui` + `make run-tray`. Left out of
 # `all` on purpose: the engine (WSL2 daemon, CLI) never needs Qt.

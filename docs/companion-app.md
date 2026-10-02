@@ -1,10 +1,11 @@
 # VoiceMate Companion: architecture and protocol contract
 
-Status: design for branch `feat/companion-app`. Source of truth for the parallel
-work streams (daemon API v2, companion core, companion UI, packaging). Code
-contracts: `app/protocol/models.py` (daemon <-> companion payloads) and
-`app/companion/contract.py` (companion core <-> UI). When this document and the
-code disagree, fix one of them in the same change.
+Purpose: the design and contract document of the companion app (daemon API v2,
+companion core, companion UI, packaging), for contributors. For installing and using
+VoiceMate, start with the [README](../README.md); the diagrams are in
+[architecture.md](architecture.md). Code contracts: `app/protocol/models.py`
+(daemon <-> companion payloads) and `app/companion/contract.py` (companion core <-> UI).
+When this document and the code disagree, fix one of them in the same change.
 
 ## Why
 
@@ -265,7 +266,8 @@ they belong to:
   result is never set twice.
 - The companion delivers `needs_delivery` results in `result_seq` order. A failing
   delivery blocks later ones for at most 3 retries (1 s apart), then it is ACKed
-  `failed`, a notification says so and the text stays in Recent.
+  `failed`, a notification says so, and the text goes to the Not copied list (saved
+  to `pending.json`, see below) as well as Recent.
 - Clipboard delivery spec (port of the script's `Set-ClipboardReliable`): skip an
   attempt while the clipboard is locked by another process (non-blocking open);
   set, read back, compare (tolerating a trailing newline); up to 5 attempts with
