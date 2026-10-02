@@ -16,6 +16,7 @@ import json
 import logging
 import socket
 import threading
+import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable, Mapping
@@ -51,6 +52,9 @@ REQUEST_TIMEOUT_S: Final = 3.0
 EVENTS_WAIT_S: Final = 25
 EVENTS_TIMEOUT_SLACK_S: Final = 5.0
 LEASE_S: Final = 40
+TOKEN_REREAD_S: Final = 30.0  # after a 401, the token is read again at most this often
+TOKEN_WAIT_S: Final = 25.0  # a request waits this long for a first token read in progress
+UNREGISTER_ON_STOP_TIMEOUT_S: Final = 1.0
 
 ErrorKind = Literal["offline", "timeout", "http", "protocol"]
 TokenProvider = Callable[[], str | None]
@@ -90,31 +94,54 @@ class DaemonClient:
         self._base = f"http://{host}:{port}"
         self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         self._token_provider = token_provider
-        self._token_lock = threading.Lock()
+        self._token_cond = threading.Condition()
         self._token: str | None = None
         self._token_loaded = False
+        self._token_reading = False
+        self._token_read_at: float | None = None
         # Set by /health (`auth: true`) or by a 401: only then is the token file read.
         self.auth_required = False
 
     # --- token ---------------------------------------------------------------------------------
 
     def token(self) -> str | None:
-        with self._token_lock:
+        """The bearer token (None while the daemon does not require one).
+
+        The provider may be slow (`wsl.exe`): it runs outside the lock, and other requests
+        meanwhile use the token they already have (they only wait when there is none yet)."""
+        with self._token_cond:
             if not self.auth_required:
                 return None
-            if not self._token_loaded:
+            if self._token_loaded:
+                return self._token
+            if self._token_reading:
+                if self._token is None:
+                    self._token_cond.wait_for(lambda: not self._token_reading, timeout=TOKEN_WAIT_S)
+                return self._token
+            self._token_reading = True
+        value: str | None = None
+        try:
+            if self._token_provider is not None:
+                value = self._token_provider()
+        except Exception:  # noqa: BLE001 - a missing token only means 401s
+            log.exception("reading the API token failed")
+        finally:
+            with self._token_cond:
+                self._token = value
                 self._token_loaded = True
-                self._token = None
-                if self._token_provider is not None:
-                    try:
-                        self._token = self._token_provider()
-                    except Exception:  # noqa: BLE001 - a missing token only means 401s
-                        log.exception("reading the API token failed")
-            return self._token
+                self._token_reading = False
+                self._token_read_at = time.monotonic()
+                self._token_cond.notify_all()
+        return value
 
-    def invalidate_token(self) -> None:
-        with self._token_lock:
+    def invalidate_token(self) -> bool:
+        """Read the token again on next use, at most every TOKEN_REREAD_S (a persistent 401
+        must not run `wsl.exe` on every request). True = it will be read again."""
+        with self._token_cond:
+            if self._token_read_at is not None and time.monotonic() - self._token_read_at < TOKEN_REREAD_S:
+                return False
             self._token_loaded = False
+            return True
 
     # --- transport -------------------------------------------------------------------------------
 
@@ -158,8 +185,8 @@ class DaemonClient:
                 exc.close()
             if exc.code == 401 and auth and retry_unauthorized:
                 self.auth_required = True
-                self.invalidate_token()  # the token file may have been recreated
-                return self._request(method, path, body, timeout=timeout, auth=auth, retry_unauthorized=False)
+                if self.invalidate_token():  # the token file may have been recreated
+                    return self._request(method, path, body, timeout=timeout, auth=auth, retry_unauthorized=False)
             raise DaemonError("http", exc.code, error_body) from None
         except urllib.error.URLError as exc:
             reason = exc.reason
@@ -330,8 +357,6 @@ class EventPoller:
         session = self.session()
         if session is None:
             registered = self._client.register(self._registration())
-            if self._stop.is_set():
-                return
             granted: list[Capability] = list(registered.get("granted", []))
             session = Session(
                 client_id=str(registered["client_id"]),
@@ -340,8 +365,18 @@ class EventPoller:
                 granted=frozenset(granted),
                 lease_s=int(registered.get("lease_s", LEASE_S)),
             )
-            with self._lock:
-                self._session = session
+            with self._lock:  # take_session() (Quit) sees it, or we see the stop: never neither
+                stopped = self._stop.is_set()
+                if not stopped:
+                    self._session = session
+            if stopped:
+                # Quit while /register was in flight: release the leases at once, or the
+                # daemon would keep them for this client (and skip its own beeps) until they expire.
+                try:
+                    self._client.unregister(session.client_id, timeout=UNREGISTER_ON_STOP_TIMEOUT_S)
+                except DaemonError as exc:
+                    log.info("unregister after stop failed: %s", exc)
+                return
             self._on_registered(registered)
             return
         response = self._client.events(session.client_id, session.instance, session.cursor, self._wait_s)

@@ -61,7 +61,7 @@ from app.companion.delivery import (
     SendAck,
     StartDelivery,
 )
-from app.companion.desktop import Desktop, autostart_command, create_desktop
+from app.companion.desktop import Desktop, HotkeyHost, autostart_command, create_desktop
 from app.companion.model import (
     CoreState,
     DeliveryOutcome,
@@ -118,6 +118,7 @@ log = logging.getLogger(__name__)
 ACK_RETRIES: Final = 5
 ATTACHED_STOP_WAIT_S: Final = 8.0
 QUIT_UNREGISTER_TIMEOUT_S: Final = 1.0
+HOTKEY_RETRY_S: Final = 10.0
 
 
 @dataclass(frozen=True)
@@ -133,10 +134,18 @@ class Timings:
     quit_cap_s: float = 15.0
     grace_s: float = 240.0
     backoff_s: tuple[float, ...] = (2.0, 5.0, 15.0, 30.0, 60.0, 120.0)
+    # A chord another app holds (e.g. the old hotkeys script) is tried again this often.
+    hotkey_retry_s: float = HOTKEY_RETRY_S
 
 
 BackendFactory = Callable[[CompanionSettings, Path], EngineBackend]
 DesktopFactory = Callable[[], Desktop]
+
+
+def is_outdated(health: HealthPayload) -> bool:
+    """The daemon speaks an API older than ours (a v1 daemon has no `api_version` at all)."""
+    api_version = health.get("api_version")
+    return not isinstance(api_version, int) or isinstance(api_version, bool) or api_version < API_VERSION
 
 
 def hotkeys_owned_by_engine(mode: EngineMode) -> bool:
@@ -249,11 +258,16 @@ class CompanionControllerImpl:
         def on_events(response: EventsResponse, instance_changed: bool) -> None:
             self._post(lambda: self._on_events(poller_ref[0], response))
 
+        def on_unauthorized() -> None:
+            # The token was re-read (at most every 30 s) and is still refused.
+            self._post(lambda: None if self._quitting else self._input(NoticeRequested("auth_failed")))
+
         poller = EventPoller(
             self._client,
             registration=self._registration,
             on_registered=on_registered,
             on_events=on_events,
+            on_unauthorized=on_unauthorized,
             wait_s=self._timings.events_wait_s,
         )
         poller_ref.append(poller)
@@ -340,6 +354,9 @@ class CompanionControllerImpl:
         if self._quitting:
             return
         self._input(Started())
+        backup = self._store.broken_backup
+        if backup is not None:
+            self._input(NoticeRequested("settings_reset", (str(backup),)))
         self._io.submit(self._start_desktop)
         self._poller.start()
         self._run(self._policy.start(time.monotonic()))
@@ -394,7 +411,8 @@ class CompanionControllerImpl:
                 self._quit_callbacks.append(on_done)
             first = len(self._quit_callbacks) == 1 and not finished
         if finished:
-            on_done()
+            # Already done: still from a controller thread, as the contract says.
+            threading.Thread(target=on_done, name="companion-quit-done", daemon=True).start()
             return
         if not first:
             return  # already quitting: on_done runs with the first caller's
@@ -552,7 +570,7 @@ class CompanionControllerImpl:
         if self._store.read_only:
             return [_("The settings file was written by a newer version of VoiceMate, so it is read-only here.")]
         candidate = normalized(settings)
-        errors = validate_settings(candidate)
+        errors = validate_settings(candidate, platform=self._store.platform)
         if errors:
             return errors
         # One registration at a time: a background re-registration must not undo this one.
@@ -580,12 +598,16 @@ class CompanionControllerImpl:
 
     def _apply_hotkeys(self, old: CompanionSettings, new: CompanionSettings) -> bool | list[str]:
         """Register `new` hotkeys at once (rolled back on failure). True = re-registered,
-        False = nothing to do, a list = localized errors."""
+        False = nothing to roll back, a list = localized errors. Call with `_hotkey_lock`."""
         host = self._desktop.hotkeys
-        if host is None or new.hotkeys == old.hotkeys or hotkeys_owned_by_engine(new.engine_mode) or not self._started:
+        if host is None or hotkeys_owned_by_engine(new.engine_mode) or not self._started:
             return False
-        flows = self._hotkey_flows
-        bindings = {b.flow: b.chord for b in new.hotkeys if flows is None or b.flow in flows}
+        bindings = self._hotkey_bindings(new)
+        if new.hotkeys == old.hotkeys:
+            # Unchanged, but a chord may still be held by another app since startup: try the
+            # missing ones again (best effort: an unrelated setting must still apply).
+            self._register_best_effort(host, bindings, notify=False)
+            return False
         try:
             verdicts = host.register(bindings, atomic=True)
         except (OSError, TimeoutError):
@@ -594,7 +616,51 @@ class CompanionControllerImpl:
         taken = [bindings[flow] for flow, verdict in verdicts.items() if verdict != "ok"]
         if taken:
             return [_("{hotkey} is already used by another app.").format(hotkey=display_chord(c)) for c in taken]
+        self._post(lambda: self._hotkeys_settled((), notify=False))
         return True
+
+    def _hotkey_bindings(self, settings: CompanionSettings) -> dict[str, str]:
+        """flow -> chord to hold: none when the engine owns the hotkeys; only flows the engine serves."""
+        if hotkeys_owned_by_engine(settings.engine_mode):
+            return {}
+        flows = self._hotkey_flows
+        return {b.flow: b.chord for b in settings.hotkeys if flows is None or b.flow in flows}
+
+    def _register_best_effort(self, host: HotkeyHost, bindings: dict[str, str], *, notify: bool) -> None:
+        """Hold what can be held; chords another app holds are retried later. Call with `_hotkey_lock`."""
+        try:
+            if not notify and host.registered() == bindings:
+                self._post(lambda: self._hotkeys_settled((), notify=False))
+                return
+            verdicts = host.register(bindings)
+        except (OSError, TimeoutError):
+            log.exception("hotkey registration failed")
+            return
+        taken = tuple(bindings[flow] for flow, verdict in verdicts.items() if verdict == "in_use")
+        if taken:
+            log.log(logging.INFO if notify else logging.DEBUG, "hotkeys held by another app: %s", taken)
+        self._post(lambda: self._hotkeys_settled(taken, notify=notify))
+
+    def _hotkeys_settled(self, taken: tuple[str, ...], *, notify: bool) -> None:
+        """Dispatcher: notify once, then retry every `hotkey_retry_s` until every chord is ours
+        (e.g. the user closed the old hotkeys script), the settings change, or Quit."""
+        if self._quitting:
+            return
+        if not taken:
+            timer = self._timers.pop("hotkey_retry", None)
+            if timer is not None:
+                timer.cancel()
+            return
+        if notify:
+            self._input(NoticeRequested("hotkey_in_use", taken))
+        self._schedule("hotkey_retry", self._timings.hotkey_retry_s, self._hotkey_retry_tick)
+
+    def _hotkey_retry_tick(self) -> None:
+        if self._quitting:
+            return
+        self._timers.pop("hotkey_retry", None)
+        flows = self._hotkey_flows
+        self._io.submit(lambda: self._register_hotkeys(set(flows) if flows else None, notify=False))
 
     def _apply_autostart(self, old: CompanionSettings, new: CompanionSettings) -> list[str]:
         # The OS (registry Run value / XDG file) is the source of truth for start at login.
@@ -888,6 +954,11 @@ class CompanionControllerImpl:
                 log.debug("health failed: %s", exc)
         if health is None:
             probe = Probe("down")
+        elif is_outdated(health):
+            # A v1 daemon (no `ready`, no `api_version`) is up and answering: for supervision
+            # that is "ready" (never a start timeout); the model flags it as outdated and
+            # triggers are refused. Its audio field never drives a WSL restart.
+            probe = Probe("ready", "unknown")
         else:
             audio = health.get("audio", "unknown")
             probe = Probe(
@@ -899,26 +970,21 @@ class CompanionControllerImpl:
         self._post(lambda: self._on_probe(client, probe, health))
 
     def _on_probe(self, client: DaemonClient, probe: Probe, health: HealthPayload | None) -> None:
-        if self._quitting:
-            return
+        if self._quitting or client is not self._client:
+            return  # a stale client's result: its replacement schedules its own probes
         self._schedule("probe", self._timings.probe_interval_s, self._probe_tick)
-        if client is not self._client:
-            return
         if health is not None:
             self._input(HealthSeen(health))
             self._sync_hotkey_flows()
         self._run(self._policy.probe(time.monotonic(), probe))
         self._sync_supervisor()
-        api_version = health.get("api_version", 0) if health is not None else 0
         connected = (
             self._policy.state in ("healthy", "degraded")
             and health is not None
+            and not is_outdated(health)
             and bool(health.get("ready"))
-            and isinstance(api_version, int)
-            and api_version >= API_VERSION
         )
-        if health is not None or not connected:
-            self._poller.set_enabled(connected)
+        self._poller.set_enabled(connected)
 
     def _tick(self) -> None:
         if self._quitting:
@@ -959,8 +1025,10 @@ class CompanionControllerImpl:
             self._hotkey_flows = names
             self._io.submit(lambda: self._register_hotkeys(set(names)))
 
-    def _register_hotkeys(self, flows: set[str] | None) -> None:
-        """Best effort (startup, flows changed). Only flows the engine serves get a hotkey."""
+    def _register_hotkeys(self, flows: set[str] | None, *, notify: bool = True) -> None:
+        """Best effort (startup, flows changed, retries). Only flows the engine serves get a hotkey.
+
+        `notify`: tell the user about chords another app holds (not again on retries)."""
         host = self._desktop.hotkeys
         if host is None or self._quitting:
             return
@@ -970,14 +1038,7 @@ class CompanionControllerImpl:
                 bindings: dict[str, str] = {}
             else:
                 bindings = {b.flow: b.chord for b in settings.hotkeys if flows is None or b.flow in flows}
-            try:
-                verdicts = host.register(bindings)
-            except (OSError, TimeoutError):
-                log.exception("hotkey registration failed")
-                return
-        taken = tuple(bindings[flow] for flow, verdict in verdicts.items() if verdict == "in_use")
-        if taken:
-            self._post(lambda: self._input(NoticeRequested("hotkey_in_use", taken)))
+            self._register_best_effort(host, bindings, notify=notify)
 
     # --- events ---------------------------------------------------------------------------------------------
 

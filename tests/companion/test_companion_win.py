@@ -159,14 +159,55 @@ def _deliver(thread: Win32Thread, text: str, timeout: float = 5.0) -> bool | Non
     return result[0] if result else None
 
 
+def _empty_clipboard() -> bool:
+    user32 = _win_dll("user32")
+    user32.OpenClipboard.argtypes = [wintypes.HWND]
+    if not user32.OpenClipboard(None):
+        return False
+    try:
+        return bool(user32.EmptyClipboard())
+    finally:
+        user32.CloseClipboard()
+
+
 @pytest.fixture
 def saved_clipboard(win32_thread: Win32Thread) -> Iterator[None]:
+    """Restores the user's clipboard text, or an empty clipboard; skips what it cannot restore."""
     if win32_thread.has_non_text_content():
         pytest.skip("the clipboard holds non-text content we could not restore")
     original = win32_thread.read_text()
+    if original is None:
+        pytest.skip("another process holds the clipboard open")
     yield
     if original:
         assert _deliver(win32_thread, original) is True
+    else:
+        assert _empty_clipboard()
+        assert win32_thread.read_text() == ""
+
+
+def test_a_copy_by_the_user_during_the_history_wait_is_never_overwritten(
+    win32_thread: Win32Thread, saved_clipboard: None
+) -> None:
+    user = hotkeys_clipboard.HotkeyClipboardThread()  # "another app": a different clipboard owner
+    user.start(lambda flow: None)
+    try:
+        ours: list[bool] = []
+        done = threading.Event()
+
+        def finished(ok: bool) -> None:
+            ours.append(ok)
+            done.set()
+
+        win32_thread.deliver(f"VoiceMate transcription {uuid.uuid4()}", finished)
+        time.sleep(0.15)  # verified (60 ms), now waiting 250 ms to re-assert for Win+V
+        user_text = f"copied by the user {uuid.uuid4()}"
+        assert _deliver(user, user_text) is True
+        assert done.wait(5) and ours == [True]
+        time.sleep(0.3)
+        assert win32_thread.read_text() == user_text  # no late re-assert over the user's copy
+    finally:
+        user.stop()
 
 
 def test_clipboard_delivery_is_verified(win32_thread: Win32Thread, saved_clipboard: None) -> None:

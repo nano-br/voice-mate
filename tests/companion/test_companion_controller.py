@@ -14,6 +14,7 @@ from companion_core_fakes import FAST, ControllerKit, FakeBackend, FakeDaemon, F
 from app.companion import paths
 from app.companion.contract import CompanionSettings, CompanionSnapshot, HotkeyBinding, Notification
 from app.companion.controller import CompanionControllerImpl, create_controller
+from app.companion.settings_store import SettingsStore
 
 
 @pytest.fixture(autouse=True)
@@ -96,9 +97,9 @@ def test_full_dictation_delivers_acks_and_cues(make_controller: ControllerKit, d
     assert wait_until(lambda: backend.keepalive)  # attached in WSL mode: keep the distro up
     assert daemon.registrations[0]["capabilities"] == ["clipboard", "cues"]
     assert daemon.registrations[0]["client_key"] == "test-client-key-0001"
-    assert wait_until(lambda: parts.hotkeys is not None and parts.hotkeys.registered)
+    assert wait_until(lambda: parts.hotkeys is not None and parts.hotkeys.held)
     assert parts.hotkeys is not None
-    assert parts.hotkeys.registered == {"clipboard": "ctrl+alt+shift+f23", "claude_chat": "ctrl+alt+shift+f22"}
+    assert parts.hotkeys.held == {"clipboard": "ctrl+alt+shift+f23", "claude_chat": "ctrl+alt+shift+f22"}
 
     parts.hotkeys.press("clipboard")
     assert wait_until(lambda: len(daemon.triggers) == 1)
@@ -286,17 +287,135 @@ def test_detected_engine_folder_is_saved(make_controller: ControllerKit) -> None
         daemon.stop()
 
 
-def test_outdated_engine_is_flagged(make_controller: ControllerKit) -> None:
+def test_a_v1_daemon_is_flagged_outdated_and_never_restarted(make_controller: ControllerKit) -> None:
+    """The v1 daemon (no `ready`, no `api_version`) must not cycle through start timeouts."""
     daemon = FakeDaemon(api_version=None).start()
     try:
-        controller, _parts, _backend = make_controller(daemon)
+        assert set(daemon.health()) == {"status", "flows", "pid", "audio", "lang", "instance"}
+        backend = FakeBackend(can_spawn=True, daemon=daemon)
+        controller, parts, _backend = make_controller(daemon, backend=backend, timings=replace(FAST, grace_s=0.5))
         recorder = Recorder(controller)
         controller.start()
-        assert wait_until(lambda: recorder.last.engine_outdated)
+        assert wait_until(lambda: recorder.last.engine_outdated and recorder.last.supervisor == "healthy")
+        assert recorder.last.tray_state == "warning"
+        assert recorder.last.status_text == "Engine is outdated"
+        threading.Event().wait(1.5)  # three times the grace period
+        assert "restarting" not in recorder.trays() and recorder.last.supervisor == "healthy"
+        assert backend.spawned == [] and backend.stops == []
         assert "Engine is outdated" in recorder.titles()
+        assert parts.hotkeys is not None
+        assert wait_until(lambda: parts.hotkeys is not None and parts.hotkeys.on_hotkey is not None)
+        parts.hotkeys.press("clipboard")
+        threading.Event().wait(0.3)
+        assert daemon.triggers == []  # refused, with the outdated notice (not "starting")
+        assert "VoiceMate is starting" not in recorder.titles()
         assert daemon.registrations == []  # no v1 fallback
     finally:
         daemon.stop()
+
+
+def test_a_mic_error_then_a_retry(make_controller: ControllerKit, daemon: FakeDaemon) -> None:
+    """The real daemon goes idle BEFORE `error mic_unavailable`; the next press starts again."""
+    controller, parts, backend = make_controller(daemon, parts=FakeDesktopParts(mics=[1]))
+    recorder = Recorder(controller)
+    controller.start()
+    assert wait_until(lambda: _connected(controller, daemon))
+    controller.toggle("clipboard")
+    assert wait_until(lambda: recorder.last.tray_state == "recording")
+    daemon.fail_microphone()
+    assert wait_until(lambda: recorder.last.tray_state == "warning")
+    assert "Microphone unavailable" in recorder.titles()
+    assert backend.wsl_shutdowns == 0  # audio ok: a Windows-side problem, never a WSL restart
+    controller.toggle("clipboard")  # the user plugs the mic back and tries again
+    assert wait_until(lambda: recorder.last.tray_state == "recording")
+    daemon.go_live()
+    controller.toggle("clipboard")
+    assert wait_until(lambda: recorder.last.tray_state == "transcribing")
+    daemon.publish_result("it works now")
+    daemon.set_state("idle")
+    assert wait_until(lambda: parts.clipboard.texts == ["it works now"])
+    assert wait_until(lambda: recorder.last.tray_state in ("ready", "idle"))
+    assert [p.name.split("-")[0] for p in parts.sound.played] == ["error", "start", "transcribing", "ready"]
+
+
+def test_a_hotkey_taken_at_startup_is_retried_until_it_is_free(
+    make_controller: ControllerKit, daemon: FakeDaemon
+) -> None:
+    parts = FakeDesktopParts()
+    assert parts.hotkeys is not None
+    hotkeys = parts.hotkeys
+    hotkeys.taken = {"ctrl+alt+shift+f23"}  # the old hotkeys script still runs
+    controller, _parts, _backend = make_controller(daemon, parts=parts)
+    recorder = Recorder(controller)
+    controller.start()
+    assert wait_until(lambda: "Hotkey unavailable" in recorder.titles())
+    assert hotkeys.held == {"claude_chat": "ctrl+alt+shift+f22"}
+    calls = len(hotkeys.calls)
+    assert wait_until(lambda: len(hotkeys.calls) > calls + 1)  # retried every hotkey_retry_s
+    # An unrelated change still applies while the chord is taken.
+    assert controller.apply_settings(replace(controller.settings(), master_volume=0.5)) == []
+    hotkeys.taken.clear()  # the user closed the script
+    assert wait_until(lambda: hotkeys.held == {"clipboard": "ctrl+alt+shift+f23", "claude_chat": "ctrl+alt+shift+f22"})
+    settled = len(hotkeys.calls)
+    threading.Event().wait(1.0)
+    assert len(hotkeys.calls) == settled  # no more retries
+    assert recorder.titles().count("Hotkey unavailable") == 1  # notified once
+
+
+def test_a_broken_settings_file_is_kept_and_reported(tmp_path: Path, daemon: FakeDaemon) -> None:
+    path = tmp_path / "companion.toml"
+    path.write_text("this = = is not toml", encoding="utf-8")
+    parts = FakeDesktopParts()
+    backend = FakeBackend(daemon=daemon)
+    controller = CompanionControllerImpl(
+        SettingsStore(path, platform="win32"),
+        desktop_factory=parts.desktop,
+        backend_factory=lambda _settings, _logs: backend,
+        cues_dir=tmp_path / "cues",
+        logs_dir=tmp_path / "logs",
+        timings=FAST,
+    )
+    recorder = Recorder(controller)
+    try:
+        controller.start()
+        assert wait_until(lambda: "Settings reset" in recorder.titles())
+        note = next(n for n in recorder.notifications if n.title == "Settings reset")
+        assert "companion.toml.broken" in note.message and note.action == "open_settings"
+        assert (tmp_path / "companion.toml.broken").read_text(encoding="utf-8") == "this = = is not toml"
+    finally:
+        done = threading.Event()
+        controller.quit(done.set)
+        assert done.wait(6)
+
+
+def test_a_persistent_401_is_reported(make_controller: ControllerKit) -> None:
+    daemon = FakeDaemon(token="the-real-token").start()
+    try:
+        backend = FakeBackend(daemon=daemon, token="an-old-token")
+        controller, _parts, _backend = make_controller(daemon, backend=backend)
+        recorder = Recorder(controller)
+        controller.start()
+        assert wait_until(lambda: "Engine access denied" in recorder.titles())
+        threading.Event().wait(1.0)
+        assert backend.token_reads == 1  # not re-read on every refused request
+        assert recorder.titles().count("Engine access denied") == 1
+    finally:
+        daemon.stop()
+
+
+def test_restart_engine_in_external_mode_does_not_stop_the_daemon(
+    make_controller: ControllerKit, daemon: FakeDaemon
+) -> None:
+    backend = FakeBackend(can_spawn=False, can_restart_wsl=False, daemon=daemon)
+    settings = CompanionSettings(engine_mode="external", client_key="test-client-key-0001")
+    controller, _parts, _backend = make_controller(daemon, backend=backend, settings=settings)
+    recorder = Recorder(controller)
+    controller.start()
+    assert wait_until(lambda: _connected(controller, daemon))
+    controller.restart_engine()
+    assert wait_until(lambda: any(s.supervisor == "restarting" for s in list(recorder.snapshots)))
+    assert wait_until(lambda: recorder.last.supervisor == "healthy")
+    assert daemon.shutdowns == []  # we could not bring an external daemon back
 
 
 def test_auth_token_is_used(make_controller: ControllerKit) -> None:
@@ -351,7 +470,7 @@ def test_apply_settings(make_controller: ControllerKit, daemon: FakeDaemon) -> N
     assert wait_until(lambda: _connected(controller, daemon))
     current = controller.settings()
     assert controller.apply_settings(replace(current, engine_dir='bad"dir')) == [
-        "The engine folder cannot contain quotes, $, backticks or line breaks."
+        "The engine folder cannot contain quotes, $, backticks, backslashes or line breaks."
     ]
     taken = replace(current, hotkeys=(HotkeyBinding("clipboard", "ctrl+alt+shift+f20"),))
     assert controller.apply_settings(taken) == ["Ctrl+Alt+Shift+F20 is already used by another app."]
@@ -363,7 +482,7 @@ def test_apply_settings(make_controller: ControllerKit, daemon: FakeDaemon) -> N
     assert controller.settings().master_volume == 0.3
     assert controller.settings().hotkeys == (HotkeyBinding("clipboard", "ctrl+alt+shift+f21"),)
     assert parts.autostart and parts.autostart[-1][0] is True and parts.autostart[-1][1][-1] == "--autostart"
-    assert parts.hotkeys.registered == {"clipboard": "ctrl+alt+shift+f21"}
+    assert parts.hotkeys.held == {"clipboard": "ctrl+alt+shift+f21"}
     assert controller.check_hotkey("ctrl+alt+shift+f20", "claude_chat") == "in_use"
     assert controller.check_hotkey("ctrl+alt+shift+f21", "claude_chat") == "duplicate"
     assert controller.check_hotkey("ctrl+alt+shift+f21", "clipboard") == "ok"
@@ -387,7 +506,7 @@ def test_apply_settings_restarts_supervision_only_for_engine_changes(
     only_one = replace(controller.settings(), hotkeys=(HotkeyBinding("claude_chat", "ctrl+alt+shift+f21"),))
     assert controller.apply_settings(only_one) == []
     assert parts.hotkeys is not None
-    assert parts.hotkeys.registered == {"claude_chat": "ctrl+alt+shift+f21"}
+    assert parts.hotkeys.held == {"claude_chat": "ctrl+alt+shift+f21"}
     # A different engine folder: stop what we run, start supervising again.
     assert controller.apply_settings(replace(controller.settings(), engine_dir="other/voice-mate")) == []
     assert wait_until(lambda: backend.closed)
@@ -417,13 +536,13 @@ def test_registry_is_the_source_of_truth_for_start_at_login(make_controller: Con
 
 def test_engine_owned_hotkeys_in_local_mode(make_controller: ControllerKit, daemon: FakeDaemon) -> None:
     settings = CompanionSettings(engine_mode="local", client_key="test-client-key-0001")
-    controller, parts, _backend = make_controller(daemon, settings=settings)
+    controller, parts, _backend = make_controller(daemon, settings=settings, platform="linux")
     controller.start()
     assert wait_until(lambda: _connected(controller, daemon))
     assert daemon.registrations[0]["capabilities"] == ["cues"]
     assert controller.check_hotkey("ctrl+alt+v", "clipboard") == "engine_owned"
     assert controller.snapshot().hotkeys_owned_by_engine
-    assert parts.hotkeys is not None and parts.hotkeys.registered == {}
+    assert parts.hotkeys is not None and parts.hotkeys.held == {}
 
 
 def test_quit_unregisters_stops_and_calls_back(make_controller: ControllerKit, daemon: FakeDaemon) -> None:
@@ -437,9 +556,16 @@ def test_quit_unregisters_stops_and_calls_back(make_controller: ControllerKit, d
     assert backend.stops == ["user_quit"] and backend.closed
     assert parts.hotkeys is not None and parts.hotkeys.stopped
     assert daemon.shutdowns == []  # an attached daemon keeps running
+    callers: list[str] = []
     second = threading.Event()
-    controller.quit(second.set)
+
+    def again() -> None:
+        callers.append(threading.current_thread().name)
+        second.set()
+
+    controller.quit(again)  # already done: still called back from a controller thread
     assert second.wait(1)
+    assert callers and callers[0] != threading.current_thread().name
 
 
 def test_quit_is_capped(make_controller: ControllerKit, daemon: FakeDaemon) -> None:

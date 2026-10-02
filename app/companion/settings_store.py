@@ -12,6 +12,7 @@ import logging
 import os
 import re
 import secrets
+import sys
 import threading
 import tomllib
 from collections.abc import Mapping
@@ -40,13 +41,15 @@ from app.i18n import _
 log = logging.getLogger(__name__)
 
 # The spawn command is `bash -lc 'cd "$HOME/<engine_dir>" && ...'`: these would break out
-# of the double quotes or run code (docs/companion-app.md, "Supervisor (WSL2)").
-ENGINE_DIR_FORBIDDEN: Final = frozenset('"$`\n\r')
+# of the double quotes or run code (docs/companion-app.md, "Supervisor (WSL2)"); a
+# backslash would escape the closing quote.
+ENGINE_DIR_FORBIDDEN: Final = frozenset('"$`\\\n\r')
 _DISTRO_RE: Final = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _FLOW_RE: Final = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]{0,63}$")
 _CLIENT_KEY_RE: Final = re.compile(r"^[A-Za-z0-9_-]{8,128}$")
 PORT_MIN: Final = 1024
 PORT_MAX: Final = 65535
+BROKEN_SUFFIX: Final = ".broken"
 
 _T = TypeVar("_T")
 
@@ -63,6 +66,33 @@ def wsl_distro_is_valid(value: str) -> bool:
     return value == "" or _DISTRO_RE.match(value) is not None
 
 
+def platform_engine_mode(platform: str) -> EngineMode:
+    """The default engine mode of a platform (`sys.platform` value)."""
+    return "wsl2" if platform == "win32" else "local"
+
+
+def engine_mode_supported(mode: str, platform: str) -> bool:
+    """wsl2 needs Windows, local needs a non-Windows host; external works everywhere."""
+    if mode == "external":
+        return True
+    return mode == platform_engine_mode(platform)
+
+
+def field_label(field_name: str) -> str:
+    """Localized name of a setting, for validation messages."""
+    cue = next((name for name in CUE_NAMES if field_name == f"cues.{name}"), None)
+    if cue is not None:
+        return cue_label(cue)
+    labels = {
+        "language": _("Language"),
+        "engine_mode": _("Engine mode"),
+        "wsl_restart_policy": _("WSL restart"),
+        "notify_level": _("Notifications"),
+        "hotkeys": _("Hotkeys"),
+    }
+    return labels.get(field_name, field_name)
+
+
 # --- reading -------------------------------------------------------------------------
 
 
@@ -72,6 +102,7 @@ class LoadResult:
     read_only: bool  # written by a newer version: never overwrite it
     problems: tuple[str, ...]  # English log lines (values that fell back to defaults)
     missing: bool = False  # no file yet
+    broken: bool = False  # not readable as TOML at all: defaults, the file is kept aside
 
 
 class _Reader:
@@ -174,13 +205,13 @@ def _read_cues(reader: _Reader) -> dict[CueName, CueSettings]:
     return cues
 
 
-def parse_settings(text: str) -> LoadResult:
+def parse_settings(text: str, platform: str = sys.platform) -> LoadResult:
     """Parse companion.toml text. Never raises: broken values fall back to defaults."""
-    defaults = CompanionSettings()
+    defaults = CompanionSettings(engine_mode=platform_engine_mode(platform))
     try:
         data = tomllib.loads(text)
     except tomllib.TOMLDecodeError as exc:
-        return LoadResult(defaults, False, (f"companion.toml is not valid TOML ({exc}); using defaults",))
+        return LoadResult(defaults, False, (f"companion.toml is not valid TOML ({exc}); using defaults",), broken=True)
     reader = _Reader(data)
     version = data.get("version", SETTINGS_VERSION)
     read_only = False
@@ -207,12 +238,16 @@ def parse_settings(text: str) -> LoadResult:
     if not isinstance(port, int) or isinstance(port, bool) or not PORT_MIN <= port <= PORT_MAX:
         reader.problem(f"daemon_port: invalid value {port!r}")
         port = defaults.daemon_port
+    engine_mode = reader.literal("engine_mode", get_args(EngineMode), defaults.engine_mode)
+    if not engine_mode_supported(engine_mode, platform):
+        reader.problem(f"engine_mode: {engine_mode!r} is not available on {platform}, using {defaults.engine_mode!r}")
+        engine_mode = defaults.engine_mode
 
     settings = CompanionSettings(
         version=version,
         client_key=client_key,
         language=reader.literal("language", get_args(UiLanguage), defaults.language),
-        engine_mode=reader.literal("engine_mode", get_args(EngineMode), defaults.engine_mode),
+        engine_mode=engine_mode,
         wsl_distro=wsl_distro,
         engine_dir=engine_dir,
         daemon_port=port,
@@ -306,7 +341,9 @@ def dump_settings(settings: CompanionSettings) -> str:
 # --- validation ------------------------------------------------------------------------
 
 
-def validate_settings(settings: CompanionSettings, *, check_files: bool = True) -> list[str]:
+def validate_settings(
+    settings: CompanionSettings, *, check_files: bool = True, platform: str = sys.platform
+) -> list[str]:
     """Localized problems that block saving; empty = valid."""
     errors: list[str] = []
 
@@ -320,9 +357,13 @@ def validate_settings(settings: CompanionSettings, *, check_files: bool = True) 
         ("notify_level", settings.notify_level, get_args(NotifyLevel)),
     ):
         if not literal_ok(value, options):
-            errors.append(_("Invalid value for {setting}.").format(setting=field_name))
+            errors.append(_("Invalid value for {setting}.").format(setting=field_label(field_name)))
+    if literal_ok(settings.engine_mode, get_args(EngineMode)) and not engine_mode_supported(
+        settings.engine_mode, platform
+    ):
+        errors.append(_("This engine mode is not available on this system."))
     if not engine_dir_is_valid(settings.engine_dir):
-        errors.append(_("The engine folder cannot contain quotes, $, backticks or line breaks."))
+        errors.append(_("The engine folder cannot contain quotes, $, backticks, backslashes or line breaks."))
     if not wsl_distro_is_valid(settings.wsl_distro):
         errors.append(_("The WSL distribution name is not valid."))
     if not PORT_MIN <= settings.daemon_port <= PORT_MAX:
@@ -338,7 +379,7 @@ def validate_settings(settings: CompanionSettings, *, check_files: bool = True) 
             errors.append(_("{hotkey} is not a valid hotkey.").format(hotkey=binding.chord))
             continue
         if _FLOW_RE.match(binding.flow) is None:
-            errors.append(_("Invalid value for {setting}.").format(setting="hotkeys"))
+            errors.append(_("Invalid value for {setting}.").format(setting=field_label("hotkeys")))
             continue
         if binding.flow in seen_flows:
             errors.append(_("The action {flow} has more than one hotkey.").format(flow=binding.flow))
@@ -354,7 +395,7 @@ def validate_settings(settings: CompanionSettings, *, check_files: bool = True) 
         if not literal_ok(cue_settings.source, get_args(CueSource)) or not literal_ok(
             cue_settings.preset, get_args(CuePreset)
         ):
-            errors.append(_("Invalid value for {setting}.").format(setting=f"cues.{cue}"))
+            errors.append(_("Invalid value for {setting}.").format(setting=field_label(f"cues.{cue}")))
             continue
         if cue_settings.source != "file" or not check_files:
             continue
@@ -389,11 +430,16 @@ def normalized(settings: CompanionSettings) -> CompanionSettings:
 
 
 class SettingsStore:
-    """Loads once, hands out immutable settings, writes atomically (temp file + replace)."""
+    """Loads once, hands out immutable settings, writes atomically (temp file + replace).
 
-    def __init__(self, path: Path) -> None:
+    A file that is not readable as TOML is moved aside to `<name>.broken` (never
+    overwritten) before the defaults are written: `broken_backup` says where it went."""
+
+    def __init__(self, path: Path, *, platform: str = sys.platform) -> None:
         self._path = path
+        self.platform = platform
         self._lock = threading.Lock()
+        self.broken_backup: Path | None = None
         result = self._load()
         self._settings = result.settings
         self._read_only = result.read_only
@@ -412,26 +458,44 @@ class SettingsStore:
         return self._settings
 
     def _load(self) -> LoadResult:
+        defaults = CompanionSettings(engine_mode=platform_engine_mode(self.platform))
+        writable = True
         try:
             text = self._path.read_text(encoding="utf-8")
         except FileNotFoundError:
-            result = LoadResult(CompanionSettings(), False, (), missing=True)
-        except (OSError, UnicodeDecodeError) as exc:
-            log.warning("settings: cannot read %s (%s); using defaults", self._path, exc)
-            result = LoadResult(CompanionSettings(), False, (f"unreadable: {exc}",))
+            result = LoadResult(defaults, False, (), missing=True)
+        except UnicodeDecodeError as exc:
+            result = LoadResult(defaults, False, (f"not UTF-8 text ({exc}); using defaults",), broken=True)
+        except OSError as exc:
+            # Cannot even read it (permissions?): use the defaults, but never write over it.
+            result = LoadResult(defaults, False, (f"unreadable ({exc}); using defaults",))
+            writable = False
         else:
-            result = parse_settings(text)
+            result = parse_settings(text, self.platform)
         for problem in result.problems:
             log.warning("settings: %s", problem)
+        if result.broken:
+            writable = self._move_aside()
         settings = normalized(result.settings)
         if not settings.client_key:
             settings = replace(settings, client_key=new_client_key())
-            if not result.read_only:
+            if not result.read_only and writable:
                 try:
                     self._write(settings)
                 except OSError as exc:
                     log.warning("settings: cannot write %s (%s)", self._path, exc)
         return replace(result, settings=settings)
+
+    def _move_aside(self) -> bool:
+        backup = self._path.with_name(self._path.name + BROKEN_SUFFIX)
+        try:
+            os.replace(self._path, backup)
+        except OSError as exc:
+            log.error("settings: %s is broken and could not be moved aside (%s); not overwriting it", self._path, exc)
+            return False
+        log.error("settings: %s was not readable; kept as %s, starting from the defaults", self._path, backup)
+        self.broken_backup = backup
+        return True
 
     def _write(self, settings: CompanionSettings) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)

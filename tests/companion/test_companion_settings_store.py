@@ -122,7 +122,53 @@ def test_invalid_values_fall_back_to_defaults_with_log_lines() -> None:
 def test_broken_toml_gives_defaults() -> None:
     result = parse_settings("this is = = not toml")
     assert result.settings == CompanionSettings()
-    assert result.problems
+    assert result.problems and result.broken
+
+
+@pytest.mark.parametrize("content", [b"this is = = not toml", b'language = "\xff\xfe"\n'])
+def test_a_broken_file_is_moved_aside_never_overwritten(tmp_path: Path, content: bytes) -> None:
+    path = tmp_path / "companion.toml"
+    path.write_bytes(content)
+    store = SettingsStore(path)
+    backup = tmp_path / "companion.toml.broken"
+    assert store.broken_backup == backup
+    assert backup.read_bytes() == content  # the user's file survives
+    assert store.get().client_key  # fresh defaults, written to a new file
+    assert parse_settings(path.read_text(encoding="utf-8")).problems == ()
+
+
+def test_a_valid_file_is_not_moved(tmp_path: Path) -> None:
+    path = tmp_path / "companion.toml"
+    path.write_text('client_key = "abcdefgh12345678"\nlanguage = "klingon"\n', encoding="utf-8")
+    store = SettingsStore(path)
+    assert store.broken_backup is None
+    assert not (tmp_path / "companion.toml.broken").exists()
+
+
+@pytest.mark.parametrize(
+    ("stored", "platform", "expected"),
+    [
+        ("local", "win32", "wsl2"),
+        ("wsl2", "linux", "local"),
+        ("external", "win32", "external"),
+        ("external", "linux", "external"),
+        ("local", "linux", "local"),
+    ],
+)
+def test_engine_mode_must_exist_on_the_platform(stored: str, platform: str, expected: str) -> None:
+    result = parse_settings(f'engine_mode = "{stored}"\n', platform)
+    assert result.settings.engine_mode == expected
+    assert bool(result.problems) == (stored != expected)
+    errors = validate_settings(CompanionSettings(engine_mode=stored), platform=platform)  # type: ignore[arg-type]
+    assert ("This engine mode is not available on this system." in errors) == (stored != expected)
+
+
+def test_validation_names_settings_with_localized_labels() -> None:
+    cues = {name: CueSettings() for name in CUE_NAMES}
+    cues["start"] = CueSettings(source="radio")  # type: ignore[arg-type]
+    errors = validate_settings(CompanionSettings(cues=cues, language="tlh"))  # type: ignore[arg-type]
+    assert "Invalid value for Recording started." in errors
+    assert "Invalid value for Language." in errors
 
 
 def test_newer_version_is_read_only(tmp_path: Path) -> None:
@@ -156,7 +202,7 @@ def test_save_keeps_the_client_key_and_writes_lf(tmp_path: Path) -> None:
     assert SettingsStore(path).get().language == "es"
 
 
-@pytest.mark.parametrize("bad", ['a"b', "a$b", "a`b", "a\nb", "a\rb"])
+@pytest.mark.parametrize("bad", ['a"b', "a$b", "a`b", "a\nb", "a\rb", "a\\b", "ai-lab\\"])
 def test_engine_dir_rejects_shell_breaking_characters(bad: str) -> None:
     assert not engine_dir_is_valid(bad)
     errors = validate_settings(CompanionSettings(engine_dir=bad))
@@ -191,7 +237,7 @@ def test_validate_ranges_and_literals() -> None:
     assert "The port must be between 1024 and 65535." in errors
     assert "The volume must be between 0 and 1." in errors
     assert "The WSL distribution name is not valid." in errors
-    assert "Invalid value for notify_level." in errors
+    assert "Invalid value for Notifications." in errors
 
 
 def test_validate_custom_cue_files(tmp_path: Path) -> None:

@@ -13,6 +13,7 @@ import ctypes
 import logging
 import subprocess
 import sys
+import threading
 from ctypes import wintypes
 from typing import IO, Final
 
@@ -115,6 +116,7 @@ class JobObject:
         handle = _kernel32.CreateJobObjectW(None, None)
         if not handle:
             raise ctypes.WinError(ctypes.get_last_error())
+        self._lock = threading.Lock()
         self._handle: int | None = handle
         info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
         info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
@@ -126,29 +128,35 @@ class JobObject:
             raise ctypes.WinError(error)
 
     def assign(self, pid: int) -> bool:
-        if self._handle is None:
-            return False
         process = _kernel32.OpenProcess(PROCESS_SET_QUOTA | PROCESS_TERMINATE, False, pid)
         if not process:
             log.warning("OpenProcess(%s) failed: %s", pid, ctypes.get_last_error())
             return False
         try:
-            if not _kernel32.AssignProcessToJobObject(self._handle, process):
-                log.warning("AssignProcessToJobObject(%s) failed: %s", pid, ctypes.get_last_error())
-                return False
+            with self._lock:
+                if self._handle is None:
+                    return False
+                if not _kernel32.AssignProcessToJobObject(self._handle, process):
+                    log.warning("AssignProcessToJobObject(%s) failed: %s", pid, ctypes.get_last_error())
+                    return False
             return True
         finally:
             _kernel32.CloseHandle(process)
 
     def terminate(self, exit_code: int = 1) -> None:
-        if self._handle is not None:
-            _kernel32.TerminateJobObject(self._handle, exit_code)
+        with self._lock:
+            if self._handle is not None:
+                _kernel32.TerminateJobObject(self._handle, exit_code)
 
     def close(self) -> None:
-        """Close the handle (KILL_ON_JOB_CLOSE: whatever still runs in the job dies)."""
-        handle, self._handle = self._handle, None
-        if handle is not None:
-            _kernel32.CloseHandle(handle)
+        """Close the handle once (KILL_ON_JOB_CLOSE: whatever still runs in the job dies).
+
+        The exit watcher and Quit may both call it: the lock prevents a double CloseHandle
+        (which could close a handle number Windows already reused)."""
+        with self._lock:
+            handle, self._handle = self._handle, None
+            if handle is not None:
+                _kernel32.CloseHandle(handle)
 
 
 def resume_process(pid: int) -> int:

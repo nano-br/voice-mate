@@ -9,8 +9,10 @@ Clipboard delivery is a port of the hotkeys script's `Set-ClipboardReliable`, ru
 `SetTimer`-driven state machine so hotkeys stay responsive (never `sleep` on this thread):
 skip an attempt while another process holds the clipboard open; set, read back, compare
 (tolerating a trailing newline and CRLF/LF); up to 5 attempts, 60..300 ms apart. Then, for
-the Win+V history (which coalesces fast changes), wait 250 ms and, if the clipboard still
-holds our text, set it once more, and let it settle 250 ms before the next delivery.
+the Win+V history (which coalesces fast changes), wait 250 ms and, if we still own the
+clipboard (`GetClipboardOwner`), set it once more, verify it, and let it settle 250 ms
+before the next delivery. Delivery only reads back our own data: another app's data may
+be delay-rendered, and reading it would block this thread.
 """
 
 from __future__ import annotations
@@ -113,6 +115,8 @@ _user32.IsClipboardFormatAvailable.argtypes = [wintypes.UINT]
 _user32.IsClipboardFormatAvailable.restype = wintypes.BOOL
 _user32.CountClipboardFormats.argtypes = []
 _user32.CountClipboardFormats.restype = ctypes.c_int
+_user32.GetClipboardOwner.argtypes = []
+_user32.GetClipboardOwner.restype = wintypes.HWND
 _kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
 _kernel32.GetModuleHandleW.restype = wintypes.HMODULE
 _kernel32.GlobalAlloc.argtypes = [wintypes.UINT, ctypes.c_size_t]
@@ -147,6 +151,7 @@ _PROBE_ID: Final = 0xBFFF  # ids 0x0000..0xBFFF belong to the application
 CLIPBOARD_ATTEMPTS: Final = 5
 CLIPBOARD_BACKOFF_MS: Final = 60  # attempt n waits n * 60 ms before the read-back
 HISTORY_DELAY_MS: Final = 250
+REASSERT_ATTEMPTS: Final = 3
 SETTLE_MS: Final = 250
 
 
@@ -223,6 +228,7 @@ class _ClipJob:
     done: Callable[[bool], None]
     attempt: int = 0
     phase: ClipPhase = "verify"
+    reasserts: int = 0
 
 
 _T = TypeVar("_T")
@@ -577,12 +583,21 @@ class HotkeyClipboardThread:
         self._write_clipboard(job.text)
         self._set_timer(CLIPBOARD_BACKOFF_MS * job.attempt)
 
+    def _owned_by_us(self) -> bool:
+        owner = _user32.GetClipboardOwner()
+        return bool(owner) and owner == self._hwnd
+
+    def _read_own_text(self) -> str | None:
+        """Our own data only. Another app's data may be delay-rendered: GetClipboardData on it
+        sends WM_RENDERFORMAT to that app and can block this thread."""
+        return self._read_clipboard() if self._owned_by_us() else None
+
     def _on_clipboard_timer(self) -> None:
         job = self._current
         if job is None:
             return
         if job.phase == "verify":
-            if same_text(self._read_clipboard(), job.text):
+            if same_text(self._read_own_text(), job.text):
                 job.phase = "history"
                 self._set_timer(HISTORY_DELAY_MS)
             elif job.attempt < CLIPBOARD_ATTEMPTS:
@@ -590,14 +605,22 @@ class HotkeyClipboardThread:
             else:
                 self._finish(False)
         elif job.phase == "history":
-            # Re-assert only if it is still ours: the user may have copied something meanwhile.
-            if same_text(self._read_clipboard(), job.text):
-                self._write_clipboard(job.text)
+            # Re-assert only while it is still ours: the user may have copied something meanwhile.
+            if not self._owned_by_us():
+                self._finish(True)
+            elif self._write_clipboard(job.text):
                 job.phase = "settle"
                 self._set_timer(SETTLE_MS)
+            elif job.reasserts < REASSERT_ATTEMPTS:
+                job.reasserts += 1  # held by another process for an instant: try again shortly
+                self._set_timer(CLIPBOARD_BACKOFF_MS)
             else:
+                log.warning("clipboard re-assert for the Win+V history failed; the text was delivered once")
                 self._finish(True)
         else:
+            # Verify the re-assert while it is still ours (a later copy by the user is fine).
+            if self._owned_by_us() and not same_text(self._read_clipboard(), job.text):
+                log.warning("clipboard re-assert could not be verified")
             self._finish(True)
 
     def _finish(self, ok: bool) -> None:

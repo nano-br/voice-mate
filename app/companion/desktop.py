@@ -31,6 +31,9 @@ class HotkeyHost(Protocol):
 
     def check(self, chord: str) -> HotkeyCheck: ...
 
+    def registered(self) -> dict[str, str]:
+        """flow -> chord actually held right now (empty while suspended)."""
+
     def suspend(self, suspended: bool) -> None:
         """Non-blocking; later calls (register, check) see its effect."""
 
@@ -86,7 +89,8 @@ def autostart_command() -> list[str]:
     """The command that starts the companion at login.
 
     Frozen: the executable itself. From source: the venv's windowless interpreter running
-    the module (`pythonw.exe -m app.companion.main --autostart`)."""
+    the module with the checkout on `sys.path` (at login the working directory is not the
+    repository, so a plain `-m app.companion.main` would fail with ModuleNotFoundError)."""
     if getattr(sys, "frozen", False):
         return [sys.executable, "--autostart"]
     python = Path(sys.executable)
@@ -94,7 +98,12 @@ def autostart_command() -> list[str]:
         windowless = python.with_name("pythonw.exe")
         if windowless.is_file():
             python = windowless
-    return [str(python), "-m", "app.companion.main", "--autostart"]
+    root = str(Path(__file__).resolve().parents[2])
+    bootstrap = (
+        f"import runpy, sys; sys.path.insert(0, {root!r}); "
+        "runpy.run_module('app.companion.main', run_name='__main__', alter_sys=True)"
+    )
+    return [str(python), "-c", bootstrap, "--autostart"]
 
 
 def _open_path(path: Path) -> None:

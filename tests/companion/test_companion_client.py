@@ -8,7 +8,7 @@ from collections.abc import Iterator
 import pytest
 from companion_core_fakes import FakeDaemon, wait_until
 
-from app.companion.client import DaemonClient, DaemonError, EventPoller
+from app.companion.client import TOKEN_REREAD_S, DaemonClient, DaemonError, EventPoller
 from app.protocol.models import EventsResponse, RegisterRequest, RegisterResponse
 
 
@@ -125,7 +125,7 @@ def test_token_is_read_only_when_auth_is_required(daemon: FakeDaemon) -> None:
     assert reads == []
 
 
-def test_bearer_token_and_reread_after_401() -> None:
+def test_bearer_token_is_reread_after_401_at_most_every_30_s() -> None:
     daemon = FakeDaemon(token="fresh-token").start()
     try:
         tokens = iter(["stale-token", "fresh-token"])
@@ -137,15 +137,77 @@ def test_bearer_token_and_reread_after_401() -> None:
             return token
 
         client = DaemonClient(daemon.port, token_provider=provider)
-        assert client.health()["auth"] is True
-        registered = _register(client)  # 401 with the stale token, re-read, retried once
-        assert registered["client_id"]
+        # No /health yet: the first 401 makes the client read the token and retry once.
+        with pytest.raises(DaemonError) as raised:
+            _register(client)
+        assert raised.value.status == 401 and reads == ["stale-token"]
+        # A persistent 401 does not run the (slow, wsl.exe) provider on every request.
+        for _ in range(3):
+            with pytest.raises(DaemonError):
+                _register(client)
+        assert reads == ["stale-token"]
+        # 30 s later the token file is read again (it may have been recreated).
+        assert client._token_read_at is not None
+        client._token_read_at -= TOKEN_REREAD_S + 1
+        assert _register(client)["client_id"]
         assert reads == ["stale-token", "fresh-token"]
         with pytest.raises(DaemonError) as raised:
             DaemonClient(daemon.port).results("unacked")
         assert raised.value.status == 401
     finally:
         daemon.stop()
+
+
+def test_a_slow_token_read_does_not_block_requests_that_have_one(daemon: FakeDaemon) -> None:
+    daemon.token = "t1"
+    release = threading.Event()
+    calls: list[int] = []
+
+    def provider() -> str | None:
+        calls.append(1)
+        if len(calls) > 1:
+            release.wait(5)  # a slow wsl.exe read
+        return "t1"
+
+    client = DaemonClient(daemon.port, token_provider=provider)
+    client.health()
+    assert client.token() == "t1"
+    client._token_read_at = None
+    assert client.invalidate_token()
+    reader = threading.Thread(target=client.token)
+    reader.start()
+    assert wait_until(lambda: len(calls) == 2)
+    started = time.monotonic()
+    assert client.token() == "t1"  # the old token, at once, while the read is in flight
+    assert _register(client)["client_id"]
+    assert time.monotonic() - started < 2
+    release.set()
+    reader.join(5)
+
+
+def test_poller_releases_a_registration_that_completes_after_stop(daemon: FakeDaemon) -> None:
+    client = DaemonClient(daemon.port)
+    poller: EventPoller | None = None
+
+    def registration() -> RegisterRequest:
+        assert poller is not None
+        poller.stop()  # Quit while /register is in flight
+        return RegisterRequest(client_key="poller-key-3", capabilities=["clipboard", "cues"])
+
+    registered: list[RegisterResponse] = []
+    poller = EventPoller(
+        client,
+        registration=registration,
+        on_registered=registered.append,
+        on_events=lambda response, changed: None,
+        wait_s=1,
+        retry_s=0.1,
+    )
+    poller.set_enabled(True)
+    poller.start()
+    assert wait_until(lambda: daemon.unregistered, timeout=5)
+    assert registered == [] and poller.take_session() is None
+    assert daemon.leases == {}
 
 
 def test_poller_registers_polls_and_recovers(daemon: FakeDaemon) -> None:

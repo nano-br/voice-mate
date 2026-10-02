@@ -11,6 +11,7 @@ import pytest
 from companion_core_fakes import FakeDaemon, wait_until
 
 from app.companion.client import DaemonClient
+from app.companion.desktop import autostart_command
 from app.companion.supervisor import backend as backend_module
 from app.companion.supervisor.backend import (
     EngineLog,
@@ -22,6 +23,18 @@ from app.companion.supervisor.backend import (
 )
 from app.companion.supervisor.local import LocalBackend
 from app.companion.supervisor.wsl import WslBackend, parse_default_distro, parse_distro_list, read_wsl_token
+
+
+def test_autostart_from_source_works_from_any_working_directory(tmp_path: Path) -> None:
+    """At login the working directory is not the checkout: `-m app.companion.main` alone
+    would fail with ModuleNotFoundError."""
+    command = autostart_command()
+    assert command[-1] == "--autostart" and command[1] == "-c"
+    probe = command[2].replace("app.companion.main", "app.companion.chords")  # main.py is the UI's
+    result = subprocess.run(
+        [sys.executable, "-c", probe, "--autostart"], cwd=tmp_path, capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_engine_script_quotes_the_folder_without_expanding_tilde() -> None:

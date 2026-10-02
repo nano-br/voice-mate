@@ -71,6 +71,7 @@ NoticeCode = Literal[
     "engine_outdated",
     "systemd_attached",
     "auth_failed",
+    "settings_reset",
     "trigger_offline",
     "trigger_timeout",
     "trigger_rejected",
@@ -301,6 +302,8 @@ def reduce(state: CoreState, message: ModelInput, now: Now) -> tuple[CoreState, 
     after = tray_state(step.state, now.mono)
     if isinstance(step.cue, _Unset):
         cue = _ENTER_CUE.get(after) if after != before else None
+        if cue == "warning" and _warning_cause(state) == _warning_cause(step.state):
+            cue = None  # the same warning shows again (an operation ended): no repeat
     else:
         cue = step.cue
     if not step.cue_allowed or not step.state.started:
@@ -312,6 +315,10 @@ def reduce(state: CoreState, message: ModelInput, now: Now) -> tuple[CoreState, 
         if notification is not None:
             notifications.append(notification)
     return new_state, Effects(cue, tuple(notifications))
+
+
+def _warning_cause(state: CoreState) -> tuple[WarningReason | None, bool, bool]:
+    return state.warning, state.supervisor == "degraded", state.engine_outdated
 
 
 def _apply(step: _Step, message: ModelInput, now: Now) -> None:
@@ -384,8 +391,8 @@ def _supervisor(step: _Step, update: SupervisorUpdate) -> None:
 
 
 def _health(step: _Step, payload: HealthPayload) -> None:
-    api_version = payload.get("api_version", 0)
-    outdated = not isinstance(api_version, int) or api_version < API_VERSION
+    api_version = payload.get("api_version")  # absent on a v1 daemon
+    outdated = not isinstance(api_version, int) or isinstance(api_version, bool) or api_version < API_VERSION
     if outdated and not step.state.engine_outdated:
         step.note("engine_outdated")
     flows: list[FlowEntry] = []
@@ -772,7 +779,7 @@ def _build(state: CoreState, note: _Note) -> tuple[NotificationLevel, str, str, 
         )
     if code == "systemd_attached":
         return (
-            "info",
+            "warning",
             _("Engine run by systemd"),
             _(
                 "A systemd service runs the engine, so VoiceMate attaches to it. To let VoiceMate manage it, "
@@ -781,7 +788,25 @@ def _build(state: CoreState, note: _Note) -> tuple[NotificationLevel, str, str, 
             "none",
         )
     if code == "auth_failed":
-        return "error", _("Engine access denied"), _("VoiceMate could not read the engine's access token."), "open_logs"
+        return (
+            "error",
+            _("Engine access denied"),
+            _(
+                "The engine refused VoiceMate's access token. VoiceMate reads "
+                "`~/.config/voicemate/api-token` again every 30 seconds; the engine log has the details."
+            ),
+            "open_logs",
+        )
+    if code == "settings_reset":
+        return (
+            "warning",
+            _("Settings reset"),
+            _(
+                "The settings file could not be read, so VoiceMate started with the default settings. "
+                "The old file was kept as {path}."
+            ).format(path=note.names[0] if note.names else "companion.toml.broken"),
+            "open_settings",
+        )
     if code == "trigger_offline":
         return (
             "warning",

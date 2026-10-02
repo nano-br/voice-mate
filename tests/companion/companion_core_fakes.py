@@ -43,6 +43,7 @@ FAST = Timings(
     quit_cap_s=5.0,
     grace_s=3.0,
     backoff_s=(0.2, 0.4),
+    hotkey_retry_s=0.3,
 )
 
 
@@ -72,11 +73,28 @@ class _Client:
 class _Result:
     record: dict[str, Any]
     created: float  # monotonic, for age_s
-    requester: str | None
+
+
+@dataclass
+class _Entry:
+    """A journal entry; per-client flags are rendered from the holders at publish time."""
+
+    event: dict[str, Any]
+    cue_holder: str | None = None
+    clipboard_holder: str | None = None
+
+
+_CUED_TYPES = frozenset({"state", "result", "error", "warning"})
 
 
 @dataclass
 class FakeDaemon:
+    """API v2 as app/daemon/hub.py serves it: `needs_cue` / `needs_delivery` are rendered
+    per client from the LEASE HOLDERS at publish time; a cancelled op publishes nothing
+    more; after `shutdown` nothing is appended and /events answers at once.
+
+    `api_version=None` makes /health a v1 payload (no `ready`, no `api_version`)."""
+
     token: str | None = None
     ready: bool = True
     api_version: int | None = 2
@@ -91,13 +109,15 @@ class FakeDaemon:
     def __post_init__(self) -> None:
         self.cond = threading.Condition()
         self.seq = 0
-        self.events: list[dict[str, Any]] = []
+        self.journal: list[_Entry] = []
         self.clients: dict[str, _Client] = {}
         self.leases: dict[str, tuple[str, float]] = {}  # capability -> (client_id, expires)
         self.op_seq = 0
         self.state: dict[str, Any] = self._state_data("idle")
         self.result_seq = 0
         self.results: list[_Result] = []
+        self.cancelled: set[int] = set()
+        self.shut_down = False
         self.acks: list[tuple[str, str, dict[str, Any]]] = []
         self.triggers: list[dict[str, Any]] = []
         self.cancels: list[dict[str, Any]] = []
@@ -143,12 +163,15 @@ class FakeDaemon:
         with self.cond:
             self.instance = uuid.uuid4().hex[:12]
             self.seq = 0
-            self.events.clear()
+            self.journal.clear()
             self.clients.clear()
             self.leases.clear()
+            self.op_seq = 0
             self.state = self._state_data("idle")
             self.results.clear()
             self.result_seq = 0
+            self.cancelled.clear()
+            self.shut_down = False
             self.started_at = time.monotonic()
             self.cond.notify_all()
 
@@ -163,7 +186,7 @@ class FakeDaemon:
             "flow_kind": None,
             "client_id": None,
             "mic_live": False,
-            "needs_cue": False,
+            "needs_cue": False,  # rendered per client
         }
         data.update(extra)
         return data
@@ -186,14 +209,38 @@ class FakeDaemon:
             if holder == client_id:
                 self.leases[capability] = (holder, time.monotonic() + client.lease_s)
 
-    def _emit(self, kind: str, data: Mapping[str, Any]) -> dict[str, Any]:
+    def _append(self, kind: str, data: Mapping[str, Any], *, clipboard: bool = False) -> dict[str, Any] | None:
+        """Call with `cond` held. Nothing is appended after `shutdown` (but `shutdown` itself)."""
+        if self.shut_down:
+            return None
+        self.seq += 1
+        event = {"seq": self.seq, "ts": time.time(), "type": kind, "data": dict(data)}
+        self.journal.append(
+            _Entry(
+                event,
+                cue_holder=self._holder("cues") if kind in _CUED_TYPES else None,
+                clipboard_holder=self._holder("clipboard") if clipboard else None,
+            )
+        )
+        del self.journal[:-RING]
+        if kind == "shutdown":
+            self.shut_down = True
+        self.cond.notify_all()
+        return event
+
+    def _emit(self, kind: str, data: Mapping[str, Any]) -> dict[str, Any] | None:
         with self.cond:
-            self.seq += 1
-            event = {"seq": self.seq, "ts": time.time(), "type": kind, "data": dict(data)}
-            self.events.append(event)
-            del self.events[:-RING]
-            self.cond.notify_all()
-            return event
+            return self._append(kind, data)
+
+    def _render(self, entry: _Entry, client_id: str) -> dict[str, Any]:
+        event = dict(entry.event)
+        data = dict(event["data"])
+        if event["type"] in _CUED_TYPES:
+            data["needs_cue"] = entry.cue_holder is not None and entry.cue_holder == client_id
+        if event["type"] == "result":
+            data["needs_delivery"] = entry.clipboard_holder is not None and entry.clipboard_holder == client_id
+        event["data"] = data
+        return event
 
     def _snapshot(self) -> dict[str, Any]:
         return {"state": dict(self.state), "unacked": self._records("unacked", 50), "audio": self.audio}
@@ -208,11 +255,6 @@ class FakeDaemon:
             out.append(record)
         return out
 
-    def requester(self) -> str | None:
-        """Who triggered the current operation (falls back to the clipboard lease holder)."""
-        with self.cond:
-            return self.state.get("client_id") or self._holder("clipboard")
-
     # --- test drivers ----------------------------------------------------------------------
 
     def set_state(
@@ -220,32 +262,29 @@ class FakeDaemon:
     ) -> None:
         with self.cond:
             requester = self.state.get("client_id")
-            needs_cue = requester is not None and self._holder("cues") == requester
             kind = next((k for name, k, _c in self.flows if name == flow), None)
             self.state = self._state_data(
                 state,
-                phase=phase,
-                flow=flow,
-                flow_kind=kind,
-                client_id=requester if state != "idle" else None,
+                phase=phase if state == "processing" else None,
+                flow=flow if state != "idle" else None,
+                flow_kind=kind if state != "idle" else None,
+                client_id=requester,
                 mic_live=mic_live and state == "recording",
             )
-            data = dict(self.state)
-            data["needs_cue"] = needs_cue
-        self._emit("state", data)
+            self._append("state", self.state)
 
     def go_live(self) -> None:
-        flow = self.state.get("flow")
-        self.set_state("recording", flow=flow, mic_live=True)
+        self.set_state("recording", flow=self.state.get("flow"), mic_live=True)
 
     def publish_result(
         self, text: str, *, kind: str = "transcript", final: bool = True, flow: str = "clipboard", spoken: bool = False
     ) -> dict[str, Any]:
+        """Returns the event as the clipboard-lease holder sees it (empty if dropped)."""
         with self.cond:
-            requester = self.state.get("client_id") or self._holder("clipboard")
+            if self.op_seq in self.cancelled or self.shut_down:
+                return {}
             holder = self._holder("clipboard")
             self.result_seq += 1
-            needs_delivery = holder is not None and holder == requester
             record = {
                 "result_seq": self.result_seq,
                 "op_seq": self.op_seq,
@@ -255,21 +294,23 @@ class FakeDaemon:
                 "final": final,
                 "created_ts": time.time(),
                 "age_s": 0.0,
-                "delivery": "pending" if needs_delivery else "daemon",
+                "delivery": "pending" if holder is not None else "daemon",
             }
-            self.results.append(_Result(record, time.monotonic(), requester))
+            self.results.append(_Result(record, time.monotonic()))
             data = {
                 "result_seq": self.result_seq,
                 "op_seq": self.op_seq,
                 "kind": kind,
                 "flow": flow,
                 "text": text,
-                "needs_delivery": needs_delivery,
+                "needs_delivery": False,
                 "final": final,
                 "spoken": spoken,
-                "needs_cue": requester is not None and self._holder("cues") == requester,
+                "needs_cue": False,
             }
-        return self._emit("result", data)
+            self._append("result", data, clipboard=True)
+            entry = self.journal[-1]
+            return self._render(entry, holder) if holder is not None else dict(entry.event)
 
     def add_old_unacked(self, text: str, age_s: float) -> int:
         """A pending result published `age_s` ago (e.g. before the companion connected)."""
@@ -286,36 +327,33 @@ class FakeDaemon:
                 "age_s": age_s,
                 "delivery": "pending",
             }
-            self.results.append(_Result(record, time.monotonic() - age_s, None))
+            self.results.append(_Result(record, time.monotonic() - age_s))
             return self.result_seq
 
     def emit_error(self, code: str, detail: str = "") -> None:
         with self.cond:
-            requester = self.state.get("client_id")
-            needs_cue = requester is not None and self._holder("cues") == requester
-        self._emit(
-            "error",
-            {
-                "code": code,
-                "detail": detail,
-                "message": "localized elsewhere",
-                "op_seq": self.op_seq,
-                "needs_cue": needs_cue,
-            },
-        )
+            if self.op_seq in self.cancelled:
+                return
+            data = {"code": code, "detail": detail, "message": "localized elsewhere", "op_seq": self.op_seq}
+            self._append("error", data)
+
+    def fail_microphone(self, detail: str = "PortAudio error -9996") -> None:
+        """What the engine does when the capture stream cannot open: idle first, then the error."""
+        self.set_state("idle")
+        self.emit_error("mic_unavailable", detail)
 
     def emit_warning(self, code: str) -> None:
         with self.cond:
-            requester = self.state.get("client_id")
-            needs_cue = requester is not None and self._holder("cues") == requester
-        self._emit(
-            "warning", {"code": code, "detail": "", "message": "x", "op_seq": self.op_seq, "needs_cue": needs_cue}
-        )
+            if self.op_seq in self.cancelled:
+                return
+            self._append("warning", {"code": code, "detail": "", "message": "x", "op_seq": self.op_seq})
 
     def set_audio(self, audio: str) -> None:
         with self.cond:
+            if audio == self.audio:
+                return
             self.audio = audio
-        self._emit("health", {"audio": audio})
+            self._append("health", {"audio": audio})
 
     def expire_leases(self) -> None:
         with self.cond:
@@ -380,8 +418,20 @@ class FakeDaemon:
             threading.Thread(target=self.stop, daemon=True).start()
 
     def health(self) -> dict[str, Any]:
-        payload: dict[str, Any] = {
+        flow_names = [name for name, _k, _c in self.flows]
+        if self.api_version is None:
+            # What the v1 daemon on port 47821 answers today.
+            return {
+                "status": "ok",
+                "flows": flow_names,
+                "pid": 4242,
+                "audio": self.audio,
+                "lang": "en",
+                "instance": self.instance,
+            }
+        return {
             "status": "ok",
+            "api_version": self.api_version,
             "version": "test",
             "instance": self.instance,
             "pid": 4242,
@@ -391,14 +441,11 @@ class FakeDaemon:
             "lang": "en",
             "platform": "wsl2",
             "trigger": "socket",
-            "flows": [name for name, _k, _c in self.flows],
+            "flows": flow_names,
             "flow_info": [{"name": name, "kind": kind, "hotkey": chord} for name, kind, chord in self.flows],
             "tts": False,
             "auth": self.token is not None,
         }
-        if self.api_version is not None:
-            payload["api_version"] = self.api_version
-        return payload
 
     def _register(self, body: dict[str, Any], _query: dict[str, str]) -> tuple[int, dict[str, Any]]:
         with self.cond:
@@ -451,15 +498,16 @@ class FakeDaemon:
             if client_id not in self.clients:
                 return 410, {"error": "unknown client"}
             self._renew(client_id)
-            oldest = self.events[0]["seq"] if self.events else self.seq + 1
-            if query.get("instance") != self.instance or since < oldest - 1 and self.events:
+            oldest = self.journal[0].event["seq"] if self.journal else self.seq + 1
+            if query.get("instance") != self.instance or (self.journal and since < oldest - 1):
                 snapshot = {"seq": self.seq, "ts": time.time(), "type": "snapshot", "data": self._snapshot()}
                 return 200, self._events_body(client_id, [snapshot], reset=True)
-            self.cond.wait_for(lambda: self.seq > since or self.server is None, timeout=wait)
+            # After `shutdown` the journal is closed: nobody waits.
+            self.cond.wait_for(lambda: self.seq > since or self.shut_down or self.server is None, timeout=wait)
             if client_id not in self.clients:
                 return 410, {"error": "unknown client"}
             self._renew(client_id)
-            events = [event for event in self.events if event["seq"] > since]
+            events = [self._render(entry, client_id) for entry in self.journal if entry.event["seq"] > since]
             return 200, self._events_body(client_id, events, reset=False)
 
     def _events_body(self, client_id: str, events: list[dict[str, Any]], *, reset: bool) -> dict[str, Any]:
@@ -474,12 +522,15 @@ class FakeDaemon:
             if client_id is not None:
                 self._renew(str(client_id))
             current = self.state["state"]
+            kind = next((k for name, k, _c in self.flows if name == flow), None)
             if current == "idle":
                 self.op_seq += 1
-                self.state = self._state_data("recording", flow=flow, client_id=client_id)
+                self.state = self._state_data("recording", flow=flow, flow_kind=kind, client_id=client_id)
                 action = "started"
             elif current == "recording":
-                self.state = self._state_data("processing", phase="transcribing", flow=flow, client_id=client_id)
+                self.state = self._state_data(
+                    "processing", phase="transcribing", flow=flow, flow_kind=kind, client_id=client_id
+                )
                 action = "stopped"
             else:
                 return 200, {
@@ -490,29 +541,27 @@ class FakeDaemon:
                     "op_seq": self.op_seq,
                     "state": current,
                 }
-            data = dict(self.state)
-            data["needs_cue"] = client_id is not None and self._holder("cues") == client_id
-            new_state = self.state["state"]
-            op_seq = self.op_seq
-        self._emit("state", data)
-        return 200, {
-            "ok": True,
-            "flow": flow,
-            "client_id": client_id,
-            "action": action,
-            "op_seq": op_seq,
-            "state": new_state,
-        }
+            self._append("state", self.state)
+            return 200, {
+                "ok": True,
+                "flow": flow,
+                "client_id": client_id,
+                "action": action,
+                "op_seq": self.op_seq,
+                "state": self.state["state"],
+            }
 
     def _cancel(self, body: dict[str, Any], _query: dict[str, str]) -> tuple[int, dict[str, Any]]:
         self.cancels.append(dict(body))
         with self.cond:
             was = self.state["state"]
+            op_seq = int(body.get("op_seq", self.op_seq))
+            if was == "idle":
+                return 200, {"action": "noop", "state": "idle"}
+            self.cancelled.add(op_seq)  # nothing more is published for it (its idle still is)
             self.state = self._state_data("idle")
-        if was != "idle":
-            self._emit("state", dict(self.state))
+            self._append("state", self.state)
             return 200, {"action": "cancelled", "state": "idle"}
-        return 200, {"action": "noop", "state": "idle"}
 
     def _shutdown(self, body: dict[str, Any], _query: dict[str, str]) -> tuple[int, dict[str, Any]]:
         reason = str(body.get("reason", "user_quit"))
@@ -522,11 +571,11 @@ class FakeDaemon:
 
     def _ack(self, body: dict[str, Any], _query: dict[str, str]) -> tuple[int, dict[str, Any]]:
         with self.cond:
-            if body.get("instance") != self.instance:
-                return 409, {"error": "instance mismatch", "instance": self.instance}
             client_id = str(body.get("client_id", ""))
             if client_id not in self.clients:
                 return 410, {"error": "unknown client"}
+            if body.get("instance") != self.instance:
+                return 409, {"error": "instance mismatch", "instance": self.instance}
             self._renew(client_id)
             for ack in body.get("acks", []):
                 self.acks.append((client_id, str(body["instance"]), dict(ack)))
@@ -576,7 +625,8 @@ class FakeSound:
 class FakeHotkeys:
     def __init__(self, taken: set[str] | None = None) -> None:
         self.taken = taken or set()
-        self.registered: dict[str, str] = {}
+        self.held: dict[str, str] = {}
+        self.calls: list[dict[str, str]] = []
         self.suspended = False
         self.on_hotkey: Callable[[str], None] | None = None
         self.stopped = False
@@ -586,19 +636,23 @@ class FakeHotkeys:
 
     def stop(self, timeout_s: float = 3.0) -> None:
         self.stopped = True
-        self.registered.clear()
+        self.held.clear()
 
     def register(self, bindings: Mapping[str, str], *, atomic: bool = False) -> dict[str, HotkeyCheck]:
+        self.calls.append(dict(bindings))
         verdicts: dict[str, HotkeyCheck] = {
             flow: "in_use" if chord in self.taken else "ok" for flow, chord in bindings.items()
         }
         if atomic and any(v != "ok" for v in verdicts.values()):
             return verdicts
-        self.registered = {flow: chord for flow, chord in bindings.items() if verdicts[flow] == "ok"}
+        self.held = {flow: chord for flow, chord in bindings.items() if verdicts[flow] == "ok"}
         return verdicts
 
+    def registered(self) -> dict[str, str]:
+        return dict(self.held)
+
     def check(self, chord: str) -> HotkeyCheck:
-        if chord in self.registered.values():
+        if chord in self.held.values():
             return "ok"
         return "in_use" if chord in self.taken else "ok"
 
@@ -735,7 +789,10 @@ class ControllerKit:
         settings: CompanionSettings | None = None,
         timings: Timings = FAST,
         port: int | None = None,
+        platform: str = "win32",
     ) -> tuple[CompanionControllerImpl, FakeDesktopParts, FakeBackend]:
+        """`platform`: which OS the settings are validated for (wsl2 mode needs "win32"),
+        so the same controller tests run on Windows and Linux."""
         base = settings or CompanionSettings(
             engine_mode="wsl2",
             client_key="test-client-key-0001",
@@ -753,7 +810,7 @@ class ControllerKit:
         desktop_parts = parts or FakeDesktopParts()
         fake_backend = backend or FakeBackend(daemon=daemon)
         controller = CompanionControllerImpl(
-            SettingsStore(path),
+            SettingsStore(path, platform=platform),
             desktop_factory=desktop_parts.desktop,
             backend_factory=lambda _settings, _logs: fake_backend,
             cues_dir=self.tmp_path / "cues",

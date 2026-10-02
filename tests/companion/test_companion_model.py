@@ -201,6 +201,49 @@ def test_an_operation_can_end_without_a_final_result() -> None:
     assert sim.cues == ["transcribing"]
 
 
+def test_a_standing_warning_is_not_cued_again_when_an_operation_ends() -> None:
+    sim = Sim().healthy()
+    sim.feed(HealthSeen(health(audio="down")))
+    assert sim.tray == "warning" and sim.cues == ["warning"]
+    sim.event("state", state("recording"))  # the user tries anyway (no mic_live: audio is down)
+    sim.event("state", state("idle"))
+    assert sim.tray == "warning"
+    assert sim.cues == ["warning"]  # same warning shown again: no second beep
+    sim.feed(HealthSeen(health(audio="ok")))
+    sim.feed(HealthSeen(health(audio="down")))  # a new occurrence: it beeps
+    assert sim.cues == ["warning", "warning"]
+
+
+def test_the_mic_error_after_idle_is_diagnosed_and_a_retry_clears_it() -> None:
+    """The real daemon publishes `state idle` before `error mic_unavailable`."""
+    sim = Sim().healthy()
+    sim.event("state", state("recording"))
+    sim.event("state", state("idle"))
+    sim.event("error", {"code": "mic_unavailable", "detail": "", "message": "", "op_seq": 1, "needs_cue": True})
+    assert sim.tray == "warning" and sim.cues == ["error"]
+    sim.event("state", state("recording"))
+    sim.event("state", state("recording", mic_live=True))  # the retry works
+    sim.event("state", state("idle"))
+    assert sim.tray == "idle" and sim.cues == ["error", "start"]
+
+
+def test_systemd_notice_passes_the_default_filter_and_names_the_command() -> None:
+    sim = Sim(notify_level="warnings").healthy()
+    sim.feed(NoticeRequested("systemd_attached"))
+    (level, _title, message) = sim.notes[-1]
+    assert level == "warning"
+    assert "`systemctl --user disable --now voicemate`" in message
+
+
+def test_settings_reset_and_auth_notices() -> None:
+    sim = Sim().healthy()
+    sim.feed(NoticeRequested("settings_reset", ("C:\\cfg\\companion.toml.broken",)))
+    assert sim.notes[-1][1] == "Settings reset"
+    assert "C:\\cfg\\companion.toml.broken" in sim.notes[-1][2]
+    sim.feed(NoticeRequested("auth_failed"))
+    assert sim.notes[-1][:2] == ("error", "Engine access denied")
+
+
 def test_a_cancelled_recording_returns_to_idle_quietly() -> None:
     sim = Sim().healthy()
     sim.event("state", state("recording", mic_live=True))
