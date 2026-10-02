@@ -49,7 +49,7 @@ experimental voice conversation with Claude.
   which needs the user in the `input` group) and WSL2 support, where the engine runs
   entirely inside WSL and Windows triggers it through the local daemon.
 - **Experimental:** AMD GPU support. Validated on a single card (Radeon RX 9070 XT)
-  under WSL2 with ROCm 7.2.
+  under WSL2 with ROCm 7.2. NVIDIA on WSL2 has not been tested.
 - `make setup` and `make configure` detect NVIDIA, AMD or CPU, install the matching
   PyTorch build (CUDA `cu128`, AMD's ROCm wheels from `repo.radeon.com` on Linux/WSL2,
   or CPU), ask which modules to install and remember the choices in
@@ -61,8 +61,8 @@ experimental voice conversation with Claude.
   openai-whisper comes before whisper.cpp, because Vulkan there only reaches a software
   renderer. Flags: `--gpu-backend`, `--whisper-backend`, `--stt-strategy`,
   `--whispercpp-mode`.
-- A warning when a transcription runs more than 3 times slower than the audio, which
-  points at a silent fallback to the CPU.
+- A warning when a transcription takes more than 3 times the length of the audio (and
+  at least 5 seconds), which points at a silent fallback to the CPU.
 - `make doctor`: environment diagnostics (WSLg microphone and audio, `input` group,
   whisper.cpp, Vulkan device, PyTorch GPU, Claude CLI, clipboard) with a suggested fix
   for each failed check.
@@ -88,6 +88,11 @@ experimental voice conversation with Claude.
   **Quit VoiceMate**.
 - Sound cues from built-in presets or your own WAV files, with volume control
   (Settings > **Sounds**).
+- **Dictation language** (Settings > **General**): **Same as the interface** (the
+  default), **Detect automatically** or one of Portuguese, English, Spanish, Russian,
+  Chinese, French, German, Italian and Japanese. It sets the engine's
+  `--transcription-language` and `--output-lang` (so also the language of Claude's
+  spoken answers) and restarts the engine.
 - Automatic recovery: the engine is restarted with backoff after a crash, and WSL is
   restarted when WSLg audio stops, following the **Restart WSL when audio fails**
   setting (**Automatically**, **Ask first** or **Never**).
@@ -97,7 +102,7 @@ experimental voice conversation with Claude.
 - Optional companion on Linux (`poetry install --extras ui`, `make run-tray`): the
   engine keeps its own hotkeys, and the status window is the main window when there is
   no system tray.
-- New VoiceMate mark: a figure with raised arms drawn as a voice wave and a coral head;
+- VoiceMate mark: a figure with raised arms drawn as a voice wave and a coral head;
   the tray glyph is minimal and the state shows only as a badge.
 
 #### Installer
@@ -105,7 +110,8 @@ experimental voice conversation with Claude.
 - Per-user Windows installer, `VoiceMate-Setup-<version>.exe` (Inno Setup): no
   administrator prompt, installs into `%LOCALAPPDATA%\Programs\VoiceMate`, adds a Start
   menu entry, and offers a desktop shortcut and start at sign-in (the latter on the first
-  install only). Windows 10 version 1809 or newer, 64-bit.
+  install only). The installer needs Windows 10 version 1809 or newer, 64-bit; the
+  engine it drives needs WSL2 with WSLg (Windows 10 build 19044 or newer, or Windows 11).
 - Upgrading closes a running VoiceMate, and the engine it started, before installing.
 - Uninstalling removes the logs, the rendered sounds and the Not copied list, and keeps
   the settings.
@@ -129,8 +135,9 @@ experimental voice conversation with Claude.
   decides where the text goes; pressing a hotkey while Claude answers or speaks cancels
   and starts a new recording, keeping the conversation.
 - Spoken answers through a pluggable text-to-speech layer, streamed sentence by
-  sentence: OmniVoice (default, extra `tts`), Kokoro (light, runs on the CPU, extra
-  `kokoro`) and VoxCPM2 (voice designed from a text description, extra `voxcpm`).
+  sentence: Kokoro (light, runs on the CPU, extra `kokoro`), OmniVoice (the engine used
+  when none is saved, extra `tts`) and VoxCPM2 (voice designed from a text description,
+  extra `voxcpm`). `make setup` lets you pick Kokoro or OmniVoice.
 - `--output-lang` sets the language Claude answers in (default `pt-BR`); further flags
   for the model, effort, thinking, timeout, system prompt and TTS voice
   (`make run ARGS="--help"` lists them).
@@ -145,13 +152,15 @@ experimental voice conversation with Claude.
 - `make stt-eval`: word error rate and split-word gate per speech-to-text backend
   against local samples, with a saved baseline.
 - `.gitattributes` enforces LF line endings.
-- Documentation: `docs/wsl2.md`, `docs/companion-app.md` (architecture and API v2
-  protocol) and `docs/brand.md`.
+- Documentation: installation, usage, configuration, troubleshooting and architecture
+  guides, `docs/wsl2.md`, `docs/companion-app.md` (architecture and API v2 protocol),
+  `docs/brand.md`, `docs/releasing.md` and `CONTRIBUTING.md`.
 - README overhaul in five languages, with real screenshots and diagrams.
-- GitHub Actions workflows: continuous integration for the checks above, and a release
-  workflow that builds the Windows installer on `windows-latest` from a version tag and
-  attaches it with a SHA-256 checksum.
-- This changelog.
+- GitHub Actions workflows: continuous integration (companion lint and tests on
+  Windows, engine lint and tests on Ubuntu), and a release workflow that builds the
+  Windows installer on `windows-latest` from a version tag and attaches it with its
+  SHA-256 checksum (`VoiceMate-Setup-<version>.exe.sha256`) and the release notes in
+  five languages (`VoiceMate-<version>-release-notes.<lang>.md`).
 
 ### Changed
 
@@ -173,6 +182,9 @@ checkout of `main`:
   command line in `app/cli/`; Claude and TTS are optional extras.
 
 ### Fixed
+
+Bugs found while building this release; they only affected earlier checkouts of
+`main`:
 
 - Global hotkeys that stopped working under heavy CPU load, because Windows silently
   removes slow low-level hooks: the listeners are now reinstalled every 60 seconds
@@ -214,7 +226,8 @@ checkout of `main`:
 - Imports from `app.services` no longer exist; the code lives in `app.core` and
   `app.features`.
 - The default TTS engine is now OmniVoice and the default voice seed mode is `off`: use
-  `--tts-engine voxcpm` and `--tts-voice-seed-mode auto` for the old behavior.
+  `poetry install --extras voxcpm` and `--tts-engine voxcpm`, and
+  `--tts-voice-seed-mode auto`, for the old behavior.
 - The default Claude model is now `claude-haiku-4-5`, which ignores `--claude-effort`:
   pass `--claude-model claude-sonnet-4-6` to keep the previous model.
 - The legacy PowerShell and AutoHotkey scripts only work with an engine started without
@@ -231,7 +244,7 @@ Development happened on `main` and in six pull requests before this first releas
 - [#1](https://github.com/nano-br/voice-mate/pull/1): reinstall the hotkey listeners
   periodically (Windows hook removal).
 - [#2](https://github.com/nano-br/voice-mate/pull/2): MIT license, package metadata,
-  Portuguese README.
+  English and Portuguese READMEs.
 - [#3](https://github.com/nano-br/voice-mate/pull/3): voice to Claude flow
   (`Ctrl+Alt+A`).
 - [#4](https://github.com/nano-br/voice-mate/pull/4): core/features modules, pluggable
