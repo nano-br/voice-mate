@@ -9,8 +9,10 @@ supervisor thread, feeding the outcomes back in. Rules from docs/companion-app.m
   still not ready when it ends -> restart the engine (counts toward the breaker);
 - engine exited, or 3 missed probes after ready -> restart with backoff 2, 5, 15, 30,
   60, 120 s; the backoff resets after 10 min healthy;
-- circuit breaker: more than 5 engine restarts in 15 min, or more than 3 WSL restarts
-  in 1 h -> `failed`; a manual restart resets it;
+- circuit breaker: more than 5 engine restarts in 15 min, more than 3 WSL restarts
+  in 1 h, or 3 start timeouts in a row -> `failed`; a manual restart resets it;
+- "address in use" means attach to the daemon holding the port, once: a second
+  conflict before the engine is healthy goes through the backoff and the breaker;
 - WSL restart when audio is `down` twice in a row, or on `mic_unavailable` while
   Windows has an active capture device and audio is not `ok`; never without a capture
   device (wait for one, then restart if audio is still not `ok`). `WslRestartPolicy`:
@@ -61,6 +63,9 @@ class PolicyConfig:
     wsl_breaker: tuple[int, float] = (3, 60 * 60.0)
     idle_wait_s: float = 30.0
     audio_down_limit: int = 2
+    # Start timeouts are >= grace_s apart, so the time-window breaker never sees them:
+    # this many in a row (without a healthy engine in between) -> failed.
+    start_timeout_limit: int = 3
 
 
 @dataclass(frozen=True)
@@ -123,6 +128,8 @@ class SupervisorPolicy:
         self._awaiting_distros = False
         self._declined = False
         self._waiting_for_mic = False
+        self._start_timeouts = 0
+        self._attached_after_conflict = False
 
     # --- views ---------------------------------------------------------------------------
 
@@ -190,8 +197,10 @@ class SupervisorPolicy:
             return []
         if self.state in ("stopped", "failed", "backoff"):
             return []
-        if address_in_use:
-            # Another daemon holds the port: attach to it instead of backing off.
+        if address_in_use and not self._attached_after_conflict:
+            # Another daemon holds the port: attach to it instead of backing off (once:
+            # a second conflict before a healthy engine goes through the backoff/breaker).
+            self._attached_after_conflict = True
             self.state = "restarting"
             self.reason = "external"
             self._phase_since = now
@@ -236,6 +245,9 @@ class SupervisorPolicy:
             and self.config.can_spawn
             and now - self._phase_since >= self.config.grace_s
         ):
+            self._start_timeouts += 1
+            if self._start_timeouts >= self.config.start_timeout_limit:
+                return self._fail(now, "engine_breaker", "engine_failed", stop=True)
             return self._crash(now, "start_timeout")
         if (
             self.state == "healthy"
@@ -243,7 +255,11 @@ class SupervisorPolicy:
             and now - self._healthy_since >= self.config.backoff_reset_s
         ):
             self._backoff_index = 0
-        if self._wsl_wanted_at is not None and now - self._wsl_wanted_at >= self.config.idle_wait_s:
+        if (
+            self._wsl_wanted_at is not None
+            and self.state in ("healthy", "degraded")
+            and now - self._wsl_wanted_at >= self.config.idle_wait_s
+        ):
             return self._do_wsl_restart(now, "audio", manual=False)
         return []
 
@@ -277,7 +293,9 @@ class SupervisorPolicy:
         self._phase_since = now
         self._expect_exit = self.owned
         self._relaunch_on_exit = False
-        return [StopEngine("restart", include_attached=True), Launch()]
+        # An attached daemon is asked to stop only when we can start one ourselves: in
+        # `external` mode we could not bring it back.
+        return [StopEngine("restart", include_attached=self.config.can_spawn), Launch()]
 
     def user_restart_wsl(self, now: float) -> list[Action]:
         if not self.config.can_restart_wsl:
@@ -305,7 +323,7 @@ class SupervisorPolicy:
 
     def engine_activity(self, now: float, busy: bool) -> list[Action]:
         self.engine_busy = busy
-        if not busy and self._wsl_wanted_at is not None:
+        if not busy and self._wsl_wanted_at is not None and self.state in ("healthy", "degraded"):
             return self._do_wsl_restart(now, "audio", manual=False)
         return []
 
@@ -392,9 +410,7 @@ class SupervisorPolicy:
             self._wsl_restarts.append(now)
             limit, _window = self.config.wsl_breaker
             if len(self._wsl_restarts) > limit:
-                self.state = "failed"
-                self.failure = "wsl_breaker"
-                return [Notice("wsl_failed")]
+                return self._fail(now, "wsl_breaker", "wsl_failed", stop=False)
             actions.append(Notice("wsl_restarting"))
         self.state = "restarting"
         self.reason = reason
@@ -414,9 +430,7 @@ class SupervisorPolicy:
         self._relaunch_on_exit = False
         limit, _window = self.config.engine_breaker
         if len(self._engine_restarts) > limit:
-            self.state = "failed"
-            self.failure = "engine_breaker"
-            return [StopEngine("supervisor"), Notice("engine_failed")]
+            return self._fail(now, "engine_breaker", "engine_failed", stop=True)
         delays = self.config.backoff_s
         delay = delays[min(self._backoff_index, len(delays) - 1)]
         self._backoff_index += 1
@@ -426,12 +440,24 @@ class SupervisorPolicy:
         self._backoff_until = now + delay
         return [StopEngine("restart")]
 
+    def _fail(self, now: float, failure: FailureReason, notice: PolicyNoticeCode, *, stop: bool) -> list[Action]:
+        """A breaker tripped: stop retrying (and drop any WSL restart still waiting)."""
+        self.state = "failed"
+        self.failure = failure
+        self._misses = 0
+        self._clear_wsl_request()
+        self._expect_exit = self.owned
+        self._relaunch_on_exit = False
+        return [StopEngine("supervisor"), Notice(notice)] if stop else [Notice(notice)]
+
     def _become_healthy(self, now: float) -> None:
         self.state = "healthy"
         self.reason = None
         self.attempt = 0
         self._misses = 0
         self._healthy_since = now
+        self._start_timeouts = 0
+        self._attached_after_conflict = False
 
     def _prune(self, now: float) -> None:
         _limit, engine_window = self.config.engine_breaker
@@ -443,6 +469,8 @@ class SupervisorPolicy:
         self._engine_restarts.clear()
         self._wsl_restarts.clear()
         self._backoff_index = 0
+        self._start_timeouts = 0
+        self._attached_after_conflict = False
 
     def _clear_wsl_request(self) -> None:
         self.pending_wsl_restart = False
@@ -459,4 +487,6 @@ class SupervisorPolicy:
         self._relaunch_on_exit = False
         self._healthy_since = None
         self._audio_down_count = 0
+        self._start_timeouts = 0
+        self._attached_after_conflict = False
         self._clear_wsl_request()

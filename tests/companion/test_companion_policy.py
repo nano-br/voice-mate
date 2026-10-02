@@ -68,6 +68,106 @@ def test_grace_expiry_restarts_with_backoff() -> None:
     assert p.attempt == 1
 
 
+def test_three_start_timeouts_in_a_row_trip_the_breaker() -> None:
+    """Start timeouts are >= 240 s apart, so "5 restarts in 15 min" alone never trips."""
+    p = policy()
+    p.start(0.0)
+    p.launched(0.0, "spawned")
+    now = 0.0
+    for _ in range(2):
+        now += 240.0
+        assert p.tick(now) == [StopEngine("restart")]
+        now = p.backoff_until or now
+        assert p.tick(now) == [Launch()]
+        p.launched(now, "spawned")
+    now += 240.0
+    actions = p.tick(now)
+    assert p.state == "failed" and p.failure == "engine_breaker"
+    assert notices(actions) == ["engine_failed"] and StopEngine("supervisor") in actions
+    # A manual restart resets the count; a healthy engine resets it too.
+    p.user_restart_engine(now + 1)
+    p.launched(now + 1, "spawned")
+    assert p.tick(now + 241) == [StopEngine("restart")]
+    assert p.state == "backoff"
+
+
+def test_start_timeout_count_resets_when_healthy() -> None:
+    p = policy()
+    p.start(0.0)
+    p.launched(0.0, "spawned")
+    now = 0.0
+    for _ in range(5):
+        now += 240.0
+        p.tick(now)  # a timeout
+        now = p.backoff_until or now
+        p.tick(now)
+        p.launched(now, "spawned")
+        p.probe(now + 1, READY)  # ...but each restart becomes healthy
+        assert p.state == "healthy"
+        p.probe(now + 2, DOWN)
+        p.probe(now + 3, DOWN)
+        p.probe(now + 4, DOWN)  # unresponsive -> restarting, the timeout count starts over
+        now = p.backoff_until or now
+        p.tick(now)
+        p.launched(now, "spawned")
+        now += 1000.0  # outside the 15 min restart window
+    assert p.state != "failed"
+
+
+def test_address_in_use_attaches_only_once_before_healthy() -> None:
+    p = policy()
+    p.start(0.0)
+    p.launched(0.0, "spawned")
+    assert p.process_exited(1.0, True) == [Launch()]
+    p.launched(1.5, "spawned")  # attach found nothing and spawned again
+    actions = p.process_exited(2.0, True)  # a second conflict: no endless relaunch
+    assert actions == [StopEngine("restart")]
+    assert p.state == "backoff" and p.restarts(2.0) == 1
+    # Healthy again: the next conflict may attach again.
+    p.tick(p.backoff_until or 2.0)
+    p.launched(10.0, "spawned")
+    p.probe(11.0, READY)
+    assert p.process_exited(12.0, True) == [Launch()]
+
+
+def test_a_waiting_wsl_restart_never_pulls_the_policy_out_of_failed() -> None:
+    p = healthy(policy())
+    p.engine_activity(1.0, True)
+    p.mic_error(2.0, 1, "down")
+    p.other_distros(3.0, [])
+    assert p.wsl_restart_waiting
+    # The engine crashes while the WSL restart waits for it to be idle.
+    for i in range(6):
+        p.process_exited(10.0 + i, False)
+        p.tick(p.backoff_until or 10.0 + i)
+        p.launched(10.5 + i, "spawned")
+    assert p.state == "failed"
+    assert not p.wsl_restart_waiting  # cleared when the breaker tripped
+    assert p.engine_activity(100.0, False) == []
+    assert p.tick(200.0) == []
+    assert p.state == "failed"
+
+
+def test_a_waiting_wsl_restart_waits_while_the_engine_is_down() -> None:
+    p = healthy(policy())
+    p.engine_activity(1.0, True)
+    p.mic_error(2.0, 1, "down")
+    p.other_distros(3.0, [])
+    p.process_exited(4.0, False)  # backoff
+    assert p.tick(40.0) == [Launch()]  # the backoff, not the WSL restart
+    assert p.engine_activity(41.0, False) == []  # restarting: not now
+    p.launched(41.0, "spawned")
+    p.probe(42.0, READY)
+    assert kinds(p.engine_activity(43.0, False)) == [RestartWsl, Notice]
+
+
+def test_restart_engine_in_external_mode_leaves_the_daemon_running() -> None:
+    p = healthy(policy(can_spawn=False, can_restart_wsl=False), outcome="attached")
+    assert p.user_restart_engine(5.0) == [StopEngine("restart", include_attached=False), Launch()]
+    p = healthy(policy(), outcome="attached")
+    assert p.user_restart_engine(5.0) == [StopEngine("restart", include_attached=True), Launch()]
+
+
 def test_attach_only_mode_waits_forever_and_never_restarts() -> None:
     p = policy(can_spawn=False, can_restart_wsl=False)
     p.start(0.0)
