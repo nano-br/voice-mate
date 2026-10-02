@@ -281,22 +281,22 @@ stateDiagram-v2
 
 ```mermaid
 flowchart TD
-    launch(["启动"]) --> q_health{"引擎已经在响应?"}
+    launch(["启动"]) --> q_health{"引擎已经在响应？"}
     q_health -- "是" --> attach["连接上它，等待就绪"] --> healthy
-    q_health -- "否" --> q_dir{"找到引擎文件夹?"}
+    q_health -- "否" --> q_dir{"找到引擎文件夹？"}
     q_dir -- "否" --> failed["错误<br/>等待手动重启"]
     q_dir -- "是" --> spawn["在 WSL 中<br/>启动 make run-engine"]
-    spawn --> q_ready{"240 秒内就绪?"}
+    spawn --> q_ready{"240 秒内就绪？"}
     q_ready -- "是" --> healthy["运行正常<br/>每 5 秒探测一次"]
     q_ready -- "否" --> q_breaker
-    healthy -->|"3 次探测无响应或退出"| q_breaker{"重启次数过多?"}
+    healthy -->|"3 次探测无响应或退出"| q_breaker{"重启次数过多？"}
     q_breaker -- "否" --> backoff["等待 2 到 120 秒"]
     backoff --> launch
     q_breaker -- "是" --> failed
     healthy -->|"WSL 音频已停止"| q_policy{"音频故障时重启 WSL"}
     q_policy -- "从不" --> nothing["什么也不做"]
     q_policy -- "先询问" --> ask["询问用户"]
-    q_policy -- "自动" --> q_others{"其他发行版在运行?"}
+    q_policy -- "自动" --> q_others{"其他发行版在运行？"}
     q_others -- "是" --> ask
     q_others -- "否" --> wslrestart["wsl --shutdown"]
     ask -- "重启 WSL" --> wslrestart
