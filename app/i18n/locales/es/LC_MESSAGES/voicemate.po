@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-01 23:17-0300\n"
+"POT-Creation-Date: 2026-10-01 23:12-0300\n"
 "PO-Revision-Date: 2026-10-01 16:49-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: es\n"
@@ -337,7 +337,7 @@ msgstr "Motor desactualizado"
 msgid "The engine is older than this app. Update it, then use Restart engine."
 msgstr ""
 "El motor es más antiguo que esta aplicación. Actualízalo y luego usa "
-"Reiniciar motor."
+"Reiniciar el motor."
 
 #: app/companion/model.py:591 app/companion/model.py:876
 #: app/companion/ui/texts.py:108
@@ -431,7 +431,7 @@ msgstr "Falló el motor"
 msgid "Restarting WSL did not help. Check the engine log, then use Restart WSL."
 msgstr ""
 "Reiniciar WSL no ayudó. Revisa el registro del motor y luego usa "
-"Reiniciar WSL."
+"Reiniciar WSL... en el menú Motor."
 
 #: app/companion/model.py:623 app/companion/model.py:729
 msgid ""
@@ -439,7 +439,7 @@ msgid ""
 "engine."
 msgstr ""
 "El motor falló demasiadas veces. Revisa el registro del motor y luego usa"
-" Reiniciar motor."
+" Reiniciar el motor."
 
 #: app/companion/model.py:629 app/companion/model.py:721
 #: app/companion/ui/texts.py:86
@@ -490,8 +490,8 @@ msgstr "Copiado: {text}"
 #: app/companion/model.py:654
 msgid "WSL needs a restart to recover the audio. Use Restart WSL now in the menu."
 msgstr ""
-"WSL necesita reiniciarse para recuperar el audio. Usa Reiniciar WSL ahora"
-" en el menú."
+"WSL necesita reiniciarse para recuperar el audio. Usa Reiniciar WSL "
+"ahora... en el menú."
 
 #: app/companion/model.py:691
 msgid "No microphone is connected. Connect one and try again."
@@ -547,7 +547,7 @@ msgstr "El motor todavía se está cargando. Inténtalo de nuevo en un momento."
 
 #: app/companion/model.py:722
 msgid "The engine is not running. Use Restart engine in the menu."
-msgstr "El motor no está en ejecución. Usa Reiniciar motor en el menú."
+msgstr "El motor no está en ejecución. Usa Reiniciar el motor en el menú."
 
 #: app/companion/model.py:728 app/companion/model.py:735
 msgid "VoiceMate stopped retrying"
@@ -559,7 +559,7 @@ msgid ""
 "use Restart WSL."
 msgstr ""
 "Reiniciar WSL no recuperó el audio. Revisa el registro del motor y luego "
-"usa Reiniciar WSL."
+"usa Reiniciar WSL... en el menú Motor."
 
 #: app/companion/model.py:743
 msgid "VoiceMate could not find the engine. Set the engine folder in Settings."
@@ -597,7 +597,7 @@ msgstr "WSL necesita reiniciarse"
 
 #: app/companion/model.py:764
 msgid "WSL lost its audio. Choose Restart WSL now in the VoiceMate menu."
-msgstr "WSL perdió el audio. Elige Reiniciar WSL ahora en el menú de VoiceMate."
+msgstr "WSL perdió el audio. Elige Reiniciar WSL ahora... en el menú de VoiceMate."
 
 #: app/companion/model.py:772
 #, python-brace-format
@@ -606,7 +606,7 @@ msgid ""
 "Restart WSL now in the VoiceMate menu when convenient."
 msgstr ""
 "WSL perdió el audio, pero reiniciarlo también detiene {distros}. Elige "
-"Reiniciar WSL ahora en el menú de VoiceMate cuando te convenga."
+"Reiniciar WSL ahora... en el menú de VoiceMate cuando te convenga."
 
 #: app/companion/model.py:781
 msgid ""
@@ -614,7 +614,7 @@ msgid ""
 "the menu."
 msgstr ""
 "El motor es más antiguo que esta aplicación. Actualízalo y luego usa "
-"Reiniciar motor en el menú."
+"Reiniciar el motor en el menú."
 
 #: app/companion/model.py:787
 msgid "Engine run by systemd"
