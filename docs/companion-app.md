@@ -104,7 +104,8 @@ except `/health` requires `Authorization: Bearer <token>` (401 otherwise). The
 companion reads the file in spawn AND attach modes, on WSL with
 `wsl.exe -d <distro> -e sh -c 'cat "$HOME/.config/voicemate/api-token"'` (`-e` does
 not expand `~`) and directly on Linux, as soon as `/health` shows `auth: true`, and reads it again
-after a 401.
+after a 401, at most every 30 s (a persistent 401 must not run `wsl.exe` on every request);
+a token that is still refused gives an "access denied" notification.
 
 ### `GET /health`
 
@@ -112,7 +113,9 @@ after a 401.
 `trigger`, `flow_info` (name, kind, engine chord), `tts` and `auth`. A missing
 `api_version`, or one below 2, means the engine is older than the companion:
 `engine_outdated` in the snapshot, a notification, and in spawn mode an offer to
-restart the engine. There is no fallback to v1 polling.
+restart the engine. There is no fallback to v1 polling. A v1 daemon has no `ready`
+either: it counts as up for supervision (no start timeout, no restart loop, and its
+`audio` never triggers a WSL restart), and triggers are refused with the outdated notice.
 
 ### `POST /register`, `POST /unregister`, leases
 
@@ -286,7 +289,8 @@ transcriptions were not copied"). `notify_level` filters them.
 
 - Spawn: `wsl.exe -d <distro> -e bash -lc 'cd "$HOME/<engine_dir>" && exec make run-engine ARGS="--daemon-port <port>"'`
   (absolute `engine_dir` without `$HOME`). Never `shlex.quote` a `~` path; reject
-  `"`, `$`, backtick and newline in `engine_dir` when settings are applied. Flags:
+  `"`, `$`, backtick, backslash (a trailing one escapes the closing quote) and newline
+  in `engine_dir` when settings are applied. Flags:
   `CREATE_NO_WINDOW`; stdin pipe held open; stdout+stderr through a pipe read by a
   thread into a `RotatingFileHandler` (the thread swallows logging errors and never
   stops draining, or the engine would block on write):
@@ -300,7 +304,8 @@ transcriptions were not copied"). `notify_level` filters them.
   daemons would race for the port and the VRAM) and notify how to disable it
   (`systemctl --user disable --now voicemate`); the controller has no API for a
   yes/no offer. A spawned engine that exits with "address in use" while `/health`
-  answers means attach, not backoff.
+  answers means attach, not backoff, once: a second conflict before the engine is
+  healthy goes through the backoff and the breaker.
 - Probing: a 500 ms TCP connect probe (a refused loopback connect takes ~2 s on
   Windows), then `/health` with a 2 s timeout, every 5 s. HTTP through
   `urllib` with `ProxyHandler({})` (no system proxy for loopback).
@@ -325,9 +330,12 @@ transcriptions were not copied"). `notify_level` filters them.
   same Job Object) while attached.
 - No capture device on Windows: never restart; warn, poll every 3 s; when a mic
   appears and audio is not `ok`, restart WSL.
-- Circuit breaker: 5 engine restarts in 15 min, or 3 WSL restarts in 1 h ->
+- Circuit breaker: 5 engine restarts in 15 min, 3 WSL restarts in 1 h, or 3 start
+  timeouts in a row (they are >= 240 s apart, so the 15 min window never sees them) ->
   `failed` plus a notification (the restart that would exceed the limit is not
-  attempted). A manual "Restart engine" / "Restart WSL" resets it.
+  attempted); a WSL restart still waiting for an idle engine is dropped. A manual
+  "Restart engine" / "Restart WSL" resets it. In `external` mode "Restart engine" never
+  asks the daemon to shut down (nothing could start it again).
   `snapshot.restarts` counts the restarts in the windows, the one in progress included.
 - Restart engine and Quit: `POST /shutdown`, wait up to 8 s, close stdin, wait 2 s,
   terminate the job. An attached daemon (not started by this app) gets only
@@ -342,7 +350,9 @@ messages to it. A chord needs a modifier, or is F1..F24; F12 is reserved by Wind
 (even with modifiers). `check_hotkey` tries a temporary registration (our own
 current registration is not `in_use`). The settings window suspends the global
 hotkeys while capturing; apply re-registers all of them at once and rolls back on
-failure. Stored as `ctrl+alt+v` (the format, key names and display names are defined
+failure. A chord another app holds at startup (e.g. the old hotkeys script) is
+notified once and retried every 10 s until it is ours, the settings change, or Quit.
+Stored as `ctrl+alt+v` (the format, key names and display names are defined
 in `app/companion/chords.py`). Only flows present in `flow_info` get registered;
 until the first `/health` with `flow_info`, every configured chord is registered,
 so a press while the engine starts still gets the "engine is starting" notification.
@@ -367,7 +377,11 @@ so a press while the engine starts still gets the "engine is starting" notificat
 Stdlib only (`tomllib` to read, a small writer of our own: `app.setup.persisted_config`
 cannot be reused, it imports the engine and only writes flat scalars). Invalid or
 unknown values fall back to defaults with a log line; a newer `version` opens the
-settings read-only with a warning.
+settings read-only with a warning. A file that is not readable as TOML (or UTF-8) is
+never overwritten: it is moved aside to `companion.toml.broken` before the defaults are
+written, and a "settings reset" notification says so. `engine_mode` must exist on the
+platform (`wsl2` on Windows, `local` elsewhere, `external` everywhere): another value
+falls back to the platform default when read and is rejected when applied.
 
 ```toml
 version = 1
