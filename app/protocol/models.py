@@ -54,7 +54,7 @@ class HealthPayload(TypedDict):
     uptime_s: int
     ready: bool  # model loaded and handlers built; until then other endpoints answer 503
     audio: AudioHealth
-    lang: str  # catalog the daemon speaks: "pt_BR" | "en" | "es"
+    lang: str  # catalog the daemon speaks: "pt_BR" | "en" | "es" | "ru" | "zh_CN"
     platform: PlatformName
     trigger: TriggerName
     flows: list[str]  # v1 field, kept for the scripts

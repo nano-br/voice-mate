@@ -71,7 +71,7 @@ SupervisorState = Literal["stopped", "starting", "healthy", "degraded", "restart
 # external: never spawn; only attach to whatever answers on the port.
 EngineMode = Literal["wsl2", "local", "external"]
 WslRestartPolicy = Literal["auto", "ask", "never"]
-UiLanguage = Literal["auto", "pt-BR", "en", "es"]
+UiLanguage = Literal["auto", "pt-BR", "en", "es", "ru", "zh-CN"]
 NotifyLevel = Literal["all", "warnings", "errors", "none"]
 
 CueName = Literal["start", "transcribing", "ready", "ai_ready", "warning", "error"]

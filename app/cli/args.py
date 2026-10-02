@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import argparse
+from typing import get_args
 
-from app.core.config import DEFAULT_OUTPUT_LANG, DEFAULT_VOICE_DESCRIPTION
+from app.core.config import DEFAULT_OUTPUT_LANG, DEFAULT_VOICE_DESCRIPTION, TranscriptionLanguage
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -123,10 +124,10 @@ def _add_core_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--transcription-language",
         default=None,
-        choices=["auto", "pt", "en", "es", "fr", "de", "it", "ja", "zh"],
+        choices=list(get_args(TranscriptionLanguage)),
         help=(
             "Language pinned for transcription. Omitted = derived from --output-lang "
-            "(pt-BR→pt, en→en). Pinning improves stability and still transcribes embedded "
+            "(pt-BR→pt, en→en, ru→ru, zh-CN→zh). Pinning improves stability and still transcribes embedded "
             "foreign terms (code-switching). 'auto' detects per utterance "
             "(less stable on short utterances)."
         ),

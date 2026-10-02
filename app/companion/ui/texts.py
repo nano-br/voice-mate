@@ -171,6 +171,8 @@ def language_labels() -> dict[UiLanguage, str]:
         "pt-BR": "Português (Brasil)",
         "en": "English",
         "es": "Español",
+        "ru": "Русский",
+        "zh-CN": "中文（简体）",
     }
 
 

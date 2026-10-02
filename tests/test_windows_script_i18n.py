@@ -10,13 +10,18 @@ message added to one side and not the other would silently stay in English.
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
+import sys
 from collections import Counter
 from pathlib import Path
+from typing import get_args
 
 import pytest
 from babel.messages.catalog import Catalog
 from babel.messages.pofile import read_po
 
+from app.companion.contract import UiLanguage
 from app.i18n.windows_script_messages import MESSAGES
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -31,6 +36,12 @@ _LOOKUP_CALL = re.compile(rf"{_LOOKUP}\s+'((?:[^']|'')*)'")
 # .NET composite format items: {0}, {1,-8}, {2:N1}.
 _FORMAT_ITEM = re.compile(r"\{\d+(?:,-?\d+)?(?::[^{}]*)?\}")
 _DASHES = (chr(0x2014), chr(0x2013))  # em dash, en dash
+# Catalogs that translate the script's messages (en needs none: the msgid is the text).
+_TRANSLATED = ["pt_BR", "es", "ru", "zh_CN"]
+# The script's `-Language` parameter: auto plus the companion's languages.
+_VALIDATE_SET = re.compile(r"\[ValidateSet\(([^)]*)\)\]\[string\]\$Language\b")
+# The script's catalog-name mapping, extracted to run it on its own.
+_CONVERT_FUNCTION = re.compile(r"^function ConvertTo-CatalogLocale\b.*?^}", re.MULTILINE | re.DOTALL)
 
 
 def _script_source() -> str:
@@ -93,7 +104,7 @@ def test_en_catalog_lists_every_script_msgid() -> None:
     assert not missing, f"run the pybabel extract/update steps: {missing}"
 
 
-@pytest.mark.parametrize("locale", ["pt_BR", "es"])
+@pytest.mark.parametrize("locale", _TRANSLATED)
 def test_every_script_msgid_is_translated(locale: str) -> None:
     catalog = _load_catalog(locale)
     problems: list[str] = []
@@ -108,7 +119,7 @@ def test_every_script_msgid_is_translated(locale: str) -> None:
     assert not problems, f"{locale}: {problems}"
 
 
-@pytest.mark.parametrize("locale", ["pt_BR", "es"])
+@pytest.mark.parametrize("locale", _TRANSLATED)
 def test_translations_are_valid_dotnet_format_strings(locale: str) -> None:
     # The script feeds each translation to `-f` (String.Format): the format items must
     # match the msgid's and any other brace would make String.Format throw.
@@ -126,6 +137,70 @@ def test_translations_are_valid_dotnet_format_strings(locale: str) -> None:
         if any(dash in translation for dash in _DASHES):
             problems.append(f"em/en dash: {translation!r}")
     assert not problems, f"{locale}: {problems}"
+
+
+def test_language_parameter_offers_the_companion_languages() -> None:
+    """`-Language` takes the same names as the companion's `language` setting."""
+    match = _VALIDATE_SET.search(_script_source())
+    assert match, "-Language ValidateSet not found"
+    offered = re.findall(r'"([^"]+)"', match.group(1))
+    assert offered == list(get_args(UiLanguage))
+
+
+def _catalog_locale(names: list[str]) -> list[str]:
+    """Runs the script's ConvertTo-CatalogLocale on each name in Windows PowerShell."""
+    function = _CONVERT_FUNCTION.search(_script_source())
+    assert function, "ConvertTo-CatalogLocale not found"
+    calls = "; ".join(f"ConvertTo-CatalogLocale '{name}'" for name in names)
+    result = subprocess.run(
+        ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", f"{function.group(0)}\n{calls}"],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=60,
+    )
+    return result.stdout.split()
+
+
+_CATALOG_NAMES = {
+    "pt-BR": "pt_BR",
+    "pt_BR.UTF-8": "pt_BR",
+    "pt-PT": "pt_BR",
+    "es": "es",
+    "es-MX": "es",
+    "es_419": "es",
+    "ru": "ru",
+    "ru-RU": "ru",
+    "ru_UA.UTF-8": "ru",
+    "zh-CN": "zh_CN",
+    "zh_CN": "zh_CN",
+    "zh-TW": "zh_CN",
+    "zh-HK": "zh_CN",
+    "zh-Hant-TW": "zh_CN",
+    "zh-Hans-SG": "zh_CN",
+    "en": "en",
+    "en-US": "en",
+    "fr-FR": "en",
+    "rus": "en",  # a prefix, not a language
+    "": "en",
+}
+
+
+@pytest.mark.skipif(
+    sys.platform != "win32" or shutil.which("powershell.exe") is None, reason="needs Windows PowerShell"
+)
+def test_script_maps_language_names_to_catalogs() -> None:
+    assert dict(zip(_CATALOG_NAMES, _catalog_locale(list(_CATALOG_NAMES)), strict=True)) == _CATALOG_NAMES
+
+
+def test_script_catalog_names_exist() -> None:
+    """Every catalog the script can pick is a real catalog folder (en needs none)."""
+    function = _CONVERT_FUNCTION.search(_script_source())
+    assert function, "ConvertTo-CatalogLocale not found"
+    returned = set(re.findall(r'return "([^"]+)"', function.group(0)))
+    assert returned == {"pt_BR", "es", "ru", "zh_CN", "en"}
+    for locale in returned - {"en"}:
+        assert (_LOCALES_DIR / locale / "LC_MESSAGES" / "voicemate.po").is_file(), locale
 
 
 def test_msgids_are_valid_dotnet_format_strings() -> None:
