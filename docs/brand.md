@@ -53,32 +53,40 @@ downwards):
 | Tray glyph on a dark taskbar | `#FFFFFF` (stopped: `#9A9A9A`) |
 | Tray glyph on a light taskbar | `#111111` (stopped: `#6B6B6B`) |
 
-## The tray glyph: the mark plus a state badge
+## The tray glyph: the mark plus a small state badge
 
 The tray shows the mark alone, with no tile and no background, in the taskbar's
 foreground color: white on a dark taskbar, near-black on a light one (the tray follows
-`SystemUsesLightTheme` and redraws when it changes). The head stays coral. The STATE is
-told only by a small badge in the bottom-right corner; with a badge the mark gets smaller
-and moves to the top-left corner so the badge never cuts its right arm, and a transparent
-ring separates the badge from the mark.
+`SystemUsesLightTheme` and redraws when it changes). The head stays coral.
+
+The icon always looks the same: the mark keeps exactly its size and place in every state
+(only `stopped` dims it to grey). The STATE is told only by a small badge in the
+bottom-right corner, with a thin transparent ring cut into the mark where they overlap;
+at 16 px it may trim the tip of the right arm by about a pixel.
+
+| | 32-unit grid (32 px and up) | 24 px | 20 px | 16 px |
+|---|---|---|---|---|
+| Badge centre | (26, 26) | (20, 20) | (16.5, 16.5) | (13, 13) |
+| Badge radius | 6 | 4 | 3.5 | 3 |
+| Cut-out ring | 1 | 0.75 | 0.6 | 0.6 |
 
 | `TrayState` | Badge |
 |---|---|
-| `idle` | none: the full-size mark |
+| `idle` | none |
 | `stopped` | grey octagon with a white bar; the mark and its head are dimmed to grey |
-| `starting` | grey disc with clock hands |
-| `restarting` | grey circular arrow (a ring with a gap, no disc) |
-| `recording` | small solid red dot (the REC light) |
-| `transcribing` | amber disc with a dark hourglass |
-| `thinking` | violet speech bubble with three dots |
-| `speaking` | violet disc with a white speaker |
+| `starting` | grey ring (hollow) |
+| `restarting` | grey circular arrow: two thirds of the ring with an arrow head |
+| `recording` | solid red disc |
+| `transcribing` | amber hourglass |
+| `thinking` | violet speech bubble (three white dots from 32 px) |
+| `speaking` | violet loudspeaker with a sound arc |
 | `ready` (3 s) | green disc with a white check |
 | `warning` | yellow triangle with a dark "!" |
 | `error` | red rounded square with a white X |
 
-Badges differ by SHAPE (disc, small dot, octagon, triangle, rounded square, speech
-bubble, open ring) and by their symbol, never only by color. No animation by default.
-
+Badges differ by SHAPE (disc, ring, open ring, octagon, triangle, rounded square, speech
+bubble, hourglass, loudspeaker) and by their symbol, never only by color. The symbols are
+simple and strong so they survive at 6 px. No animation by default.
 ## The app icon: the framed tile
 
 The exe, the Start menu shortcut, the installer and the windows show the mark in white
@@ -99,8 +107,8 @@ one-pixel bright edge around the dark square.
 
 - **Do** keep the body's V lower than the arms and the head above the shoulders, with a
   gap: that is what makes it a figure and not a plain wave.
-- **Do** tell a tray state by the badge's shape first. A new state gets a new silhouette
-  or symbol, and `tests/companion/ui/test_ui_icons.py` checks every pair at 16, 20, 24 and
+- **Do** keep the tray mark identical in every state and tell the state by the small
+  badge's shape first. A new state gets a new silhouette or symbol, and `tests/companion/ui/test_ui_icons.py` checks every pair at 16, 20, 24 and
   32 px with colors removed (lightness and coverage only).
 - **Do** check new artwork at 16 px on a dark (`#202020`) and a light (`#F3F3F3`) taskbar.
 - **Don't** draw a microphone, a speaker or any other device as the identity.

@@ -270,18 +270,19 @@ they belong to:
 | `TrayState` | Badge | Tooltip | Cue on entering |
 |---|---|---|---|
 | `stopped` | grey octagon, dimmed glyph | "VoiceMate is stopped" | none |
-| `starting` / `restarting` | grey clock / arrows | "Starting engine..." / "Restarting (attempt 2)" | none |
+| `starting` / `restarting` | grey ring / circular arrow | "Starting engine..." / "Restarting (attempt 2)" | none |
 | `idle` | none | "Listening for Ctrl+Alt+V" | none |
-| `recording` | red dot | "Recording 00:12" | none (`start` plays on `mic_live`) |
+| `recording` | red disc | "Recording 00:12" | none (`start` plays on `mic_live`) |
 | `transcribing` | amber hourglass | "Transcribing..." | `transcribing` |
-| `thinking` / `speaking` | violet bubble / speaker | "Claude is answering..." | none |
-| `ready` (lasts 3 s) | green check | "Copied: ..." | `ready` or `ai_ready` (see below) |
-| `warning` | yellow triangle | "No microphone" / "WSL audio is down" | `warning` |
-| `error` | red X | details | `error` |
+| `thinking` / `speaking` | violet speech bubble / loudspeaker | "Claude is answering..." | none |
+| `ready` (lasts 3 s) | green disc with a check | "Copied: ..." | `ready` or `ai_ready` (see below) |
+| `warning` | yellow triangle with "!" | "No microphone" / "WSL audio is down" | `warning` |
+| `error` | red square with an X | details | `error` |
 
 The glyph is the VoiceMate mark (a figure with raised arms whose body is a sound wave,
 and a coral head; see [brand.md](brand.md)) with no tile, in the taskbar's foreground
-color; the badge sits in the bottom-right corner. Badges differ by shape, not only color.
+color, the same size and place in every state; only a small badge in the bottom-right
+corner changes. Badges differ by shape, not only color.
 The glyph follows the taskbar theme
 (`HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize\SystemUsesLightTheme`).
 No animation by default.

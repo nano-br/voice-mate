@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import itertools
+import math
 import struct
 from pathlib import Path
 from typing import get_args
@@ -11,7 +12,8 @@ import pytest
 
 pytest.importorskip("PySide6")
 
-from PySide6.QtGui import QColor, QImage  # noqa: E402
+from PySide6.QtCore import Qt  # noqa: E402
+from PySide6.QtGui import QColor, QImage, QPainter, QPainterPath  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from app.companion.contract import TrayState  # noqa: E402
@@ -52,8 +54,9 @@ def _count(image: QImage, color: QColor) -> int:
     return sum(1 for y in range(image.height()) for x in range(image.width()) if image.pixelColor(x, y) == color)
 
 
-# At 16 px a badge is about 8 x 8 pixels: ask for a clear difference in at least 8 of them.
-_MIN_DIFFERENT_PIXELS = {16: 8, 20: 8, 24: 12, 32: 24}
+# The badge is small (6 px wide at 16 px) and the mark never changes: ask for a clear
+# difference in at least 5 of the badge's pixels at 16 px, a few more as it grows.
+_MIN_DIFFERENT_PIXELS = {16: 5, 20: 7, 24: 10, 32: 20}
 
 
 @pytest.mark.parametrize("size", icons.TRAY_SIZES)
@@ -93,7 +96,13 @@ def test_every_tray_state_is_distinguishable_without_color(
 
 @pytest.mark.parametrize(
     ("first", "second"),
-    [("stopped", "idle"), ("starting", "restarting"), ("warning", "error"), ("thinking", "speaking")],
+    [
+        ("stopped", "idle"),
+        ("starting", "restarting"),
+        ("recording", "starting"),
+        ("warning", "error"),
+        ("thinking", "speaking"),
+    ],
 )
 @pytest.mark.parametrize("size", [16, 20, 24, 32])
 def test_related_states_differ_by_badge_shape(
@@ -102,13 +111,48 @@ def test_related_states_differ_by_badge_shape(
     assert _silhouette(first, size) != _silhouette(second, size)
 
 
-def test_badges_have_distinct_outlines() -> None:
-    """Disc, octagon, triangle, rounded square, speech bubble and the small record dot."""
-    outlines = {
-        badge: icons._badge_outline(badge).boundingRect().getRect()
-        for badge in ("octagon", "record", "triangle", "cross", "bubble", "clock")
-    }
-    assert len(set(outlines.values())) == len(outlines)
+def _mask(path: QPainterPath, size: int) -> QImage:
+    image = QImage(size, size, QImage.Format.Format_ARGB32_Premultiplied)
+    image.fill(0)
+    painter = QPainter(image)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(QColor("#000000"))
+    painter.drawPath(path)
+    painter.end()
+    return image
+
+
+def test_badges_have_distinct_silhouettes() -> None:
+    """Octagon, disc, triangle, rounded square, speech bubble, hourglass and loudspeaker."""
+    spec = icons._badge_spec(64)
+    badges: tuple[icons.Badge, ...] = ("octagon", "record", "triangle", "cross", "bubble", "hourglass", "speaker")
+    masks = {badge: _mask(icons._badge_outline(badge, spec), 64) for badge in badges}
+    for first, second in itertools.combinations(badges, 2):
+        assert masks[first] != masks[second], f"{first}/{second}"
+
+
+@pytest.mark.parametrize("size", icons.TRAY_SIZES)
+@pytest.mark.parametrize("tone", TONES)
+def test_the_mark_is_the_same_in_every_state(qapp: QApplication, tone: icons.GlyphTone, size: int) -> None:
+    """Only the small corner badge changes (and `stopped` dims the glyph): the mark keeps
+    its size and place, so the icon always looks the same at a glance."""
+    spec = icons._badge_spec(size)
+    reach = spec.radius * 1.5 + spec.gap + 1  # the badge's corners, its cut-out ring, anti-aliasing
+    idle = _image("idle", tone, size)
+    outside = [
+        (x, y)
+        for y in range(size)
+        for x in range(size)
+        if math.hypot(x + 0.5 - spec.center.x(), y + 0.5 - spec.center.y()) > reach
+    ]
+    for state in ALL_STATES:
+        if state == "stopped":
+            continue
+        image = _image(state, tone, size)
+        assert all(image.pixelColor(x, y) == idle.pixelColor(x, y) for x, y in outside), state
+    # The badge stays small: it never covers more than a quarter of the icon's width.
+    assert 2 * spec.radius <= size * 0.42
 
 
 def test_tray_icon_has_every_size_and_follows_the_taskbar_tone(qapp: QApplication) -> None:
