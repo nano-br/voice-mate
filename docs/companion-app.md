@@ -267,20 +267,23 @@ they belong to:
 
 ### Tray states, cues and reactions
 
-| `TrayState` | Badge | Tooltip | Cue on entering |
+| `TrayState` | Status light | Tooltip | Cue on entering |
 |---|---|---|---|
-| `stopped` | grey mic | "VoiceMate is stopped" | none |
-| `starting` / `restarting` | grey clock / arrows | "Starting engine..." / "Restarting (attempt 2)" | none |
-| `idle` | none | "Listening for Ctrl+Alt+V" | none |
-| `recording` | red dot | "Recording 00:12" | none (`start` plays on `mic_live`) |
-| `transcribing` | amber hourglass | "Transcribing..." | `transcribing` |
-| `thinking` / `speaking` | violet bubble / speaker | "Claude is answering..." | none |
-| `ready` (lasts 3 s) | green check | "Copied: ..." | `ready` or `ai_ready` (see below) |
-| `warning` | yellow triangle | "No microphone" / "WSL audio is down" | `warning` |
-| `error` | red X | details | `error` |
+| `stopped` | grey tile, no light | "VoiceMate is stopped" | none |
+| `starting` / `restarting` | hollow ring / open ring with an arrow head | "Starting engine..." / "Restarting (attempt 2)" | none |
+| `idle` | coral dot | "Listening for Ctrl+Alt+V" | none |
+| `recording` | red dot in a white ring | "Recording 00:12" | none (`start` plays on `mic_live`) |
+| `transcribing` | three amber dots | "Transcribing..." | `transcribing` |
+| `thinking` / `speaking` | cyan sparkle / speech bubble | "Claude is answering..." | none |
+| `ready` (lasts 3 s) | mint check | "Copied: ..." | `ready` or `ai_ready` (see below) |
+| `warning` | amber triangle badge, no light | "No microphone" / "WSL audio is down" | `warning` |
+| `error` | red X badge, no light | details | `error` |
 
-Badges differ by shape, not only color. The base glyph follows the taskbar theme
-(`HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize\SystemUsesLightTheme`).
+The tray shows the VoiceMate mark (the M wave on the indigo tile) and tells the state
+with the dot above the M, the "status light"; see [brand.md](brand.md). States differ
+by shape, not only color. The tile carries its own colors, so the glyph is the same on
+dark and light taskbars (the tray still reads `SystemUsesLightTheme`, but the drawing
+ignores it).
 No animation by default.
 
 An event's cue REPLACES the cue on entering the tray state (never two cues). A
@@ -499,7 +502,8 @@ volume = 1.0
   (`winget install JRSoftware.InnoSetup`).
 - Reproducible builds: exact pins in `requirements/companion-constraints.txt`.
 - Icons: `app/companion/assets/voicemate.ico` (16 to 256 px) and
-  `voicemate-<size>.png`, drawn by `tools/gen_icon.py` (`python -m tools.gen_icon`).
+  `voicemate-<size>.png`, drawn by `tools/gen_icon.py` (`python -m tools.gen_icon`) with
+  the same code as the tray glyphs (`app/companion/ui/icons.py`, see [brand.md](brand.md)).
   The UI loads them from `Path(app.companion.__file__).parent / "assets"`; the frozen
   app ships them at the same place.
 - Limits `packaging/windows/voicemate-companion.spec` puts on the UI (the frozen app

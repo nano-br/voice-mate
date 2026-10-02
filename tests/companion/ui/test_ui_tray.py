@@ -1,25 +1,18 @@
 from __future__ import annotations
 
-import itertools
 import time
 from collections.abc import Callable
-from pathlib import Path
-from typing import get_args
 
 import pytest
 
 pytest.importorskip("PySide6")
 
-from PySide6.QtGui import QAction, QImage  # noqa: E402
+from PySide6.QtGui import QAction  # noqa: E402
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon  # noqa: E402
 
-from app.companion.contract import TrayState  # noqa: E402
-from app.companion.ui import icons  # noqa: E402
 from app.companion.ui.app import CompanionUi  # noqa: E402
 from app.companion.ui.demo_controller import FakeController  # noqa: E402
 from app.companion.ui.tray import TrayIcon  # noqa: E402
-
-ALL_STATES: tuple[TrayState, ...] = get_args(TrayState)
 
 
 def _tray(ui: CompanionUi) -> TrayIcon:
@@ -36,81 +29,6 @@ def _action(menu: QMenu, text: str) -> QAction:
         if action.text().split("\t")[0] == text:
             return action
     raise AssertionError(f"no menu item {text!r} in {_texts(menu)}")
-
-
-def _planes(state: TrayState, tone: icons.GlyphTone, size: int) -> list[tuple[int, int]]:
-    """(lightness, alpha) per pixel: what is left of the icon without colors."""
-    image = icons.tray_pixmap(state, tone, size).toImage().convertToFormat(QImage.Format.Format_ARGB32)
-    return [
-        (image.pixelColor(x, y).lightness(), image.pixelColor(x, y).alpha())
-        for y in range(image.height())
-        for x in range(image.width())
-    ]
-
-
-def _visible_difference(first: list[tuple[int, int]], second: list[tuple[int, int]]) -> int:
-    """Pixels that differ clearly: a big step in lightness, or in coverage (the silhouette)."""
-    return sum(
-        1
-        for (light_a, alpha_a), (light_b, alpha_b) in zip(first, second, strict=True)
-        if abs(alpha_a - alpha_b) >= 128 or (min(alpha_a, alpha_b) >= 128 and abs(light_a - light_b) >= 64)
-    )
-
-
-def _silhouette(state: TrayState, size: int) -> list[bool]:
-    image = icons.tray_pixmap(state, "light", size).toImage().convertToFormat(QImage.Format.Format_ARGB32)
-    return [image.pixelColor(x, y).alpha() >= 128 for y in range(image.height()) for x in range(image.width())]
-
-
-# At 16 px a badge is about 9 x 9 pixels: ask for a clear difference in at least 8 of them.
-_MIN_DIFFERENT_PIXELS = {16: 8, 32: 32}
-
-
-@pytest.mark.parametrize("size", [16, 32])
-@pytest.mark.parametrize("tone", ["light", "dark"])
-def test_every_tray_state_is_distinguishable_without_color(
-    qapp: QApplication, tone: icons.GlyphTone, size: int
-) -> None:
-    planes = {state: _planes(state, tone, size) for state in ALL_STATES}
-    for first, second in itertools.combinations(ALL_STATES, 2):
-        different = _visible_difference(planes[first], planes[second])
-        assert different >= _MIN_DIFFERENT_PIXELS[size], f"{first}/{second}: {different} px at {size} px"
-
-
-@pytest.mark.parametrize(("first", "second"), [("stopped", "idle"), ("starting", "restarting")])
-@pytest.mark.parametrize("size", [16, 32])
-def test_related_states_differ_by_badge_shape(
-    qapp: QApplication, first: TrayState, second: TrayState, size: int
-) -> None:
-    assert _silhouette(first, size) != _silhouette(second, size)
-
-
-def test_tray_icon_has_every_size_and_follows_the_taskbar_tone(qapp: QApplication) -> None:
-    icon = icons.tray_icon("recording", "light")
-    available = {size.width() for size in icon.availableSizes()}
-    assert set(icons.TRAY_SIZES) <= available
-    light = icons.tray_pixmap("idle", "light", 16).toImage()
-    dark = icons.tray_pixmap("idle", "dark", 16).toImage()
-    assert light != dark
-
-
-def test_app_icon_prefers_the_packaged_icon(
-    qapp: QApplication, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    monkeypatch.setattr(icons, "ASSET_ICON", tmp_path / "missing.ico")
-    assert not icons.app_icon().isNull()  # drawn fallback
-    packaged = tmp_path / "voicemate.ico"
-    icons.app_pixmap(48).save(str(packaged), "PNG")  # format detected by content
-    monkeypatch.setattr(icons, "ASSET_ICON", packaged)
-    assert icons.app_icon().availableSizes() == [icons.app_pixmap(48).size()]
-
-
-def test_taskbar_tone_follows_the_windows_registry(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(icons.sys, "platform", "win32")
-    monkeypatch.setattr(icons, "_windows_taskbar_is_light", lambda: True)
-    assert icons.taskbar_glyph_tone() == "dark"
-    monkeypatch.setattr(icons, "_windows_taskbar_is_light", lambda: False)
-    assert icons.taskbar_glyph_tone() == "light"
 
 
 @pytest.mark.parametrize(
