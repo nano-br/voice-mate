@@ -17,6 +17,7 @@ import threading
 from pathlib import Path
 
 from app.companion.client import DaemonClient
+from app.companion.dictation import EngineLanguage
 from app.companion.paths import home_dir
 from app.companion.supervisor.backend import (
     ENGINE_DIR_CANDIDATES,
@@ -37,15 +38,18 @@ class LocalBackend:
     can_spawn = True
     can_restart_wsl = False
 
-    def __init__(self, port: int, log_path: Path, *, shell: str = "bash") -> None:
+    def __init__(
+        self, port: int, log_path: Path, *, language: EngineLanguage | None = None, shell: str = "bash"
+    ) -> None:
         self.port = port
+        self.language = language
         self._shell = shell
         self._log = EngineLog(log_path)
         self._lock = threading.Lock()
         self._process: ManagedProcess | None = None
 
     def spawn_command(self, engine_dir: str) -> list[str]:
-        return [self._shell, "-lc", engine_script(engine_dir, self.port)]
+        return [self._shell, "-lc", engine_script(engine_dir, self.port, self.language)]
 
     def spawn(self, engine_dir: str, generation: int, on_exit: ExitCallback) -> None:
         command = self.spawn_command(engine_dir)

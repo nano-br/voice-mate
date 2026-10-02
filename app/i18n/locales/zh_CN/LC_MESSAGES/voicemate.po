@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-02 05:02-0300\n"
+"POT-Creation-Date: 2026-10-02 08:01-0300\n"
 "PO-Revision-Date: 2026-10-02 03:34-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: zh_CN\n"
@@ -243,47 +243,47 @@ msgstr ""
 "[VoiceMate] ⚠ --input-method mouse 仅在 Windows "
 "上受支持（trigger={trigger}）；改用键盘快捷键。"
 
-#: app/companion/controller.py:607
+#: app/companion/controller.py:616
 msgid ""
 "The settings file was written by a newer version of VoiceMate, so it is "
 "read-only here."
 msgstr "设置文件由更新版本的 VoiceMate 写入，因此在此处为只读。"
 
-#: app/companion/controller.py:626
+#: app/companion/controller.py:635
 msgid "Could not save the settings file."
 msgstr "无法保存设置文件。"
 
-#: app/companion/controller.py:654
+#: app/companion/controller.py:663
 #, python-brace-format
 msgid "{hotkey} is already used by another app."
 msgstr "{hotkey} 已被其他应用占用。"
 
-#: app/companion/controller.py:719
+#: app/companion/controller.py:728
 msgid "Could not change the start at login setting."
 msgstr "无法更改“登录时启动 VoiceMate”设置。"
 
-#: app/companion/cues.py:80 app/companion/ui/texts.py:150
+#: app/companion/cues.py:80 app/companion/ui/texts.py:151
 msgid "Recording started"
 msgstr "开始录音"
 
-#: app/companion/cues.py:81 app/companion/ui/texts.py:151
+#: app/companion/cues.py:81 app/companion/ui/texts.py:152
 msgid "Transcribing"
 msgstr "转写中"
 
-#: app/companion/cues.py:82 app/companion/ui/texts.py:105
-#: app/companion/ui/texts.py:152
+#: app/companion/cues.py:82 app/companion/ui/texts.py:106
+#: app/companion/ui/texts.py:153
 msgid "Copied"
 msgstr "已复制"
 
-#: app/companion/cues.py:83 app/companion/ui/texts.py:153
+#: app/companion/cues.py:83 app/companion/ui/texts.py:154
 msgid "Claude answered"
 msgstr "Claude 已回答"
 
-#: app/companion/cues.py:84 app/companion/ui/texts.py:154
+#: app/companion/cues.py:84 app/companion/ui/texts.py:155
 msgid "Warning"
 msgstr "警告"
 
-#: app/companion/cues.py:85 app/companion/ui/texts.py:155
+#: app/companion/cues.py:85 app/companion/ui/texts.py:156
 msgid "Error"
 msgstr "错误"
 
@@ -332,7 +332,7 @@ msgid "The engine is older than this app. Update it, then use Restart engine."
 msgstr "引擎版本比此应用旧。请更新引擎，然后使用“重启引擎”。"
 
 #: app/companion/model.py:597 app/companion/model.py:896
-#: app/companion/ui/texts.py:108
+#: app/companion/ui/texts.py:109
 msgid "No microphone"
 msgstr "没有麦克风"
 
@@ -341,7 +341,7 @@ msgid "Connect a microphone to record."
 msgstr "请连接麦克风以进行录音。"
 
 #: app/companion/model.py:600 app/companion/model.py:883
-#: app/companion/ui/demo_controller.py:333 app/companion/ui/texts.py:110
+#: app/companion/ui/demo_controller.py:333 app/companion/ui/texts.py:111
 msgid "WSL audio stopped"
 msgstr "WSL 音频已停止"
 
@@ -429,11 +429,11 @@ msgid ""
 msgstr "引擎失败次数过多。请查看引擎日志，然后使用“重启引擎”。"
 
 #: app/companion/model.py:637 app/companion/model.py:729
-#: app/companion/ui/texts.py:86
+#: app/companion/ui/texts.py:87
 msgid "VoiceMate is stopped"
 msgstr "VoiceMate 已停止"
 
-#: app/companion/model.py:639 app/companion/ui/texts.py:88
+#: app/companion/model.py:639 app/companion/ui/texts.py:89
 msgid "Starting engine..."
 msgstr "正在启动引擎..."
 
@@ -442,7 +442,7 @@ msgstr "正在启动引擎..."
 msgid "Waiting for the engine on port {port}."
 msgstr "正在等待端口 {port} 上的引擎。"
 
-#: app/companion/model.py:643 app/companion/ui/texts.py:92
+#: app/companion/model.py:643 app/companion/ui/texts.py:93
 #, python-brace-format
 msgid "Restarting (attempt {attempt})"
 msgstr "正在重启（第 {attempt} 次尝试）"
@@ -452,24 +452,24 @@ msgstr "正在重启（第 {attempt} 次尝试）"
 msgid "Listening for {hotkey}"
 msgstr "等待按下 {hotkey}"
 
-#: app/companion/model.py:647 app/companion/ui/texts.py:97
+#: app/companion/model.py:647 app/companion/ui/texts.py:98
 msgid "Ready"
 msgstr "就绪"
 
-#: app/companion/model.py:650 app/companion/ui/texts.py:78
+#: app/companion/model.py:650 app/companion/ui/texts.py:79
 #, python-brace-format
 msgid "Recording {elapsed}"
 msgstr "录音中 {elapsed}"
 
-#: app/companion/model.py:652 app/companion/ui/texts.py:99
+#: app/companion/model.py:652 app/companion/ui/texts.py:100
 msgid "Transcribing..."
 msgstr "正在转写..."
 
-#: app/companion/model.py:654 app/companion/ui/texts.py:101
+#: app/companion/model.py:654 app/companion/ui/texts.py:102
 msgid "Claude is answering..."
 msgstr "Claude 正在回答..."
 
-#: app/companion/model.py:656 app/companion/ui/texts.py:104
+#: app/companion/model.py:656 app/companion/ui/texts.py:105
 #, python-brace-format
 msgid "Copied: {text}"
 msgstr "已复制：{text}"
@@ -766,81 +766,85 @@ msgstr ""
 "已被其他应用占用：{hotkeys}。如果旧的 VoiceMate 快捷键脚本仍在运行，请关闭它并将其从 shell:startup "
 "中移除，或在设置中选择其他快捷键。"
 
-#: app/companion/settings_store.py:88 app/companion/ui/settings_window.py:564
+#: app/companion/settings_store.py:89 app/companion/ui/settings_window.py:580
 msgid "Language"
 msgstr "语言"
 
-#: app/companion/settings_store.py:89
+#: app/companion/settings_store.py:90 app/companion/ui/settings_window.py:581
+msgid "Dictation language"
+msgstr "听写语言"
+
+#: app/companion/settings_store.py:91
 msgid "Engine mode"
 msgstr "引擎模式"
 
-#: app/companion/settings_store.py:90
+#: app/companion/settings_store.py:92
 msgid "WSL restart"
 msgstr "WSL 重启"
 
-#: app/companion/settings_store.py:91 app/companion/ui/settings_window.py:565
+#: app/companion/settings_store.py:93 app/companion/ui/settings_window.py:582
 msgid "Notifications"
 msgstr "通知"
 
-#: app/companion/settings_store.py:92 app/companion/ui/settings_window.py:650
+#: app/companion/settings_store.py:94 app/companion/ui/settings_window.py:696
 msgid "Hotkeys"
 msgstr "快捷键"
 
-#: app/companion/settings_store.py:363 app/companion/settings_store.py:385
-#: app/companion/settings_store.py:401
+#: app/companion/settings_store.py:370 app/companion/settings_store.py:392
+#: app/companion/settings_store.py:408
 #, python-brace-format
 msgid "Invalid value for {setting}."
 msgstr "{setting} 的值无效。"
 
-#: app/companion/settings_store.py:367
+#: app/companion/settings_store.py:374
 msgid "This engine mode is not available on this system."
 msgstr "此引擎模式在当前系统上不可用。"
 
-#: app/companion/settings_store.py:369
+#: app/companion/settings_store.py:376
 msgid ""
 "The engine folder cannot contain quotes, $, backticks, backslashes or "
 "line breaks."
 msgstr "引擎文件夹不能包含引号、$、反引号、反斜杠或换行符。"
 
-#: app/companion/settings_store.py:371
+#: app/companion/settings_store.py:378
 msgid "The WSL distribution name is not valid."
 msgstr "WSL 发行版名称无效。"
 
-#: app/companion/settings_store.py:373
+#: app/companion/settings_store.py:380
 #, python-brace-format
 msgid "The port must be between {low} and {high}."
 msgstr "端口必须介于 {low} 和 {high} 之间。"
 
-#: app/companion/settings_store.py:375 app/companion/settings_store.py:397
+#: app/companion/settings_store.py:382 app/companion/settings_store.py:404
 msgid "The volume must be between 0 and 1."
 msgstr "音量必须介于 0 和 1 之间。"
 
-#: app/companion/settings_store.py:382 app/companion/ui/demo_controller.py:228
+#: app/companion/settings_store.py:389 app/companion/ui/demo_controller.py:228
 #, python-brace-format
 msgid "{hotkey} is not a valid hotkey."
 msgstr "{hotkey} 不是有效的快捷键。"
 
-#: app/companion/settings_store.py:388
+#: app/companion/settings_store.py:395
 #, python-brace-format
 msgid "The action {flow} has more than one hotkey."
 msgstr "操作 {flow} 有多个快捷键。"
 
-#: app/companion/settings_store.py:390
+#: app/companion/settings_store.py:397
 #, python-brace-format
 msgid "{hotkey} is assigned to more than one action."
 msgstr "{hotkey} 被分配给了多个操作。"
 
-#: app/companion/settings_store.py:408
+#: app/companion/settings_store.py:415
 #, python-brace-format
 msgid "The sound file for the {cue} cue was not found."
 msgstr "找不到“{cue}”提示音的声音文件。"
 
-#: app/companion/settings_store.py:410
+#: app/companion/settings_store.py:417
 #, python-brace-format
 msgid "The sound file for the {cue} cue must be a PCM 8 or 16-bit WAV file."
 msgstr "“{cue}”提示音的声音文件必须是 8 位或 16 位 PCM WAV 文件。"
 
-#: app/companion/settings_store.py:413
+#: app/companion/settings_store.py:420
 #, python-brace-format
 msgid "The sound file for the {cue} cue is longer than {seconds} seconds."
 msgstr "“{cue}”提示音的声音文件长度超过了 {seconds} 秒。"
@@ -874,7 +878,7 @@ msgid ""
 msgstr "这会停止所有正在运行的 WSL 发行版（包括 Docker），然后重新启动引擎。"
 
 #: app/companion/ui/app.py:187 app/companion/ui/app.py:286
-#: app/companion/ui/settings_window.py:665
+#: app/companion/ui/settings_window.py:711
 #: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:79
 msgid "Cancel"
 msgstr "取消"
@@ -949,128 +953,132 @@ msgstr "此按键无法使用"
 msgid "No shortcut"
 msgstr "无快捷键"
 
-#: app/companion/ui/settings_window.py:141
+#: app/companion/ui/settings_window.py:142
 msgid "Click a shortcut, then press the new keys. Esc cancels, Backspace clears."
 msgstr "单击某个快捷键，然后按新的按键。Esc 取消，Backspace 清除。"
 
-#: app/companion/ui/settings_window.py:144
+#: app/companion/ui/settings_window.py:145
 msgid "The engine owns these shortcuts. Change them in the engine configuration."
 msgstr "这些快捷键由引擎管理。请在引擎配置中更改。"
 
-#: app/companion/ui/settings_window.py:157
+#: app/companion/ui/settings_window.py:158
 msgid "Restore defaults"
 msgstr "恢复默认值"
 
-#: app/companion/ui/settings_window.py:184
+#: app/companion/ui/settings_window.py:185
 #, python-brace-format
 msgid "{action}:"
 msgstr "{action}："
 
-#: app/companion/ui/settings_window.py:186
+#: app/companion/ui/settings_window.py:187
 #, python-brace-format
 msgid "Shortcut for {action}"
 msgstr "{action} 的快捷键"
 
-#: app/companion/ui/settings_window.py:259
+#: app/companion/ui/settings_window.py:260
 msgid "No shortcut: use the menu"
 msgstr "无快捷键：请使用菜单"
 
-#: app/companion/ui/settings_window.py:264
+#: app/companion/ui/settings_window.py:265
 msgid "Checking..."
 msgstr "正在检查..."
 
-#: app/companion/ui/settings_window.py:346
+#: app/companion/ui/settings_window.py:347
 msgid "Play sound cues"
 msgstr "播放提示音"
 
-#: app/companion/ui/settings_window.py:350
+#: app/companion/ui/settings_window.py:351
 msgid "Volume:"
 msgstr "音量："
 
-#: app/companion/ui/settings_window.py:351
+#: app/companion/ui/settings_window.py:352
 msgid "Master volume"
 msgstr "主音量"
 
-#: app/companion/ui/settings_window.py:363
-#: app/companion/ui/settings_window.py:651
+#: app/companion/ui/settings_window.py:364
+#: app/companion/ui/settings_window.py:697
 msgid "Sounds"
 msgstr "声音"
 
-#: app/companion/ui/settings_window.py:380
+#: app/companion/ui/settings_window.py:381
 msgid "Custom sounds must be WAV files (PCM, 8 or 16 bit)."
 msgstr "自定义声音必须是 WAV 文件（PCM，8 位或 16 位）。"
 
-#: app/companion/ui/settings_window.py:387
+#: app/companion/ui/settings_window.py:388
 #, python-brace-format
 msgid "Source: {sound}"
 msgstr "来源：{sound}"
 
-#: app/companion/ui/settings_window.py:389
+#: app/companion/ui/settings_window.py:390
 #, python-brace-format
 msgid "Built-in sound: {sound}"
 msgstr "内置声音：{sound}"
 
-#: app/companion/ui/settings_window.py:392
+#: app/companion/ui/settings_window.py:393
 msgid "No file chosen"
 msgstr "未选择文件"
 
-#: app/companion/ui/settings_window.py:393
+#: app/companion/ui/settings_window.py:394
 #, python-brace-format
 msgid "Sound file: {sound}"
 msgstr "声音文件：{sound}"
 
-#: app/companion/ui/settings_window.py:395
+#: app/companion/ui/settings_window.py:396
 msgid "Browse..."
 msgstr "浏览..."
 
-#: app/companion/ui/settings_window.py:396
+#: app/companion/ui/settings_window.py:397
 #, python-brace-format
 msgid "Choose a file for {sound}"
 msgstr "为 {sound} 选择文件"
 
-#: app/companion/ui/settings_window.py:408
+#: app/companion/ui/settings_window.py:409
 #, python-brace-format
 msgid "Volume: {sound}"
 msgstr "音量：{sound}"
 
-#: app/companion/ui/settings_window.py:414
+#: app/companion/ui/settings_window.py:415
 msgid "Preview"
 msgstr "试听"
 
-#: app/companion/ui/settings_window.py:415
+#: app/companion/ui/settings_window.py:416
 #, python-brace-format
 msgid "Preview: {sound}"
 msgstr "试听：{sound}"
 
-#: app/companion/ui/settings_window.py:479
+#: app/companion/ui/settings_window.py:480
 msgid "Choose a sound file"
 msgstr "选择声音文件"
 
-#: app/companion/ui/settings_window.py:479
+#: app/companion/ui/settings_window.py:480
 msgid "WAV audio"
 msgstr "WAV 音频"
 
-#: app/companion/ui/settings_window.py:508
+#: app/companion/ui/settings_window.py:509
 msgid "Language:"
 msgstr "语言："
 
-#: app/companion/ui/settings_window.py:510
+#: app/companion/ui/settings_window.py:511
 msgid "Takes effect after VoiceMate restarts."
 msgstr "重启 VoiceMate 后生效。"
 
-#: app/companion/ui/settings_window.py:515
+#: app/companion/ui/settings_window.py:516
+msgid "Dictation language:"
+msgstr "听写语言："
+
+#: app/companion/ui/settings_window.py:524
 msgid "Notifications:"
 msgstr "通知："
 
-#: app/companion/ui/settings_window.py:516
+#: app/companion/ui/settings_window.py:525
 msgid "Start VoiceMate when I sign in"
 msgstr "登录时启动 VoiceMate"
 
-#: app/companion/ui/settings_window.py:521
+#: app/companion/ui/settings_window.py:530
 msgid "Always show the VoiceMate icon on the taskbar"
 msgstr "始终在任务栏上显示 VoiceMate 图标"
 
-#: app/companion/ui/settings_window.py:524
+#: app/companion/ui/settings_window.py:533
 msgid ""
 "Shows the icon with the recording and transcription state next to the "
 "clock, instead of hiding it behind the arrow. An icon hidden in the "
@@ -1080,96 +1088,124 @@ msgstr ""
 "在时钟旁显示带有录音和转写状态的图标，而不是将其隐藏在箭头后面。在 Windows "
 "任务栏设置中隐藏的图标会保持隐藏，直到你关闭此选项、单击“应用”，然后再次开启。"
 
-#: app/companion/ui/settings_window.py:533 app/companion/ui/tray.py:96
+#: app/companion/ui/settings_window.py:542 app/companion/ui/tray.py:96
 msgid "Engine"
 msgstr "引擎"
 
-#: app/companion/ui/settings_window.py:540
+#: app/companion/ui/settings_window.py:549
 msgid "Mode:"
 msgstr "模式："
 
-#: app/companion/ui/settings_window.py:542
+#: app/companion/ui/settings_window.py:551
 msgid "Default distro"
 msgstr "默认发行版"
 
-#: app/companion/ui/settings_window.py:543
+#: app/companion/ui/settings_window.py:552
 msgid "WSL distro:"
 msgstr "WSL 发行版："
 
-#: app/companion/ui/settings_window.py:545
+#: app/companion/ui/settings_window.py:554 app/companion/ui/texts.py:184
 msgid "Detect automatically"
 msgstr "自动检测"
 
-#: app/companion/ui/settings_window.py:546
+#: app/companion/ui/settings_window.py:555
 msgid "The voice-mate folder: relative to your home folder, or absolute."
 msgstr "voice-mate 文件夹：相对于你的主文件夹的路径，或绝对路径。"
 
-#: app/companion/ui/settings_window.py:547
+#: app/companion/ui/settings_window.py:556
 msgid "Engine folder:"
 msgstr "引擎文件夹："
 
-#: app/companion/ui/settings_window.py:550
+#: app/companion/ui/settings_window.py:559
 msgid ""
 "Restarting WSL brings its audio back, but it stops every running distro, "
 "Docker included."
 msgstr "重启 WSL 可以恢复其音频，但会停止所有正在运行的发行版（包括 Docker）。"
 
-#: app/companion/ui/settings_window.py:552
+#: app/companion/ui/settings_window.py:561
 msgid "Restart WSL when audio fails:"
 msgstr "音频故障时重启 WSL："
 
-#: app/companion/ui/settings_window.py:566
+#: app/companion/ui/settings_window.py:583
 msgid "Mode"
 msgstr "模式"
 
-#: app/companion/ui/settings_window.py:567
+#: app/companion/ui/settings_window.py:584
 msgid "WSL distro"
 msgstr "WSL 发行版"
 
-#: app/companion/ui/settings_window.py:568
+#: app/companion/ui/settings_window.py:585
 msgid "Engine folder"
 msgstr "引擎文件夹"
 
-#: app/companion/ui/settings_window.py:569
+#: app/companion/ui/settings_window.py:586
 msgid "Restart WSL when audio fails"
 msgstr "音频故障时重启 WSL"
 
-#: app/companion/ui/settings_window.py:631
+#: app/companion/ui/settings_window.py:648
+msgid ""
+"Connect only: set by the engine's own\n"
+"--transcription-language and --output-lang flags."
+msgstr ""
+"仅连接：由引擎自身的\n"
+"--transcription-language 和 --output-lang 选项决定。"
+
+#: app/companion/ui/settings_window.py:651
+msgid ""
+"Whisper detects the language of each recording. Claude still answers in "
+"the interface language. Changing it restarts the engine."
+msgstr "Whisper 会检测每段录音的语言。Claude 仍会使用界面语言回答。更改后会重启引擎。"
+
+#: app/companion/ui/settings_window.py:654
+msgid "Claude still answers in the interface language."
+msgstr "Claude 仍会使用界面语言回答。"
+
+#: app/companion/ui/settings_window.py:657
+msgid ""
+"The language you speak when dictating. It also sets the language of "
+"Claude's spoken answers. Changing it restarts the engine."
+msgstr "听写时所说的语言。它同时决定 Claude 语音回答所用的语言。更改后会重启引擎。"
+
+#: app/companion/ui/settings_window.py:660
+msgid "Also sets the language of Claude's spoken answers."
+msgstr "同时决定 Claude 语音回答所用的语言。"
+
+#: app/companion/ui/settings_window.py:677
 msgid "VoiceMate Settings"
 msgstr "VoiceMate 设置"
 
-#: app/companion/ui/settings_window.py:642
+#: app/companion/ui/settings_window.py:688
 msgid ""
 "These settings were saved by a newer version of VoiceMate. They are shown"
 " read-only."
 msgstr "这些设置由更新版本的 VoiceMate 保存，仅以只读方式显示。"
 
-#: app/companion/ui/settings_window.py:652
+#: app/companion/ui/settings_window.py:698
 msgid "General"
 msgstr "常规"
 
-#: app/companion/ui/settings_window.py:664
+#: app/companion/ui/settings_window.py:710
 msgid "OK"
 msgstr "确定"
 
-#: app/companion/ui/settings_window.py:666
+#: app/companion/ui/settings_window.py:712
 msgid "Apply"
 msgstr "应用"
 
-#: app/companion/ui/settings_window.py:747
+#: app/companion/ui/settings_window.py:793
 msgid "Saving..."
 msgstr "正在保存..."
 
-#: app/companion/ui/settings_window.py:759
+#: app/companion/ui/settings_window.py:805
 #, python-brace-format
 msgid "Unexpected error: {error}"
 msgstr "意外错误：{error}"
 
-#: app/companion/ui/settings_window.py:766
+#: app/companion/ui/settings_window.py:812
 msgid "The settings were not saved:"
 msgstr "设置未保存："
 
-#: app/companion/ui/settings_window.py:778
+#: app/companion/ui/settings_window.py:824
 msgid "Settings saved."
 msgstr "设置已保存。"
 
@@ -1234,185 +1270,189 @@ msgstr "复制"
 msgid "No transcriptions yet"
 msgstr "暂无转写内容"
 
-#: app/companion/ui/status_window.py:349 app/companion/ui/tray.py:229
+#: app/companion/ui/status_window.py:356 app/companion/ui/tray.py:229
 msgid "Quitting..."
 msgstr "正在退出..."
 
-#: app/companion/ui/texts.py:51
+#: app/companion/ui/texts.py:52
 msgid "Dictate"
 msgstr "听写"
 
-#: app/companion/ui/texts.py:51
+#: app/companion/ui/texts.py:52
 msgid "Ask Claude"
 msgstr "询问 Claude"
 
-#: app/companion/ui/texts.py:58
+#: app/companion/ui/texts.py:59
 #, python-brace-format
 msgid "{title} ({flow})"
 msgstr "{title}（{flow}）"
 
-#: app/companion/ui/texts.py:64
+#: app/companion/ui/texts.py:65
 msgid "Stop and copy"
 msgstr "停止并复制"
 
-#: app/companion/ui/texts.py:64
+#: app/companion/ui/texts.py:65
 msgid "Stop and ask Claude"
 msgstr "停止并询问 Claude"
 
-#: app/companion/ui/texts.py:76
+#: app/companion/ui/texts.py:77
 msgid "Recording"
 msgstr "录音中"
 
-#: app/companion/ui/texts.py:93
+#: app/companion/ui/texts.py:94
 msgid "Restarting engine..."
 msgstr "正在重启引擎..."
 
-#: app/companion/ui/texts.py:96
+#: app/companion/ui/texts.py:97
 #, python-brace-format
 msgid "Listening for {chord}"
 msgstr "等待按下 {chord}"
 
-#: app/companion/ui/texts.py:111
+#: app/companion/ui/texts.py:112
 msgid "Check the microphone"
 msgstr "请检查麦克风"
 
-#: app/companion/ui/texts.py:113
+#: app/companion/ui/texts.py:114
 msgid "The engine stopped working"
 msgstr "引擎已停止工作"
 
-#: app/companion/ui/texts.py:119
+#: app/companion/ui/texts.py:120
 msgid "Shortcuts paused"
 msgstr "快捷键已暂停"
 
-#: app/companion/ui/texts.py:126
+#: app/companion/ui/texts.py:127
 msgid "Stopped"
 msgstr "已停止"
 
-#: app/companion/ui/texts.py:127
+#: app/companion/ui/texts.py:128
 msgid "Starting"
 msgstr "正在启动"
 
-#: app/companion/ui/texts.py:128
+#: app/companion/ui/texts.py:129
 msgid "Running"
 msgstr "正在运行"
 
-#: app/companion/ui/texts.py:129
+#: app/companion/ui/texts.py:130
 msgid "Not responding"
 msgstr "无响应"
 
-#: app/companion/ui/texts.py:130
+#: app/companion/ui/texts.py:131
 msgid "Restarting"
 msgstr "正在重启"
 
-#: app/companion/ui/texts.py:131
+#: app/companion/ui/texts.py:132
 msgid "Waiting to restart"
 msgstr "等待重启"
 
-#: app/companion/ui/texts.py:132
+#: app/companion/ui/texts.py:133
 msgid "Failed"
 msgstr "失败"
 
-#: app/companion/ui/texts.py:137
+#: app/companion/ui/texts.py:138
 msgid "Working"
 msgstr "正常"
 
-#: app/companion/ui/texts.py:137
+#: app/companion/ui/texts.py:138
 msgid "Not working"
 msgstr "异常"
 
-#: app/companion/ui/texts.py:137 app/companion/ui/texts.py:142
+#: app/companion/ui/texts.py:138 app/companion/ui/texts.py:143
 msgid "Unknown"
 msgstr "未知"
 
-#: app/companion/ui/texts.py:144
+#: app/companion/ui/texts.py:145
 msgid "None found"
 msgstr "未找到"
 
-#: app/companion/ui/texts.py:160
+#: app/companion/ui/texts.py:161
 msgid "Built-in"
 msgstr "内置"
 
-#: app/companion/ui/texts.py:160
+#: app/companion/ui/texts.py:161
 msgid "Custom file"
 msgstr "自定义文件"
 
-#: app/companion/ui/texts.py:164
+#: app/companion/ui/texts.py:165
 msgid "Classic"
 msgstr "经典"
 
-#: app/companion/ui/texts.py:164
+#: app/companion/ui/texts.py:165
 msgid "Soft"
 msgstr "柔和"
 
-#: app/companion/ui/texts.py:164
+#: app/companion/ui/texts.py:165
 msgid "Click"
 msgstr "咔嗒"
 
-#: app/companion/ui/texts.py:170
+#: app/companion/ui/texts.py:171
 msgid "Automatic (system language)"
 msgstr "自动（系统语言）"
 
-#: app/companion/ui/texts.py:181
+#: app/companion/ui/texts.py:183
+msgid "Same as the interface"
+msgstr "与界面相同"
+
+#: app/companion/ui/texts.py:199
 msgid "Start it in WSL"
 msgstr "在 WSL 中启动"
 
-#: app/companion/ui/texts.py:182
+#: app/companion/ui/texts.py:200
 msgid "Start it on this computer"
 msgstr "在此电脑上启动"
 
-#: app/companion/ui/texts.py:183
+#: app/companion/ui/texts.py:201
 msgid "Connect only"
 msgstr "仅连接"
 
-#: app/companion/ui/texts.py:188
+#: app/companion/ui/texts.py:206
 msgid "Automatically"
 msgstr "自动"
 
-#: app/companion/ui/texts.py:188
+#: app/companion/ui/texts.py:206
 msgid "Ask first"
 msgstr "先询问"
 
-#: app/companion/ui/texts.py:188
+#: app/companion/ui/texts.py:206
 msgid "Never"
 msgstr "从不"
 
-#: app/companion/ui/texts.py:193
+#: app/companion/ui/texts.py:211
 msgid "All"
 msgstr "全部"
 
-#: app/companion/ui/texts.py:194
+#: app/companion/ui/texts.py:212
 msgid "Warnings and errors"
 msgstr "警告和错误"
 
-#: app/companion/ui/texts.py:195
+#: app/companion/ui/texts.py:213
 msgid "Errors only"
 msgstr "仅错误"
 
-#: app/companion/ui/texts.py:196
+#: app/companion/ui/texts.py:214
 msgid "None"
 msgstr "无"
 
-#: app/companion/ui/texts.py:202
+#: app/companion/ui/texts.py:220
 msgid "Available"
 msgstr "可用"
 
-#: app/companion/ui/texts.py:203
+#: app/companion/ui/texts.py:221
 msgid "Used by another app"
 msgstr "已被其他应用占用"
 
-#: app/companion/ui/texts.py:204
+#: app/companion/ui/texts.py:222
 msgid "Used by another action"
 msgstr "已被其他操作占用"
 
-#: app/companion/ui/texts.py:205
+#: app/companion/ui/texts.py:223
 msgid "Not allowed"
 msgstr "不允许"
 
-#: app/companion/ui/texts.py:206
+#: app/companion/ui/texts.py:224
 msgid "Set by the engine"
 msgstr "由引擎设置"
 
-#: app/companion/ui/texts.py:211
+#: app/companion/ui/texts.py:229
 msgid ""
 "Use Ctrl, Alt, Shift or Win with a key, or a function key alone. F12 is "
 "reserved by Windows."
