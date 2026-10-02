@@ -20,6 +20,10 @@ User-facing strings produced by the core (notification titles/messages, status
 text, validation errors) are already localized with `app.i18n._`; the companion
 builds them from error/warning CODES, never by relaying the daemon's `message`
 (the daemon may speak another language).
+
+Factory: `app/companion/main.py` builds the controller with
+`app.companion.controller.create_controller(settings_path: Path | None = None)
+-> CompanionController` (imported lazily; `--demo` uses the UI's fake controller).
 """
 
 from __future__ import annotations
@@ -123,6 +127,8 @@ class RecentItem:
 
 @dataclass(frozen=True)
 class HotkeyBinding:
+    """`chord` is never empty: a flow without a binding has no hotkey."""
+
     flow: str  # engine flow NAME (an identifier from the engine config, see FlowInfo)
     chord: str  # e.g. "ctrl+alt+v" (the engine's hotkey format)
 
@@ -222,7 +228,10 @@ class CompanionController(Protocol):
         /shutdown, then stdin EOF, then kill; an attached daemon is left running), unregisters
         hotkeys, then calls `on_done` from a controller thread (hard cap 15 s)."""
 
-    def settings(self) -> CompanionSettings: ...
+    def settings(self) -> CompanionSettings:
+        """The latest applied, normalized settings (cached in memory, no I/O). The UI reads
+        it each time it needs a value and never keeps its own copy: the core changes
+        settings too (client_key, a detected engine_dir, the OS autostart state)."""
 
     def apply_settings(self, settings: CompanionSettings) -> list[str]:
         """Validate, persist and apply. Returns localized errors; empty list = applied."""
@@ -234,7 +243,10 @@ class CompanionController(Protocol):
     def suspend_hotkeys(self, suspended: bool) -> None:
         """Release the global hotkeys while the UI captures a new chord."""
 
-    def preview_cue(self, cue: CueName, settings: CueSettings) -> None: ...
+    def preview_cue(self, cue: CueName, settings: CueSettings, master_volume: float) -> None:
+        """Play `cue` once with these (possibly unsaved) settings at `master_volume` x
+        `settings.volume`, also when cues are muted or this cue is disabled: the settings
+        window previews what the user is editing, before it is applied."""
 
     def recent_results(self) -> list[RecentItem]:
         """Cached (no I/O): the last 10 delivered/seen results, newest first."""
