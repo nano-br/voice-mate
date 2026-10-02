@@ -232,6 +232,11 @@ def _print_ready(config: Config, flows: list[FlowConfig], api: ApiServer | None)
     print(_("[VoiceMate] Ctrl+C to exit.\n"))
 
 
+def _announced_reason(lifecycle: Lifecycle, quit_reason: ShutdownReason | None) -> ShutdownReason | None:
+    """The shutdown reason to publish, or None when the engine stopped on its own (a crash)."""
+    return lifecycle.shutdown_reason or quit_reason
+
+
 def _close_engine(engine: _Engine) -> None:
     for handler in engine.owned_handlers:
         try:
@@ -335,6 +340,7 @@ def main() -> None:
         status.hub.publish_shutdown(reason)
         listener.stop()
 
+    quit_reason: ShutdownReason | None = None
     try:
         if lifecycle.mark_ready(_stop):
             runner = _ListenerThread(listener)
@@ -344,9 +350,14 @@ def main() -> None:
             if runner.error is not None:
                 raise runner.error
     except KeyboardInterrupt:
-        pass
+        quit_reason = "user_quit"
     finally:
-        status.hub.publish_shutdown(lifecycle.shutdown_reason or "user_quit")
+        # Only a requested stop (or Ctrl+C) is announced. A listener that crashed or
+        # ended on its own publishes nothing: attached clients see a disconnect (a
+        # crash to recover from), never a deliberate user_quit.
+        reason = _announced_reason(lifecycle, quit_reason)
+        if reason is not None:
+            status.hub.publish_shutdown(reason)
         try:
             listener.stop()
         except Exception as exc:  # noqa: BLE001 (shutting down anyway)
@@ -360,6 +371,9 @@ def main() -> None:
         if watchdog is not None:
             watchdog.stop()
         _close_engine(engine)
+        # A whisper-server the build abandoned (it fell back to whisper-cli after the
+        # server never became ready) is owned by nobody: never let it outlive us.
+        kill_live_servers()
         print(_("\n[VoiceMate] Shutting down."))
 
 

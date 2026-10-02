@@ -9,7 +9,7 @@ from collections.abc import Callable
 import pytest
 
 from app.daemon.lifecycle import Lifecycle
-from app.main import _exit_now, _install_sigterm, _ListenerThread
+from app.main import _announced_reason, _exit_now, _install_sigterm, _ListenerThread
 from app.protocol.models import ShutdownReason
 
 
@@ -84,3 +84,15 @@ def test_the_hard_exit_kills_live_whisper_servers_first(monkeypatch: pytest.Monk
     monkeypatch.setattr("app.main.hard_exit", exit_fn)
     _exit_now(0)
     assert calls == ["kill", "exit 0"]
+
+
+def test_only_requested_stops_are_announced() -> None:
+    """A crashed listener must look like a crash to attached clients, never a user_quit."""
+    crashed = Lifecycle(exit_now=lambda _code: None)
+    assert _announced_reason(crashed, None) is None
+    assert _announced_reason(crashed, "user_quit") == "user_quit"  # Ctrl+C in the console
+
+    requested = Lifecycle(exit_now=lambda _code: None)
+    requested.mark_ready(lambda _reason: None)
+    requested.request_shutdown("supervisor")
+    assert _announced_reason(requested, None) == "supervisor"

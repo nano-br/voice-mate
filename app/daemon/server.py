@@ -237,10 +237,18 @@ class ApiServer:
             self._serving.start()
 
     def _serve(self, server: _HttpServer) -> None:
-        server.serve_forever(poll_interval=0.5)
+        try:
+            server.serve_forever(poll_interval=0.5)
+        finally:
+            with self._lock:
+                died = not self._closed
+            if died:
+                # serve_forever ended without stop() (e.g. a selector failure): wake
+                # listen() so the daemon exits instead of holding the port with a dead API.
+                self._stopped.set()
 
     def wait_stopped(self, timeout: float | None = None) -> bool:
-        """True once `stop()` finished (requests drained, socket closed)."""
+        """True once `stop()` finished (requests drained, socket closed), or serving died."""
         return self._stopped.wait(timeout)
 
     def stop(self, grace: float = 1.0) -> None:

@@ -438,6 +438,22 @@ def test_an_idle_connection_is_dropped_and_does_not_pin_stop(
     assert time.monotonic() - started < 2.0  # nothing left in flight to wait for
 
 
+def test_serving_that_dies_wakes_listeners(make_server: MakeServer, monkeypatch: pytest.MonkeyPatch) -> None:
+    """If serve_forever ever ends without stop(), wait_stopped() must return (listen()
+    would otherwise block forever and the daemon would hold the port with a dead API)."""
+    from app.daemon import server as server_module
+
+    def _die(self: object, poll_interval: float = 0.5) -> None:
+        # Like the real serve_forever ending on its own (e.g. its selector failed): it
+        # marks itself shut down, so a later shutdown() does not wait.
+        self._BaseServer__is_shut_down.set()  # type: ignore[attr-defined]
+
+    monkeypatch.setattr(server_module._HttpServer, "serve_forever", _die)
+    server = make_server()
+    assert server.wait_stopped(timeout=5.0)
+    server.stop(grace=0.1)  # the normal cleanup still works afterwards
+
+
 def test_concurrent_stops_both_return_once_drained(make_server: MakeServer) -> None:
     server = make_server()
     other = threading.Thread(target=server.stop)
