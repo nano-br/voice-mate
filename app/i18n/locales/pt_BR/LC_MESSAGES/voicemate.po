@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-02 00:27-0300\n"
+"POT-Creation-Date: 2026-10-02 02:39-0300\n"
 "PO-Revision-Date: 2026-10-01 16:49-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: pt_BR\n"
@@ -249,7 +249,7 @@ msgstr ""
 "[VoiceMate] ⚠ --input-method mouse só é suportado no Windows "
 "(trigger={trigger}); usando hotkeys de teclado."
 
-#: app/companion/controller.py:571
+#: app/companion/controller.py:587
 msgid ""
 "The settings file was written by a newer version of VoiceMate, so it is "
 "read-only here."
@@ -257,16 +257,16 @@ msgstr ""
 "O arquivo de configurações foi gravado por uma versão mais nova do "
 "VoiceMate, então aqui ele fica somente para leitura."
 
-#: app/companion/controller.py:590
+#: app/companion/controller.py:606
 msgid "Could not save the settings file."
 msgstr "Não foi possível salvar o arquivo de configurações."
 
-#: app/companion/controller.py:618
+#: app/companion/controller.py:634
 #, python-brace-format
 msgid "{hotkey} is already used by another app."
 msgstr "{hotkey} já está em uso por outro aplicativo."
 
-#: app/companion/controller.py:683
+#: app/companion/controller.py:699
 msgid "Could not change the start at login setting."
 msgstr "Não foi possível alterar a opção de iniciar ao entrar no sistema."
 
@@ -300,7 +300,7 @@ msgid "Settings"
 msgstr "Configurações"
 
 #: app/companion/main.py:143 app/companion/ui/status_window.py:122
-#: app/companion/ui/status_window.py:173 app/companion/ui/tray.py:97
+#: app/companion/ui/status_window.py:177 app/companion/ui/tray.py:97
 msgid "Restart engine"
 msgstr "Reiniciar o motor"
 
@@ -308,7 +308,7 @@ msgstr "Reiniciar o motor"
 msgid "Restart WSL..."
 msgstr "Reiniciar o WSL..."
 
-#: app/companion/main.py:146 app/companion/ui/status_window.py:177
+#: app/companion/main.py:146 app/companion/ui/status_window.py:181
 #: app/companion/ui/tray.py:107
 msgid "Quit VoiceMate"
 msgstr "Sair do VoiceMate"
@@ -341,7 +341,7 @@ msgid "Connect a microphone to record."
 msgstr "Conecte um microfone para gravar."
 
 #: app/companion/model.py:594 app/companion/model.py:867
-#: app/companion/ui/demo_controller.py:325 app/companion/ui/texts.py:110
+#: app/companion/ui/demo_controller.py:331 app/companion/ui/texts.py:110
 msgid "WSL audio stopped"
 msgstr "O áudio do WSL parou"
 
@@ -876,11 +876,11 @@ msgstr "O arquivo de som do sinal {cue} deve ser um WAV PCM de 8 ou 16 bits."
 msgid "The sound file for the {cue} cue is longer than {seconds} seconds."
 msgstr "O arquivo de som do sinal {cue} passa de {seconds} segundos."
 
-#: app/companion/ui/app.py:143
+#: app/companion/ui/app.py:144
 msgid "Restart WSL now?"
 msgstr "Reiniciar o WSL agora?"
 
-#: app/companion/ui/app.py:144 app/companion/ui/status_window.py:128
+#: app/companion/ui/app.py:145 app/companion/ui/status_window.py:128
 msgid ""
 "WSL audio is not working. Restarting WSL fixes it, but it also stops "
 "every running distro."
@@ -888,19 +888,19 @@ msgstr ""
 "O áudio do WSL não está funcionando. Reiniciar o WSL resolve, mas também "
 "para todas as distros em execução."
 
-#: app/companion/ui/app.py:145 app/companion/ui/app.py:171
+#: app/companion/ui/app.py:146 app/companion/ui/app.py:172
 msgid "Restart WSL"
 msgstr "Reiniciar o WSL"
 
-#: app/companion/ui/app.py:146 app/companion/ui/status_window.py:132
+#: app/companion/ui/app.py:147 app/companion/ui/status_window.py:132
 msgid "Not now"
 msgstr "Agora não"
 
-#: app/companion/ui/app.py:169
+#: app/companion/ui/app.py:170
 msgid "Restart WSL?"
 msgstr "Reiniciar o WSL?"
 
-#: app/companion/ui/app.py:170
+#: app/companion/ui/app.py:171
 msgid ""
 "This stops every running WSL distro, Docker included, and starts the "
 "engine again."
@@ -908,14 +908,31 @@ msgstr ""
 "Isso para todas as distros do WSL em execução, inclusive o Docker, e "
 "inicia o motor de novo."
 
-#: app/companion/ui/app.py:172 app/companion/ui/settings_window.py:628
+#: app/companion/ui/app.py:173 app/companion/ui/app.py:214
+#: app/companion/ui/settings_window.py:628
 #: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:79
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: app/companion/ui/app.py:196
+#: app/companion/ui/app.py:197
 msgid "Could not change the sounds"
 msgstr "Não foi possível alterar os sons"
+
+#: app/companion/ui/app.py:211
+msgid "Clear the \"Not copied\" list?"
+msgstr "Limpar a lista \"Não copiadas\"?"
+
+#: app/companion/ui/app.py:212
+msgid ""
+"These transcriptions never reached the clipboard. Once cleared, they "
+"cannot be copied any more."
+msgstr ""
+"Essas transcrições nunca chegaram à área de transferência. Depois de "
+"limpar a lista, não será mais possível copiá-las."
+
+#: app/companion/ui/app.py:213 app/companion/ui/tray.py:199
+msgid "Clear list"
+msgstr "Limpar lista"
 
 #: app/companion/ui/demo_controller.py:145
 msgid "VoiceMate demo"
@@ -925,7 +942,7 @@ msgstr "Demonstração do VoiceMate"
 msgid "Nothing is recorded: the states change by themselves."
 msgstr "Nada é gravado: os estados mudam sozinhos."
 
-#: app/companion/ui/demo_controller.py:326
+#: app/companion/ui/demo_controller.py:332
 msgid "Restart WSL to bring the microphone back."
 msgstr "Reinicie o WSL para recuperar o microfone."
 
@@ -1193,27 +1210,31 @@ msgstr "Não copiadas"
 msgid "Transcriptions that never reached the clipboard. Copy them from here."
 msgstr "Transcrições que nunca chegaram à área de transferência. Copie-as daqui."
 
-#: app/companion/ui/status_window.py:166 app/companion/ui/tray.py:83
+#: app/companion/ui/status_window.py:165
+msgid "Clear"
+msgstr "Limpar"
+
+#: app/companion/ui/status_window.py:170 app/companion/ui/tray.py:83
 msgid "Recent"
 msgstr "Recentes"
 
-#: app/companion/ui/status_window.py:171 app/companion/ui/tray.py:104
+#: app/companion/ui/status_window.py:175 app/companion/ui/tray.py:104
 msgid "Settings..."
 msgstr "Configurações..."
 
-#: app/companion/ui/status_window.py:175 app/companion/ui/tray.py:102
+#: app/companion/ui/status_window.py:179 app/companion/ui/tray.py:102
 msgid "Open logs"
 msgstr "Abrir logs"
 
-#: app/companion/ui/status_window.py:195
+#: app/companion/ui/status_window.py:200
 msgid "Copy"
 msgstr "Copiar"
 
-#: app/companion/ui/status_window.py:234 app/companion/ui/tray.py:192
+#: app/companion/ui/status_window.py:239 app/companion/ui/tray.py:192
 msgid "No transcriptions yet"
 msgstr "Nenhuma transcrição ainda"
 
-#: app/companion/ui/status_window.py:344 app/companion/ui/tray.py:224
+#: app/companion/ui/status_window.py:349 app/companion/ui/tray.py:229
 msgid "Quitting..."
 msgstr "Saindo..."
 
@@ -1416,11 +1437,11 @@ msgstr "Silenciar sons"
 msgid "Not copied ({count})"
 msgstr "Não copiadas ({count})"
 
-#: app/companion/ui/tray.py:195
+#: app/companion/ui/tray.py:196
 msgid "Nothing to copy"
 msgstr "Nada para copiar"
 
-#: app/companion/ui/tray.py:237
+#: app/companion/ui/tray.py:242
 #, python-brace-format
 msgid "Claude: {text}"
 msgstr "Claude: {text}"

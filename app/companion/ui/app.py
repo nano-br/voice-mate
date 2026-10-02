@@ -72,6 +72,7 @@ class CompanionUi(QObject):
         self._quit_done = False
         self._wsl_box: QMessageBox | None = None
         self._restart_wsl_box: QMessageBox | None = None
+        self._clear_pending_box: QMessageBox | None = None
         self._jump_list_mode: str | None = None
 
         self.tray: TrayIcon | None = None
@@ -198,6 +199,30 @@ class CompanionUi(QObject):
 
     def copy_result(self, item: RecentItem) -> None:
         self._controller.copy_result(item.instance, item.record["result_seq"])
+
+    def confirm_clear_pending(self) -> None:
+        if self._quitting:
+            return
+        if self._clear_pending_box is not None:
+            self._clear_pending_box.raise_()
+            self._clear_pending_box.activateWindow()
+            return
+        box, clear = _question(
+            _('Clear the "Not copied" list?'),
+            _("These transcriptions never reached the clipboard. Once cleared, they cannot be copied any more."),
+            _("Clear list"),
+            _("Cancel"),
+        )
+
+        def answered(_result: int) -> None:
+            self._clear_pending_box = None
+            box.deleteLater()
+            if box.clickedButton() is clear and not self._quitting:
+                self._controller.clear_pending()
+
+        box.finished.connect(answered)
+        self._clear_pending_box = box
+        box.show()
 
     # ------------------------------------------------------------------ lifecycle
 
@@ -364,7 +389,8 @@ class CompanionUi(QObject):
 
 def _question(title: str, text: str, accept: str, reject: str) -> tuple[QMessageBox, QAbstractButton]:
     """A non-modal question with our own (translated) button texts. The default (Enter) is
-    `reject`: restarting WSL stops every distro, so it must be an explicit click."""
+    `reject`: restarting WSL stops every distro and clearing the Not copied list cannot be
+    undone, so they must be an explicit click."""
     box = QMessageBox(QMessageBox.Icon.Question, title, text)
     box.setWindowIcon(app_icon())
     accept_button = box.addButton(accept, QMessageBox.ButtonRole.AcceptRole)

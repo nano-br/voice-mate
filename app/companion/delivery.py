@@ -15,7 +15,8 @@ Rules from docs/companion-app.md, "Delivery, ACK and reconciliation":
 - the pending list outlives the process: the controller saves it on every change
   (app/companion/pending_store.py) and hands it back through `restore_pending`. A
   restored result the daemon still reports as unacked (its ACK was lost with the old
-  run) is ACKed `dismissed` again and stays pending.
+  run) is ACKed `dismissed` again and stays pending. `clear_pending` empties the list
+  (the user's "Clear list"); cleared results stay known, so they never come back.
 """
 
 from __future__ import annotations
@@ -142,6 +143,8 @@ class DeliveryQueue:
         self._acked: OrderedDict[Key, AckStatus] = OrderedDict()
         self._recent: list[RecentItem] = []  # newest first
         self._pending: OrderedDict[Key, RecentItem] = OrderedDict()  # oldest first
+        # Restored from disk: the daemon may never have received their ACK (see on_unacked).
+        self._unsynced: set[Key] = set()
 
     # --- views ---------------------------------------------------------------------
 
@@ -180,6 +183,21 @@ class DeliveryQueue:
             key = (item.instance, item.record["result_seq"])
             if key not in self._pending:
                 self._add_pending(key, item.record)
+                if key not in self._acked:
+                    self._unsynced.add(key)
+
+    def clear_pending(self) -> int:
+        """The user emptied the Not copied list: drop every item (returns how many).
+
+        They stay known (never offered again by reconciliation); no ACK changes, they
+        were ACKed when they became pending. A restored one whose ACK the daemon never
+        got is still ACKed `dismissed` if the daemon reports it (see `on_unacked`)."""
+        keys = list(self._pending)
+        for key in keys:
+            if key not in self._acked:
+                self._mark_acked(key, "dismissed")
+        self._pending.clear()
+        return len(keys)
 
     def set_instance(self, instance: str, now: float) -> list[DeliveryEffect]:
         """A new daemon instance: queued results of the old one cannot be ACKed any more,
@@ -244,10 +262,15 @@ class DeliveryQueue:
                 continue
             key = (instance, record["result_seq"])
             if self.is_known(key):
-                if key in self._pending and key not in self._acked:
+                if key in self._unsynced:
                     # Restored from disk, but its ACK never reached the daemon (the old run
-                    # quit or crashed first): it is already offered for a manual copy.
-                    self._set_status(key, "dismissed", record)
+                    # quit or crashed first): it is already offered for a manual copy (or
+                    # the user cleared it), so it is never delivered automatically.
+                    self._unsynced.discard(key)
+                    if key in self._pending:
+                        self._set_status(key, "dismissed", record)
+                    else:
+                        self._mark_acked(key, "dismissed")
                     resync.append(record["result_seq"])
                 continue
             self._remember(instance, record)
@@ -375,11 +398,14 @@ class DeliveryQueue:
         record = self._find_record(job.key) or _record_from_job(job)
         self._add_pending(job.key, record)
 
-    def _set_status(self, key: Key, status: AckStatus, record: ResultRecord | None = None) -> None:
+    def _mark_acked(self, key: Key, status: AckStatus) -> None:
         self._acked[key] = status
         self._acked.move_to_end(key)
         while len(self._acked) > _ACKED_MEMORY:
             self._acked.popitem(last=False)
+
+    def _set_status(self, key: Key, status: AckStatus, record: ResultRecord | None = None) -> None:
+        self._mark_acked(key, status)
         self._recent = [
             RecentItem(item.instance, _record(item.record, delivery=status))
             if (item.instance, item.record["result_seq"]) == key
@@ -388,6 +414,7 @@ class DeliveryQueue:
         ]
         if status == "delivered":
             self._pending.pop(key, None)
+            self._unsynced.discard(key)  # its delivered ACK supersedes the lost one
             return
         known = record or self._find_record(key)
         if known is not None:

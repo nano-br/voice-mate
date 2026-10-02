@@ -224,3 +224,36 @@ def test_flow_buttons_come_before_cancel_in_the_tab_order(ui: CompanionUi) -> No
     first, second = window.flow_buttons
     assert first.nextInFocusChain() is second
     assert second.nextInFocusChain() is window.cancel_button
+
+
+def test_pending_clear_button_asks_then_empties_the_list(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    window = ui.status_window
+    window.show()
+    fake.add_pending("lost text")
+    fake.add_pending("another one")
+    process_events()
+    assert window.pending_clear.text() == "Clear" and window.pending_clear.isVisible()
+    window.pending_clear.click()
+    box = ui._clear_pending_box
+    assert box is not None and box.isVisible()
+    assert fake.called("clear_pending") == []
+    next(button for button in box.buttons() if button.text() == "Clear list").click()
+    assert process_events(lambda: ui._clear_pending_box is None)
+    assert fake.called("clear_pending") == [()]
+    assert process_events(lambda: not window.pending_group.isVisible())
+    assert fake.pending_results() == []
+
+
+def test_pending_clear_is_ignored_while_quitting(
+    ui: CompanionUi, fake: FakeController, exits: list[int], process_events: Callable[..., bool]
+) -> None:
+    fake.add_pending("lost text")
+    process_events()
+    fake.quit_delay = 0.3
+    ui.quit_app()
+    assert not ui.status_window.pending_clear.isEnabled()
+    ui.confirm_clear_pending()
+    assert ui._clear_pending_box is None
+    assert process_events(lambda: exits == [0], timeout=3.0)

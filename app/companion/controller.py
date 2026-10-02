@@ -795,6 +795,14 @@ class CompanionControllerImpl:
     def copy_result(self, instance: str, result_seq: int) -> None:
         self._post(lambda: self._apply_delivery(self._delivery.copy(instance, result_seq, time.monotonic())))
 
+    def clear_pending(self) -> None:
+        def run() -> None:
+            cleared = self._delivery.clear_pending()
+            log.info("Not copied list cleared (%s item(s))", cleared)
+            self._apply_delivery([])  # saves the empty list (deletes pending.json)
+
+        self._post(run)
+
     def open_logs(self) -> None:
         directory = self._logs_dir
 

@@ -288,3 +288,27 @@ def test_a_restored_item_the_daemon_still_reports_is_acked_again_not_delivered()
     assert not any(isinstance(e, NotCopied) for e in effects)  # the user already sees it
     assert [i.record["result_seq"] for i in q.pending()] == [7]
     assert q.on_unacked(INSTANCE, [record(7, 11.0)], 10.0) == []  # only once
+
+
+def test_clear_pending_empties_the_list_without_acks_and_for_good() -> None:
+    q = queue()
+    q.on_unacked(INSTANCE, [record(1, 60.0), record(2, 60.0)], 0.0)  # dismissed: pending
+    q.restore_pending([restored(9, "inst-old")])
+    assert len(q.pending()) == 3
+    assert q.clear_pending() == 3
+    assert q.pending() == []
+    # Reconciliation still sees them (say the ACK is slow): never offered again.
+    assert q.on_unacked(INSTANCE, [record(1, 61.0), record(2, 61.0)], 1.0) == []
+    assert q.pending() == []
+    assert q.clear_pending() == 0
+
+
+def test_a_cleared_restored_item_is_still_acked_when_the_daemon_reports_it() -> None:
+    q = DeliveryQueue()
+    q.restore_pending([restored(7)])  # its ACK was lost with the old run
+    assert q.clear_pending() == 1
+    q.set_instance(INSTANCE, 0.0)
+    effects = q.on_unacked(INSTANCE, [record(7, 1.0)], 0.5)
+    assert acks(effects) == [(7, "dismissed")]
+    assert started(effects) == [] and q.pending() == []
+    assert q.on_unacked(INSTANCE, [record(7, 2.0)], 1.0) == []  # only once

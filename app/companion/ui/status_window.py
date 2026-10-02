@@ -160,10 +160,14 @@ class StatusWindow(QWidget):
         info.addRow(_("Restarts:"), self.restarts_value)
         root.addLayout(info)
 
-        self.pending_group, self.pending_list, self.pending_copy = self._results_group(_("Not copied"))
+        self.pending_group, self.pending_list, self.pending_copy, pending_row = self._results_group(_("Not copied"))
         self.pending_group.setToolTip(_("Transcriptions that never reached the clipboard. Copy them from here."))
+        self.pending_clear = QPushButton(_("Clear"))
+        self.pending_clear.clicked.connect(self._shell.confirm_clear_pending)
+        pending_row.insertWidget(1, self.pending_clear)  # stretch, Clear, Copy
+        QWidget.setTabOrder(self.pending_clear, self.pending_copy)  # Tab follows the visual order
         root.addWidget(self.pending_group)
-        self.recent_group, self.recent_list, self.recent_copy = self._results_group(_("Recent"))
+        self.recent_group, self.recent_list, self.recent_copy, _recent_row = self._results_group(_("Recent"))
         root.addWidget(self.recent_group, 1)
 
         bottom = QHBoxLayout()
@@ -182,7 +186,8 @@ class StatusWindow(QWidget):
         bottom.addWidget(self.quit_button)
         root.addLayout(bottom)
 
-    def _results_group(self, title: str) -> tuple[QGroupBox, QListWidget, QPushButton]:
+    def _results_group(self, title: str) -> tuple[QGroupBox, QListWidget, QPushButton, QHBoxLayout]:
+        """A titled list with its button row (a stretch, then Copy)."""
         group = QGroupBox(title)
         layout = QVBoxLayout(group)
         layout.setContentsMargins(8, 8, 8, 8)
@@ -202,7 +207,7 @@ class StatusWindow(QWidget):
         row.addStretch(1)
         row.addWidget(copy)
         layout.addLayout(row)
-        return group, results, copy
+        return group, results, copy, row
 
     # ------------------------------------------------------------------ rendering
 

@@ -44,4 +44,7 @@ class Shell(Protocol):
 
     def copy_result(self, item: RecentItem) -> None: ...
 
+    def confirm_clear_pending(self) -> None:
+        """Ask before emptying the Not copied list: its texts cannot be copied afterwards."""
+
     def quit_app(self) -> None: ...

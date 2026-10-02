@@ -246,7 +246,8 @@ they belong to:
   companion is the only one left that knows about it. It is saved to `pending.json`
   (see "Local files") on every change and restored at startup, before `start()`, so
   the tray badge and the status window show it at once. A manual copy removes the
-  entry (from memory and from the file). A restored result the daemon still reports
+  entry (from memory and from the file); "Clear list" (`clear_pending`) empties it,
+  see "Tray states, cues and reactions". A restored result the daemon still reports
   as unacked (the old run quit or crashed before its ACK went out) is ACKed
   `dismissed` again and stays in the list; it is never delivered automatically.
 
@@ -329,6 +330,18 @@ click copies) and Not copied (never delivered, click copies); Mute sounds; Engin
 Restart engine / Restart WSL... / Open logs; a "Restart WSL now..." item while
 `pending_wsl_restart`; Settings...; Quit VoiceMate. Left click opens the status
 window, which shows the same information and a "Quit VoiceMate" button.
+
+Emptying Not copied: the submenu ends with a separator and "Clear list"; the status
+window's Not copied group has "Clear" next to "Copy". Both ask first, with a
+non-modal question ('Clear the "Not copied" list?', buttons "Clear list" and
+"Cancel", Cancel being the default for Enter and Esc): the texts cannot be copied
+afterwards, and since the list now survives restarts it holds the only copy of them.
+Answering "Clear list" calls `clear_pending()`, which drops every item from memory
+and deletes `pending.json`. Nothing is ACKed again (those results were ACKed when
+they became pending) and cleared results stay known, so reconciliation never offers
+them again; a restored one whose ACK the daemon never got is still ACKed `dismissed`
+when the daemon reports it. There is no per-item removal: an item leaves the list
+when it is copied or when the whole list is cleared.
 
 ### Notifications
 
@@ -518,7 +531,8 @@ as "not found".
   not stored (the daemon computes it per response).
 - At most `PENDING_LIMIT` (50) items, the same cap as the list in memory, so a
   restart never drops what the user could see; the oldest go first.
-- Written whole on every change, on the `pending` worker thread (temp file + `fsync` +
+- Written whole on every change (a result added, copied or capped, the list
+  cleared), on the `pending` worker thread (temp file + `fsync` +
   `os.replace`); Quit waits up to 2 s for the last write. An empty list deletes the
   file. A write that fails is logged (once, until a write works again) and the list
   stays in memory: disk errors never block the UI or a delivery.
@@ -528,8 +542,8 @@ as "not found".
   cannot even be moved, nothing is written to it for the rest of the session. Invalid
   items are skipped with a log line, the valid ones are restored.
 - Privacy: the file holds transcription text. It stays in the user's profile, only
-  holds what is waiting for a manual copy, goes away when the list is empty, and the
-  Windows uninstaller deletes it (with its `.tmp` and `.broken-*` copies). The text
+  holds what is waiting for a manual copy, goes away when the list is empty (also
+  after "Clear list"), and the Windows uninstaller deletes it (with its `.tmp` and `.broken-*` copies). The text
   is never written to the logs.
 
 ### Single instance, taskbar, autostart

@@ -275,6 +275,12 @@ class FakeController:
             count = len(self._pending)
         self.publish(pending_unacked=count)
 
+    def clear_pending(self) -> None:
+        self._call("clear_pending")
+        with self._lock:
+            self._pending = []
+        self.publish(pending_unacked=0)
+
     def open_logs(self) -> None:
         self._call("open_logs")
 

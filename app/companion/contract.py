@@ -258,4 +258,8 @@ class CompanionController(Protocol):
         """Put a recent/pending result on the clipboard (verified) and ACK it `delivered`
         (last status wins, also over an earlier `dismissed`)."""
 
+    def clear_pending(self) -> None:
+        """Empty the Not copied list (memory and disk). Nothing is ACKed again: those
+        results were ACKed when they became pending. The UI confirms first."""
+
     def open_logs(self) -> None: ...

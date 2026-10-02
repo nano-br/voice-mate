@@ -207,6 +207,27 @@ def test_the_not_copied_list_survives_a_restart(make_controller: ControllerKit, 
     assert wait_until(lambda: not make_controller.pending_path.exists())  # copied: gone from disk too
 
 
+def test_clear_pending_empties_the_list_and_deletes_the_file(
+    make_controller: ControllerKit, daemon: FakeDaemon
+) -> None:
+    first = daemon.add_old_unacked("old one", age_s=45)
+    second = daemon.add_old_unacked("old two", age_s=50)
+    controller, parts, _backend = make_controller(daemon)
+    recorder = Recorder(controller)
+    controller.start()
+    assert wait_until(lambda: recorder.last.pending_unacked == 2)
+    assert wait_until(lambda: _stored_texts(make_controller.pending_path) == ["old one", "old two"])
+    acks_before = len(daemon.acks)
+    controller.clear_pending()
+    assert wait_until(lambda: recorder.last.pending_unacked == 0)
+    assert controller.pending_results() == []
+    assert wait_until(lambda: not make_controller.pending_path.exists())
+    threading.Event().wait(0.5)  # a reconciliation round (FAST timings)
+    assert controller.pending_results() == [] and len(daemon.acks) == acks_before  # no ACK changes
+    assert daemon.ack_status(first) == daemon.ack_status(second) == "dismissed"
+    assert parts.clipboard.texts == []
+
+
 def test_a_pending_list_that_cannot_be_saved_does_not_break_delivery(
     make_controller: ControllerKit, daemon: FakeDaemon, tmp_path: Path
 ) -> None:
