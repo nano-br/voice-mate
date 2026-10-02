@@ -206,7 +206,7 @@ _PIXEL_MARKS: Final[dict[tuple[Layout, int], _PixelMark]] = {
     ("app", 16): _hand(((3, 10), (5, 6), (8, 12), (11, 6), (13, 10)), 2, (8, 3), 1),
     ("app", 20): _hand(((3, 13), (6, 8), (10, 16), (14, 8), (17, 13)), 2, (10, 4), 2),
     ("app", 24): _hand(((5, 15), (8, 10), (12, 18), (16, 10), (19, 15)), 2, (12, 6), 2),
-    ("tray", 16): _hand(((1, 10), (5, 6), (8, 14), (11, 6), (15, 10)), 2, (8, 3), 2),
+    ("tray", 16): _hand(((1, 10), (5, 6), (8, 13), (11, 6), (15, 10)), 2, (8, 3), 2),
     ("tray", 20): _hand(((2, 12), (7, 7), (10, 17), (13, 7), (18, 12)), 2, (10, 4), 2),
     ("tray", 24): _hand(((2.5, 13.5), (6.5, 6.5), (11.5, 18.5), (16.5, 6.5), (20.5, 13.5)), 3, (11.5, 3.5), 2.5),
 }
@@ -300,7 +300,8 @@ def glyph_image(state: TrayState, glyph: QColor, size: int) -> QImage:
         mark = _PIXEL_MARKS.get(("tray", size)) or _place_mark(_TRAY_BOX, size)
         head = glyph if state == "stopped" else CORAL  # stopped: the whole glyph is dimmed
         _paint_mark(painter, mark, glyph, head)
-        if badge != "none" and size not in _BADGE_ART:
+        art = _BADGE_ART.get((size, badge))
+        if badge != "none" and art is None:
             spec = _badge_spec(size)
             _clear(painter, spec)
             painter.save()
@@ -309,39 +310,89 @@ def glyph_image(state: TrayState, glyph: QColor, size: int) -> QImage:
             painter.restore()
     finally:
         painter.end()
-    if badge != "none" and size in _BADGE_ART:
-        _put_badge_art(image, badge, size)
+    if art is not None:
+        _put_badge_art(image, art, _ART_ORIGINS[size])
     return image
 
 
-# At 16 px the badge is pixel art on a 6 x 6 grid in the corner (columns and rows 10 to 15):
+# At 16, 20 and 24 px the badges are pixel art (6 x 6, 7 x 7 and 8 x 8) in the corner:
 # vector shapes that small only blur. "." keeps the glyph's pixel (the right arm's tip may
 # show through a corner); every other cell replaces it. B = the badge's color, W = white,
-# K = dark ink. The body's V ends at column 9, so the art never touches it.
-_ART_ORIGIN: Final = 10
-_BADGE_ART: Final[dict[int, dict[Badge, tuple[QColor, tuple[str, ...]]]]] = {
-    16: {
-        "octagon": (_GREY, (".BBBB.", "BBBBBB", "BWWWWB", "BWWWWB", "BBBBBB", ".BBBB.")),
-        "ring": (_GREY, (".BBBB.", "BB..BB", "B....B", "B....B", "BB..BB", ".BBBB.")),
-        "arrows": (_GREY, (".BBBBB", "BB..BB", "B..BBB", "B.....", "BB..B.", ".BBB..")),
-        "record": (_RED, (".BBBB.", "BBBBBB", "BBBBBB", "BBBBBB", "BBBBBB", ".BBBB.")),
-        "hourglass": (_AMBER, ("BBBBBB", ".BBBB.", "..BB..", "..BB..", ".BBBB.", "BBBBBB")),
-        "bubble": (_VIOLET, (".BBBB.", "BBBBBB", "BBBBBB", ".BBBB.", ".BB...", ".B....")),
-        "speaker": (_VIOLET, ("...B..", "..BB.B", "BBBB.B", "BBBB.B", "..BB.B", "...B..")),
-        "check": (_GREEN, (".BBBB.", "BBBBWB", "BBBBWB", "BWBWBB", "BBWBBB", ".BBBB.")),
-        "triangle": (_YELLOW, ("..BB..", "..BB..", ".BKKB.", ".BKKB.", "BBBBBB", "BBKKBB")),
-        "cross": (_RED, (".BBBB.", "BWBBWB", "BBWWBB", "BBWWBB", "BWBBWB", ".BBBB.")),
-    },
+# K = dark ink. The art starts right of the body's V and its anti-aliased edge (column 10
+# at 16 px, 13 at 20, 16 at 24; at 16 px the art's top-left cell stays empty), so it never
+# touches the body.
+_ART_ORIGINS: Final[dict[int, int]] = {16: 10, 20: 13, 24: 16}
+_BADGE_ART: Final[dict[tuple[int, Badge], tuple[QColor, tuple[str, ...]]]] = {
+    (16, "octagon"): (_GREY, (".BBBB.", "BBBBBB", "BWWWWB", "BWWWWB", "BBBBBB", ".BBBB.")),
+    (16, "ring"): (_GREY, (".BBBB.", "BB..BB", "B....B", "B....B", "BB..BB", ".BBBB.")),
+    (16, "arrows"): (_GREY, (".BBBBB", "BB..BB", "B..BBB", "B.....", "BB..B.", ".BBB..")),
+    (16, "record"): (_RED, (".BBBB.", "BBBBBB", "BBBBBB", "BBBBBB", "BBBBBB", ".BBBB.")),
+    (16, "hourglass"): (_AMBER, (".BBBB.", ".BBBB.", "..BB..", "..BB..", ".BBBB.", ".BBBB.")),
+    (16, "bubble"): (_VIOLET, (".BBBB.", "BBBBBB", "BBBBBB", ".BBBB.", ".BB...", ".B....")),
+    (16, "speaker"): (_VIOLET, ("...B..", "..BB.B", "BBBB.B", "BBBB.B", "..BB.B", "...B..")),
+    (16, "check"): (_GREEN, (".BBBB.", "BBBBWB", "BBBBWB", "BWBWBB", "BBWBBB", ".BBBB.")),
+    (16, "triangle"): (_YELLOW, ("...B..", "..BKB.", "..BKB.", ".BBBBB", ".BBKBB", ".BBBBB")),
+    (16, "cross"): (_RED, (".BBBB.", "BWBBWB", "BBWWBB", "BBWWBB", "BWBBWB", ".BBBB.")),
+    (20, "octagon"): (_GREY, ("..BBB..", ".BBBBB.", "BBBBBBB", "BWWWWWB", "BBBBBBB", ".BBBBB.", "..BBB..")),
+    (20, "ring"): (_GREY, ("..BBB..", ".BB.BB.", "BB...BB", "B.....B", "BB...BB", ".BB.BB.", "..BBB..")),
+    (20, "arrows"): (_GREY, ("..BBBB.", ".BB.BBB", "BB...B.", "B......", "BB.....", ".BB....", "..BBB..")),
+    (20, "record"): (_RED, ("..BBB..", ".BBBBB.", "BBBBBBB", "BBBBBBB", "BBBBBBB", ".BBBBB.", "..BBB..")),
+    (20, "hourglass"): (_AMBER, ("BBBBBBB", ".BBBBB.", "..BBB..", "...B...", "..BBB..", ".BBBBB.", "BBBBBBB")),
+    (20, "bubble"): (_VIOLET, (".BBBBB.", "BBBBBBB", "BWBWBWB", "BBBBBBB", ".BBBBB.", ".BB....", ".B.....")),
+    (20, "speaker"): (_VIOLET, ("...B...", "..BB.B.", "BBBB..B", "BBBB..B", "BBBB..B", "..BB.B.", "...B...")),
+    (20, "check"): (_GREEN, ("..BBB..", ".BBBBB.", "BBBBBWB", "BBBBWWB", "BWBWWBB", ".BWWBB.", "..BBB..")),
+    (20, "triangle"): (_YELLOW, ("...B...", "..BBB..", "..BKB..", ".BBKBB.", ".BBBBB.", "BBBKBBB", "BBBBBBB")),
+    (20, "cross"): (_RED, (".BBBBB.", "BWBBBWB", "BBWBWBB", "BBBWBBB", "BBWBWBB", "BWBBBWB", ".BBBBB.")),
+    (24, "octagon"): (
+        _GREY,
+        ("..BBBB..", ".BBBBBB.", "BBBBBBBB", "BWWWWWWB", "BWWWWWWB", "BBBBBBBB", ".BBBBBB.", "..BBBB.."),
+    ),
+    (24, "ring"): (
+        _GREY,
+        ("..BBBB..", ".BB..BB.", "BB....BB", "B......B", "B......B", "BB....BB", ".BB..BB.", "..BBBB.."),
+    ),
+    (24, "arrows"): (
+        _GREY,
+        ("..BBBBB.", ".BB...BB", "BB..BBBB", "B....BB.", "B.......", "BB......", ".BB.....", "..BBBB.."),
+    ),
+    (24, "record"): (
+        _RED,
+        ("..BBBB..", ".BBBBBB.", "BBBBBBBB", "BBBBBBBB", "BBBBBBBB", "BBBBBBBB", ".BBBBBB.", "..BBBB.."),
+    ),
+    (24, "hourglass"): (
+        _AMBER,
+        ("BBBBBBBB", ".BBBBBB.", "..BBBB..", "...BB...", "...BB...", "..BBBB..", ".BBBBBB.", "BBBBBBBB"),
+    ),
+    (24, "bubble"): (
+        _VIOLET,
+        (".BBBBBB.", "BBBBBBBB", "BBBBBBBB", "BWBBWBBW", "BBBBBBBB", ".BBBBBB.", ".BBB....", ".B......"),
+    ),
+    (24, "speaker"): (
+        _VIOLET,
+        ("....B...", "...BB.B.", "BBBBB..B", "BBBBB..B", "BBBBB..B", "BBBBB..B", "...BB.B.", "....B..."),
+    ),
+    (24, "check"): (
+        _GREEN,
+        ("..BBBB..", ".BBBBBB.", "BBBBBBWB", "BBBBBWWB", "BWBBWWBB", "BWWWWBBB", ".BWWBBB.", "..BBBB.."),
+    ),
+    (24, "triangle"): (
+        _YELLOW,
+        ("...BB...", "...BB...", "..BKKB..", "..BKKB..", ".BBKKBB.", ".BBBBBB.", "BBBKKBBB", "BBBBBBBB"),
+    ),
+    (24, "cross"): (
+        _RED,
+        (".BBBBBB.", "BWBBBBWB", "BBWBBWBB", "BBBWWBBB", "BBBWWBBB", "BBWBBWBB", "BWBBBBWB", ".BBBBBB."),
+    ),
 }
 
 
-def _put_badge_art(image: QImage, badge: Badge, size: int) -> None:
-    color, rows = _BADGE_ART[size][badge]
+def _put_badge_art(image: QImage, art: tuple[QColor, tuple[str, ...]], origin: int) -> None:
+    color, rows = art
     palette = {"B": color, "W": _WHITE, "K": _INK}
     for y, row in enumerate(rows):
         for x, cell in enumerate(row):
             if cell != ".":
-                image.setPixelColor(_ART_ORIGIN + x, _ART_ORIGIN + y, palette[cell])
+                image.setPixelColor(origin + x, origin + y, palette[cell])
 
 
 # ---------------------------------------------------------------------- app icon
@@ -446,12 +497,12 @@ class _BadgeSpec:
 
 
 # Small, in the bottom-right corner: the cut-out (radius + gap) never reaches the body's V.
-# 7 px at 20 and 8 px at 24; at 16 px the pixel art (_BADGE_ART) fills this disc's 6 x 6
-# square with no ring, since one would bite the V.
+# At 16, 20 and 24 px the pixel art (_BADGE_ART) replaces the vector badge; these discs are
+# the area it covers, for the tests.
 _BADGES: Final[dict[int, _BadgeSpec]] = {
     16: _BadgeSpec(QPointF(13.0, 13.0), 3.0, 0.0, 1.0),
-    20: _BadgeSpec(QPointF(16.5, 16.5), 3.5, 0.6, 1.2),
-    24: _BadgeSpec(QPointF(20.0, 20.0), 4.0, 0.75, 1.4),
+    20: _BadgeSpec(QPointF(16.5, 16.5), 3.5, 0.0, 1.2),
+    24: _BadgeSpec(QPointF(20.0, 20.0), 4.0, 0.0, 1.4),
 }
 
 

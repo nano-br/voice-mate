@@ -65,16 +65,14 @@ foreground color: white on a dark taskbar, near-black on a light one (the tray f
 
 The icon always looks the same: the mark keeps exactly its size and place in every state
 (only `stopped` dims it to grey). The STATE is told only by a small badge in the
-bottom-right corner. A round cut-out (the badge's disc plus a thin transparent ring)
-separates it from the mark; it may trim the tip of the right arm, never the body's V.
-Every badge shape stays inside its disc. At 16 px the badge is pixel art on a 6 x 6
-grid (columns and rows 10 to 15) with no ring: the V ends at column 9.
+bottom-right corner; it may cover the tip of the right arm, never the body's V.
 
-| | 32-unit grid (32 px and up) | 24 px | 20 px | 16 px |
-|---|---|---|---|---|
-| Badge centre | (26.5, 26.5) | (20, 20) | (16.5, 16.5) | 6 x 6 pixel art at (10, 10) |
-| Badge radius | 5.5 | 4 | 3.5 | 3 |
-| Cut-out ring | 0.75 | 0.75 | 0.6 | none |
+- At 16, 20 and 24 px (the tray at 100, 125 and 150 %) the badge is pixel art, 6 x 6,
+  7 x 7 and 8 x 8 cells from column and row 10, 13 and 16, just right of the V and its
+  anti-aliased edge. Vector shapes that small only blur.
+- From 32 px the badge is drawn: a disc of radius 5.5 centred at (26.5, 26.5) on the
+  32-unit grid, cut out of the mark with a 0.75 transparent ring; every shape stays inside
+  that disc, so its reach toward the figure is known.
 
 | `TrayState` | Badge |
 |---|---|
@@ -84,7 +82,7 @@ grid (columns and rows 10 to 15) with no ring: the V ends at column 9.
 | `restarting` | grey circular arrow: two thirds of the ring with an arrow head |
 | `recording` | solid red disc |
 | `transcribing` | amber hourglass |
-| `thinking` | violet speech bubble (three white dots from 32 px) |
+| `thinking` | violet speech bubble (three white dots from 20 px) |
 | `speaking` | violet loudspeaker with a sound arc |
 | `ready` (3 s) | green disc with a white check |
 | `warning` | yellow triangle with a dark "!" |
@@ -92,7 +90,7 @@ grid (columns and rows 10 to 15) with no ring: the V ends at column 9.
 
 Badges differ by SHAPE (disc, ring, open ring, octagon, triangle, rounded square, speech
 bubble, hourglass, loudspeaker) and by their symbol, never only by color. The symbols are
-simple and strong so they survive at 6 px. No animation by default.
+simple and strong so they survive at 6 x 6 pixels. No animation by default.
 
 ## The app icon: the framed tile
 

@@ -160,11 +160,10 @@ def test_the_mark_is_the_same_in_every_state(qapp: QApplication, tone: icons.Gly
 def test_a_badge_never_cuts_into_the_body(qapp: QApplication, tone: icons.GlyphTone, size: int) -> None:
     """The cut-out may trim the right arm's tip, never the V (the figure's body)."""
     mark = icons._PIXEL_MARKS.get(("tray", size)) or icons._place_mark(icons._TRAY_BOX, size)
-    body_right = mark.wave[3].x() - mark.stroke / 2  # the right arm starts past this column
+    body_right = mark.wave[3].x() - mark.stroke / 2  # the right arm starts past this column;
+    # the column holding it is included, for the V's anti-aliased edge
     idle = _image("idle", tone, size)
-    body = [
-        (x, y) for y in range(size) for x in range(size) if x + 1 <= body_right and idle.pixelColor(x, y).alpha() > 0
-    ]
+    body = [(x, y) for y in range(size) for x in range(size) if x <= body_right and idle.pixelColor(x, y).alpha() > 0]
     for state in ALL_STATES:
         if state in ("idle", "stopped"):
             continue
