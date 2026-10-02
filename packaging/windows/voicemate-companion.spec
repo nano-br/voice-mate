@@ -15,6 +15,7 @@
 # provides when it executes this file.
 
 import re
+import sys
 import tomllib
 from pathlib import Path
 
@@ -35,6 +36,11 @@ APP_NAME = "VoiceMate"
 ROOT = Path(SPECPATH).resolve().parents[1]
 LOCALES_DIR = ROOT / "app" / "i18n" / "locales"
 ASSETS_DIR = ROOT / "app" / "companion" / "assets"
+
+# The version rules are tools/release_check.py's (one SemVer definition for the release
+# gate and the build): the spec is not importable, so this is where they are shared.
+sys.path.insert(0, str(ROOT))
+from tools.release_check import numeric_version, version_problems  # noqa: E402
 
 # The engine's stack. tests/test_import_boundary.py keeps the companion away from it;
 # excluding it here turns an accidental import into an ImportError at startup instead
@@ -116,17 +122,14 @@ QT_UNUSED_FILES = re.compile(
 )
 
 
-# SemVer 2.0 (docs/releasing.md): MAJOR.MINOR.PATCH, then an optional -pre-release and
-# +build. A PEP 440 spelling such as 0.2.0rc1 is refused: its digits would turn into
-# the numeric version 0.2.0.1, which sorts after the final 0.2.0 (0.2.0.0).
-SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$")
-
-
 def project_version() -> str:
+    """SemVer 2.0 (docs/releasing.md): a PEP 440 spelling such as 0.2.0rc1 is refused, its
+    digits would turn into the numeric version 0.2.0.1, which sorts after the final 0.2.0."""
     with (ROOT / "pyproject.toml").open("rb") as file:
         version = str(tomllib.load(file)["tool"]["poetry"]["version"])
-    if not SEMVER.match(version):
-        raise SystemExit(f"pyproject.toml version {version!r} is not SemVer (MAJOR.MINOR.PATCH[-pre]): see docs/releasing.md")
+    problems = version_problems(version)
+    if problems:
+        raise SystemExit(f"{problems[0]}: see docs/releasing.md")
     return version
 
 
@@ -147,9 +150,7 @@ def version_resource(version: str) -> VSVersionInfo:
     the suffix. The installer copies its files with `ignoreversion`, so an equal
     numeric version never keeps an older file.
     """
-    match = SEMVER.match(version)
-    assert match, version
-    numbers = [int(part) for part in match.groups()] + [0]
+    numbers = numeric_version(version)
     strings = [
         StringStruct("CompanyName", "NanoBR"),
         StringStruct("FileDescription", APP_NAME),
@@ -161,7 +162,7 @@ def version_resource(version: str) -> VSVersionInfo:
         StringStruct("ProductVersion", version),
     ]
     return VSVersionInfo(
-        ffi=FixedFileInfo(filevers=tuple(numbers), prodvers=tuple(numbers)),
+        ffi=FixedFileInfo(filevers=numbers, prodvers=numbers),
         kids=[
             StringFileInfo([StringTable("040904B0", strings)]),
             VarFileInfo([VarStruct("Translation", [0x0409, 1200])]),

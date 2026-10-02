@@ -46,9 +46,9 @@ with `ignoreversion`, so an equal numeric version never leaves an older file beh
 
 | Where | How |
 | --- | --- |
-| Engine `/health` (`engine_version`) | `importlib.metadata.version("voice-mate")` in `app/daemon/server.py`, `0.0.0` when the package is not installed |
+| Engine `/health` (`version`) | `importlib.metadata.version("voice-mate")` in `app/daemon/server.py` (`engine_version()`), `0.0.0` when the package is not installed; for a pre-release it is the PEP 440 spelling (`0.2.0rc1` for `0.2.0-rc.1`) |
 | Companion (`COMPANION_VERSION`, sent when it registers with the engine) | `app/companion/version.py`: the `VERSION` file the Windows build bakes into the bundle, else `pyproject.toml` in a source checkout, else the installed package metadata, else `0.0.0` |
-| `VoiceMate.exe` version resource (Explorer's Details tab) | `packaging/windows/voicemate-companion.spec` reads `pyproject.toml`: text versions are the full version, the numeric one is `MAJOR.MINOR.PATCH.0` |
+| `VoiceMate.exe` version resource (Explorer's Details tab) | `packaging/windows/voicemate-companion.spec` reads `pyproject.toml` and takes the SemVer rules from `tools/release_check.py`: text versions are the full version, the numeric one is `MAJOR.MINOR.PATCH.0` |
 | `app/companion/VERSION` inside the build | written by the spec into the build folder (never into the source tree) |
 | Installer version and name, `VoiceMate-Setup-<version>.exe` | `packaging/windows/voicemate-companion.iss` reads the exe's `ProductVersion` |
 | Git tag | `v` + the version, checked by `make release-check TAG=...` and the release workflow |
@@ -58,8 +58,10 @@ Not derived, and not bumped: the `Project-Id-Version: voice-mate 0.1.0` header o
 `.po` catalogs. It was written when the catalogs were created, `pybabel update` keeps
 it as it is, and gettext ignores it at runtime. It is cosmetic.
 
-Never write the version anywhere else: `tests/companion/test_companion_version.py` and
-`make release-check` fail when the companion disagrees with `pyproject.toml`.
+Nothing compares the engine's PEP 440 spelling with the companion's SemVer one: they
+name the same version. Never write the version anywhere else:
+`tests/companion/test_companion_version.py` and `make release-check` fail when the
+companion disagrees with `pyproject.toml`.
 
 ## Release checklist
 
@@ -82,10 +84,13 @@ Example for `0.2.0`; replace it everywhere.
      that language's `.po` has them.
 5. **Check**: `make release-check` (SemVer version, CHANGELOG section with a valid date,
    the six notes files present and not empty, the companion agrees).
-6. **Pull request** with these changes. CI must be green; when the PR touches the
-   packaging, the Release workflow also builds the installer as a workflow artifact
-   (download it from the run to try it). Merge it.
-7. **Tag `main`**, annotated, and push the tag:
+6. **Pull request** with these changes. CI must be green; the Release workflow also
+   runs on it (it touches `pyproject.toml`, `CHANGELOG.md` and `docs/releases/`): it
+   checks the CHANGELOG section and the notes files, and builds the installer as a
+   workflow artifact (download it from the run to try it). Merge it.
+7. **Tag `main`**, annotated, and push the tag. Tag a commit whose CI is green: the
+   release workflow refuses a commit without a passing CI run (see "Why the release
+   needs a green CI" below):
 
    ```bash
    git switch main
@@ -97,13 +102,15 @@ Example for `0.2.0`; replace it everywhere.
 
 8. **The Release workflow** (`.github/workflows/release.yml`) runs on the tag:
    - *build* (Windows, read-only): checks that the tag is `v` + the version, that it is
-     on `main` and that the notes exist (`python -m tools.release_check --tag v0.2.0`),
-     installs the pinned Inno Setup, runs `make companion-installer`, writes
+     on `main`, that the notes exist (`python -m tools.release_check --tag v0.2.0`) and
+     that CI passed on the tagged commit, then installs the pinned Inno Setup, runs `make companion-installer`, writes
      `VoiceMate-Setup-0.2.0.exe.sha256` (`<hash>  <file name>`) and stages the assets;
    - *publish* (Linux, the only job allowed to write): verifies the checksum, creates
-     the release as a draft with `v0.2.0.md` plus the SHA-256 as its body, uploads the
-     installer, the `.sha256` and the five notes files, then publishes it (as a
-     pre-release when the version has a suffix).
+     the release as a draft when it does not exist, uploads the installer, the `.sha256`
+     and the five notes files, and only then sets the body (`v0.2.0.md` plus the SHA-256)
+     and publishes it (as a pre-release when the version has a suffix). The text is
+     written after the installer, so it never shows a checksum the uploaded installer
+     does not have.
 9. **Verify** the published release: the assets are all there, and the checksum matches
    the downloaded installer:
 
@@ -128,7 +135,16 @@ Example for `0.2.0`; replace it everywhere.
   ```
 
   A re-run builds the tag itself (not the branch it was started from), applies the same
-  checks, updates the existing release in place and replaces its assets.
+  checks, replaces the assets of the existing release, then rewrites its text and
+  publishes it. That also finishes a draft that a failed run left behind.
+- **The checks failed before anything was published** (CHANGELOG or notes missing,
+  version mismatch, tag not on `main`): the tag has no release yet, so it may be
+  replaced. Fix the problem on `main` through a PR, then
+  `git push --delete origin v0.2.0 && git tag -d v0.2.0` and tag again (step 7). A
+  dispatch cannot help here: it builds the tag's own content.
+- **CI had not passed on the tagged commit** (still running, or red): nothing was
+  published. If CI was only still running, re-run the failed jobs once it is green. If
+  it was red, fix `main` through a PR and tag the new commit as in the previous case.
 - **The release is published and only its text is wrong**: fix the notes in a PR, then
   edit the release directly instead of rebuilding (a rebuilt installer has a different
   checksum than the one people may have already verified):
@@ -139,7 +155,17 @@ Example for `0.2.0`; replace it everywhere.
   ```
 
 - **The installer is broken**: release a new PATCH version. Never move or reuse a tag
-  that was published.
+  that has a published release.
+
+## Why the release needs a green CI
+
+The build job asks GitHub for the `CI` workflow runs of the tagged commit
+(`gh run list --workflow ci.yml --branch main --event push --commit <sha> --status
+success`) and fails when there is none. CI runs on every push to `main` and tags are
+only accepted on `main`, so every legitimate tag has such a run. Dispatching the
+workflow for an older tag checks that tag's commit the same way. This needs the
+`actions: read` permission of the build job and nothing else; the lint and tests are
+not run a second time in the release workflow.
 
 ## Continuous integration
 
@@ -153,5 +179,7 @@ Example for `0.2.0`; replace it everywhere.
 
 The Release workflow also runs on pull requests that touch `packaging/`,
 `tools/build_installer.py`, `tools/release_check.py`, `requirements/companion*`,
-`app/companion/version.py` or the workflow itself: it builds the installer and keeps it as a workflow artifact for 7 days,
-without publishing anything.
+`app/companion/version.py`, `pyproject.toml`, `CHANGELOG.md`, `docs/releases/` or the
+workflow itself: it checks the version (and, once the version has a CHANGELOG section
+or notes files, those too: `release_check --notes-if-present`), builds the installer and
+keeps it as a workflow artifact for 7 days, without publishing anything.

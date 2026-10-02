@@ -43,15 +43,65 @@ def test_a_complete_release_has_no_problems(tmp_path: Path) -> None:
         "1.0.0-alpha.beta.1",
         "1.0.0+build.5",
         "1.0.0-rc.1+sha.1",
+        "1.0.0--",  # a pre-release identifier of one hyphen is valid SemVer
     ],
 )
 def test_semver_versions_are_accepted(version: str) -> None:
     assert release_check.version_problems(version) == []
 
 
-@pytest.mark.parametrize("version", ["1.2", "v1.2.3", "01.2.3", "1.2.3-", "1.2.3-01", "1.2.3.4", "1.2.3 "])
+@pytest.mark.parametrize(
+    "version",
+    [
+        "1.2",
+        "v1.2.3",
+        "01.2.3",
+        "1.2.3-",
+        "1.2.3-01",
+        "1.2.3.4",
+        "1.2.3 ",
+        "1.2.3\n",
+        "1.2.3-rc.1\n",
+        "\n1.2.3",
+    ],
+)
 def test_other_versions_are_refused(version: str) -> None:
+    # A trailing newline included: it would shift the key=value lines of $GITHUB_OUTPUT.
     assert release_check.version_problems(version)
+
+
+def test_a_trailing_newline_is_not_a_prerelease_either() -> None:
+    assert Release("1.2.3-rc.1\n").prerelease is False
+
+
+@pytest.mark.parametrize(
+    ("version", "numbers"),
+    [
+        ("0.1.0", (0, 1, 0, 0)),
+        ("10.20.30", (10, 20, 30, 0)),
+        # A pre-release and the final release share the numeric version: only the text differs.
+        ("0.2.0-rc.1", (0, 2, 0, 0)),
+        ("0.2.0", (0, 2, 0, 0)),
+        ("1.0.0-alpha.beta.1+sha.5", (1, 0, 0, 0)),
+        ("1.0.0+build.5", (1, 0, 0, 0)),
+    ],
+)
+def test_the_windows_file_version_is_major_minor_patch_zero(version: str, numbers: tuple[int, ...]) -> None:
+    # The PyInstaller spec builds the exe's version resource with this function.
+    assert release_check.numeric_version(version) == numbers
+
+
+@pytest.mark.parametrize("version", ["0.2.0rc1", "01.2.3", "1.2", "1.2.3\n", ""])
+def test_the_windows_file_version_refuses_what_is_not_semver(version: str) -> None:
+    # `0.2.0rc1` would otherwise become 0.2.0.1, which sorts after the final 0.2.0.
+    with pytest.raises(ValueError, match="SemVer"):
+        release_check.numeric_version(version)
+
+
+def test_the_spec_takes_the_version_rules_from_this_module() -> None:
+    spec = (_ROOT / "packaging" / "windows" / "voicemate-companion.spec").read_text(encoding="utf-8")
+    assert "from tools.release_check import numeric_version, version_problems" in spec
+    assert "SEMVER" not in spec  # no second regex to drift
 
 
 @pytest.mark.parametrize("version", ["0.2.0rc1", "0.2.0a1", "0.2.0b2", "0.2.0.dev3"])
@@ -122,9 +172,42 @@ def test_an_empty_notes_file_is_reported(tmp_path: Path) -> None:
 def test_skip_notes_still_checks_the_version_and_the_tag(tmp_path: Path) -> None:
     release = _tree(tmp_path, notes=False)
     (tmp_path / "CHANGELOG.md").unlink()
-    assert release_check.check(release, skip_notes=True) == []
-    assert release_check.check(release, tag="v9.9.9", skip_notes=True)
-    assert release_check.check(Release("0.2.0rc1", root=tmp_path), skip_notes=True)
+    assert release_check.check(release, notes="skip") == []
+    assert release_check.check(release, tag="v9.9.9", notes="skip")
+    assert release_check.check(Release("0.2.0rc1", root=tmp_path), notes="skip")
+
+
+def test_notes_if_present_leaves_out_a_release_that_was_not_started(tmp_path: Path) -> None:
+    # A version bump alone, or an ordinary pull request: no section, no notes file.
+    release = _tree(tmp_path, notes=False, changelog="# Changelog\n\n## [Unreleased]\n\n- Things.\n")
+    assert release_check.check(release, notes="if-present") == []
+    assert release_check.check(release, notes="require")
+
+
+def test_notes_if_present_validates_a_release_prep_pull_request(tmp_path: Path) -> None:
+    # The CHANGELOG section is there, the notes are not written yet.
+    release = _tree(tmp_path, notes=False)
+    problems = release_check.check(release, notes="if-present")
+    assert "docs/releases/v1.2.3.md not found" in problems
+    assert len(problems) == 1 + len(NOTES_LANGUAGES)
+
+
+def test_notes_if_present_validates_a_release_with_a_notes_file_only(tmp_path: Path) -> None:
+    release = _tree(tmp_path, notes=False, changelog="# Changelog\n\n## [Unreleased]\n")
+    release.notes_file.parent.mkdir(parents=True)
+    release.notes_file.write_bytes(b"# Notes\n")
+    problems = release_check.check(release, notes="if-present")
+    assert "CHANGELOG.md has no '## [1.2.3] - YYYY-MM-DD' section" in problems
+    assert "docs/releases/v1.2.3.es.md not found" in problems
+
+
+def test_notes_if_present_passes_a_complete_release(tmp_path: Path) -> None:
+    assert release_check.check(_tree(tmp_path), notes="if-present") == []
+
+
+def test_the_notes_modes_are_exclusive_on_the_command_line() -> None:
+    with pytest.raises(SystemExit):
+        release_check.main(["--skip-notes", "--notes-if-present"])
 
 
 def test_github_outputs_name_what_the_workflow_publishes(tmp_path: Path) -> None:
@@ -152,9 +235,10 @@ def test_stage_notes_copies_every_translation_under_its_asset_name(tmp_path: Pat
     assert len(list((tmp_path / "assets").iterdir())) == len(NOTES_LANGUAGES)
 
 
-def test_stage_notes_cannot_be_combined_with_skip_notes(tmp_path: Path) -> None:
+@pytest.mark.parametrize("flag", ["--skip-notes", "--notes-if-present"])
+def test_stage_notes_cannot_be_combined_with_a_notes_check_that_may_skip(tmp_path: Path, flag: str) -> None:
     with pytest.raises(SystemExit):
-        release_check.main(["--skip-notes", "--stage-notes", str(tmp_path)])
+        release_check.main([flag, "--stage-notes", str(tmp_path)])
 
 
 def test_main_writes_the_outputs_only_when_consistent(tmp_path: Path) -> None:
@@ -180,3 +264,20 @@ def test_the_workflow_and_the_makefile_use_the_helper() -> None:
     assert "python -m tools.release_check" in workflow
     makefile = (_ROOT / "Makefile").read_text(encoding="utf-8")
     assert "-m tools.release_check" in makefile
+
+
+def test_the_release_workflow_publishes_last_and_serializes_a_tag() -> None:
+    workflow = (_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    # Assets first, then the text and the publication, whether or not the release existed.
+    upload = workflow.index('gh release upload "$TAG"')
+    edit = workflow.index('gh release edit "$TAG"')
+    assert upload < edit
+    assert "--draft=false" in workflow[edit:]
+    # A tag push and a dispatch of that tag are one concurrency group; re-runs overwrite the artifact.
+    assert "inputs.tag || github.ref_name }}" in workflow
+    assert "overwrite: true" in workflow
+    # A release prep pull request is validated, and the tagged commit needs a passing CI run.
+    assert "--notes-if-present" in workflow
+    assert "gh run list --workflow ci.yml" in workflow
+    for path in ("pyproject.toml", "CHANGELOG.md", "docs/releases/**"):
+        assert f'- "{path}"' in workflow

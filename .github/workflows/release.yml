@@ -3,10 +3,11 @@
 # - push of a tag vX.Y.Z (or vX.Y.Z-pre): build, then create the release (or update it,
 #   when it exists) with the installer, its .sha256 and the translated notes.
 # - workflow_dispatch with an existing tag: the same, again (assets are replaced).
-# - pull_request touching the packaging: build only, the installer becomes a workflow
-#   artifact, nothing is published.
+# - pull_request touching the packaging or the release files (version, CHANGELOG, notes):
+#   build only, the installer becomes a workflow artifact, nothing is published.
 #
-# The build job only reads the repository; the publish job is the only one that may write.
+# A release needs a commit of main whose CI passed. The build job only reads the
+# repository; the publish job is the only one that may write.
 name: Release
 
 on:
@@ -20,6 +21,11 @@ on:
         type: string
   pull_request:
     paths:
+      # What a release-prep pull request changes (docs/releasing.md), so that it is checked
+      # and its installer is built before the tag is pushed.
+      - "pyproject.toml"
+      - "CHANGELOG.md"
+      - "docs/releases/**"
       - "packaging/**"
       - "tools/build_installer.py"
       - "tools/release_check.py"
@@ -31,7 +37,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.event.pull_request.number || inputs.tag || github.ref }}
+  # ref_name: a tag push and a dispatch of the same tag share one group and queue.
+  group: release-${{ github.event.pull_request.number || inputs.tag || github.ref_name }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -44,6 +51,9 @@ jobs:
     name: Build the Windows installer
     runs-on: windows-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read  # to read the CI runs of the tagged commit
     defaults:
       run:
         shell: bash
@@ -54,14 +64,14 @@ jobs:
       installer: ${{ steps.release.outputs.installer }}
       artifact: ${{ steps.stage.outputs.artifact }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # A re-run builds the tag itself, whatever branch the workflow was started from.
           ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
           # The whole history, to check that the tag is on main.
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
@@ -72,16 +82,27 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           if [ "$EVENT" = pull_request ]; then
-            # Nothing is published: the version must be valid, the notes may not exist yet.
-            python -m tools.release_check --skip-notes --github-output "$GITHUB_OUTPUT"
+            # Nothing is published: the version must be valid. The CHANGELOG and the notes
+            # are checked once this version has any (a release-prep pull request), not before.
+            python -m tools.release_check --notes-if-present --github-output "$GITHUB_OUTPUT"
             exit 0
           fi
           python -m tools.release_check --tag "$TAG" --github-output "$GITHUB_OUTPUT"
           if ! git merge-base --is-ancestor HEAD origin/main; then
             echo "::error::$TAG is not on main: tag a commit of main (docs/releasing.md)"
+            exit 1
+          fi
+          # CI runs on every push to main: the tagged commit must have a passing run.
+          sha=$(git rev-parse HEAD)
+          passed=$(gh run list --workflow ci.yml --branch main --event push --commit "$sha" \
+            --status success --json databaseId --jq length | tr -d '\r')
+          if [ "${passed:-0}" -lt 1 ]; then
+            echo "::error::CI has not passed on $sha ($TAG): wait for it (or fix main and tag again), then re-run this workflow (docs/releasing.md)"
             exit 1
           fi
 
@@ -146,11 +167,13 @@ jobs:
             echo "SHA-256: \`$hash\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.stage.outputs.artifact }}
           path: dist/release/
           if-no-files-found: error
+          # Artifacts belong to the run, not to the attempt: re-running all jobs rebuilds it.
+          overwrite: true
           retention-days: ${{ github.event_name == 'pull_request' && 7 || 30 }}
 
   publish:
@@ -168,7 +191,7 @@ jobs:
       PRERELEASE: ${{ needs.build.outputs.prerelease }}
       INSTALLER: ${{ needs.build.outputs.installer }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build.outputs.artifact }}
           path: release
@@ -177,20 +200,18 @@ jobs:
         working-directory: release/assets
         run: sha256sum -c "$INSTALLER.sha256"
 
-      # A new release is created as a draft and published once every asset is up, so
-      # nobody sees it without its installer. An existing one is updated in place.
+      # Assets first, text last: the body carries the checksum of the installer uploaded in
+      # this run, so it is only ever written after that installer is up. A new release is a
+      # draft until then and nobody sees it without its installer. The last edit always
+      # publishes: it also finishes a draft left behind by a run that died after creating it
+      # (`gh release view` finds drafts too), and does nothing to a published release.
       - name: Create or update the release
         run: |
           set -euo pipefail
           title="VoiceMate $TAG"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --title "$title" --notes-file release/body.md --prerelease="$PRERELEASE"
-            gh release upload "$TAG" release/assets/* --clobber
-          else
-            flags=()
-            if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
-            gh release create "$TAG" --verify-tag --draft --title "$title" --notes-file release/body.md "${flags[@]}"
-            gh release upload "$TAG" release/assets/* --clobber
-            gh release edit "$TAG" --draft=false
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --verify-tag --draft --title "$title" --notes-file release/body.md
           fi
+          gh release upload "$TAG" release/assets/* --clobber
+          gh release edit "$TAG" --title "$title" --notes-file release/body.md --prerelease="$PRERELEASE" --draft=false
           gh release view "$TAG" --json url,assets --jq '.url, (.assets[].name)'

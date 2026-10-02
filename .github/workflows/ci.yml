@@ -38,9 +38,9 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
@@ -78,7 +78,7 @@ jobs:
       # The Poetry the lock file is maintained with (any 2.x reads lock-version 2.1).
       POETRY_VERSION: "2.4.1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # sounddevice loads the system PortAudio when app.core.recorder is imported.
       - name: Install PortAudio
@@ -90,7 +90,7 @@ jobs:
       - name: Install Poetry
         run: pipx install "poetry==$POETRY_VERSION"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         id: python
         with:
           python-version: "3.12"
