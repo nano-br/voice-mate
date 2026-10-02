@@ -212,7 +212,9 @@ def _build_engine(args: Namespace, config: Config, flows: list[FlowConfig], stat
     return _Engine(transcriber, speaker, owned_handlers, flows, session)
 
 
-def _print_ready(config: Config, flows: list[FlowConfig], api: ApiServer | None) -> None:
+def _print_ready(config: Config, flows: list[FlowConfig], api: ApiServer | None, *, supervised: bool = False) -> None:
+    """Supervised, the companion app owns the lifecycle (and, on WSL2, the hotkeys): the hints
+    about the hotkey scripts and Ctrl+C would contradict it, so they are left out."""
     print(_("\n[VoiceMate] Ready. Input: {input_method}").format(input_method=config.input_method))
     print(
         _("[VoiceMate] Platform: {platform} (trigger: {trigger})").format(
@@ -221,7 +223,10 @@ def _print_ready(config: Config, flows: list[FlowConfig], api: ApiServer | None)
     )
     if config.trigger == "socket" and api is not None:
         print(_("[VoiceMate] Daemon listening on http://127.0.0.1:{port} (POST /trigger).").format(port=api.port))
-        print(_("[VoiceMate] Register the Windows-side hotkeys with scripts/windows/voicemate-hotkeys.ahk (or .ps1)."))
+        if not supervised:
+            print(
+                _("[VoiceMate] Register the Windows-side hotkeys with scripts/windows/voicemate-hotkeys.ahk (or .ps1).")
+            )
     else:
         for flow in flows:
             label = _("clipboard") if flow.kind == "clipboard" else _("Claude (multi-turn)")
@@ -229,7 +234,8 @@ def _print_ready(config: Config, flows: list[FlowConfig], api: ApiServer | None)
         if api is not None:
             print(_("[VoiceMate] HTTP API on http://127.0.0.1:{port}.").format(port=api.port))
     print(_("[VoiceMate] Max recording: {seconds}s").format(seconds=config.max_recording_seconds))
-    print(_("[VoiceMate] Ctrl+C to exit.\n"))
+    if not supervised:
+        print(_("[VoiceMate] Ctrl+C to exit.\n"))
 
 
 def _announced_reason(lifecycle: Lifecycle, quit_reason: ShutdownReason | None) -> ShutdownReason | None:
@@ -318,7 +324,7 @@ def main() -> None:
     if api is not None:
         api.attach(engine.session, _engine_info(platform, trigger, engine.flows, tts_active))
     listener: InputListener = build_listener(config, engine.flows, engine.session, api)
-    _print_ready(config, engine.flows, api)
+    _print_ready(config, engine.flows, api, supervised=args.supervised)
 
     watchdog: Watchdog | None = None
     if config.watchdog_enabled:

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-01 23:19-0300\n"
+"POT-Creation-Date: 2026-10-02 00:27-0300\n"
 "PO-Revision-Date: 2026-10-01 16:49-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: es\n"
@@ -46,7 +46,7 @@ msgstr "[VoiceMate] API HTTP en http://127.0.0.1:{port}; cargando el motor..."
 msgid "[VoiceMate] No handler available; exiting."
 msgstr "[VoiceMate] No hay ningún handler disponible; saliendo."
 
-#: app/main.py:216
+#: app/main.py:218
 #, python-brace-format
 msgid ""
 "\n"
@@ -55,17 +55,17 @@ msgstr ""
 "\n"
 "[VoiceMate] Listo. Entrada: {input_method}"
 
-#: app/main.py:218
+#: app/main.py:220
 #, python-brace-format
 msgid "[VoiceMate] Platform: {platform} (trigger: {trigger})"
 msgstr "[VoiceMate] Plataforma: {platform} (disparador: {trigger})"
 
-#: app/main.py:223
+#: app/main.py:225
 #, python-brace-format
 msgid "[VoiceMate] Daemon listening on http://127.0.0.1:{port} (POST /trigger)."
 msgstr "[VoiceMate] Daemon escuchando en http://127.0.0.1:{port} (POST /trigger)."
 
-#: app/main.py:224
+#: app/main.py:228
 msgid ""
 "[VoiceMate] Register the Windows-side hotkeys with scripts/windows"
 "/voicemate-hotkeys.ahk (or .ps1)."
@@ -73,48 +73,48 @@ msgstr ""
 "[VoiceMate] Registra los atajos del lado de Windows con scripts/windows"
 "/voicemate-hotkeys.ahk (o .ps1)."
 
-#: app/main.py:227
+#: app/main.py:232
 msgid "clipboard"
 msgstr "portapapeles"
 
-#: app/main.py:227
+#: app/main.py:232
 msgid "Claude (multi-turn)"
 msgstr "Claude (multiturno)"
 
-#: app/main.py:228
+#: app/main.py:233
 #, python-brace-format
 msgid "[VoiceMate] Hotkey {hotkey}: → {label}"
 msgstr "[VoiceMate] Atajo {hotkey}: → {label}"
 
-#: app/main.py:230
+#: app/main.py:235
 #, python-brace-format
 msgid "[VoiceMate] HTTP API on http://127.0.0.1:{port}."
 msgstr "[VoiceMate] API HTTP en http://127.0.0.1:{port}."
 
-#: app/main.py:231
+#: app/main.py:236
 #, python-brace-format
 msgid "[VoiceMate] Max recording: {seconds}s"
 msgstr "[VoiceMate] Tiempo máximo de grabación: {seconds}s"
 
-#: app/main.py:232
+#: app/main.py:238
 msgid "[VoiceMate] Ctrl+C to exit.\n"
 msgstr "[VoiceMate] Ctrl+C para salir.\n"
 
-#: app/main.py:245
+#: app/main.py:251
 #, python-brace-format
 msgid "[VoiceMate] Failed to close handler: {exc}"
 msgstr "[VoiceMate] No se pudo cerrar el handler: {exc}"
 
-#: app/main.py:253
+#: app/main.py:259
 #, python-brace-format
 msgid "[VoiceMate] Failed to close transcriber: {exc}"
 msgstr "[VoiceMate] No se pudo cerrar el transcriptor: {exc}"
 
-#: app/main.py:287
+#: app/main.py:293
 msgid "[VoiceMate] Supervised: closing stdin shuts the engine down."
 msgstr "[VoiceMate] Modo supervisado: cerrar stdin apaga el motor."
 
-#: app/main.py:306 app/main.py:377
+#: app/main.py:312 app/main.py:383
 msgid ""
 "\n"
 "[VoiceMate] Shutting down."
@@ -122,12 +122,12 @@ msgstr ""
 "\n"
 "[VoiceMate] Finalizando."
 
-#: app/main.py:312
+#: app/main.py:318
 #, python-brace-format
 msgid "[VoiceMate] ❌ The engine failed to start: {exc}"
 msgstr "[VoiceMate] ❌ El motor no pudo iniciarse: {exc}"
 
-#: app/main.py:364
+#: app/main.py:370
 #, python-brace-format
 msgid "[VoiceMate] Failed to stop the listener: {exc}"
 msgstr "[VoiceMate] No se pudo detener el listener: {exc}"
@@ -2623,11 +2623,11 @@ msgstr "Disparador vía daemon HTTP"
 
 #: app/setup/doctor.py:227
 msgid ""
-"register the hotkeys on Windows: scripts/windows/voicemate-hotkeys.ahk "
-"(or .ps1)"
+"hotkeys on Windows: the companion app; without it, scripts/windows"
+"/voicemate-hotkeys.ahk (or .ps1)"
 msgstr ""
-"registra los atajos en Windows: scripts/windows/voicemate-hotkeys.ahk (o "
-".ps1)"
+"atajos en Windows: la aplicación companion; sin ella, scripts/windows"
+"/voicemate-hotkeys.ahk (o .ps1)"
 
 #: app/setup/doctor.py:234
 msgid "X11 session (DISPLAY) for pynput"

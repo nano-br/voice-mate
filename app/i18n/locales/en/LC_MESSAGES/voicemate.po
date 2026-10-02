@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 23:19-0300\n"
+"POT-Creation-Date: 2026-10-02 00:27-0300\n"
 "PO-Revision-Date: 2026-05-21 14:42-0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -47,82 +47,82 @@ msgstr ""
 msgid "[VoiceMate] No handler available; exiting."
 msgstr ""
 
-#: app/main.py:216
+#: app/main.py:218
 #, python-brace-format
 msgid ""
 "\n"
 "[VoiceMate] Ready. Input: {input_method}"
 msgstr ""
 
-#: app/main.py:218
+#: app/main.py:220
 #, python-brace-format
 msgid "[VoiceMate] Platform: {platform} (trigger: {trigger})"
 msgstr ""
 
-#: app/main.py:223
+#: app/main.py:225
 #, python-brace-format
 msgid "[VoiceMate] Daemon listening on http://127.0.0.1:{port} (POST /trigger)."
 msgstr ""
 
-#: app/main.py:224
+#: app/main.py:228
 msgid ""
 "[VoiceMate] Register the Windows-side hotkeys with scripts/windows"
 "/voicemate-hotkeys.ahk (or .ps1)."
 msgstr ""
 
-#: app/main.py:227
+#: app/main.py:232
 msgid "clipboard"
 msgstr ""
 
-#: app/main.py:227
+#: app/main.py:232
 msgid "Claude (multi-turn)"
 msgstr ""
 
-#: app/main.py:228
+#: app/main.py:233
 #, python-brace-format
 msgid "[VoiceMate] Hotkey {hotkey}: → {label}"
 msgstr ""
 
-#: app/main.py:230
+#: app/main.py:235
 #, python-brace-format
 msgid "[VoiceMate] HTTP API on http://127.0.0.1:{port}."
 msgstr ""
 
-#: app/main.py:231
+#: app/main.py:236
 #, python-brace-format
 msgid "[VoiceMate] Max recording: {seconds}s"
 msgstr ""
 
-#: app/main.py:232
+#: app/main.py:238
 msgid "[VoiceMate] Ctrl+C to exit.\n"
 msgstr ""
 
-#: app/main.py:245
+#: app/main.py:251
 #, python-brace-format
 msgid "[VoiceMate] Failed to close handler: {exc}"
 msgstr ""
 
-#: app/main.py:253
+#: app/main.py:259
 #, python-brace-format
 msgid "[VoiceMate] Failed to close transcriber: {exc}"
 msgstr ""
 
-#: app/main.py:287
+#: app/main.py:293
 msgid "[VoiceMate] Supervised: closing stdin shuts the engine down."
 msgstr ""
 
-#: app/main.py:306 app/main.py:377
+#: app/main.py:312 app/main.py:383
 msgid ""
 "\n"
 "[VoiceMate] Shutting down."
 msgstr ""
 
-#: app/main.py:312
+#: app/main.py:318
 #, python-brace-format
 msgid "[VoiceMate] ❌ The engine failed to start: {exc}"
 msgstr ""
 
-#: app/main.py:364
+#: app/main.py:370
 #, python-brace-format
 msgid "[VoiceMate] Failed to stop the listener: {exc}"
 msgstr ""
@@ -2385,8 +2385,8 @@ msgstr ""
 
 #: app/setup/doctor.py:227
 msgid ""
-"register the hotkeys on Windows: scripts/windows/voicemate-hotkeys.ahk "
-"(or .ps1)"
+"hotkeys on Windows: the companion app; without it, scripts/windows"
+"/voicemate-hotkeys.ahk (or .ps1)"
 msgstr ""
 
 #: app/setup/doctor.py:234
