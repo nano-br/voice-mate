@@ -32,7 +32,7 @@ def test_interface_follows_the_ui_language(ui: UiLanguage, transcription: str, o
     ("catalog", "transcription", "output"),
     [("pt_BR", "pt", "pt-BR"), ("en", "en", "en"), ("es", "es", "es"), ("ru", "ru", "ru"), ("zh_CN", "zh", "zh-CN")],
 )
-def test_interface_with_the_ui_on_auto_uses_the_loaded_catalog(catalog: str, transcription: str, output: str) -> None:
+def test_interface_with_the_ui_on_auto_uses_the_os_catalog(catalog: str, transcription: str, output: str) -> None:
     assert resolve_engine_language("interface", "auto", catalog) == EngineLanguage(transcription, output)
 
 
