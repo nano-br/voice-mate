@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 23:12-0300\n"
+"POT-Creation-Date: 2026-10-01 23:19-0300\n"
 "PO-Revision-Date: 2026-05-21 14:42-0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -302,7 +302,7 @@ msgstr ""
 msgid "No answer from the engine. VoiceMate restarts it if this continues."
 msgstr ""
 
-#: app/companion/model.py:588 app/companion/model.py:780
+#: app/companion/model.py:588 app/companion/model.py:784
 msgid "Engine is outdated"
 msgstr ""
 
@@ -310,7 +310,7 @@ msgstr ""
 msgid "The engine is older than this app. Update it, then use Restart engine."
 msgstr ""
 
-#: app/companion/model.py:591 app/companion/model.py:876
+#: app/companion/model.py:591 app/companion/model.py:880
 #: app/companion/ui/texts.py:108
 msgid "No microphone"
 msgstr ""
@@ -319,7 +319,7 @@ msgstr ""
 msgid "Connect a microphone to record."
 msgstr ""
 
-#: app/companion/model.py:594 app/companion/model.py:863
+#: app/companion/model.py:594 app/companion/model.py:867
 #: app/companion/ui/demo_controller.py:325 app/companion/ui/texts.py:110
 msgid "WSL audio stopped"
 msgstr ""
@@ -328,7 +328,7 @@ msgstr ""
 msgid "WSL lost its audio bridge. Restarting WSL brings it back."
 msgstr ""
 
-#: app/companion/model.py:595 app/companion/model.py:869
+#: app/companion/model.py:595 app/companion/model.py:873
 msgid "Audio server is down"
 msgstr ""
 
@@ -337,7 +337,7 @@ msgid "The engine cannot reach the audio server."
 msgstr ""
 
 #: app/companion/model.py:597 app/companion/model.py:601
-#: app/companion/model.py:602 app/companion/model.py:849
+#: app/companion/model.py:602 app/companion/model.py:853
 msgid "Microphone unavailable"
 msgstr ""
 
@@ -383,7 +383,7 @@ msgstr ""
 msgid "The engine is restarting."
 msgstr ""
 
-#: app/companion/model.py:620 app/companion/model.py:742
+#: app/companion/model.py:620 app/companion/model.py:746
 msgid "Engine folder not found"
 msgstr ""
 
@@ -391,322 +391,326 @@ msgstr ""
 msgid "Set the engine folder in Settings."
 msgstr ""
 
-#: app/companion/model.py:622 app/companion/model.py:623
+#: app/companion/model.py:622 app/companion/model.py:625
 msgid "Engine failed"
 msgstr ""
 
-#: app/companion/model.py:622
-msgid "Restarting WSL did not help. Check the engine log, then use Restart WSL."
+#: app/companion/model.py:623
+msgid ""
+"Restarting WSL did not help. Check the engine log, then use Restart "
+"WSL... in the Engine menu."
 msgstr ""
 
-#: app/companion/model.py:623 app/companion/model.py:729
+#: app/companion/model.py:625 app/companion/model.py:731
 msgid ""
 "The engine failed too many times. Check the engine log, then use Restart "
 "engine."
 msgstr ""
 
-#: app/companion/model.py:629 app/companion/model.py:721
+#: app/companion/model.py:631 app/companion/model.py:723
 #: app/companion/ui/texts.py:86
 msgid "VoiceMate is stopped"
 msgstr ""
 
-#: app/companion/model.py:631 app/companion/ui/texts.py:88
+#: app/companion/model.py:633 app/companion/ui/texts.py:88
 msgid "Starting engine..."
 msgstr ""
 
-#: app/companion/model.py:633
+#: app/companion/model.py:635
 #, python-brace-format
 msgid "Waiting for the engine on port {port}."
 msgstr ""
 
-#: app/companion/model.py:635 app/companion/ui/texts.py:92
+#: app/companion/model.py:637 app/companion/ui/texts.py:92
 #, python-brace-format
 msgid "Restarting (attempt {attempt})"
 msgstr ""
 
-#: app/companion/model.py:639
+#: app/companion/model.py:641
 #, python-brace-format
 msgid "Listening for {hotkey}"
 msgstr ""
 
-#: app/companion/model.py:639 app/companion/ui/texts.py:97
+#: app/companion/model.py:641 app/companion/ui/texts.py:97
 msgid "Ready"
 msgstr ""
 
-#: app/companion/model.py:642 app/companion/ui/texts.py:78
+#: app/companion/model.py:644 app/companion/ui/texts.py:78
 #, python-brace-format
 msgid "Recording {elapsed}"
 msgstr ""
 
-#: app/companion/model.py:644 app/companion/ui/texts.py:99
+#: app/companion/model.py:646 app/companion/ui/texts.py:99
 msgid "Transcribing..."
 msgstr ""
 
-#: app/companion/model.py:646 app/companion/ui/texts.py:101
+#: app/companion/model.py:648 app/companion/ui/texts.py:101
 msgid "Claude is answering..."
 msgstr ""
 
-#: app/companion/model.py:648 app/companion/ui/texts.py:104
+#: app/companion/model.py:650 app/companion/ui/texts.py:104
 #, python-brace-format
 msgid "Copied: {text}"
 msgstr ""
 
-#: app/companion/model.py:654
-msgid "WSL needs a restart to recover the audio. Use Restart WSL now in the menu."
+#: app/companion/model.py:656
+msgid ""
+"WSL needs a restart to recover the audio. Use Restart WSL now... in the "
+"menu."
 msgstr ""
 
-#: app/companion/model.py:691
+#: app/companion/model.py:693
 msgid "No microphone is connected. Connect one and try again."
 msgstr ""
 
-#: app/companion/model.py:695
+#: app/companion/model.py:697
 msgid ""
 "The engine could not open the microphone. Allow desktop apps to use the "
 "microphone in the Windows privacy settings, and close any app that holds "
 "it exclusively."
 msgstr ""
 
-#: app/companion/model.py:698
+#: app/companion/model.py:700
 msgid ""
 "The engine could not open the microphone. Close any app that holds it "
 "exclusively."
 msgstr ""
 
-#: app/companion/model.py:700
+#: app/companion/model.py:702
 msgid ""
 "The engine could not open the microphone: the audio server is not "
 "responding."
 msgstr ""
 
-#: app/companion/model.py:703
+#: app/companion/model.py:705
 msgid ""
 "Windows has a microphone, but WSL cannot open it: its audio bridge is "
 "stuck. Restarting WSL fixes it."
 msgstr ""
 
-#: app/companion/model.py:705
+#: app/companion/model.py:707
 msgid ""
 "WSL cannot open the microphone. If one is connected, restarting WSL fixes"
 " it."
 msgstr ""
 
-#: app/companion/model.py:714
+#: app/companion/model.py:716
 msgid "VoiceMate is starting"
 msgstr ""
 
-#: app/companion/model.py:715
+#: app/companion/model.py:717
 msgid "The engine is still loading. Try again in a moment."
 msgstr ""
 
-#: app/companion/model.py:722
+#: app/companion/model.py:724
 msgid "The engine is not running. Use Restart engine in the menu."
 msgstr ""
 
-#: app/companion/model.py:728 app/companion/model.py:735
+#: app/companion/model.py:730 app/companion/model.py:737
 msgid "VoiceMate stopped retrying"
 msgstr ""
 
-#: app/companion/model.py:736
+#: app/companion/model.py:739
 msgid ""
 "Restarting WSL did not bring the audio back. Check the engine log, then "
-"use Restart WSL."
+"use Restart WSL... in the Engine menu."
 msgstr ""
 
-#: app/companion/model.py:743
+#: app/companion/model.py:747
 msgid "VoiceMate could not find the engine. Set the engine folder in Settings."
 msgstr ""
 
-#: app/companion/model.py:749
+#: app/companion/model.py:753
 msgid "Could not start the engine"
 msgstr ""
 
-#: app/companion/model.py:750
+#: app/companion/model.py:754
 msgid ""
 "Starting the engine failed. VoiceMate will try again; the engine log has "
 "the details."
 msgstr ""
 
-#: app/companion/model.py:756
+#: app/companion/model.py:760
 msgid "Restarting WSL"
 msgstr ""
 
-#: app/companion/model.py:757
+#: app/companion/model.py:761
 msgid ""
 "WSL lost its audio, so VoiceMate is restarting it. This takes a few "
 "seconds."
 msgstr ""
 
-#: app/companion/model.py:763 app/companion/model.py:770
+#: app/companion/model.py:767 app/companion/model.py:774
 msgid "WSL needs a restart"
 msgstr ""
 
-#: app/companion/model.py:764
-msgid "WSL lost its audio. Choose Restart WSL now in the VoiceMate menu."
+#: app/companion/model.py:768
+msgid "WSL lost its audio. Choose Restart WSL now... in the VoiceMate menu."
 msgstr ""
 
-#: app/companion/model.py:772
+#: app/companion/model.py:776
 #, python-brace-format
 msgid ""
 "WSL lost its audio, but restarting it also stops {distros}. Choose "
-"Restart WSL now in the VoiceMate menu when convenient."
+"Restart WSL now... in the VoiceMate menu when convenient."
 msgstr ""
 
-#: app/companion/model.py:781
+#: app/companion/model.py:785
 msgid ""
 "The engine is older than this app. Update it, then use Restart engine in "
 "the menu."
 msgstr ""
 
-#: app/companion/model.py:787
+#: app/companion/model.py:791
 msgid "Engine run by systemd"
 msgstr ""
 
-#: app/companion/model.py:789
+#: app/companion/model.py:793
 msgid ""
 "A systemd service runs the engine, so VoiceMate attaches to it. To let "
 "VoiceMate manage it, run `systemctl --user disable --now voicemate` in "
 "WSL."
 msgstr ""
 
-#: app/companion/model.py:797
+#: app/companion/model.py:801
 msgid "Engine access denied"
 msgstr ""
 
-#: app/companion/model.py:799
+#: app/companion/model.py:803
 msgid ""
 "The engine refused VoiceMate's access token. VoiceMate reads "
 "`~/.config/voicemate/api-token` again every 30 seconds; the engine log "
 "has the details."
 msgstr ""
 
-#: app/companion/model.py:807
+#: app/companion/model.py:811
 msgid "Settings reset"
 msgstr ""
 
-#: app/companion/model.py:809
+#: app/companion/model.py:813
 #, python-brace-format
 msgid ""
 "The settings file could not be read, so VoiceMate started with the "
 "default settings. The old file was kept as {path}."
 msgstr ""
 
-#: app/companion/model.py:817
+#: app/companion/model.py:821
 msgid "Engine unreachable"
 msgstr ""
 
-#: app/companion/model.py:818
+#: app/companion/model.py:822
 msgid "The engine did not answer. VoiceMate keeps trying to reconnect."
 msgstr ""
 
-#: app/companion/model.py:824
+#: app/companion/model.py:828
 msgid "Engine busy"
 msgstr ""
 
-#: app/companion/model.py:825
+#: app/companion/model.py:829
 msgid "The engine did not answer in time. It may still act on this key press."
 msgstr ""
 
-#: app/companion/model.py:831
+#: app/companion/model.py:835
 msgid "Request rejected"
 msgstr ""
 
-#: app/companion/model.py:832
+#: app/companion/model.py:836
 #, python-brace-format
 msgid "The engine rejected the request (HTTP {status})."
 msgstr ""
 
-#: app/companion/model.py:836
+#: app/companion/model.py:840
 msgid "Engine error"
 msgstr ""
 
-#: app/companion/model.py:836
+#: app/companion/model.py:840
 msgid "The engine reported an internal error. See the engine log."
 msgstr ""
 
-#: app/companion/model.py:838
+#: app/companion/model.py:842
 msgid "Nothing transcribed"
 msgstr ""
 
-#: app/companion/model.py:838
+#: app/companion/model.py:842
 msgid "No speech was detected in the recording."
 msgstr ""
 
-#: app/companion/model.py:840
+#: app/companion/model.py:844
 msgid "Nothing recorded"
 msgstr ""
 
-#: app/companion/model.py:840
+#: app/companion/model.py:844
 msgid "The recording captured no audio."
 msgstr ""
 
-#: app/companion/model.py:844
+#: app/companion/model.py:848
 msgid "Slow transcription"
 msgstr ""
 
-#: app/companion/model.py:845
+#: app/companion/model.py:849
 msgid ""
 "Transcription is running slower than usual. The engine log has the "
 "details."
 msgstr ""
 
-#: app/companion/model.py:853
+#: app/companion/model.py:857
 msgid "Transcription failed"
 msgstr ""
 
-#: app/companion/model.py:854
+#: app/companion/model.py:858
 msgid "The engine could not transcribe the recording. See the engine log."
 msgstr ""
 
-#: app/companion/model.py:858
+#: app/companion/model.py:862
 msgid "Claude did not answer"
 msgstr ""
 
-#: app/companion/model.py:858
+#: app/companion/model.py:862
 msgid "The request to Claude failed. See the engine log."
 msgstr ""
 
-#: app/companion/model.py:864
+#: app/companion/model.py:868
 msgid "The engine cannot reach the WSL audio server, so recording will fail."
 msgstr ""
 
-#: app/companion/model.py:870
+#: app/companion/model.py:874
 msgid "The engine cannot reach the audio server, so recording will fail."
 msgstr ""
 
-#: app/companion/model.py:877
+#: app/companion/model.py:881
 msgid "No microphone is connected. Recording will fail until you connect one."
 msgstr ""
 
-#: app/companion/model.py:882
+#: app/companion/model.py:886
 msgid ""
 "A transcription was not copied to the clipboard. Open VoiceMate to copy "
 "it."
 msgstr ""
 
-#: app/companion/model.py:884
+#: app/companion/model.py:888
 #, python-brace-format
 msgid ""
 "{count} transcriptions were not copied to the clipboard. Open VoiceMate "
 "to copy them."
 msgstr ""
 
-#: app/companion/model.py:887
+#: app/companion/model.py:891
 msgid "Not copied to the clipboard"
 msgstr ""
 
-#: app/companion/model.py:889
+#: app/companion/model.py:893
 msgid "Copy failed"
 msgstr ""
 
-#: app/companion/model.py:889
+#: app/companion/model.py:893
 msgid "The text could not be copied to the clipboard. Try again."
 msgstr ""
 
-#: app/companion/model.py:893
+#: app/companion/model.py:897
 msgid "Hotkey unavailable"
 msgstr ""
 
-#: app/companion/model.py:895
+#: app/companion/model.py:899
 #, python-brace-format
 msgid ""
 "Already used by another app: {hotkeys}. If the old VoiceMate hotkeys "

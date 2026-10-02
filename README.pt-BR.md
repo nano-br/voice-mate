@@ -233,7 +233,7 @@ integração de clipboard — sobrescreva com `--platform` / `--trigger`:
 As hotkeys default são idênticas em todo lugar: `Ctrl+Alt+V` (clipboard) e `Ctrl+Alt+A` (Claude). No WSL2
 elas são registradas pelo `scripts/windows/voicemate-hotkeys.ahk` (ou `.ps1`), que faz POST no daemon —
 mesma semântica de "o atalho do stop escolhe o destino". Rode `make doctor` para validar
-mic/áudio/gatilho/GPU com correções acionáveis. No Windows, o [app companion](#app-companion-bandeja) substitui esses scripts.
+mic/áudio/gatilho/GPU com correções acionáveis. No Windows, o [aplicativo companion](#aplicativo-companion-bandeja) substitui esses scripts.
 
 ## Uso
 
@@ -325,9 +325,9 @@ poetry run voice-mate --listener-refresh-seconds 30 --watchdog-timeout 60
 
 O padrão é `large-v3-turbo` — melhor equilíbrio entre velocidade e qualidade, especialmente quando o áudio tem mistura de idiomas.
 
-## App companion (bandeja)
+## Aplicativo companion (bandeja)
 
-O companion é um pequeno app de desktop (PySide6) que fica na bandeja do sistema. Ele inicia e supervisiona o motor, registra as hotkeys, toca os sons de aviso, escreve cada transcrição no clipboard e confere se ela chegou lá, e reúne num lugar só o status e o botão de sair de tudo. No Windows ele substitui o script PowerShell/AutoHotkey e comanda o motor dentro do WSL2; no Linux é uma interface opcional. O motor em si não muda: `make run` continua funcionando sem o companion.
+O companion é um pequeno aplicativo de desktop (PySide6) que fica na bandeja do sistema. Ele inicia e supervisiona o motor, registra as hotkeys, toca os sons de aviso, escreve cada transcrição no clipboard e confere se ela chegou lá, e reúne num lugar só o status e o botão de sair de tudo. No Windows ele substitui o script PowerShell/AutoHotkey e comanda o motor dentro do WSL2; no Linux é uma interface opcional. O motor em si não muda: `make run` continua funcionando sem o companion.
 
 ### Instalação no Windows
 
@@ -349,11 +349,11 @@ Nos dois casos o motor continua no WSL2 (instale como em [docs/wsl2.md](docs/wsl
 
 ### Fixar na barra de tarefas
 
-O Windows não deixa instaladores fixarem apps. Abra o Iniciar, pesquise VoiceMate, clique nele com o botão direito e escolha **Fixar na barra de tarefas**. Clicar no ícone fixado com o VoiceMate rodando abre a janela de status; o botão direito oferece **Configurações**, **Reiniciar o motor**, **Reiniciar o WSL** e **Sair do VoiceMate**. Fixar usa o atalho do menu Iniciar, então vale para o app instalado.
+O Windows não deixa instaladores fixarem aplicativos. Abra o Iniciar, pesquise VoiceMate, clique nele com o botão direito e escolha **Fixar na barra de tarefas**. Clicar no ícone fixado com o VoiceMate rodando abre a janela de status; o botão direito oferece **Configurações**, **Reiniciar o motor**, **Reiniciar o WSL...** e **Sair do VoiceMate**. Fixar usa o atalho do menu Iniciar, então vale para o aplicativo instalado.
 
 ### Sair
 
-Menu do ícone na bandeja > **Sair do VoiceMate** (também é um botão na janela de status e um item do menu de botão direito do ícone fixado). Sair encerra o motor que o companion iniciou; um motor ao qual ele só se conectou (por exemplo o serviço do systemd) continua rodando. Pelo terminal, para o app instalado (PowerShell):
+Menu do ícone na bandeja > **Sair do VoiceMate** (também é um botão na janela de status e um item do menu de botão direito do ícone fixado). Sair encerra o motor que o companion iniciou; um motor ao qual ele só se conectou (por exemplo o serviço do systemd) continua rodando. Pelo terminal, para o aplicativo instalado (PowerShell):
 
 ```powershell
 & "$env:LOCALAPPDATA\Programs\VoiceMate\VoiceMate.exe" --command quit
@@ -387,9 +387,9 @@ mkdir -p ~/.local/share/applications &&
 | Sintoma | Correção |
 | ------- | -------- |
 | "Iniciando o motor..." por muito tempo | A primeira carga do modelo leva de 10 a 60 s. Veja o `engine.log` (**Motor** > **Abrir logs**) e a distro do WSL e a pasta do motor nas Configurações |
-| Uma hotkey mostra "Em uso por outro app" na primeira execução | Um script antigo de hotkeys (PowerShell ou AutoHotkey) ainda está rodando: feche-o e remova-o do `shell:startup` |
-| "O áudio do WSL parou" ou "Sem microfone" | Conecte um microfone. O WSL é reiniciado conforme **Reiniciar o WSL se o áudio falhar**; à mão: **Motor** > **Reiniciar o WSL** |
-| "O motor é mais antigo que este app. Reinicie ou atualize o motor." | Atualize o checkout no WSL (`git pull`) e use **Reiniciar o motor** |
+| Uma hotkey mostra "Em uso por outro aplicativo" na primeira execução | Um script antigo de hotkeys (PowerShell ou AutoHotkey) ainda está rodando: feche-o e remova-o do `shell:startup` |
+| "O áudio do WSL parou" ou "Sem microfone" | Conecte um microfone. O WSL é reiniciado conforme **Reiniciar o WSL se o áudio falhar**; à mão: **Motor** > **Reiniciar o WSL...** |
+| "O motor é mais antigo que este aplicativo. Reinicie ou atualize o motor." | Atualize o checkout no WSL (`git pull`) e use **Reiniciar o motor** |
 | Uma transcrição não foi copiada | Ela fica em **Não copiadas**, no menu da bandeja (clique para copiar) e na janela de status (**Copiar**) |
 | O SmartScreen alerta sobre o instalador | O instalador não tem assinatura de código: **Mais informações** > **Executar assim mesmo** |
 
@@ -410,7 +410,7 @@ mkdir -p ~/.local/share/applications &&
 | `make format`              | Formata o código com Ruff                                       |
 | `make lint`                | Roda Ruff + type-check com Mypy                                 |
 | `make test`                | Executa os testes com pytest                                    |
-| `make run-tray`            | Executa o app companion (bandeja); `ARGS="..."` repassa flags   |
+| `make run-tray`            | Executa o aplicativo companion (bandeja); `ARGS="..."` repassa flags |
 | `make companion-venv`      | Cria a `.venv-companion` (ambiente do companion no Windows, versões fixadas) |
 | `make companion-test` / `make companion-lint` | Testes / lint do companion                   |
 | `make companion-build`     | Congela o companion com PyInstaller (`dist\VoiceMate`)          |

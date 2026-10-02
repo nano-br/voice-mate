@@ -315,7 +315,7 @@ Either way the engine still lives in WSL2 (install it as in [docs/wsl2.md](docs/
 
 ### Pin to the taskbar
 
-Windows does not let installers pin apps. Open Start, search for VoiceMate, right-click it and choose **Pin to taskbar**. Clicking the pinned icon while VoiceMate runs opens its status window; right-clicking it offers **Settings**, **Restart engine**, **Restart WSL** and **Quit VoiceMate**. Pinning uses the Start menu shortcut, so it applies to the installed app.
+Windows does not let installers pin apps. Open Start, search for VoiceMate, right-click it and choose **Pin to taskbar**. Clicking the pinned icon while VoiceMate runs opens its status window; right-clicking it offers **Settings**, **Restart engine**, **Restart WSL...** and **Quit VoiceMate**. Pinning uses the Start menu shortcut, so it applies to the installed app.
 
 ### Quit
 
@@ -354,7 +354,7 @@ mkdir -p ~/.local/share/applications &&
 | ------- | --- |
 | "Starting engine..." for a long time | The first model load takes 10 to 60 s. Check `engine.log` (**Engine** > **Open logs**) and the WSL distro and engine folder in Settings |
 | A hotkey shows "Used by another app" on first run | An old hotkey script (PowerShell or AutoHotkey) is still running: close it and remove it from `shell:startup` |
-| "WSL audio stopped" or "No microphone" | Connect a microphone. WSL is restarted as set in **Restart WSL when audio fails**; by hand: **Engine** > **Restart WSL** |
+| "WSL audio stopped" or "No microphone" | Connect a microphone. WSL is restarted as set in **Restart WSL when audio fails**; by hand: **Engine** > **Restart WSL...** |
 | "The engine is older than this app. Restart or update it." | Update the checkout in WSL (`git pull`), then **Restart engine** |
 | A transcription was not copied | It stays under **Not copied**, in the tray menu (click it to copy) and in the status window (**Copy**) |
 | SmartScreen warns about the installer | The installer is not code-signed: **More info** > **Run anyway** |

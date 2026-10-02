@@ -619,7 +619,9 @@ def _failure_texts(failure: FailureReason | None) -> tuple[str, str]:
     if failure == "no_engine_dir":
         return _("Engine folder not found"), _("Set the engine folder in Settings.")
     if failure == "wsl_breaker":
-        return _("Engine failed"), _("Restarting WSL did not help. Check the engine log, then use Restart WSL.")
+        return _("Engine failed"), _(
+            "Restarting WSL did not help. Check the engine log, then use Restart WSL... in the Engine menu."
+        )
     return _("Engine failed"), _("The engine failed too many times. Check the engine log, then use Restart engine.")
 
 
@@ -651,7 +653,7 @@ def _texts(state: CoreState, tray: TrayState, now: Now) -> tuple[str, str]:
     else:
         status, detail = _failure_texts(state.failure)
     if state.pending_wsl_restart:
-        detail = _("WSL needs a restart to recover the audio. Use Restart WSL now in the menu.")
+        detail = _("WSL needs a restart to recover the audio. Use Restart WSL now... in the menu.")
     return status, detail
 
 
@@ -733,7 +735,9 @@ def _build(state: CoreState, note: _Note) -> tuple[NotificationLevel, str, str, 
         return (
             "error",
             _("VoiceMate stopped retrying"),
-            _("Restarting WSL did not bring the audio back. Check the engine log, then use Restart WSL."),
+            _(
+                "Restarting WSL did not bring the audio back. Check the engine log, then use Restart WSL... in the Engine menu."
+            ),
             "open_logs",
         )
     if code == "engine_dir_missing":
@@ -761,7 +765,7 @@ def _build(state: CoreState, note: _Note) -> tuple[NotificationLevel, str, str, 
         return (
             "warning",
             _("WSL needs a restart"),
-            _("WSL lost its audio. Choose Restart WSL now in the VoiceMate menu."),
+            _("WSL lost its audio. Choose Restart WSL now... in the VoiceMate menu."),
             "show_status",
         )
     if code == "wsl_restart_ask_others":
@@ -770,7 +774,7 @@ def _build(state: CoreState, note: _Note) -> tuple[NotificationLevel, str, str, 
             _("WSL needs a restart"),
             _(
                 "WSL lost its audio, but restarting it also stops {distros}. "
-                "Choose Restart WSL now in the VoiceMate menu when convenient."
+                "Choose Restart WSL now... in the VoiceMate menu when convenient."
             ).format(distros=", ".join(note.names)),
             "show_status",
         )

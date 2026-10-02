@@ -494,7 +494,7 @@ def test_pending_wsl_restart_detail() -> None:
     sim = Sim().healthy()
     sim.feed(SupervisorUpdate("healthy", 0, None, None, 0, True))
     assert sim.snap().pending_wsl_restart
-    assert "Restart WSL now" in sim.snap().detail
+    assert "Restart WSL now..." in sim.snap().detail
 
 
 def test_snippet() -> None:

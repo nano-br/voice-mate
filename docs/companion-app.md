@@ -317,8 +317,8 @@ since the daemon never beeps for them.
 
 Menu: status line; "Dictate (Ctrl+Alt+V)" / "Ask Claude (Ctrl+Alt+A)", which become
 "Stop and copy" / "Stop and ask Claude" while recording; Cancel; Recent (last 10,
-click copies) and Pending (never delivered, click copies); Mute sounds; Engine >
-Restart engine / Restart WSL / Open logs; a "Restart WSL now?" item while
+click copies) and Not copied (never delivered, click copies); Mute sounds; Engine >
+Restart engine / Restart WSL... / Open logs; a "Restart WSL now..." item while
 `pending_wsl_restart`; Settings...; Quit VoiceMate. Left click opens the status
 window, which shows the same information and a "Quit VoiceMate" button.
 
@@ -380,7 +380,7 @@ transcriptions were not copied"). `notify_level` filters them.
   timeouts in a row (they are >= 240 s apart, so the 15 min window never sees them) ->
   `failed` plus a notification (the restart that would exceed the limit is not
   attempted); a WSL restart still waiting for an idle engine is dropped. A manual
-  "Restart engine" / "Restart WSL" resets it. In `external` mode "Restart engine" never
+  "Restart engine" / "Restart WSL..." resets it. In `external` mode "Restart engine" never
   asks the daemon to shut down (nothing could start it again).
   `snapshot.restarts` counts the restarts in the windows, the one in progress included.
 - Restart engine and Quit: `POST /shutdown`, wait up to 8 s, close stdin, wait 2 s,
@@ -474,8 +474,8 @@ volume = 1.0
 - `main.py` sets `APP_USER_MODEL_ID` with `SetCurrentProcessExplicitAppUserModelID`
   before creating `QApplication`; the Inno Setup `[Icons]` entry uses the same
   `AppUserModelID`. Set both or neither. Jump list tasks (pywin32
-  `ICustomDestinationList`): Settings, Restart engine, Restart WSL, Quit; each runs
-  `VoiceMate.exe --command <x>`.
+  `ICustomDestinationList`): Settings, Restart engine, Restart WSL... (`wsl2` mode
+  only), Quit VoiceMate; each runs `VoiceMate.exe --command <x>`.
 - Clicking the pinned shortcut while running opens the status window. Windows 11
   forbids pinning from an installer: the first run explains
   "Start > right-click VoiceMate > Pin to taskbar".
