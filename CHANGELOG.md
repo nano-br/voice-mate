@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The Claude flow now defaults to `claude-haiku-5-5` (it was `claude-haiku-4-5`), and the
+  suggested larger model is `claude-sonnet-5-5`. Haiku 5.5 accepts the `effort` level, so the
+  runtime now sends it.
+- Models that reject disabled thinking (Sonnet 5.5, Opus 5.5, Fable) keep thinking on and rely
+  on a low effort instead, so `--claude-model claude-sonnet-5-5` no longer fails at startup.
+
 ## [0.1.0] - 2026-10-02
 
 First public release. It bundles everything built since the first working

@@ -42,7 +42,7 @@ Details:
 - Because both the transcription and the answer pass through the clipboard, `Win+V` on Windows shows both.
 - Any hotkey pressed while Claude answers or while TTS speaks interrupts the answer and starts a new recording. The conversation is kept.
 - Claude answers in the language of `--output-lang` (default `pt-BR`), for example `make run ARGS="--output-lang en"`. The companion sets it from "Dictation language:" ([Dictation language](#dictation-language)).
-- The default model is `claude-haiku-4-5` with effort `low` and thinking off, for low latency. See [configuration.md](configuration.md#claude-flow-experimental) for the flags.
+- The default model is `claude-haiku-5-5` with effort `low` and thinking off, for low latency. See [configuration.md](configuration.md#claude-flow-experimental) for the flags.
 - Requirements: the Claude Code CLI installed and signed in, and the `claude` extra ([installation.md](installation.md#claude-code-cli-for-the-claude-flow)). Without them the Claude flow is disabled with a warning in the engine log, and the clipboard flow keeps working.
 
 ### TTS engines

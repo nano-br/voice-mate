@@ -215,10 +215,71 @@ def test_claude_chat_config_default_leaves_system_prompt_none() -> None:
 
     cfg = ClaudeChatConfig()
     assert cfg.system_prompt is None
-    assert cfg.model == "claude-haiku-4-5"
+    assert cfg.model == "claude-haiku-5-5"
     assert cfg.effort == "low"
     assert cfg.thinking_enabled is False
     assert cfg.timeout_seconds == 120.0
+
+
+def test_runtime_sends_effort_and_disables_thinking_for_haiku_5_5(fake_sdk: types.ModuleType) -> None:
+    """Haiku 5.5 accepts effort and disabled thinking at effort `high` or below."""
+    from app.features.claude.runtime import ClaudeRuntime
+
+    runtime = ClaudeRuntime(
+        system_prompt=None,
+        max_turns=None,
+        model="claude-haiku-5-5",
+        effort="low",
+        thinking_enabled=False,
+    )
+    runtime.start()
+    try:
+        opts = _fake_state["last_client"].options
+        assert opts.effort == "low"
+        assert opts.thinking == {"type": "disabled"}
+    finally:
+        runtime.stop()
+
+
+def test_runtime_keeps_thinking_for_haiku_5_5_above_high(fake_sdk: types.ModuleType) -> None:
+    """Haiku 5.5 rejects disabled thinking at effort xhigh or max."""
+    from app.features.claude.runtime import ClaudeRuntime
+
+    runtime = ClaudeRuntime(
+        system_prompt=None,
+        max_turns=None,
+        model="claude-haiku-5-5",
+        effort="max",
+        thinking_enabled=False,
+    )
+    runtime.start()
+    try:
+        opts = _fake_state["last_client"].options
+        assert opts.effort == "max"
+        assert "thinking" not in opts.kwargs
+    finally:
+        runtime.stop()
+
+
+def test_runtime_never_disables_thinking_on_sonnet_5_5(fake_sdk: types.ModuleType) -> None:
+    """Sonnet 5.5 returns 400 on disabled thinking at any effort: the runtime omits it."""
+    from app.features.claude.runtime import ClaudeRuntime
+
+    runtime = ClaudeRuntime(
+        system_prompt=None,
+        max_turns=None,
+        model="claude-sonnet-5-5",
+        effort="low",
+        thinking_enabled=False,
+    )
+    runtime.start()
+    try:
+        opts = _fake_state["last_client"].options
+        assert opts.model == "claude-sonnet-5-5"
+        assert opts.effort == "low"
+        assert "thinking" not in opts.kwargs
+    finally:
+        runtime.stop()
 
 
 def test_runtime_omits_effort_for_haiku(fake_sdk: types.ModuleType) -> None:

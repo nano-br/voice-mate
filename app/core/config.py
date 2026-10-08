@@ -76,9 +76,9 @@ class ClaudeChatConfig:
 
     system_prompt: str | None = None
     max_turns: int | None = 50
-    # Haiku 4.5: lower time-to-first-token, ideal for realtime voice with short
-    # responses. Does NOT accept the `effort` parameter (the runtime omits it for Haiku models).
-    model: str = "claude-haiku-4-5"
+    # Haiku 5.5: lowest time-to-first-token and cost, ideal for realtime voice with short
+    # responses. Accepts `effort` and disabled thinking at effort `high` or below.
+    model: str = "claude-haiku-5-5"
     effort: ClaudeEffort = "low"
     thinking_enabled: bool = False
     timeout_seconds: float = 120.0

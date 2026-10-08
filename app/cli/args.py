@@ -211,10 +211,10 @@ def _add_claude_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--claude-model",
-        default="claude-haiku-4-5",
+        default="claude-haiku-5-5",
         help=(
-            "Claude model (default: claude-haiku-4-5 — lowest latency for realtime voice). "
-            "Use claude-sonnet-4-6 for more elaborate responses."
+            "Claude model (default: claude-haiku-5-5 — lowest latency for realtime voice). "
+            "Use claude-sonnet-5-5 for more elaborate responses."
         ),
     )
     parser.add_argument(
