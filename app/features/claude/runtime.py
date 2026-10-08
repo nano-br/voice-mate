@@ -23,16 +23,19 @@ _NO_DISABLED_THINKING = ("claude-opus-5-5", "claude-sonnet-5-5", "claude-fable",
 _DISABLED_THINKING_UP_TO_HIGH = ("claude-haiku-5", "claude-opus-5")
 
 # Short aliases accepted by Claude Code resolve to the current generation of each family.
+# `opusplan` plans with Opus and runs with Sonnet: both reject disabled thinking.
 _ALIASES = {
     "haiku": "claude-haiku-5-5",
     "sonnet": "claude-sonnet-5-5",
     "opus": "claude-opus-5-5",
+    "opusplan": "claude-opus-5-5",
     "fable": "claude-fable-5-1",
 }
 
 
 def _canonical(model: str) -> str:
-    name = model.lower()
+    """Lowercase id with any `[...]` variant suffix removed (`sonnet[1m]` -> `claude-sonnet-5-5`)."""
+    name = model.lower().split("[", 1)[0].strip()
     return _ALIASES.get(name, name)
 
 
