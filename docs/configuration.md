@@ -57,8 +57,8 @@ Flags reach the engine through the Makefile with `ARGS`, for example `make run A
 | `--claude-no-system-prompt` | off | Send no system prompt. Wins over `--claude-system-prompt` |
 | `--claude-max-turns` | `50` | Turns per conversation |
 | `--claude-model` | `claude-haiku-5-5` | Claude model |
-| `--claude-effort {low,medium,high,xhigh,max}` | `low` | Effort level. Ignored by Haiku models |
-| `--claude-enable-thinking` | off | Extended thinking |
+| `--claude-effort {low,medium,high,xhigh,max}` | `low` | Effort level. Ignored by Haiku 4.5 and older |
+| `--claude-enable-thinking` | off | Extended thinking. Sonnet 5.5, Opus 5.5 and Fable always think, and so do Haiku 5.5 and Opus 5 at effort `xhigh` or `max` |
 | `--claude-timeout-seconds` | `120.0` | Timeout of each turn |
 
 ### Text-to-speech (Claude flow)

@@ -22,6 +22,19 @@ _NO_DISABLED_THINKING = ("claude-opus-5-5", "claude-sonnet-5-5", "claude-fable",
 # Models that accept disabled thinking only at effort `high` or below.
 _DISABLED_THINKING_UP_TO_HIGH = ("claude-haiku-5", "claude-opus-5")
 
+# Short aliases accepted by Claude Code resolve to the current generation of each family.
+_ALIASES = {
+    "haiku": "claude-haiku-5-5",
+    "sonnet": "claude-sonnet-5-5",
+    "opus": "claude-opus-5-5",
+    "fable": "claude-fable-5-1",
+}
+
+
+def _canonical(model: str) -> str:
+    name = model.lower()
+    return _ALIASES.get(name, name)
+
 
 def _model_supports_effort(model: str | None) -> bool:
     """Older Haiku generations reject the `effort` parameter (returns 400).
@@ -31,7 +44,7 @@ def _model_supports_effort(model: str | None) -> bool:
     """
     if not model:
         return True
-    name = model.lower()
+    name = _canonical(model)
     return not (name.startswith(_HAIKU_WITHOUT_EFFORT) and "haiku" in name)
 
 
@@ -39,7 +52,7 @@ def _model_accepts_disabled_thinking(model: str | None, effort: str | None) -> b
     """Whether `thinking: {type: "disabled"}` is accepted for this model and effort."""
     if not model:
         return True
-    name = model.lower()
+    name = _canonical(model)
     if name.startswith(_NO_DISABLED_THINKING):
         return False
     if name.startswith(_DISABLED_THINKING_UP_TO_HIGH) and effort in ("xhigh", "max"):
@@ -192,7 +205,7 @@ class ClaudeRuntime:
         elif not self._thinking_enabled:
             print(
                 f"[ClaudeRuntime] thinking left on: {self._model} does not accept disabled thinking "
-                f"at effort '{self._effort}'. A low effort keeps answers fast.",
+                f"at effort '{self._effort}'.",
                 file=sys.stderr,
             )
         options = ClaudeAgentOptions(**options_kwargs)

@@ -282,7 +282,49 @@ def test_runtime_never_disables_thinking_on_sonnet_5_5(fake_sdk: types.ModuleTyp
         runtime.stop()
 
 
-def test_runtime_omits_effort_for_haiku(fake_sdk: types.ModuleType) -> None:
+@pytest.mark.parametrize(
+    ("model", "expected"),
+    [
+        (None, True),
+        ("claude-haiku-5-5", True),
+        ("haiku", True),
+        ("claude-sonnet-5-5", True),
+        ("claude-haiku-4-5", False),
+        ("claude-haiku-4-5-20251001", False),
+        ("claude-3-5-haiku-20241022", False),
+    ],
+)
+def test_model_supports_effort(model: str | None, expected: bool) -> None:
+    from app.features.claude.runtime import _model_supports_effort
+
+    assert _model_supports_effort(model) is expected
+
+
+@pytest.mark.parametrize(
+    ("model", "effort", "expected"),
+    [
+        (None, "low", True),
+        ("claude-haiku-5-5", "high", True),
+        ("claude-haiku-5-5", "xhigh", False),
+        ("claude-opus-5", "high", True),
+        ("claude-opus-5", "xhigh", False),
+        ("claude-opus-5-5", "low", False),
+        ("claude-sonnet-5-5", "low", False),
+        ("claude-fable-5-1", "low", False),
+        ("sonnet", "low", False),
+        ("opus", "low", False),
+        ("haiku", "low", True),
+        ("claude-sonnet-4-6", "max", True),
+        ("claude-haiku-4-5-20251001", "low", True),
+    ],
+)
+def test_model_accepts_disabled_thinking(model: str | None, effort: str, expected: bool) -> None:
+    from app.features.claude.runtime import _model_accepts_disabled_thinking
+
+    assert _model_accepts_disabled_thinking(model, effort) is expected
+
+
+def test_runtime_omits_effort_for_haiku_4_5(fake_sdk: types.ModuleType) -> None:
     """Haiku 4.5 returns 400 if it receives effort — the runtime must omit it."""
     from app.features.claude.runtime import ClaudeRuntime
 
