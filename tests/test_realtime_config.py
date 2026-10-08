@@ -124,12 +124,12 @@ def test_tts_engine_flag_overrides_persisted() -> None:
 
 def test_claude_model_defaults_to_haiku() -> None:
     config = build_config(parse_args([]))
-    assert config.claude_chat.model == "claude-haiku-4-5"
+    assert config.claude_chat.model == "claude-haiku-5-5"
 
 
 def test_claude_model_override() -> None:
-    config = build_config(parse_args(["--claude-model", "claude-sonnet-4-6"]))
-    assert config.claude_chat.model == "claude-sonnet-4-6"
+    config = build_config(parse_args(["--claude-model", "claude-sonnet-5-5"]))
+    assert config.claude_chat.model == "claude-sonnet-5-5"
 
 
 def test_tts_language_defaults_to_pt_from_output_lang() -> None:

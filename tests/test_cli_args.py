@@ -9,7 +9,7 @@ def test_parse_args_no_flags_uses_defaults() -> None:
     assert args.model == "large-v3-turbo"
     assert args.hotkey == "ctrl+alt+v"
     assert args.claude_chat_hotkey == "ctrl+alt+a"
-    assert args.claude_model == "claude-haiku-4-5"
+    assert args.claude_model == "claude-haiku-5-5"
     assert args.claude_effort == "low"
     assert args.claude_enable_thinking is False
     assert args.no_claude_chat is False

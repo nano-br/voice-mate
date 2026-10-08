@@ -12,15 +12,55 @@ from typing import Any, cast
 _STREAM_END = object()
 
 
-def _model_supports_effort(model: str | None) -> bool:
-    """The `effort` parameter is rejected by Haiku 4.5 (returns 400).
+# Haiku generations that reject the `effort` parameter (400). Haiku 5.5 and later accept it.
+_HAIKU_WITHOUT_EFFORT = ("claude-haiku-4", "claude-3")
 
-    Sonnet/Opus accept it. When the model is unknown (None → SDK default), we
-    assume it supports it (the historical default was Sonnet).
+# Models that reject `thinking: {type: "disabled"}` at every effort level (400). On them the
+# runtime omits the thinking option and relies on a low effort to keep answers fast.
+_NO_DISABLED_THINKING = ("claude-opus-5-5", "claude-sonnet-5-5", "claude-fable", "claude-mythos")
+
+# Models that accept disabled thinking only at effort `high` or below.
+_DISABLED_THINKING_UP_TO_HIGH = ("claude-haiku-5", "claude-opus-5")
+
+# Short aliases accepted by Claude Code resolve to the current generation of each family.
+# `opusplan` plans with Opus and runs with Sonnet: both reject disabled thinking.
+_ALIASES = {
+    "haiku": "claude-haiku-5-5",
+    "sonnet": "claude-sonnet-5-5",
+    "opus": "claude-opus-5-5",
+    "opusplan": "claude-opus-5-5",
+    "fable": "claude-fable-5-1",
+}
+
+
+def _canonical(model: str) -> str:
+    """Lowercase id with any `[...]` variant suffix removed (`sonnet[1m]` -> `claude-sonnet-5-5`)."""
+    name = model.lower().split("[", 1)[0].strip()
+    return _ALIASES.get(name, name)
+
+
+def _model_supports_effort(model: str | None) -> bool:
+    """Older Haiku generations reject the `effort` parameter (returns 400).
+
+    Haiku 5.5, Sonnet and Opus accept it. When the model is unknown (None → SDK
+    default), we assume it supports it.
     """
     if not model:
         return True
-    return "haiku" not in model.lower()
+    name = _canonical(model)
+    return not (name.startswith(_HAIKU_WITHOUT_EFFORT) and "haiku" in name)
+
+
+def _model_accepts_disabled_thinking(model: str | None, effort: str | None) -> bool:
+    """Whether `thinking: {type: "disabled"}` is accepted for this model and effort."""
+    if not model:
+        return True
+    name = _canonical(model)
+    if name.startswith(_NO_DISABLED_THINKING):
+        return False
+    if name.startswith(_DISABLED_THINKING_UP_TO_HIGH) and effort in ("xhigh", "max"):
+        return False
+    return True
 
 
 class ClaudeRuntime:
@@ -161,10 +201,16 @@ class ClaudeRuntime:
                 f"[ClaudeRuntime] effort='{self._effort}' ignored: {self._model} does not support the parameter.",
                 file=sys.stderr,
             )
-        if not self._thinking_enabled:
+        if not self._thinking_enabled and _model_accepts_disabled_thinking(self._model, self._effort):
             from claude_agent_sdk import ThinkingConfigDisabled
 
             options_kwargs["thinking"] = ThinkingConfigDisabled(type="disabled")
+        elif not self._thinking_enabled:
+            print(
+                f"[ClaudeRuntime] thinking left on: {self._model} does not accept disabled thinking "
+                f"at effort '{self._effort}'.",
+                file=sys.stderr,
+            )
         options = ClaudeAgentOptions(**options_kwargs)
         client = ClaudeSDKClient(options=options)
         await client.__aenter__()

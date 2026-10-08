@@ -211,10 +211,10 @@ def _add_claude_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--claude-model",
-        default="claude-haiku-4-5",
+        default="claude-haiku-5-5",
         help=(
-            "Claude model (default: claude-haiku-4-5 — lowest latency for realtime voice). "
-            "Use claude-sonnet-4-6 for more elaborate responses."
+            "Claude model (default: claude-haiku-5-5 — lowest latency for realtime voice). "
+            "Use claude-sonnet-5-5 for more elaborate responses."
         ),
     )
     parser.add_argument(
@@ -223,13 +223,16 @@ def _add_claude_args(parser: argparse.ArgumentParser) -> None:
         choices=["low", "medium", "high", "xhigh", "max"],
         help=(
             "Claude effort level (default: low — prioritizes speed). "
-            "Ignored on Haiku models, which do not accept the parameter."
+            "Ignored on Haiku 4.5 and older, which do not accept the parameter."
         ),
     )
     parser.add_argument(
         "--claude-enable-thinking",
         action="store_true",
-        help="Enable Claude's extended thinking (default: disabled)",
+        help=(
+            "Enable Claude's extended thinking (default: disabled). Sonnet 5.5, Opus 5.5 and Fable "
+            "always think, and so do Haiku 5.5 and Opus 5 at effort xhigh or max."
+        ),
     )
     parser.add_argument(
         "--claude-timeout-seconds",
