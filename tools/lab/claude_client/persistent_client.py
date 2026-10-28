@@ -89,8 +89,12 @@ async def run(args: argparse.Namespace) -> None:
                 elif isinstance(msg, ResultMessage):
                     total = time.perf_counter() - start
                     cur = client._transport._process.pid  # type: ignore[union-attr]
-                    print(f"\n# session={msg.session_id} ttft={ttft if ttft is None else round(ttft, 2)}s "
-                          f"total={total:.2f}s pid={cur} error={msg.is_error}", file=sys.stderr, flush=True)
+                    print(
+                        f"\n# session={msg.session_id} ttft={ttft if ttft is None else round(ttft, 2)}s "
+                        f"total={total:.2f}s pid={cur} error={msg.is_error}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
     finally:
         await client.disconnect()
 
