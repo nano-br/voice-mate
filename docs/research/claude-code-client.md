@@ -16,7 +16,7 @@ Lab date: 2026-10-28. Versions seen: Claude Desktop 4.29.0 (its bundled CLI 2.1.
 | Does `resume` write to the same file? | Yes. `--resume <id>` and `resume=<id>` append to the same `<id>.jsonl` and keep the id; `fork_session` writes a new id with the history copied. | §7 |
 | Can two writers share a session? | They do not corrupt the file, but each process only knows its own in-memory history: the conversation splits into branches and a later resume follows one branch and silently drops the other. One writer per session. | §7 |
 | Can VoiceMate type into a conversation the Desktop is running, so it shows in the Desktop and on the phone? | Yes, through Windows UI Automation: find the prompt box, type, press Enter. Tested end to end; the text arrives as a normal user prompt. The local messaging pipe works on CLI sessions but did not deliver into a Desktop session. | §8 |
-| Can VoiceMate put its own session on the phone? | Yes, through an undocumented `remote_control` control request on the `stream-json` protocol (the one the Desktop uses). The session appeared in the phone app (checked by the person); a prompt sent from the phone was not checked. | §6 |
+| Can VoiceMate put its own session on the phone? | Yes, through an undocumented `remote_control` control request on the `stream-json` protocol (the one the Desktop uses). The session appeared in the phone app and a prompt the person sent from the phone was answered by the VoiceMate process (§6.1). | §6 |
 | Can the reader stay off the SDK/CLI? | Yes. Transcripts plus `~/.claude/sessions/<pid>.json` give messages, turn ends and busy/idle. Works from WSL through `/mnt/c`. | §4, §9 |
 | Windows or WSL for the persistent core? | Windows (companion side), next to the Desktop. | §10 |
 
@@ -119,7 +119,7 @@ For a session VoiceMate runs itself:
 
 The CLI answered with `session_url` (`https://claude.ai/code/session_...`), `bridge_session_id` and system events `bridge_state: ready` then `connected`; the next turn kept working. After the switch the session also loaded the account's claude.ai connectors as tools, even with `--tools ""`, so a VoiceMate session with Remote Control on is not tool-free any more.
 
-The transcript of that session got the same `bridge-session` lines the Desktop sessions have. In this first run the phone was not checked. In the §6.1 run the session appeared in the phone app (checked by the person). Not verified: whether a prompt typed on the phone reaches the VoiceMate process. Confirm it before building on it: start a session with `remote_control` on, type on the phone, and look for a `user` message on the process's stdout.
+The transcript of that session got the same `bridge-session` lines the Desktop sessions have. In this first run the phone was not checked. In the §6.1 run the session appeared in the phone app (checked by the person). A prompt typed on the phone also reached the VoiceMate process in that run (§6.1).
 
 
 ### 6.1 A VoiceMate-owned session in the Desktop (tested, works)
@@ -129,7 +129,7 @@ Test on 2026-10-28 with [`rc_session_lab.py`](../../tools/lab/claude_client/rc_s
 - **It shows in the Desktop sidebar.** About 15 s after the request the entry appeared in the Code tab's sidebar with its own "more options" menu, and it was absent before (checked through UI Automation).
 - **The whole history shows.** Opening it in the Desktop showed both turns, including the one sent before Remote Control was turned on.
 - **The Desktop can write into it.** A prompt typed into that conversation in the Desktop (through the UI Automation lab) was delivered to the lab's process, which answered; the answer showed in the Desktop and in the lab's `stdout`. The process VoiceMate runs stays the only writer: the Desktop and the phone are remote clients of it, like the phone is for a Desktop session.
-- **Phone:** the session "VoiceMate RC probe 1657" appeared in the phone app, checked by the person at 17:05 on 2026-10-28; a prompt sent from the phone was not checked.
+- **Phone:** the session "VoiceMate RC probe 1657" appeared in the phone app, checked by the person at 17:05 on 2026-10-28. At about 17:12 the person sent "Oi" from the phone and the lab's process answered it ("Oi! Em que posso ajudar?" on its stdout). The stream-json output carried the answer but did not echo the remote user's prompt, so a reader that needs the prompt text should take it from the transcript on disk.
 - **Not checked:** what the Desktop shows after the process exits, and whether the entry comes back when VoiceMate resumes the same session id later with Remote Control on again.
 
 This changes the recommendation (§11): VoiceMate can own its main conversation and still meet the "visible in the Desktop and on the phone" requirement.
@@ -216,7 +216,7 @@ Recommendation: the persistent Claude core runs on the Windows companion side, w
 
 ## 11. Recommended architecture
 
-> Update after §6.1: there are two complementary roles. (1) VoiceMate's own main conversation runs in a persistent `stream-json` process owned by the companion, with Remote Control on, so it shows in the Desktop and in the phone app and can be continued from the Desktop (typing from the phone is not yet checked). (2) Other conversations the Desktop runs are driven as described below (UI Automation in, disk reader out). The diagram covers role 2.
+> Update after §6.1: there are two complementary roles. (1) VoiceMate's own main conversation runs in a persistent `stream-json` process owned by the companion, with Remote Control on, so it shows in the Desktop and in the phone app and can be continued from the Desktop and from the phone. (2) Other conversations the Desktop runs are driven as described below (UI Automation in, disk reader out). The diagram covers role 2.
 
 The person's requirement (everything visible in the Desktop and on the phone) decides it: the Desktop stays the only process that runs the conversations, and VoiceMate is a voice front end for it, like the phone is.
 
