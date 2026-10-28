@@ -15,9 +15,10 @@ Lab date: 2026-10-28. Versions seen: Claude Desktop 4.29.0 (its bundled CLI 2.1.
 | What puts a session on the phone? | Remote Control on the process that runs the session. The Desktop turns it on per running session (`bridge-session` lines in the transcript). | §6 |
 | Does `resume` write to the same file? | Yes. `--resume <id>` and `resume=<id>` append to the same `<id>.jsonl` and keep the id; `fork_session` writes a new id with the history copied. | §7 |
 | Can two writers share a session? | They do not corrupt the file, but each process only knows its own in-memory history: the conversation splits into branches and a later resume follows one branch and silently drops the other. One writer per session. | §7 |
+| Can VoiceMate type into a conversation the Desktop is running, so it shows in the Desktop and on the phone? | Yes, through Windows UI Automation: find the prompt box, type, press Enter. Tested end to end; the text arrives as a normal user prompt. The local messaging pipe works on CLI sessions but did not deliver into a Desktop session. | §8 |
 | Can VoiceMate put its own session on the phone? | Yes, through an undocumented `remote_control` control request on the `stream-json` protocol (the one the Desktop uses). | §6 |
-| Can the reader stay off the SDK/CLI? | Yes. Transcripts plus `~/.claude/sessions/<pid>.json` give messages, turn ends and busy/idle. Works from WSL through `/mnt/c`. | §4, §8 |
-| Windows or WSL for the persistent core? | Windows (companion side). | §9 |
+| Can the reader stay off the SDK/CLI? | Yes. Transcripts plus `~/.claude/sessions/<pid>.json` give messages, turn ends and busy/idle. Works from WSL through `/mnt/c`. | §4, §9 |
+| Windows or WSL for the persistent core? | Windows (companion side), next to the Desktop. | §10 |
 
 ## 2. Authentication is the first blocker
 
@@ -139,7 +140,38 @@ Consequences:
 - **Taking over an idle session works at the file level.** When no process owns a session, resuming it appends a clean, linear continuation (step 2 above, with A idle). The Desktop reads the same transcript when it starts that session again, so it should show those turns; this lab did not open a Desktop session to confirm it, because it only touched throwaway sessions and the Desktop lists only sessions it created.
 - The CLI help says `claude --bg --resume <id>` "starts a copy and says so when the session is already running": the CLI itself avoids the second writer for background sessions. Plain `-p --resume` and the SDK do not check.
 
-## 8. Disk reader prototype
+## 8. Typing into a conversation the Desktop is running
+
+Requirement from the person: every conversation VoiceMate opens or talks to must be visible in the Desktop app and therefore on the phone. Sessions VoiceMate runs itself through the SDK never show in the Desktop sidebar (§5), so the useful question is how to feed a conversation the Desktop already runs, the way the phone does, without a second writer (§7). Three routes were tried, only on throwaway sessions or on the lab's own session.
+
+### 8.1 Windows UI Automation (tested, works)
+
+The Desktop is an Electron app, so Chromium exposes the page to UI Automation, the API screen readers use. The tree is empty on the first query and fills in on the next one (Chromium turns accessibility on when a client asks). [`desktop_uia_lab.py`](../../tools/lab/claude_client/desktop_uia_lab.py):
+
+- The window is the top-level `Chrome_WidgetWin_1` named `Claude`. The open conversation is the `Document` with `AutomationId == "RootWebArea"`; its name is `<title> - Claude Code`.
+- The prompt box is an `Edit` control of class `tiptap ProseMirror`, named `Prompt`. It has no Value pattern; its text is in its `Text` children.
+- Writing: bring the window forward (`SetActive`), focus the editor, send the keystrokes, then Enter. Keystrokes go to the foreground window, so skipping `SetActive` sends them to whatever app has focus. The first attempt without it typed nothing into the box.
+- Result: a prompt typed this way into the lab session arrived as a normal user prompt (a `queue-operation` `enqueue` while the session was busy, then delivered as the person's own message), so it also shows on the phone through the Desktop's Remote Control. Typing and sending took about 2.1 s, most of it the per-key typing delay; pasting from the clipboard would be faster.
+- Reading the answer through UI Automation works (the conversation text is exposed as `Text` controls) but is noisy: tool output, side panels and hidden screen-reader strings are mixed in. Reading the transcript on disk is cleaner (§9). The Desktop index (§5) maps the conversation (`local_<uuid>`, title) to the `.jsonl` file.
+- Opening a given conversation first: the deep link `claude://claude.ai/epitaxy/local_<uuid>` (not exercised in this lab).
+
+Side note: the same tree shows a "press and hold to record" button next to the prompt box, so the Desktop has its own dictation; VoiceMate's value there is its hotkey, its STT quality and speaking the answer back.
+
+Limits: the Desktop window must be open, it takes focus while VoiceMate types, the UI tree changes with Desktop releases (class names, labels in the UI language), and it only drives the conversation shown in the window.
+
+### 8.2 Local messaging pipe (tested, works on CLI sessions only)
+
+Every Claude Code process binds `\\.\pipe\LOCAL\cc-msg-<hex>`, listed as `messagingSocketPath` in `~/.claude/sessions/<pid>.json`, with a `<pid>.<hash>.key` file holding `peerToken`. A peer connects and writes two JSON lines: `{"type": "auth", "token": <peerToken>}` then `{"type": "user", "message": {"role": "user", "content": "..."}}`. [`pipe_inject_lab.py`](../../tools/lab/claude_client/pipe_inject_lab.py):
+
+- Into a throwaway `stream-json` CLI session: without the auth line nothing happens; with it the prompt runs and the reply is in the transcript ("pipe ok").
+- The prompt is delivered as a peer message, wrapped in "Another Claude session sent a message ... not typed by your user". The model treats it as a teammate's request, not as the person: it cannot approve permissions, for example.
+- Into the lab's own Desktop session: the write succeeded but nothing was delivered after several minutes (no `queue-operation` line). The Desktop appears to hold or filter peer messages for its sessions. Not a route for Desktop conversations.
+
+### 8.3 claude.ai session API (not tested, by design)
+
+The phone talks to the session through claude.ai, and the CLI binary contains the endpoints it uses (`/v1/code/sessions/{id}/events`, `/events/stream`, `/bridge`, ...). Using them from VoiceMate would mean taking the person's OAuth token out of `~/.claude/.credentials.json` and calling an undocumented API as if VoiceMate were a first-party client. That was not done: it is fragile, and handling the token by hand is not acceptable for a lab. If Anthropic documents a Remote Control client API, this becomes the cleanest route.
+
+## 9. Disk reader prototype
 
 [`session_watch.py`](../../tools/lab/claude_client/session_watch.py), standard library only:
 
@@ -150,54 +182,54 @@ python tools/lab/claude_client/session_watch.py follow <session-id>
 
 It keeps a byte offset per file, holds back an unfinished last line until its newline arrives, maps lines to events (`user`, `assistant_text`, `tool_use`, `turn_end`, `compact`, `queued`, `error`, `title`) and polls `~/.claude/sessions/*.json` for busy/idle. Polling every 0.25 s was chosen over file-system events because it works the same on NTFS, on `/mnt/c` from WSL (no inotify over 9p) and on `\\wsl.localhost` from Windows. From WSL with `CLAUDE_CONFIG_DIR=/mnt/c/Users/<user>/.claude`, one `stat` costs about 1.8 ms and following a session works unchanged; listing all 767 transcripts takes 1.7 s, so the list should be cached.
 
-## 9. Windows or WSL for the core
+## 10. Windows or WSL for the core
 
 - The Desktop, its sessions, `~/.claude` and the projects the person works on are on Windows. A core in WSL would need its own login, would see Windows projects only as `/mnt/c/...` (a different slug, `-mnt-c-...`, so a different session folder) and would cross the 9p bridge for every read.
 - The engine in WSL only needs text in and text out for voice chat; it already talks HTTP to the companion.
 
 Recommendation: the persistent Claude core runs on the Windows companion side, with the Windows `claude` login; the WSL engine asks the companion over the existing local HTTP channel. If it ever has to run in WSL, set `CLAUDE_CONFIG_DIR` to the Windows `~/.claude` only for reading, never for a second writer.
 
-## 10. Recommended architecture
+## 11. Recommended architecture
+
+The person's requirement (everything visible in the Desktop and on the phone) decides it: the Desktop stays the only process that runs the conversations, and VoiceMate is a voice front end for it, like the phone is.
 
 ```mermaid
 flowchart LR
     subgraph win["Windows host"]
         direction TB
         subgraph comp["Companion, VoiceMate.exe"]
-            core["Claude core<br/>one ClaudeSDKClient per active session<br/>connected at startup"]
+            typer["Desktop driver<br/>UI Automation: open conversation,<br/>type into Prompt, press Enter"]
             reader["Session reader<br/>tail of .jsonl + sessions/*.json<br/>polling 0.25 s"]
         end
-        cli["Claude Code CLI<br/>bundled with the SDK, own login"]
-        disk[("~/.claude<br/>projects/*.jsonl<br/>sessions/*.json")]
-        desk["Claude Desktop<br/>Code tab"]
+        desk["Claude Desktop<br/>Code tab, runs every conversation"]
+        disk[("~/.claude<br/>projects/*.jsonl, sessions/*.json<br/>Claude-Data index")]
     end
     subgraph wsl["WSL2"]
         engine["VoiceMate engine<br/>STT, TTS"]
     end
     phone["Phone / claude.ai/code"]
 
-    engine -->|"HTTP: prompt text"| core
-    core -->|"HTTP: reply deltas"| engine
-    core -->|"stream-json stdin/stdout"| cli
-    cli -->|"appends"| disk
+    engine -->|"HTTP: transcribed prompt"| typer
+    typer -->|"keystrokes"| desk
     desk -->|"appends"| disk
     reader -->|"reads, never writes"| disk
-    reader -->|"events: new message, turn end, busy/idle"| comp
-    cli <-->|"Remote Control (when enabled)"| phone
+    reader -->|"HTTP: reply text to speak"| engine
     desk <-->|"Remote Control"| phone
 ```
 
-1. **Claude core in the companion (Windows).** One `ClaudeSDKClient` per session VoiceMate is talking to, opened at startup or when the person picks a session, kept open, closed after a long idle period. This keeps follow-up turns at about 1.5 s to the first token. Scrub the Desktop host variables before starting it. The WSL engine sends the transcribed prompt to the companion over the existing local HTTP channel and receives text deltas to speak.
-2. **Session reader in the companion.** Standard library, polling (`session_watch.py` is the seed): lists sessions with titles and busy/idle, follows one session and emits `user`, `assistant_text`, `turn_end`, `queued`, `compact`. This is how VoiceMate shows or speaks what happens in a Desktop or phone conversation without running anything.
-3. **Writing rules.** VoiceMate writes only to sessions it owns: new sessions it creates (optionally with Remote Control on, so they appear on the phone), or idle sessions it resumes. A session another process owns is read-only for VoiceMate; to say something into it, the person uses the Desktop or the phone, or VoiceMate forks it.
-4. **Phone.** For VoiceMate's own sessions, send the `remote_control` control request after connecting (see §6). It is undocumented, so keep it behind a setting and fall back to "not on the phone" if the request fails.
-5. **Desktop sidebar.** VoiceMate's sessions do not appear there and should not be forced in (writing the Desktop index is a private format). The Desktop can still open any transcript later through its own resume, and the reader shows them in VoiceMate.
+1. **Input through the Desktop.** A companion hotkey (or the voice flow) sends the transcribed text to the conversation open in the Desktop: UI Automation finds the `Prompt` box, types (or pastes) and presses Enter. Optionally a "fill only" mode leaves the text in the box for the person to review and send. The conversation then shows in the Desktop and on the phone like any typed prompt.
+2. **Output from disk.** The session reader maps the open conversation to its `.jsonl` (Desktop index, §5), follows it and emits the assistant text at `turn_end` (or as it arrives) for the engine to speak. No SDK or CLI process is spawned to read.
+3. **Picking a conversation.** The reader lists conversations with title and busy/idle; VoiceMate opens one with the deep link `claude://claude.ai/epitaxy/local_<uuid>` before typing.
+4. **SDK core only as an option.** A persistent `ClaudeSDKClient` (§3, about 1.5 s to the first token) stays useful for quick voice questions that do not need to be in the Desktop. It must never resume a conversation the Desktop is running (§7). With the requirement above, it is a secondary mode, not the base.
+5. **Windows side.** Both pieces live in the companion, next to the Desktop window and `~/.claude`; the WSL engine keeps doing speech and talks to the companion over the existing local HTTP channel.
 
-Suggested order for the production work: (a) session reader in the companion with a session picker; (b) move the Claude core from the WSL engine to the companion, keyed by session id, with the one-writer check; (c) optional Remote Control for VoiceMate's sessions.
+Suggested order for the production work: (a) session reader in the companion (list, follow, speak the last answer); (b) "send to Claude" hotkey with UI Automation, fill-only first, then fill and send; (c) opening a chosen conversation by deep link; (d) the SDK quick-question mode if still wanted.
 
-## 11. Risks
+## 12. Risks
 
 - **Undocumented formats.** The `.jsonl` line types, `~/.claude/sessions/<pid>.json` and the Desktop index are internal. New line types appear often (this lab saw 22). Parse defensively: ignore unknown types, never fail on a missing field, pin the tested CLI version in a test fixture.
 - **Auth coupling.** The Desktop's host auth is not reusable. VoiceMate needs its own login and must scrub the Desktop variables when started from a Claude session.
 - **Version drift.** Three CLI versions coexist on this machine (2.1.143 on `PATH`, 2.1.309 in the Desktop, 2.1.310 in the SDK). Use the SDK's bundled CLI and record its version.
+- **UI Automation is a UI contract, not an API.** Class names (`tiptap ProseMirror`), the `Prompt` label (it follows the UI language) and the layout can change with any Desktop release. Match on several properties, check the conversation title before typing, and fail loudly instead of typing into the wrong place.
+- **Focus.** Typing needs the Desktop window in the foreground; VoiceMate takes focus for about a second each time. Never send keystrokes without confirming the focused element is the prompt box.
 - **Clock skew.** WSL and Windows clocks differed by about 20 s during the lab; compare transcript `timestamp` values, not file mtimes across the boundary.
