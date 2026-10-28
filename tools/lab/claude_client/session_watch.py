@@ -123,8 +123,12 @@ def parse_line(d: dict) -> Iterator[Event]:
         elif d.get("isCompactSummary"):
             yield Event("compact", text="(compact summary)", **base)
         else:
-            yield Event("user", text=_text_blocks(content),
-                        extra={"entrypoint": d.get("entrypoint"), "promptSource": d.get("promptSource")}, **base)
+            yield Event(
+                "user",
+                text=_text_blocks(content),
+                extra={"entrypoint": d.get("entrypoint"), "promptSource": d.get("promptSource")},
+                **base,
+            )
     elif t == "assistant" and not d.get("isSidechain"):
         msg = d.get("message", {})
         # The CLI writes one line per content block; all lines of one API reply share message.id.
@@ -211,8 +215,10 @@ def cmd_list(args: argparse.Namespace) -> None:
         sid = os.path.basename(path)[:-6]
         status = live.get(sid, {}).get("status", "-")
         age = time.time() - os.path.getmtime(path)
-        print(f"{sid}  {status:5s}  {age / 60:6.1f} min ago  {_session_title(path)[:50]!s:50s}  "
-              f"{os.path.basename(os.path.dirname(path))[:60]}")
+        print(
+            f"{sid}  {status:5s}  {age / 60:6.1f} min ago  {_session_title(path)[:50]!s:50s}  "
+            f"{os.path.basename(os.path.dirname(path))[:60]}"
+        )
 
 
 def cmd_follow(args: argparse.Namespace) -> None:
@@ -238,7 +244,7 @@ def cmd_follow(args: argparse.Namespace) -> None:
                     last_title = ev.text
                 if ev.kind in args.kinds:
                     stamp = (ev.timestamp or "")[11:19]
-                    print(f"[{stamp}] {ev.kind:14s} {ev.text[:args.width]!r}", flush=True)
+                    print(f"[{stamp}] {ev.kind:14s} {ev.text[: args.width]!r}", flush=True)
         status = live_sessions().get(sid, {}).get("status")
         if status != last_status and "status" in args.kinds:
             print(f"[{time.strftime('%H:%M:%S')}] status         {status}", flush=True)
@@ -261,8 +267,11 @@ def main() -> None:
     p.add_argument("--once", action="store_true", help="read what is there and exit")
     p.add_argument("--interval", type=float, default=0.25)
     p.add_argument("--width", type=int, default=160)
-    p.add_argument("--kinds", nargs="*",
-                   default=["user", "assistant_text", "tool_use", "turn_end", "compact", "queued", "error", "status"])
+    p.add_argument(
+        "--kinds",
+        nargs="*",
+        default=["user", "assistant_text", "tool_use", "turn_end", "compact", "queued", "error", "status"],
+    )
     p.set_defaults(fn=cmd_follow)
     args = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]  # Windows consoles default to cp1252

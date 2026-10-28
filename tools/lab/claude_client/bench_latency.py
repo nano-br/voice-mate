@@ -26,6 +26,10 @@ import subprocess
 import time
 import uuid
 from dataclasses import asdict, dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from claude_agent_sdk import ClaudeAgentOptions
 
 PROMPTS = [
     "Reply with exactly one short sentence: what is 2 + 2?",
@@ -51,7 +55,7 @@ def _now() -> float:
     return time.perf_counter()
 
 
-def _options(args: argparse.Namespace, **extra: object):  # type: ignore[no-untyped-def]
+def _options(args: argparse.Namespace, **extra: object) -> ClaudeAgentOptions:
     from claude_agent_sdk import ClaudeAgentOptions
 
     return ClaudeAgentOptions(
@@ -133,7 +137,11 @@ async def bench_sdk_query(args: argparse.Namespace) -> list[Turn]:
 
 
 def _cli() -> str:
-    return shutil.which("claude") or "claude"
+    # Same binary as the SDK by default, so every strategy runs the same CLI version.
+    from claude_agent_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
+
+    bundled = SubprocessCLITransport._find_bundled_cli(None)  # type: ignore[arg-type]  # lab only
+    return os.environ.get("LAB_CLI") or bundled or shutil.which("claude") or "claude"
 
 
 def _read_stream_turn(proc: subprocess.Popen[str], start: float) -> tuple[float | None, str, str | None]:
@@ -160,8 +168,16 @@ def _read_stream_turn(proc: subprocess.Popen[str], start: float) -> tuple[float 
 
 def _cli_base(args: argparse.Namespace) -> list[str]:
     return [
-        _cli(), "-p", "--model", args.model, "--output-format", "stream-json", "--verbose",
-        "--include-partial-messages", "--tools", "",
+        _cli(),
+        "-p",
+        "--model",
+        args.model,
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--include-partial-messages",
+        "--tools",
+        "",
     ]
 
 
@@ -169,10 +185,15 @@ def bench_cli_resume(args: argparse.Namespace) -> list[Turn]:
     out: list[Turn] = []
     sid: str | None = None
     for i in range(args.turns):
-        cmd = _cli_base(args) + (["--resume", sid] if sid else []) + [PROMPTS[i % len(PROMPTS)]]
+        # The prompt goes on stdin: `--tools` is variadic and would swallow a trailing argument.
+        cmd = _cli_base(args) + (["--resume", sid] if sid else [])
         start = _now()
-        proc = subprocess.Popen(cmd, cwd=args.cwd, stdout=subprocess.PIPE, stdin=subprocess.DEVNULL,
-                                text=True, encoding="utf-8")
+        proc = subprocess.Popen(
+            cmd, cwd=args.cwd, stdout=subprocess.PIPE, stdin=subprocess.PIPE, text=True, encoding="utf-8"
+        )
+        assert proc.stdin is not None
+        proc.stdin.write(PROMPTS[i % len(PROMPTS)])
+        proc.stdin.close()
         ttft, text, sid = _read_stream_turn(proc, start)
         proc.wait()
         out.append(Turn("cli-resume", i, ttft, _now() - start, proc.pid, sid, text))
@@ -183,8 +204,9 @@ def bench_cli_stream(args: argparse.Namespace) -> list[Turn]:
     out: list[Turn] = []
     cmd = _cli_base(args) + ["--input-format", "stream-json"]
     spawn = _now()
-    proc = subprocess.Popen(cmd, cwd=args.cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                            text=True, encoding="utf-8")
+    proc = subprocess.Popen(
+        cmd, cwd=args.cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, encoding="utf-8"
+    )
     assert proc.stdin is not None
     try:
         for i in range(args.turns):
@@ -202,12 +224,16 @@ def bench_cli_stream(args: argparse.Namespace) -> list[Turn]:
 
 def _summary(turns: list[Turn]) -> str:
     first, rest = turns[0], turns[1:]
+
     def med(xs: list[float]) -> str:
         return f"{statistics.median(xs):.2f}s" if xs else "n/a"
+
     pids = {t.pid for t in turns if t.pid}
-    return (f"{first.strategy:15s} turn1 ttft={first.ttft_s or 0:.2f}s total={first.total_s:.2f}s | "
-            f"next median ttft={med([t.ttft_s for t in rest if t.ttft_s])} "
-            f"total={med([t.total_s for t in rest])} | distinct pids={len(pids) or 'n/a'}")
+    return (
+        f"{first.strategy:15s} turn1 ttft={first.ttft_s or 0:.2f}s total={first.total_s:.2f}s | "
+        f"next median ttft={med([t.ttft_s for t in rest if t.ttft_s])} "
+        f"total={med([t.total_s for t in rest])} | distinct pids={len(pids) or 'n/a'}"
+    )
 
 
 def main() -> None:
@@ -233,8 +259,10 @@ def main() -> None:
     for name in args.only:
         turns = runners[name]()
         for t in turns:
-            print(f"  {t.strategy} #{t.turn} ttft={t.ttft_s} total={t.total_s:.2f} pid={t.pid} "
-                  f"sid={t.session_id} text={t.text[:60]!r}")
+            print(
+                f"  {t.strategy} #{t.turn} ttft={t.ttft_s} total={t.total_s:.2f} pid={t.pid} "
+                f"sid={t.session_id} text={t.text[:60]!r}"
+            )
         print(_summary(turns))
         results.extend(turns)
     if args.json:
