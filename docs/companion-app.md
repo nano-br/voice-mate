@@ -171,7 +171,9 @@ a token that is still refused gives an "access denied" notification.
 ### `GET /health`
 
 `HealthPayload`: adds `api_version`, `version`, `uptime_s`, `ready`, `platform`,
-`trigger`, `flow_info` (name, kind, engine chord), `tts` and `auth`. A missing
+`trigger`, `flow_info` (name, kind, engine chord), `tts`, `auth` and `stt` (the
+requested mode, the device and backend in use, and the model; `null` while loading).
+The status window shows it, with a note when the GPU mode fell back to the CPU. A missing
 `api_version`, or one below 2, means the engine is older than the companion:
 `engine_outdated` in the snapshot, a notification, and in spawn mode an offer to
 restart the engine. There is no fallback to v1 polling. A v1 daemon has no `ready`
@@ -563,6 +565,9 @@ wsl_restart_policy = "auto"
 notify_level = "warnings"
 start_at_login = false
 tray_icon_visible = true
+stt_mode = "cpu"
+stt_cpu_model = "large-v3-turbo"
+stt_gpu_model = "large-v3-turbo"
 
 [[hotkeys]]
 flow = "clipboard"
@@ -582,6 +587,16 @@ volume = 1.0
 
 `dictation_language` is `interface`, `auto`, `pt`, `en`, `es`, `ru`, `zh`, `fr`, `de`, `it`
 or `ja` (see "Dictation language"); an older file without it follows the interface.
+
+`stt_mode` is `auto` (the engine's own setup), `cpu` or `gpu`, with one model per mode
+(`large-v3-turbo`, `large-v3`, `medium`, `small`). Only the flags they resolve to
+restart the engine: the model of the mode not in use does not. Before a new mode is
+applied (tray menu > "Transcription", or the General tab), the companion runs
+`make stt-check` in the engine checkout; a missing mode is installed with `make
+stt-install` after a question that gives the download size, in a window that streams
+its output. Declining or a failed install keeps the current mode; a check that cannot
+run (WSL down) lets the switch through, and the engine falls back to the CPU and says
+so. More in [configuration.md](configuration.md#speech-to-text-modes).
 
 `engine_dir` empty means "detect or ask" on first run (look for `Makefile` +
 `app/main.py` under common paths inside the distro).

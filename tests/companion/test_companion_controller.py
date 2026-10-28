@@ -1052,3 +1052,65 @@ def _reserve_port() -> int:
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         return int(sock.getsockname()[1])
+
+
+def test_switching_the_transcription_mode_restarts_the_engine(
+    make_controller: ControllerKit, daemon: FakeDaemon, tmp_path: Path
+) -> None:
+    settings = CompanionSettings(
+        engine_mode="wsl2", client_key="test-client-key-0001", engine_dir="ai-lab/voice-mate", stt_mode="cpu"
+    )
+    controller, built = _controller_counting_builds(make_controller, daemon, tmp_path, settings)
+    assert controller.apply_settings(replace(controller.settings(), stt_mode="gpu")) == []
+    assert wait_until(lambda: len(built.backends) == 2)  # restarting is what frees or takes the GPU
+    assert wait_until(lambda: built.backends[0].stops == ["restart"])
+
+
+def test_the_model_of_the_mode_not_in_use_does_not_restart(
+    make_controller: ControllerKit, daemon: FakeDaemon, tmp_path: Path
+) -> None:
+    settings = CompanionSettings(
+        engine_mode="wsl2", client_key="test-client-key-0001", engine_dir="ai-lab/voice-mate", stt_mode="cpu"
+    )
+    controller, built = _controller_counting_builds(make_controller, daemon, tmp_path, settings)
+    assert controller.apply_settings(replace(controller.settings(), stt_gpu_model="medium")) == []
+    assert controller.settings().stt_gpu_model == "medium"
+    _assert_no_rebuild(controller, built, daemon)
+
+
+def test_stt_tools_run_make_in_the_engine_folder(
+    make_controller: ControllerKit, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import app.companion.controller as controller_module
+
+    commands: list[list[str]] = []
+
+    def check(command: list[str]) -> None:
+        commands.append(list(command))
+
+    def install(command: list[str], on_line: object) -> bool:
+        commands.append(list(command))
+        return True
+
+    monkeypatch.setattr(controller_module, "run_check", check)
+    monkeypatch.setattr(controller_module, "run_install", install)
+    backend = FakeBackend(can_spawn=True)
+    settings = CompanionSettings(
+        engine_mode="wsl2", client_key="test-client-key-0001", engine_dir="ai-lab/voice-mate", stt_gpu_model="medium"
+    )
+    controller, _parts, _backend = make_controller(port=_reserve_port(), backend=backend, settings=settings)
+    controller.check_stt(settings)
+    assert controller.install_stt(settings, "gpu", lambda _line: None)
+    assert commands == [
+        ["tool", "ai-lab/voice-mate", 'stt-check ARGS="--json --cpu-model large-v3-turbo --gpu-model medium"'],
+        ["tool", "ai-lab/voice-mate", 'stt-install MODE=gpu ARGS="--model medium"'],
+    ]
+
+
+def test_stt_tools_are_not_offered_in_external_mode(make_controller: ControllerKit) -> None:
+    settings = CompanionSettings(engine_mode="external", client_key="test-client-key-0001")
+    controller, _parts, _backend = make_controller(
+        port=_reserve_port(), backend=FakeBackend(can_spawn=False), settings=settings
+    )
+    assert controller.check_stt(settings) is None
+    assert controller.install_stt(settings, "gpu", lambda _line: None) is False

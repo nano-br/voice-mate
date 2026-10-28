@@ -20,6 +20,8 @@ Flags reach the engine through the Makefile with `ARGS`, for example `make run A
 | `--model {tiny,base,small,medium,large-v2,large-v3,large-v3-turbo}` | `large-v3-turbo` | Whisper model |
 | `--hotkey` | `ctrl+alt+v` | Hotkey of the clipboard flow |
 | `--cpu` | off | Force the CPU (int8). Wins over every GPU setting |
+| `--stt-mode {auto,cpu,gpu}` | saved choice, else `auto` | Where to transcribe. `cpu`: faster-whisper int8 on the processor, greedy decoding with VAD, the GPU stays free for other work. `gpu`: the GPU backend with greedy decoding, falling back to the CPU (with an install hint) when it does not work. `auto`: the GPU when its backend works, otherwise the CPU. See [Speech-to-text modes](#speech-to-text-modes) |
+| `--cpu-threads` | `0` (half the cores, at most 8) | CPU threads of faster-whisper on the CPU |
 | `--gpu-backend {auto,nvidia,amd,cpu}` | saved choice, else detected | GPU vendor; `auto` detects the card |
 | `--whisper-backend {faster-whisper,whispercpp,openai-whisper}` | saved choice, else per vendor | Speech-to-text engine |
 | `--stt-strategy {auto,faster-whisper-rocm,whispercpp,openai-whisper}` | saved choice, else `auto` | AMD only: the first backend of the fallback chain |
@@ -100,6 +102,7 @@ A flat TOML file written by `make setup` and `make configure`. Invalid values ar
 | `stt_strategy` | `auto`, `faster-whisper-rocm`, `whispercpp`, `openai-whisper` | AMD fallback chain |
 | `ct2_rocm_ok` | `true`, `false` | CTranslate2-ROCm validated by setup. The engine writes `false` when it fails at runtime; `make configure` tries again |
 | `daemon_port` | integer | HTTP API port |
+| `stt_mode` | `auto`, `cpu`, `gpu` | Default transcription mode (asked by `make setup` and `make configure`) |
 
 ## Companion file: `companion.toml`
 
@@ -121,6 +124,9 @@ Location: Windows `%APPDATA%\VoiceMate\companion.toml`; Linux `${XDG_CONFIG_HOME
 | `notify_level` | `warnings` | `all`, `warnings`, `errors`, `none` | General > "Notifications:" ("All", "Warnings and errors", "Errors only", "None") |
 | `start_at_login` | `false` | `true`, `false` | General > "Start VoiceMate when I sign in" |
 | `tray_icon_visible` | `true` | `true`, `false` (Windows 11 only) | General > "Always show the VoiceMate icon on the taskbar" |
+| `stt_mode` | `auto` | `auto` (the engine's own setup), `cpu`, `gpu` | General > Transcription > "Run on:"; tray menu > "Transcription" |
+| `stt_cpu_model` | `large-v3-turbo` | `large-v3-turbo`, `large-v3`, `medium`, `small` | General > Transcription > "CPU model:" |
+| `stt_gpu_model` | `large-v3-turbo` | same as `stt_cpu_model` | General > Transcription > "GPU model:" |
 | `[[hotkeys]]` with `flow` and `chord` | `clipboard` = `ctrl+alt+v`, `claude_chat` = `ctrl+alt+a` | Ctrl, Alt, Shift or Win with a key, or a function key alone; F12 is reserved by Windows | Hotkeys tab |
 | `[cues.<name>]` for `start`, `transcribing`, `ready`, `ai_ready`, `warning`, `error` | `enabled = true`, `source = "preset"`, `preset = "classic"`, `file = ""`, `volume = 1.0` | `source`: `preset`, `file`; `preset`: `classic`, `soft`, `click`; `file`: a PCM WAV (8 or 16 bit) | Sounds tab |
 
@@ -129,6 +135,56 @@ The language change asks "Restart VoiceMate?" ("Restart now" or "Later"); until 
 ### Dictation language
 
 The companion turns `dictation_language` into two flags for the engine it starts: `--transcription-language <code>` and `--output-lang <BCP-47>` (`pt` gives `pt-BR`, `zh` gives `zh-CN`, the others their own code). `interface` uses the interface language; `auto` passes `--transcription-language auto` and keeps `--output-lang` on the interface language, so Claude still answers in it. Changing the key restarts the engine. In the mode "Connect only" the key is ignored and the engine keeps its own flags, and so does an engine the companion attaches to (a systemd unit, or one started by hand). More in [usage.md](usage.md#dictation-language).
+
+## Speech-to-text modes
+
+The engine transcribes either on the processor or on the graphics card. The CPU mode exists
+so VoiceMate keeps working while the GPU is busy with other work (video, dubbing, games):
+it never loads anything on the GPU.
+
+| Mode | Backend | Decoding | When |
+|---|---|---|---|
+| `cpu` | faster-whisper, int8 | beam 1, VAD filter, `--cpu-threads` | the GPU is busy, or there is none |
+| `gpu` | faster-whisper CUDA (NVIDIA), openai-whisper ROCm (AMD in WSL2), whisper.cpp Vulkan (AMD on Windows) | beam 1 | fastest |
+| `auto` | the engine's setup choice | the backend's default (beam 5) | as before this option existed |
+
+The companion keeps one model per mode (`stt_cpu_model`, `stt_gpu_model`) and passes
+`--stt-mode` and `--model` to the engine it starts. Switching restarts the engine, which is
+what frees (or takes) the GPU. A mode that is not installed is installed by the companion
+after asking, with the download size; the same tools run by hand:
+
+```bash
+make stt-check
+make stt-install MODE=gpu
+make stt-install MODE=cpu ARGS="--model medium"
+```
+
+`stt-install` only touches the engine's own virtual environment (and `~/.cache` for the
+models): ROCm PyTorch and openai-whisper for AMD, CUDA libraries for NVIDIA, the
+whisper.cpp build on Windows, the faster-whisper model for the CPU.
+
+### Benchmark
+
+Measured on 2026-10-27 (CPU) and 2026-10-28 (GPU) with Portuguese dictation from Common
+Voice (short recordings of about 6 s, long ones of about 65 s), through the engine's own
+backends on one machine (Intel i5-13400F, AMD Radeon RX 9070 XT with ROCm in WSL2). WER is
+the word error rate against the reference text; latency is the transcription time per
+recording.
+
+| Mode | Model | Beam | Short: latency, WER | Long: latency, WER |
+|---|---|---|---|---|
+| CPU (8 threads, int8) | large-v3-turbo | 1 | 4.7 s, 5.0 % | 21 s, 3.3 % |
+| CPU (8 threads, int8) | medium | 1 | 3.2 s, 5.3 % | 15 s, 5.1 % |
+| GPU (Radeon, ROCm) | large-v3-turbo | 5 | 0.45 s, 4.8 % | 4.6 s, 2.9 % |
+| GPU (Radeon, ROCm) | large-v3-turbo | 1 | 0.18 s, 4.5 % | 1.9 s, 3.6 % |
+| GPU (Radeon, ROCm) | medium | 5 | 0.83 s, 6.1 % | 10.1 s, 6.9 % |
+| GPU (Radeon, ROCm) | medium | 1 | 0.42 s, 5.8 % | 4.9 s, 7.3 % |
+
+On the CPU, beam 5 gave no lower WER in the same run and was only slower (not in the
+table). On the GPU, greedy decoding is about 2.4 times faster than beam 5 for less than
+one point of WER, so the `gpu` mode decodes greedily. `medium` is less accurate than
+`large-v3-turbo` on both, and on the GPU it is also slower, so the turbo model is the
+default of both modes; `medium` and `small` are there for slower processors.
 
 ## Environment variables
 

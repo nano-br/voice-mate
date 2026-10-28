@@ -31,6 +31,7 @@ from app.core.console import force_utf8_stdio
 from app.i18n import _
 from app.platform.detect import default_trigger, detect_platform
 from app.platform.kinds import PlatformKind
+from app.protocol.models import SttMode
 from app.setup.gpu_detect import GpuInfo, amd_driver_warning, detect_gpu
 from app.setup.persisted_config import PersistedConfig, load_persisted, save_persisted
 
@@ -140,6 +141,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         vendor = _prompt_vendor(saved.gpu_vendor or info.vendor, interactive)
 
+    stt_mode = _prompt_stt_mode(vendor, saved.stt_mode or "auto", interactive)
     flow = _prompt_flow(interactive, saved.default_flow or "claude_chat")
     tts_engine: TTSEngine = saved.tts_engine or "kokoro"
     if flow == "claude_chat":
@@ -212,6 +214,7 @@ def main(argv: list[str] | None = None) -> int:
                 stt_strategy=saved.stt_strategy or "auto",
                 ct2_rocm_ok=ct2_rocm_ok,
                 daemon_port=saved.daemon_port,
+                stt_mode=stt_mode,
             )
         )
         print(_("[setup] ✓ Choices saved to ~/.config/voicemate/config.toml"))
@@ -222,6 +225,7 @@ def main(argv: list[str] | None = None) -> int:
         _maybe_install_systemd_unit(interactive)
 
     print(_("\n[setup] Done! Run:  make run"))
+    print(_("[setup] Switch the transcription mode later in the companion, or with `make stt-install MODE=cpu|gpu`."))
     print(_("[setup] Environment diagnostics (audio/mic/hotkeys):  make doctor"))
     if platform == "wsl2":
         print(_("[setup] WSL2: register the hotkeys on the Windows side — see docs/wsl2.md."))
@@ -332,6 +336,21 @@ def _prompt_vendor(default: GpuVendor, interactive: bool) -> GpuVendor:
         "amd": "amd",
         "cpu": "cpu",
     }
+    return mapping.get(raw, default)
+
+
+def _prompt_stt_mode(vendor: GpuVendor, default: SttMode, interactive: bool) -> SttMode:
+    """Where transcription runs by default. Without a GPU there is nothing to ask."""
+    if vendor == "cpu":
+        return "cpu"
+    if not interactive:
+        return default
+    print(_("\nWhere should the transcription run by default?"))
+    print(_("  1) auto: the GPU when its backend works, otherwise the CPU"))
+    print(_("  2) gpu: the graphics card (fastest)"))
+    print(_("  3) cpu: the processor, leaving the GPU entirely free for other work"))
+    raw = _ask(_("Choose [1-3] (Enter = {default}): ").format(default=default)).lower()
+    mapping: dict[str, SttMode] = {"1": "auto", "2": "gpu", "3": "cpu", "auto": "auto", "gpu": "gpu", "cpu": "cpu"}
     return mapping.get(raw, default)
 
 

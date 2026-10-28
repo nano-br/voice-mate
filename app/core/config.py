@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from app.platform.kinds import PlatformKind, TriggerKind
+from app.protocol.models import SttMode
 
 FlowKind = Literal["clipboard", "claude_chat"]
 # TTS engine:
@@ -147,6 +148,11 @@ class Config:
     # STT strategy on AMD (fallback chain). "auto" uses ct2_rocm_ok to
     # decide whether to try faster-whisper-rocm first.
     stt_strategy: SttStrategy = "auto"
+    # Transcription mode picked by the user (companion / --stt-mode / setup): "cpu"
+    # frees the GPU, "gpu" insists on the card, "auto" keeps the per-vendor chain.
+    stt_mode: SttMode = "auto"
+    # faster-whisper threads on the CPU. 0 = auto (`app.core.transcriber.default_cpu_threads`).
+    cpu_threads: int = 0
     # Result of the CTranslate2-ROCm validation done by setup (persisted):
     # True = build validated (use faster-whisper on the AMD GPU); False = failed
     # (do not retry on every boot); None = never attempted.

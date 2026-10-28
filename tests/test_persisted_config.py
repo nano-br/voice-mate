@@ -89,6 +89,7 @@ def test_platform_fields_roundtrip(tmp_path: Path) -> None:
         stt_strategy="faster-whisper-rocm",
         ct2_rocm_ok=False,
         daemon_port=50000,
+        stt_mode="cpu",
     )
     save_persisted(cfg, path)
     assert load_persisted(path) == cfg
@@ -105,6 +106,7 @@ def test_invalid_platform_fields_are_dropped(tmp_path: Path) -> None:
     assert loaded.trigger is None
     assert loaded.stt_strategy is None
     assert loaded.daemon_port is None
+    assert loaded.stt_mode is None
 
 
 def test_daemon_port_rejects_bool(tmp_path: Path) -> None:

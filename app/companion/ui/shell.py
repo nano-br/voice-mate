@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Protocol
 
 from app.companion.contract import CompanionController, CompanionSettings, RecentItem, UiLanguage
 from app.companion.ui.bridge import ControllerBridge
+from app.protocol.models import SttMode
 
 
 class Shell(Protocol):
@@ -54,3 +56,10 @@ class Shell(Protocol):
 
     def offer_language_restart(self) -> None:
         """The saved language needs a restart: ask whether to restart VoiceMate now."""
+
+    def switch_stt_mode(self, mode: SttMode) -> None:
+        """Switch where the engine transcribes, installing the mode first when needed (asks)."""
+
+    def ensure_stt_ready(self, settings: CompanionSettings, on_result: Callable[[bool], None]) -> None:
+        """Before applying `settings`: install their transcription mode if missing (asks first).
+        `on_result(True)` once it is safe to apply them, False when the user said no or it failed."""

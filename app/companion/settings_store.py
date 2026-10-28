@@ -39,6 +39,7 @@ from app.companion.contract import (
 )
 from app.companion.cues import MAX_CUSTOM_SECONDS, check_cue_file, cue_label
 from app.i18n import _
+from app.protocol.models import SttMode, SttModel
 
 log = logging.getLogger(__name__)
 
@@ -92,6 +93,9 @@ def field_label(field_name: str) -> str:
         "wsl_restart_policy": _("WSL restart"),
         "notify_level": _("Notifications"),
         "hotkeys": _("Hotkeys"),
+        "stt_mode": _("Transcription"),
+        "stt_cpu_model": _("CPU model"),
+        "stt_gpu_model": _("GPU model"),
     }
     return labels.get(field_name, field_name)
 
@@ -267,6 +271,9 @@ def parse_settings(text: str, platform: str = sys.platform) -> LoadResult:
         notify_level=reader.literal("notify_level", get_args(NotifyLevel), defaults.notify_level),
         start_at_login=reader.boolean("start_at_login", defaults.start_at_login),
         tray_icon_visible=reader.boolean("tray_icon_visible", defaults.tray_icon_visible),
+        stt_mode=reader.literal("stt_mode", get_args(SttMode), defaults.stt_mode),
+        stt_cpu_model=reader.literal("stt_cpu_model", get_args(SttModel), defaults.stt_cpu_model),
+        stt_gpu_model=reader.literal("stt_gpu_model", get_args(SttModel), defaults.stt_gpu_model),
     )
     known = {field.name for field in fields(CompanionSettings)}
     for key in data:
@@ -328,6 +335,9 @@ def dump_settings(settings: CompanionSettings) -> str:
         f"notify_level = {_toml_value(settings.notify_level)}",
         f"start_at_login = {_toml_value(settings.start_at_login)}",
         f"tray_icon_visible = {_toml_value(settings.tray_icon_visible)}",
+        f"stt_mode = {_toml_value(settings.stt_mode)}",
+        f"stt_cpu_model = {_toml_value(settings.stt_cpu_model)}",
+        f"stt_gpu_model = {_toml_value(settings.stt_gpu_model)}",
     ]
     if not settings.hotkeys:
         lines.append("hotkeys = []")  # explicit: no hotkeys at all (absent = defaults)
@@ -365,6 +375,9 @@ def validate_settings(
         ("engine_mode", settings.engine_mode, get_args(EngineMode)),
         ("wsl_restart_policy", settings.wsl_restart_policy, get_args(WslRestartPolicy)),
         ("notify_level", settings.notify_level, get_args(NotifyLevel)),
+        ("stt_mode", settings.stt_mode, get_args(SttMode)),
+        ("stt_cpu_model", settings.stt_cpu_model, get_args(SttModel)),
+        ("stt_gpu_model", settings.stt_gpu_model, get_args(SttModel)),
     ):
         if not literal_ok(value, options):
             errors.append(_("Invalid value for {setting}.").format(setting=field_label(field_name)))

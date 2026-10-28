@@ -83,6 +83,7 @@ def test_menu_layout_when_idle(ui: CompanionUi) -> None:
         "Not copied",
         "Restart WSL now...",
         "Mute sounds",
+        "Transcription",
         "Engine",
         "Settings...",
         "Quit VoiceMate",

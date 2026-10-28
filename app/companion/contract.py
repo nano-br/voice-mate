@@ -33,7 +33,17 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Final, Literal, Protocol, get_args
 
-from app.protocol.models import AudioHealth, FlowKind, ResultRecord
+from app.protocol.models import (
+    DEFAULT_STT_MODEL,
+    AudioHealth,
+    FlowKind,
+    ResultRecord,
+    SttCheckReport,
+    SttDevice,
+    SttInfo,
+    SttMode,
+    SttModel,
+)
 
 # Shared identity: the Inno Setup shortcut, the jump list and the process must all
 # use the same AUMID, or Windows shows a second taskbar button next to the pin.
@@ -163,6 +173,11 @@ class CompanionSettings:
     # Windows 11: keep the tray icon on the taskbar instead of the overflow behind the
     # arrow next to the clock (no effect elsewhere).
     tray_icon_visible: bool = True
+    # Where the engine this app starts transcribes ("auto" = the engine's own choice) and
+    # the Whisper model of each mode (`--stt-mode` and `--model`); a change restarts it.
+    stt_mode: SttMode = "auto"
+    stt_cpu_model: SttModel = DEFAULT_STT_MODEL
+    stt_gpu_model: SttModel = DEFAULT_STT_MODEL
 
 
 @dataclass(frozen=True)
@@ -188,6 +203,7 @@ class CompanionSnapshot:
     pending_unacked: int = 0  # old results never delivered: offer them in the UI
     pending_wsl_restart: bool = False  # policy "ask": waiting for the user's answer
     hotkeys_suspended: bool = False
+    stt: SttInfo | None = None  # the transcription engine running (from /health), None until known
 
 
 @dataclass(frozen=True)
@@ -275,3 +291,13 @@ class CompanionController(Protocol):
         restored item whose ACK the daemon never got. The UI confirms first."""
 
     def open_logs(self) -> None: ...
+
+    def check_stt(self, settings: CompanionSettings) -> SttCheckReport | None:
+        """BLOCKING (call it off the GUI thread): which transcription modes the engine of
+        `settings` has installed, for these models (`make stt-check`, through WSL on Windows).
+        None when it cannot tell (external mode, no engine folder, the check failed)."""
+
+    def install_stt(self, settings: CompanionSettings, mode: SttDevice, on_line: Callable[[str], None]) -> bool:
+        """BLOCKING, minutes long: install what `mode` needs for its model in `settings`
+        (`make stt-install`). `on_line` gets each output line on the calling thread.
+        True when the mode is ready afterwards. The caller asks the user first."""

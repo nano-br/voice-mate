@@ -64,6 +64,7 @@ from app.protocol.models import (
     PlatformName,
     ResultsQuery,
     ShutdownReason,
+    SttInfo,
     TriggerExpect,
     TriggerName,
     TriggerResponse,
@@ -113,6 +114,7 @@ class EngineInfo:
     trigger: TriggerName
     flows: tuple[FlowInfo, ...] = ()
     tts: bool = False
+    stt: SttInfo | None = None  # known once the transcriber is built
 
     @property
     def flow_names(self) -> list[str]:
@@ -366,6 +368,7 @@ class ApiServer:
             "flow_info": list(info.flows),
             "tts": info.tts,
             "auth": self._token is not None,
+            "stt": info.stt,
         }
 
     def _events(self, query: dict[str, str]) -> _Reply:

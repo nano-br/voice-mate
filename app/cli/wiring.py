@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from app.core.audio_feedback import AudioFeedback
@@ -35,6 +36,7 @@ from app.platform.listeners import (
 
 if TYPE_CHECKING:
     from app.daemon.server import ApiServer
+    from app.protocol.models import SttInfo
 
 
 def _whisper_language(config: Config) -> str | None:
@@ -42,13 +44,34 @@ def _whisper_language(config: Config) -> str | None:
     return None if config.transcription_language == "auto" else config.transcription_language
 
 
+# On the CPU beam search costs time and gave no accuracy back (CPU benchmark in
+# docs/configuration.md), so the CPU always decodes greedily.
+_CPU_BEAM_SIZE = 1
+# The explicit GPU mode is the fast one: greedy decoding was 2.4x faster than beam 5
+# on the GPU for less than one point of WER (GPU benchmark in docs/configuration.md).
+_GPU_MODE_BEAM_SIZE = 1
+
+
 def _faster_whisper(config: Config, use_cpu: bool) -> TranscriptionBackend:
     return FasterWhisperBackend(
         model_size=config.model_size,
         use_cpu=use_cpu,
-        beam_size=config.beam_size,
+        beam_size=_CPU_BEAM_SIZE if use_cpu else config.beam_size,
         language=_whisper_language(config),
+        cpu_threads=config.cpu_threads,
+        vad_filter=use_cpu,
     )
+
+
+def _cpu_fallback(config: Config, reason: str) -> TranscriptionBackend:
+    """faster-whisper on the CPU after the GPU path failed, saying why and how to fix it."""
+    print(reason, file=sys.stderr)
+    if config.stt_mode != "cpu":  # "auto" too: there is a card, only its backend is missing
+        print(
+            _("[VoiceMate]   Install the GPU mode from the companion or with `make stt-install MODE=gpu`."),
+            file=sys.stderr,
+        )
+    return _faster_whisper(config, use_cpu=True)
 
 
 def _try_openai_whisper(config: Config) -> TranscriptionBackend | None:
@@ -132,33 +155,40 @@ def _build_amd_transcriber(config: Config) -> TranscriptionBackend:
 
     if strategy == "whispercpp":
         order = [_try_whispercpp, _try_openai_whisper]
-    elif strategy == "openai-whisper":
+    elif strategy == "openai-whisper" or platform == "wsl2":
+        # On WSL2 whisper.cpp would run on llvmpipe, i.e. the CPU, and slower than
+        # faster-whisper int8 there: it is only used when asked for explicitly.
         order = [_try_openai_whisper]
-    elif platform == "wsl2":
-        order = [_try_openai_whisper, _try_whispercpp]
     else:
         order = [_try_whispercpp, _try_openai_whisper]
     for factory in order:
         backend = factory(config)
         if backend is not None:
             return backend
-    print(_("[VoiceMate] ⚠ No GPU backend available on AMD; using faster-whisper on CPU."), file=sys.stderr)
-    return _faster_whisper(config, use_cpu=True)
+    return _cpu_fallback(config, _("[VoiceMate] ⚠ No GPU backend available on AMD; using faster-whisper on CPU."))
 
 
 def build_transcriber(config: Config) -> TranscriptionBackend:
-    """Pick the transcription engine based on vendor/strategy.
+    """Pick the transcription engine based on the STT mode and vendor/strategy.
 
-    `--cpu` → faster-whisper CPU. AMD → the `_build_amd_transcriber` chain (goal:
-    quality ≥ main's faster-whisper CUDA). NVIDIA → faster-whisper CUDA (main's
-    behavior), with whispercpp/openai-whisper opt-in via --whisper-backend.
-    No GPU → faster-whisper CPU.
+    `stt_mode="cpu"` (or `--cpu`) → faster-whisper on the CPU, the GPU stays free.
+    Otherwise AMD → the `_build_amd_transcriber` chain (goal: quality ≥ main's
+    faster-whisper CUDA). NVIDIA → faster-whisper CUDA (main's behavior), with
+    whispercpp/openai-whisper opt-in via --whisper-backend. No GPU → faster-whisper
+    CPU (with an install hint when the GPU mode was asked for).
     """
-    if config.use_cpu:
+    if config.use_cpu or config.stt_mode == "cpu":
         return _faster_whisper(config, use_cpu=True)
+    if config.stt_mode == "gpu":
+        config = replace(config, beam_size=_GPU_MODE_BEAM_SIZE)
 
     if config.gpu_vendor == "amd":
         return _build_amd_transcriber(config)
+
+    if config.gpu_vendor == "cpu":
+        if config.stt_mode == "gpu":
+            return _cpu_fallback(config, _("[VoiceMate] ⚠ GPU mode requested but no supported GPU was found."))
+        return _faster_whisper(config, use_cpu=True)
 
     if config.whisper_backend == "whispercpp":
         backend = _try_whispercpp(config)
@@ -169,7 +199,18 @@ def build_transcriber(config: Config) -> TranscriptionBackend:
         if backend is not None:
             return backend
 
-    return _faster_whisper(config, use_cpu=config.gpu_vendor == "cpu")
+    return _faster_whisper(config, use_cpu=False)
+
+
+def describe_transcriber(transcriber: TranscriptionBackend, config: Config) -> SttInfo:
+    """What `/health` reports about the STT engine actually built (`stt`)."""
+    device = getattr(transcriber, "device", "gpu" if config.gpu_vendor != "cpu" and not config.use_cpu else "cpu")
+    return {
+        "mode": config.stt_mode,
+        "device": "cpu" if device == "cpu" else "gpu",
+        "backend": getattr(transcriber, "name", "faster-whisper"),
+        "model": str(getattr(transcriber, "model_name", config.model_size)),
+    }
 
 
 def build_speaker(config: TTSConfig) -> TextToSpeech:

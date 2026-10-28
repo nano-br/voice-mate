@@ -63,6 +63,23 @@ def _add_core_args(parser: argparse.ArgumentParser) -> None:
         help="Force CPU instead of GPU (uses int8)",
     )
     parser.add_argument(
+        "--stt-mode",
+        default=None,
+        choices=["auto", "cpu", "gpu"],
+        help=(
+            "Where speech-to-text runs. 'cpu': faster-whisper int8 on the processor, the GPU "
+            "stays free. 'gpu': the graphics card (falls back to the CPU with a hint when the "
+            "GPU mode is not installed). 'auto': the best backend installed. Omitted = saved "
+            "config or 'auto'. Install a mode with `make stt-install MODE=cpu|gpu`."
+        ),
+    )
+    parser.add_argument(
+        "--cpu-threads",
+        type=int,
+        default=0,
+        help="faster-whisper threads on the CPU (default 0 = half the logical CPUs, at most 8).",
+    )
+    parser.add_argument(
         "--gpu-backend",
         default=None,
         choices=["auto", "nvidia", "amd", "cpu"],

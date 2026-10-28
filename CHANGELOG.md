@@ -7,8 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Two speech-to-text modes, switchable from the tray menu ("Transcription") or the
+  settings window: CPU (faster-whisper int8 with VAD, leaves the GPU free for other work)
+  and GPU (the fastest). Each mode keeps its own Whisper model. A mode that is not
+  installed is installed by the companion after asking, with the download size, inside the
+  engine's own environment only. `make stt-check` and `make stt-install MODE=cpu|gpu` do
+  the same by hand, and `make setup` and `make configure` ask for the default mode.
+- Engine flags `--stt-mode {auto,cpu,gpu}` and `--cpu-threads`. `/health` reports where
+  the engine transcribes (`stt`), and the status window shows it.
+
 ### Changed
 
+- The CPU path decodes greedily with a VAD filter, and the `gpu` mode decodes greedily:
+  in the benchmark (docs/configuration.md) beam search cost time for little or no
+  accuracy. `auto` keeps the configured beam.
+- AMD in WSL2 goes straight to openai-whisper (ROCm): the whisper.cpp build there runs on
+  the CPU. An explicit `--stt-strategy whispercpp` still uses it.
 - The Claude flow now defaults to `claude-haiku-5-5` (it was `claude-haiku-4-5`), and the
   suggested larger model is `claude-sonnet-5-5`. Haiku 5.5 accepts the `effort` level, so the
   runtime now sends it.

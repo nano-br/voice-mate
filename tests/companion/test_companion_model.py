@@ -519,3 +519,30 @@ def test_snippet() -> None:
     long = "word " * 40
     short = snippet(long)
     assert len(short) <= 61 and short.endswith("…")
+
+
+def test_health_carries_where_the_engine_transcribes() -> None:
+    sim = Sim()
+    sim.feed(SupervisorUpdate("healthy", 0, None, None, 0, False))
+    stt = {"mode": "gpu", "device": "cpu", "backend": "faster-whisper", "model": "medium"}
+    sim.feed(HealthSeen(health(stt=stt)))
+    assert sim.snap().stt == stt
+    sim.feed(SupervisorUpdate("restarting", 1, "unresponsive", None, 1, False))
+    assert sim.snap().stt is None  # the next engine may run elsewhere
+
+
+@pytest.mark.parametrize(
+    "stt",
+    [
+        None,
+        "gpu",
+        {"mode": "tpu", "device": "cpu", "backend": "faster-whisper", "model": "medium"},
+        {"mode": "cpu", "device": "cpu", "backend": "faster-whisper"},
+        {"mode": "cpu", "device": "cpu", "backend": "faster-whisper", "model": 3},
+    ],
+)
+def test_an_unknown_stt_shape_is_ignored(stt: object) -> None:
+    sim = Sim()
+    sim.feed(SupervisorUpdate("healthy", 0, None, None, 0, False))
+    sim.feed(HealthSeen(health(stt=stt)))
+    assert sim.snap().stt is None

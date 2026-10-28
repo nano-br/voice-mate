@@ -24,6 +24,7 @@ from typing import Final
 
 from app.companion.client import DaemonClient
 from app.companion.dictation import EngineLanguage
+from app.companion.stt import EngineStt
 from app.companion.supervisor.backend import (
     ENGINE_DIR_CANDIDATES,
     TOKEN_RELATIVE_PATH,
@@ -33,6 +34,7 @@ from app.companion.supervisor.backend import (
     engine_script,
     env_token,
     hidden_window_flags,
+    make_script,
     stop_gracefully,
 )
 from app.protocol.models import ShutdownReason
@@ -130,12 +132,14 @@ class WslBackend:
         log_path: Path,
         *,
         language: EngineLanguage | None = None,
+        stt: EngineStt | None = None,
         wsl_exe: str = WSL_EXE,
         runner: Runner = run_hidden,
     ) -> None:
         self.distro = distro
         self.port = port
         self.language = language
+        self.stt = stt
         self._wsl = wsl_exe
         self._run = runner
         self._log = EngineLog(log_path)
@@ -152,7 +156,10 @@ class WslBackend:
         return [self._wsl, "-d", self.distro] if self.distro else [self._wsl]
 
     def spawn_command(self, engine_dir: str) -> list[str]:
-        return [*self._base(), "-e", "bash", "-lc", engine_script(engine_dir, self.port, self.language)]
+        return [*self._base(), "-e", "bash", "-lc", engine_script(engine_dir, self.port, self.language, self.stt)]
+
+    def tool_command(self, engine_dir: str, target: str) -> list[str] | None:
+        return [*self._base(), "-e", "bash", "-lc", make_script(engine_dir, target)]
 
     def keepalive_command(self) -> list[str]:
         return [*self._base(), "-e", "sleep", "infinity"]

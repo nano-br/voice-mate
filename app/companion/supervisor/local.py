@@ -19,6 +19,7 @@ from pathlib import Path
 from app.companion.client import DaemonClient
 from app.companion.dictation import EngineLanguage
 from app.companion.paths import home_dir
+from app.companion.stt import EngineStt
 from app.companion.supervisor.backend import (
     ENGINE_DIR_CANDIDATES,
     EngineLog,
@@ -26,6 +27,7 @@ from app.companion.supervisor.backend import (
     ManagedProcess,
     engine_script,
     env_token,
+    make_script,
     read_local_token,
     stop_gracefully,
 )
@@ -39,17 +41,27 @@ class LocalBackend:
     can_restart_wsl = False
 
     def __init__(
-        self, port: int, log_path: Path, *, language: EngineLanguage | None = None, shell: str = "bash"
+        self,
+        port: int,
+        log_path: Path,
+        *,
+        language: EngineLanguage | None = None,
+        stt: EngineStt | None = None,
+        shell: str = "bash",
     ) -> None:
         self.port = port
         self.language = language
+        self.stt = stt
         self._shell = shell
         self._log = EngineLog(log_path)
         self._lock = threading.Lock()
         self._process: ManagedProcess | None = None
 
     def spawn_command(self, engine_dir: str) -> list[str]:
-        return [self._shell, "-lc", engine_script(engine_dir, self.port, self.language)]
+        return [self._shell, "-lc", engine_script(engine_dir, self.port, self.language, self.stt)]
+
+    def tool_command(self, engine_dir: str, target: str) -> list[str] | None:
+        return [self._shell, "-lc", make_script(engine_dir, target)]
 
     def spawn(self, engine_dir: str, generation: int, on_exit: ExitCallback) -> None:
         command = self.spawn_command(engine_dir)
