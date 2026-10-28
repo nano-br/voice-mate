@@ -116,7 +116,7 @@ For a session VoiceMate runs itself:
 
 The CLI answered with `session_url` (`https://claude.ai/code/session_...`), `bridge_session_id` and system events `bridge_state: ready` then `connected`; the next turn kept working. After the switch the session also loaded the account's claude.ai connectors as tools, even with `--tools ""`, so a VoiceMate session with Remote Control on is not tool-free any more.
 
-<!-- PHONE-INPUT -->
+The transcript of that session got the same `bridge-session` lines the Desktop sessions have. Not verified: whether a prompt typed on the phone reaches the VoiceMate process. The test session stayed open for seven minutes with nobody typing on the phone, and the lab's browser pane is not signed in to claude.ai. Confirm it before building on it: start a session with `remote_control` on, type on the phone, and look for a `user` message on the process's stdout.
 
 
 ## 7. Resume, fork and two writers
