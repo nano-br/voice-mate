@@ -44,8 +44,8 @@ async def ask(client: ClaudeSDKClient, prompt: str) -> tuple[str, str]:
     return text.strip(), sid
 
 
-def cli_turn(args: argparse.Namespace, sid: str, prompt: str, *extra: str) -> dict:
-    cmd = [_cli(), "-p", "--model", args.model, "--output-format", "json", "--resume", sid, *extra, "--tools", ""]
+def cli_turn(args: argparse.Namespace, sid: str, prompt: str) -> dict:
+    cmd = [_cli(), "-p", "--model", args.model, "--output-format", "json", "--resume", sid, "--tools", ""]
     out = subprocess.run(cmd, cwd=args.cwd, input=prompt, capture_output=True, text=True, encoding="utf-8")
     return json.loads(out.stdout) if out.stdout.strip() else {"error": out.stderr}
 
@@ -80,32 +80,36 @@ async def main_async(args: argparse.Namespace) -> None:
 
     a = ClaudeSDKClient(options=opts())
     await a.connect()
-    text, sid = await ask(a, "Remember the secret word BANANA. Reply only 'ok'.")
-    print(f"1. A created {sid}: {text!r}")
+    try:
+        text, sid = await ask(a, "Remember the secret word BANANA. Reply only 'ok'.")
+        print(f"1. A created {sid}: {text!r}")
 
-    r = cli_turn(args, sid, "Also remember the secret number 42. Reply only 'ok'.")
-    print(
-        f"2. B resumed: session_id={r.get('session_id')} same={r.get('session_id') == sid} "
-        f"result={r.get('result')!r} error={r.get('error', '')[:200]!r}"
-    )
+        r = cli_turn(args, sid, "Also remember the secret number 42. Reply only 'ok'.")
+        print(
+            f"2. B resumed: session_id={r.get('session_id')} same={r.get('session_id') == sid} "
+            f"result={r.get('result')!r} error={r.get('error', '')[:200]!r}"
+        )
 
-    text, sid_a = await ask(a, "What secret word and secret number do you know? One line.")
-    print(f"3. A after B: {text!r} (session {sid_a})")
+        text, sid_a = await ask(a, "What secret word and secret number do you know? One line.")
+        print(f"3. A after B: {text!r} (session {sid_a})")
 
-    both = await asyncio.gather(
-        ask(a, "Concurrent A: reply only 'A here'."),
-        cli_turn_async(args, sid, "Concurrent B: reply only 'B here'."),
-    )
-    print(f"4. concurrent: A={both[0]!r} B={both[1].get('result')!r} B.session={both[1].get('session_id')}")
-    await a.disconnect()
+        both = await asyncio.gather(
+            ask(a, "Concurrent A: reply only 'A here'."),
+            cli_turn_async(args, sid, "Concurrent B: reply only 'B here'."),
+        )
+        print(f"4. concurrent: A={both[0]!r} B={both[1].get('result')!r} B.session={both[1].get('session_id')}")
+    finally:
+        await a.disconnect()
 
     r = cli_turn(args, sid, "List every secret and every 'here' reply you have seen. One line.")
     print(f"5. fresh resume: {r.get('result')!r} session={r.get('session_id')}")
 
     f = ClaudeSDKClient(options=opts(resume=sid, fork_session=True))
     await f.connect()
-    text, fsid = await ask(f, "Fork check: what secret word do you know? One line.")
-    await f.disconnect()
+    try:
+        text, fsid = await ask(f, "Fork check: what secret word do you know? One line.")
+    finally:
+        await f.disconnect()
     print(f"6. fork: new id={fsid} differs={fsid != sid} answer={text!r}")
 
     for s in {sid, fsid}:

@@ -11,7 +11,9 @@ Strategies:
   cli-stream      one `claude -p --input-format stream-json` process, N turns on stdin
 
 Usage (from a venv with claude-agent-sdk installed):
-  python tools/lab/claude_client/bench_latency.py --turns 4 --cwd <lab dir>
+  python tools/lab/claude_client/bench_latency.py --turns 4 --cwd <lab dir> [--rounds 3]
+
+--cwd is required and must be a lab directory: every turn writes a session there.
 """
 
 from __future__ import annotations
@@ -24,7 +26,6 @@ import shutil
 import statistics
 import subprocess
 import time
-import uuid
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING
 
@@ -49,6 +50,7 @@ class Turn:
     pid: int | None
     session_id: str | None
     text: str
+    round: int = 0
 
 
 def _now() -> float:
@@ -240,8 +242,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--turns", type=int, default=4)
     ap.add_argument("--model", default="claude-haiku-5-5")
-    ap.add_argument("--cwd", default=os.getcwd())
+    ap.add_argument("--cwd", required=True, help="lab directory, not a real project: every turn writes a session")
     ap.add_argument("--only", nargs="*", default=["sdk-persistent", "sdk-query", "cli-resume", "cli-stream"])
+    ap.add_argument("--rounds", type=int, default=1, help="repeat all strategies; the order rotates each round")
     ap.add_argument("--json", help="write raw turns to this file")
     args = ap.parse_args()
     from persistent_client import scrub_host_env
@@ -256,19 +259,22 @@ def main() -> None:
         "cli-resume": lambda: bench_cli_resume(args),
         "cli-stream": lambda: bench_cli_stream(args),
     }
-    for name in args.only:
-        turns = runners[name]()
-        for t in turns:
-            print(
-                f"  {t.strategy} #{t.turn} ttft={t.ttft_s} total={t.total_s:.2f} pid={t.pid} "
-                f"sid={t.session_id} text={t.text[:60]!r}"
-            )
-        print(_summary(turns))
-        results.extend(turns)
+    for rnd in range(args.rounds):
+        # Rotate the order so no strategy always pays the cold prompt cache of the first run.
+        k = rnd % len(args.only)
+        for name in args.only[k:] + args.only[:k]:
+            turns = runners[name]()
+            for t in turns:
+                t.round = rnd
+                print(
+                    f"  r{rnd} {t.strategy} #{t.turn} ttft={t.ttft_s} total={t.total_s:.2f} pid={t.pid} "
+                    f"sid={t.session_id} text={t.text[:60]!r}"
+                )
+            print(_summary(turns))
+            results.extend(turns)
     if args.json:
         with open(args.json, "w", encoding="utf-8") as f:
             json.dump([asdict(t) for t in results], f, indent=2)
-    print("run id", uuid.uuid4())
 
 
 if __name__ == "__main__":

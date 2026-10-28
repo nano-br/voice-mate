@@ -11,12 +11,12 @@ Lab date: 2026-10-28. Versions seen: Claude Desktop 4.29.0 (its bundled CLI 2.1.
 | Does `ClaudeSDKClient` keep one process alive across turns? | Yes. The CLI child keeps the same PID for every turn until `disconnect()`. | §3, same PID on every turn |
 | How much does a persistent process save? | About 1.7 s per turn: 1.4 s to the first token instead of 3.1 s. Model time is the same. | §3 |
 | Do Desktop Code tab sessions use `~/.claude/projects/*.jsonl`? | Yes, the same files (`entrypoint: "claude-desktop"`). | §4 |
-| Does an SDK session show up in the Desktop sidebar? | No. The sidebar reads the Desktop's own index, not the projects folder. | §5 |
+| Does an SDK session show up in the Desktop sidebar? | Not by default: the sidebar reads the Desktop's own index, not the projects folder. With Remote Control turned on it does, and the Desktop can type into it (§6.1). | §5, §6.1 |
 | What puts a session on the phone? | Remote Control on the process that runs the session. The Desktop turns it on per running session (`bridge-session` lines in the transcript). | §6 |
 | Does `resume` write to the same file? | Yes. `--resume <id>` and `resume=<id>` append to the same `<id>.jsonl` and keep the id; `fork_session` writes a new id with the history copied. | §7 |
 | Can two writers share a session? | They do not corrupt the file, but each process only knows its own in-memory history: the conversation splits into branches and a later resume follows one branch and silently drops the other. One writer per session. | §7 |
 | Can VoiceMate type into a conversation the Desktop is running, so it shows in the Desktop and on the phone? | Yes, through Windows UI Automation: find the prompt box, type, press Enter. Tested end to end; the text arrives as a normal user prompt. The local messaging pipe works on CLI sessions but did not deliver into a Desktop session. | §8 |
-| Can VoiceMate put its own session on the phone? | Yes, through an undocumented `remote_control` control request on the `stream-json` protocol (the one the Desktop uses). | §6 |
+| Can VoiceMate put its own session on the phone? | Yes, through an undocumented `remote_control` control request on the `stream-json` protocol (the one the Desktop uses). The session appeared in the phone app (checked by the person); a prompt sent from the phone was not checked. | §6 |
 | Can the reader stay off the SDK/CLI? | Yes. Transcripts plus `~/.claude/sessions/<pid>.json` give messages, turn ends and busy/idle. Works from WSL through `/mnt/c`. | §4, §9 |
 | Windows or WSL for the persistent core? | Windows (companion side), next to the Desktop. | §10 |
 
@@ -29,7 +29,9 @@ The Desktop app authenticates its own sessions: it starts the CLI with `CLAUDE_C
 
 So a VoiceMate client needs its own login: `claude auth login` once on the side that runs it, or `claude setup-token` for a long-lived token passed as `CLAUDE_CODE_OAUTH_TOKEN`.
 
-**Pitfall found in the lab.** A CLI started from inside a Desktop session inherits the Desktop host variables (`CLAUDECODE`, `CLAUDE_CODE_ENTRYPOINT`, `CLAUDE_CODE_SDK_HAS_HOST_AUTH_REFRESH`, `CLAUDE_CODE_MESSAGING_*`, ...). The first lab run did exactly that and the child rewrote `~/.claude/.credentials.json` with empty tokens (the file's mtime matches the first lab session to the second). The prototypes now drop those variables (`scrub_host_env()` in `persistent_client.py`). Production code that may be started from a Claude session (tests, dev runs) must do the same.
+**Pitfall found in the lab.** A CLI started from inside a Desktop session inherits the Desktop host variables (`CLAUDECODE`, `CLAUDE_CODE_ENTRYPOINT`, `CLAUDE_CODE_SDK_HAS_HOST_AUTH_REFRESH`, `CLAUDE_CODE_MESSAGING_*`, ...). The first lab run did exactly that and the child rewrote `~/.claude/.credentials.json` with empty tokens (the file's mtime matches the first lab session to the second). The prototypes now drop every `CLAUDE_CODE_*` variable plus `CLAUDECODE` and `CLAUDE_PID`, keeping only `CLAUDE_CODE_OAUTH_TOKEN`, `CLAUDE_CONFIG_DIR` and `CLAUDE_CODE_GIT_BASH_PATH` (`scrub_host_env()` in `persistent_client.py`; there is no flag to turn it off). The overwrite is inferred from the file mtimes, not traced to one variable. Production code that may be started from a Claude session (tests, dev runs) must do the same.
+
+After the incident the person logged in again outside the lab. The tests with a login (§3, second table) used the refreshed `~/.claude/.credentials.json`, without `CLAUDE_CODE_OAUTH_TOKEN`.
 
 ## 3. Latency: persistent process vs one process per message
 
@@ -40,7 +42,7 @@ Strategies measured by [`bench_latency.py`](../../tools/lab/claude_client/bench_
 - **cli-resume**: `claude -p --resume <id>` per message.
 - **cli-stream**: one `claude -p --input-format stream-json --output-format stream-json` process fed turn by turn on stdin.
 
-Process overhead only (runs without a valid login return a local error, so this is spawn + init, no API time):
+Process overhead only. These runs were made before the login was restored; without a valid login they return a local error, so this is spawn + init, no API time:
 
 | Strategy | First turn | Next turns | PIDs over 4 turns |
 |---|---|---|---|
@@ -60,7 +62,7 @@ Reading:
 
 - A persistent process answers follow-up turns in about **1.4 to 1.5 s to the first token**, against about **2.9 to 3.2 s** when every message starts a process (`query()` or `claude -p --resume`). The saving is about 1.7 s per turn, all of it process start, init and transcript reload; the model time is the same.
 - The SDK and the raw `stream-json` CLI perform the same once warm: the SDK is a thin wrapper over that exact process and protocol.
-- The first turn of a persistent process is the slow one (`connect()` took 0.8 to 1.3 s, then a cold prompt cache). Connect when the app starts, not when the person speaks, and the person never pays it.
+- The first turn of a persistent process is the slow one (`connect()` took 0.8 to 1.3 s in the logged-in runs, against 0.63 to 2.15 s in the first table, which came from the runs without a login; then a cold prompt cache). In the published measurements `sdk-persistent` always ran first, so its first turn includes a cold prompt cache that the other strategies did not pay; the later turns are not affected. `bench_latency.py --rounds N` now rotates the order each round. Connect when the app starts, not when the person speaks, and the person never pays it.
 - The current VoiceMate runtime (`app/features/claude/runtime.py`) already keeps one `ClaudeSDKClient` alive for the life of the engine, so its voice chat is on the fast path. What it lacks is choosing *which* session to talk to and sharing it with the other clients.
 
 ## 4. Transcript format (`~/.claude/projects/<slug>/<session-id>.jsonl`)
@@ -99,7 +101,7 @@ The Desktop is an MSIX app, but its user data moved out of the package container
 - `claude-code\<version>\`: the CLI builds the Desktop runs.
 - The transcript itself is the normal `~/.claude/projects/...jsonl`.
 
-An SDK session has no `local_*.json`, so it never shows in the sidebar (checked: the four lab sessions are missing from the Desktop's session list). Writing that index file by hand would be an undocumented, fragile hack. The Desktop opens a known session from a deep link: `claude://claude.ai/epitaxy/local_<uuid>`.
+An SDK session has no `local_*.json`, so it does not show in the sidebar as a local session (checked: the four lab sessions are missing from the Desktop's session list). With Remote Control on it shows anyway, as a remote session (§6.1). Writing that index file by hand would be an undocumented, fragile hack. The Desktop opens a known session from a deep link: `claude://claude.ai/epitaxy/local_<uuid>`.
 
 ## 6. Phone and Remote Control
 
@@ -117,8 +119,20 @@ For a session VoiceMate runs itself:
 
 The CLI answered with `session_url` (`https://claude.ai/code/session_...`), `bridge_session_id` and system events `bridge_state: ready` then `connected`; the next turn kept working. After the switch the session also loaded the account's claude.ai connectors as tools, even with `--tools ""`, so a VoiceMate session with Remote Control on is not tool-free any more.
 
-The transcript of that session got the same `bridge-session` lines the Desktop sessions have. Not verified: whether a prompt typed on the phone reaches the VoiceMate process. The test session stayed open for seven minutes with nobody typing on the phone, and the lab's browser pane is not signed in to claude.ai. Confirm it before building on it: start a session with `remote_control` on, type on the phone, and look for a `user` message on the process's stdout.
+The transcript of that session got the same `bridge-session` lines the Desktop sessions have. In this first run the phone was not checked. In the §6.1 run the session appeared in the phone app (checked by the person). Not verified: whether a prompt typed on the phone reaches the VoiceMate process. Confirm it before building on it: start a session with `remote_control` on, type on the phone, and look for a `user` message on the process's stdout.
 
+
+### 6.1 A VoiceMate-owned session in the Desktop (tested, works)
+
+Test on 2026-10-28 with [`rc_session_lab.py`](../../tools/lab/claude_client/rc_session_lab.py): a `stream-json` CLI started by the lab (the transport the SDK uses), named `VoiceMate RC probe 1657`, one turn, then the `remote_control` request, then a second turn, kept alive for 15 minutes.
+
+- **It shows in the Desktop sidebar.** About 15 s after the request the entry appeared in the Code tab's sidebar with its own "more options" menu, and it was absent before (checked through UI Automation).
+- **The whole history shows.** Opening it in the Desktop showed both turns, including the one sent before Remote Control was turned on.
+- **The Desktop can write into it.** A prompt typed into that conversation in the Desktop (through the UI Automation lab) was delivered to the lab's process, which answered; the answer showed in the Desktop and in the lab's `stdout`. The process VoiceMate runs stays the only writer: the Desktop and the phone are remote clients of it, like the phone is for a Desktop session.
+- **Phone:** the session "VoiceMate RC probe 1657" appeared in the phone app, checked by the person at 17:05 on 2026-10-28; a prompt sent from the phone was not checked.
+- **Not checked:** what the Desktop shows after the process exits, and whether the entry comes back when VoiceMate resumes the same session id later with Remote Control on again.
+
+This changes the recommendation (§11): VoiceMate can own its main conversation and still meet the "visible in the Desktop and on the phone" requirement.
 
 ## 7. Resume, fork and two writers
 
@@ -142,7 +156,7 @@ Consequences:
 
 ## 8. Typing into a conversation the Desktop is running
 
-Requirement from the person: every conversation VoiceMate opens or talks to must be visible in the Desktop app and therefore on the phone. Sessions VoiceMate runs itself through the SDK never show in the Desktop sidebar (§5), so the useful question is how to feed a conversation the Desktop already runs, the way the phone does, without a second writer (§7). Three routes were tried, only on throwaway sessions or on the lab's own session.
+Requirement from the person: every conversation VoiceMate opens or talks to must be visible in the Desktop app and therefore on the phone. A session VoiceMate runs itself meets it once Remote Control is on (§6.1). This section covers the other case: feeding a conversation the Desktop already runs, the way the phone does, without a second writer (§7). Three routes were tried, only on throwaway sessions or on the lab's own session.
 
 ### 8.1 Windows UI Automation (tested, works)
 
@@ -165,7 +179,7 @@ Every Claude Code process binds `\\.\pipe\LOCAL\cc-msg-<hex>`, listed as `messag
 
 - Into a throwaway `stream-json` CLI session: without the auth line nothing happens; with it the prompt runs and the reply is in the transcript ("pipe ok").
 - The prompt is delivered as a peer message, wrapped in "Another Claude session sent a message ... not typed by your user". The model treats it as a teammate's request, not as the person: it cannot approve permissions, for example.
-- Into the lab's own Desktop session: the write succeeded but nothing was delivered after several minutes (no `queue-operation` line). The Desktop appears to hold or filter peer messages for its sessions. Not a route for Desktop conversations.
+- Into the lab's own Desktop session (tested by hand, not by the script: connecting to the `messagingSocketPath` of that session's `<pid>.json` and sending the same two lines): the write succeeded but nothing was delivered after several minutes (no `queue-operation` line). The Desktop appears to hold or filter peer messages for its sessions. Not a route for Desktop conversations.
 
 ### 8.3 claude.ai session API (not tested, by design)
 
@@ -176,9 +190,10 @@ The phone talks to the session through claude.ai, and the CLI binary contains th
 Scenario: the person is typing in a spreadsheet and presses the VoiceMate hotkey. Tested with Notepad as the stand-in app ([`desktop_background_lab.py`](../../tools/lab/claude_client/desktop_background_lab.py)):
 
 - **Reading works in the background and minimized.** The whole tree (conversation text, prompt box, sidebar) stays readable with the Desktop minimized; no focus change.
-- **Buttons work in the background and minimized.** Invoking a sidebar entry switched the open conversation in about 0.8 s with the window minimized and Notepad in front. Other invokable controls seen: the `Claude`/`Code` tabs, the session panes (`Terminal`, `Alterações`, `Navegador`, `Arquivos`), `Nova sessão em <project>` per project, the send button. Sidebar labels change with state (the title plus a running suffix, or `Mensagem recebida de <title>`), so match by prefix and re-read after each action.
+- **Buttons work in the background and minimized.** Invoking a sidebar entry switched the open conversation with the window minimized and Notepad in front; the time from `Invoke()` until the document name changed was about 0.8 s. This and the 2.2 s below were measured with an earlier version of the script, before the foreground, title and focus guards; they were not measured again, and the script now prints that interval. Other invokable controls seen: the `Claude`/`Code` tabs, the session panes (`Terminal`, `Alterações`, `Navegador`, `Arquivos`), `Nova sessão em <project>` per project, the send button (not exercised: the lab sends with Enter). Sidebar labels change with state (the title plus a running suffix, or `Mensagem recebida de <title>`), so the lab matches the title exactly or followed by a separator and re-reads after each action. A `Mensagem recebida de <title>` label does not match that rule: the lab then reports the button as not found, and step 4 still refuses to type unless the open conversation is the lab's. Production code should match on the conversation id from the Desktop index (§5), not on labels.
 - **Typing does not work without focus.** Posting `WM_CHAR` messages to the Desktop's web view, in the background or minimized, put nothing in the prompt box. The ProseMirror editor only takes real keyboard input, and that goes to the foreground window.
-- **"Flash" mode works.** Bring the Desktop forward, focus the prompt, type, invoke the send button, give the foreground back to the previous window. Notepad got the focus back and kept receiving the person's typing; the prompt arrived in the Desktop as a normal message. The run took 2.2 s, most of it walking the accessibility tree from scratch; the part where the Desktop holds the focus is the typing itself. Pasting instead of typing and caching the prompt element should bring it to a few hundred milliseconds. Keystrokes the person makes during that window go to the Desktop, so VoiceMate should do it in one short burst (or ask the person to pause).
+- **"Flash" mode works.** Bring the Desktop forward, focus the prompt, type, press Enter, give the foreground back to the previous window. Notepad got the focus back and kept receiving the person's typing; the prompt arrived in the Desktop as a normal message. The run took 2.2 s, most of it walking the accessibility tree from scratch; the part where the Desktop holds the focus is the typing itself. Pasting instead of typing and caching the prompt element should bring it to a few hundred milliseconds. Keystrokes the person makes during that window go to the Desktop, so VoiceMate should do it in one short burst (or ask the person to pause).
+- **Guards in the labs.** `desktop_uia_lab.py` `type`/`send` require `--expect-title`; both UI Automation labs share `uia_common.py`, which matches the window by class (`Chrome_WidgetWin*`) and exact name `Claude`, not by process (a Chrome or Edge tab on claude.ai has a longer title), and aborts unless that window is the foreground, the open conversation's title is exactly the expected one and the keyboard focus is in the prompt box, checked right before the keys and again before Enter.
 - **Lesson from an incident in the lab.** After a conversation switch the lab typed into the wrong conversation (text only, not sent, then removed), because it checked the open conversation once at the start. Check the open conversation's title immediately before every keystroke burst and refuse to type when it does not match.
 
 ## 9. Disk reader prototype
@@ -200,6 +215,8 @@ It keeps a byte offset per file, holds back an unfinished last line until its ne
 Recommendation: the persistent Claude core runs on the Windows companion side, with the Windows `claude` login; the WSL engine asks the companion over the existing local HTTP channel. If it ever has to run in WSL, set `CLAUDE_CONFIG_DIR` to the Windows `~/.claude` only for reading, never for a second writer.
 
 ## 11. Recommended architecture
+
+> Update after §6.1: there are two complementary roles. (1) VoiceMate's own main conversation runs in a persistent `stream-json` process owned by the companion, with Remote Control on, so it shows in the Desktop and in the phone app and can be continued from the Desktop (typing from the phone is not yet checked). (2) Other conversations the Desktop runs are driven as described below (UI Automation in, disk reader out). The diagram covers role 2.
 
 The person's requirement (everything visible in the Desktop and on the phone) decides it: the Desktop stays the only process that runs the conversations, and VoiceMate is a voice front end for it, like the phone is.
 
@@ -227,7 +244,7 @@ flowchart LR
     desk <-->|"Remote Control"| phone
 ```
 
-1. **Input through the Desktop.** A companion hotkey (or the voice flow) sends the transcribed text to the chosen conversation: UI Automation switches to it if needed (works in the background), takes the focus for a short burst, pastes into the `Prompt` box, invokes send and gives the focus back to the app the person was using (§8.4). Optionally a "fill only" mode leaves the text in the box for the person to review and send. The conversation then shows in the Desktop and on the phone like any typed prompt.
+1. **Input through the Desktop.** A companion hotkey (or the voice flow) sends the transcribed text to the chosen conversation: UI Automation switches to it if needed (works in the background), takes the focus for a short burst, pastes into the `Prompt` box, presses Enter and gives the focus back to the app the person was using (§8.4). Optionally a "fill only" mode leaves the text in the box for the person to review and send. The conversation then shows in the Desktop and on the phone like any typed prompt.
 2. **Output from disk.** The session reader maps the open conversation to its `.jsonl` (Desktop index, §5), follows it and emits the assistant text at `turn_end` (or as it arrives) for the engine to speak. No SDK or CLI process is spawned to read.
 3. **Picking a conversation.** The reader lists conversations with title and busy/idle; VoiceMate opens one by invoking its sidebar entry (tested, works minimized) or with the deep link `claude://claude.ai/epitaxy/local_<uuid>`.
 4. **SDK core only as an option.** A persistent `ClaudeSDKClient` (§3, about 1.5 s to the first token) stays useful for quick voice questions that do not need to be in the Desktop. It must never resume a conversation the Desktop is running (§7). With the requirement above, it is a secondary mode, not the base.

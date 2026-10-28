@@ -8,7 +8,7 @@ The session is a normal Claude Code transcript on disk, so it can be resumed lat
 by any client (`claude --resume <id>`, this script with `--resume`).
 
 Usage (venv with claude-agent-sdk):
-  python tools/lab/claude_client/persistent_client.py [--cwd DIR] [--model M]
+  python tools/lab/claude_client/persistent_client.py --cwd DIR [--model M]
         [--resume SESSION_ID [--fork]] [--continue] [--session-id UUID]
   Then type prompts; an empty line or Ctrl+Z/Ctrl+D quits. Pipe a file to script it.
 """
@@ -23,25 +23,19 @@ import time
 
 # Variables the Claude Desktop app sets on its own sessions. A child CLI that inherits
 # them believes the Desktop host is handing it OAuth tokens; in the lab that child
-# rewrote ~/.claude/.credentials.json with empty tokens. Drop them so the client
-# behaves like a standalone one (as the VoiceMate companion would run).
-_HOST_ENV = (
-    "CLAUDECODE",
-    "CLAUDE_CODE_ENTRYPOINT",
-    "CLAUDE_CODE_SDK_HAS_HOST_AUTH_REFRESH",
-    "CLAUDE_CODE_CHILD_SESSION",
-    "CLAUDE_CODE_SESSION_ID",
-    "CLAUDE_CODE_HOST_SESSION_ID",
-    "CLAUDE_CODE_MESSAGING_SOCKET",
-    "CLAUDE_CODE_MESSAGING_TOKEN",
-    "CLAUDE_CODE_OAUTH_SCOPES",
-    "CLAUDE_PID",
-)
+# rewrote ~/.claude/.credentials.json with empty tokens. Drop them all (by prefix, so new
+# ones are covered) so the client behaves like a standalone one, as the VoiceMate
+# companion would run. These few are settings the person chose, not host state.
+_KEEP_ENV = {"CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_GIT_BASH_PATH"}
+_HOST_ENV_NAMES = {"CLAUDECODE", "CLAUDE_PID"}
 
 
 def scrub_host_env() -> None:
-    for name in _HOST_ENV:
-        os.environ.pop(name, None)
+    for name in list(os.environ):
+        if name in _KEEP_ENV:
+            continue
+        if name.startswith("CLAUDE_CODE_") or name in _HOST_ENV_NAMES:
+            os.environ.pop(name, None)
 
 
 async def run(args: argparse.Namespace) -> None:
@@ -101,7 +95,7 @@ async def run(args: argparse.Namespace) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cwd", default=os.getcwd())
+    ap.add_argument("--cwd", required=True, help="lab directory; --continue picks the latest session of this project")
     ap.add_argument("--model", default="claude-haiku-5-5")
     ap.add_argument("--resume")
     ap.add_argument("--continue", dest="continue_", action="store_true")
@@ -109,10 +103,8 @@ def main() -> None:
     ap.add_argument("--session-id", help="force the id of a new session")
     ap.add_argument("--no-tools", action="store_true", help="answer only, no tools (faster, cheaper)")
     ap.add_argument("--settings", action="store_true", help="load user and project settings/CLAUDE.md")
-    ap.add_argument("--keep-host-env", action="store_true", help="do not drop the Desktop host variables")
     args = ap.parse_args()
-    if not args.keep_host_env:
-        scrub_host_env()
+    scrub_host_env()
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     asyncio.run(run(args))
 
