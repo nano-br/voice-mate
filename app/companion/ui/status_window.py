@@ -154,7 +154,10 @@ class StatusWindow(QWidget):
         self.audio_value = QLabel()
         self.mics_value = QLabel()
         self.restarts_value = QLabel()
+        self.stt_value = QLabel()
+        self.stt_value.setWordWrap(True)
         info.addRow(_("Engine:"), self.engine_value)
+        info.addRow(_("Transcription:"), self.stt_value)
         info.addRow(_("Audio:"), self.audio_value)
         info.addRow(_("Microphones:"), self.mics_value)
         info.addRow(_("Restarts:"), self.restarts_value)
@@ -227,6 +230,7 @@ class StatusWindow(QWidget):
 
         self.engine_value.setText(texts.supervisor_labels()[snapshot.supervisor])
         self.audio_value.setText(texts.audio_labels()[snapshot.audio])
+        self.stt_value.setText(texts.stt_line(snapshot.stt))
         self.mics_value.setText(texts.mic_count_label(snapshot.mic_count))
         self.restarts_value.setText(str(snapshot.restarts))
 

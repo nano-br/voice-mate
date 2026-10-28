@@ -61,12 +61,14 @@ from app.companion.contract import (
     WslRestartPolicy,
 )
 from app.companion.paths import home_dir
+from app.companion.stt import engine_stt
 from app.companion.ui import texts
 from app.companion.ui.hotkey_edit import HotkeyEdit
 from app.companion.ui.icons import app_icon
 from app.companion.ui.shell import Shell
 from app.companion.ui.view_model import chord_for, displayed_flows, settings_read_only
 from app.i18n import _
+from app.protocol.models import SttMode, SttModel
 
 SAVED_MESSAGE_MS = 4000
 
@@ -561,6 +563,25 @@ class GeneralPage(QWidget):
         engine_form.addRow(_("Restart WSL when audio fails:"), self.wsl_restart_policy)
         self._wsl_rows = (self.wsl_distro, self.wsl_restart_policy)
         layout.addWidget(engine_box)
+
+        stt_box = QGroupBox(_("Transcription"))
+        stt_form = QFormLayout(stt_box)
+        stt_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        self.stt_mode = _option_combo(texts.stt_mode_labels())
+        self.stt_mode.setToolTip(
+            _(
+                "CPU leaves the graphics card free for other programs. GPU is faster. A mode that is "
+                "not installed yet is installed when you apply (VoiceMate asks first). Changing it "
+                "restarts the engine."
+            )
+        )
+        stt_form.addRow(_("Run on:"), self.stt_mode)
+        self.stt_cpu_model = _option_combo(texts.stt_model_labels())
+        stt_form.addRow(_("CPU model:"), self.stt_cpu_model)
+        self.stt_gpu_model = _option_combo(texts.stt_model_labels())
+        stt_form.addRow(_("GPU model:"), self.stt_gpu_model)
+        self._stt_box = stt_box
+        layout.addWidget(stt_box)
         layout.addStretch(1)
 
         for combo in (
@@ -569,6 +590,9 @@ class GeneralPage(QWidget):
             self.notify_level,
             self.engine_mode,
             self.wsl_restart_policy,
+            self.stt_mode,
+            self.stt_cpu_model,
+            self.stt_gpu_model,
         ):
             combo.currentIndexChanged.connect(self.changed)
         self.engine_mode.currentIndexChanged.connect(lambda _index: self._sync_mode())
@@ -584,6 +608,9 @@ class GeneralPage(QWidget):
             (self.wsl_distro, _("WSL distro")),
             (self.engine_dir, _("Engine folder")),
             (self.wsl_restart_policy, _("Restart WSL when audio fails")),
+            (self.stt_mode, _("Transcription")),
+            (self.stt_cpu_model, _("CPU model")),
+            (self.stt_gpu_model, _("GPU model")),
         ):
             widget.setAccessibleName(name)
 
@@ -599,6 +626,9 @@ class GeneralPage(QWidget):
             self.wsl_distro.setText(settings.wsl_distro)
             self.engine_dir.setText(settings.engine_dir)
             _select(self.wsl_restart_policy, settings.wsl_restart_policy, texts.wsl_restart_labels())
+            _select(self.stt_mode, settings.stt_mode, texts.stt_mode_labels())
+            _select(self.stt_cpu_model, settings.stt_cpu_model, texts.stt_model_labels())
+            _select(self.stt_gpu_model, settings.stt_gpu_model, texts.stt_model_labels())
         self._sync_mode()
 
     def selected_language(self) -> UiLanguage:
@@ -614,6 +644,9 @@ class GeneralPage(QWidget):
         notify_level: NotifyLevel = self.notify_level.currentData()
         engine_mode: EngineMode = self.engine_mode.currentData()
         policy: WslRestartPolicy = self.wsl_restart_policy.currentData()
+        stt_mode: SttMode = self.stt_mode.currentData()
+        stt_cpu_model: SttModel = self.stt_cpu_model.currentData()
+        stt_gpu_model: SttModel = self.stt_gpu_model.currentData()
         tray_icon_visible = (
             settings.tray_icon_visible if self.tray_icon_visible is None else self.tray_icon_visible.isChecked()
         )
@@ -628,6 +661,9 @@ class GeneralPage(QWidget):
             wsl_distro=self.wsl_distro.text().strip(),
             engine_dir=self.engine_dir.text().strip(),
             wsl_restart_policy=policy,
+            stt_mode=stt_mode,
+            stt_cpu_model=stt_cpu_model,
+            stt_gpu_model=stt_gpu_model,
         )
 
     def _sync_mode(self) -> None:
@@ -635,6 +671,7 @@ class GeneralPage(QWidget):
         for widget in self._wsl_rows:
             widget.setEnabled(mode == "wsl2")
         self.engine_dir.setEnabled(mode != "external")
+        self._stt_box.setEnabled(mode != "external")  # the engine is not ours to start
         self._sync_dictation_hint()
 
     def _sync_dictation_hint(self) -> None:
@@ -790,6 +827,29 @@ class SettingsDialog(QDialog):
             return
         self._busy = True
         self._update_buttons()
+        if _stt_changed(edited, baseline):
+            # A mode that is not installed yet is installed first (the shell asks).
+            self._show_message(_("Checking the transcription mode..."), None)
+            self._shell.ensure_stt_ready(edited, lambda ready: self._stt_ready(ready, edited, baseline, close_after))
+            return
+        self._save(edited, baseline, close_after)
+
+    def _stt_ready(
+        self, ready: bool, edited: CompanionSettings, baseline: CompanionSettings, close_after: bool
+    ) -> None:
+        if ready:
+            self._save(edited, baseline, close_after)
+            return
+        self._applied(
+            [
+                _(
+                    "The transcription mode is not ready (not installed, or another change is under way), so nothing was changed."
+                )
+            ],
+            False,
+        )
+
+    def _save(self, edited: CompanionSettings, baseline: CompanionSettings, close_after: bool) -> None:
         self._show_message(_("Saving..."), None)
         controller = self._shell.controller
         new_language = edited.language if edited.language != baseline.language else None
@@ -911,3 +971,8 @@ def _rebase_hotkeys(
 
 def _escape(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _stt_changed(edited: CompanionSettings, baseline: CompanionSettings) -> bool:
+    """Only what decides the engine's flags: the model of the mode not in use does not count."""
+    return engine_stt(edited) != engine_stt(baseline)

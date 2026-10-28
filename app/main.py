@@ -9,7 +9,7 @@ from types import FrameType
 
 from app.cli.args import parse_args
 from app.cli.config_builder import build_config, delete_existing_auto_seed
-from app.cli.wiring import build_handlers, build_listener, build_speaker, build_transcriber
+from app.cli.wiring import build_handlers, build_listener, build_speaker, build_transcriber, describe_transcriber
 from app.core.audio_feedback import AudioFeedback
 from app.core.config import Config, FlowConfig
 from app.core.console import force_utf8_stdio
@@ -32,7 +32,7 @@ from app.platform.audio_probe import AudioServerProbe
 from app.platform.clipboard import create_clipboard_writer
 from app.platform.detect import default_trigger, detect_platform
 from app.platform.kinds import PlatformKind, TriggerKind
-from app.protocol.models import FlowInfo, ShutdownReason
+from app.protocol.models import FlowInfo, ShutdownReason, SttInfo
 from app.setup.persisted_config import load_persisted
 
 
@@ -120,12 +120,15 @@ def _has_chat_flow(flows: list[FlowConfig]) -> bool:
     return any(flow.kind == "claude_chat" for flow in flows)
 
 
-def _engine_info(platform: PlatformKind, trigger: TriggerKind, flows: list[FlowConfig], tts: bool) -> EngineInfo:
+def _engine_info(
+    platform: PlatformKind, trigger: TriggerKind, flows: list[FlowConfig], tts: bool, stt: SttInfo | None = None
+) -> EngineInfo:
     return EngineInfo(
         platform=platform,
         trigger=trigger,
         flows=tuple(FlowInfo(name=flow.name, kind=flow.kind, hotkey=flow.hotkey) for flow in flows),
         tts=tts,
+        stt=stt,
     )
 
 
@@ -322,7 +325,8 @@ def main() -> None:
 
     tts_active = engine.speaker.is_active() and _has_chat_flow(engine.flows)
     if api is not None:
-        api.attach(engine.session, _engine_info(platform, trigger, engine.flows, tts_active))
+        stt = describe_transcriber(engine.transcriber, config)
+        api.attach(engine.session, _engine_info(platform, trigger, engine.flows, tts_active, stt))
     listener: InputListener = build_listener(config, engine.flows, engine.session, api)
     _print_ready(config, engine.flows, api, supervised=args.supervised)
 

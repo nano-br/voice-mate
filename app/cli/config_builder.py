@@ -23,6 +23,7 @@ from app.core.config import (
 )
 from app.i18n import _
 from app.platform.kinds import PlatformKind, TriggerKind
+from app.protocol.models import SttMode
 from app.setup.gpu_detect import detect_gpu
 from app.setup.persisted_config import PersistedConfig
 
@@ -33,15 +34,31 @@ _DISABLED_SYSTEM_PROMPT = ""
 _KNOWN_TRANSCRIPTION_LANGS = frozenset(get_args(TranscriptionLanguage)) - {"auto"}
 
 
-def _resolve_gpu_vendor(args: argparse.Namespace, persisted: PersistedConfig) -> GpuVendor:
-    """Precedence: --cpu > --gpu-backend > saved config > auto-detection."""
+def _resolve_stt_mode(args: argparse.Namespace, persisted: PersistedConfig) -> SttMode:
+    """Precedence: --cpu > --stt-mode > saved config > auto."""
+    if args.cpu:
+        return "cpu"
+    flag = getattr(args, "stt_mode", None)
+    if flag is not None:
+        return cast(SttMode, flag)
+    if persisted.stt_mode is not None:
+        return persisted.stt_mode
+    return "auto"
+
+
+def _resolve_gpu_vendor(args: argparse.Namespace, persisted: PersistedConfig, stt_mode: SttMode) -> GpuVendor:
+    """Precedence: --cpu > --gpu-backend > saved config > auto-detection.
+
+    The GPU mode re-detects when the saved vendor is "cpu": a setup that ran in
+    CPU mode must not keep the GPU mode on the processor once it is asked for.
+    """
     if args.cpu:
         return "cpu"
     if args.gpu_backend is not None:
         if args.gpu_backend == "auto":
             return detect_gpu().vendor
         return cast(GpuVendor, args.gpu_backend)  # nvidia | amd | cpu (validated by argparse)
-    if persisted.gpu_vendor is not None:
+    if persisted.gpu_vendor is not None and not (stt_mode == "gpu" and persisted.gpu_vendor == "cpu"):
         return persisted.gpu_vendor
     return detect_gpu().vendor
 
@@ -156,7 +173,8 @@ def _resolve_daemon_port(args: argparse.Namespace, persisted: PersistedConfig) -
 
 def build_config(args: argparse.Namespace, persisted: PersistedConfig | None = None) -> Config:
     persisted = persisted or PersistedConfig()
-    gpu_vendor = _resolve_gpu_vendor(args, persisted)
+    stt_mode = _resolve_stt_mode(args, persisted)
+    gpu_vendor = _resolve_gpu_vendor(args, persisted, stt_mode)
     whisper_backend = _resolve_whisper_backend(args, persisted, gpu_vendor)
     claude_chat_enabled = _resolve_claude_enabled(args, persisted)
     tts_enabled = _resolve_tts_enabled(args, persisted)
@@ -170,6 +188,8 @@ def build_config(args: argparse.Namespace, persisted: PersistedConfig | None = N
         hotkey=args.hotkey,
         output_lang=args.output_lang,
         use_cpu=args.cpu,
+        stt_mode=stt_mode,
+        cpu_threads=max(0, int(getattr(args, "cpu_threads", 0) or 0)),
         gpu_vendor=gpu_vendor,
         whisper_backend=whisper_backend,
         stt_strategy=_resolve_stt_strategy(args, persisted),

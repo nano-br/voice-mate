@@ -118,7 +118,7 @@ def ui(
     companion.bridge.detach()
     if companion.settings_dialog is not None:
         companion.settings_dialog.hide()
-    for attribute in ("_wsl_box", "_restart_wsl_box", "_language_box", "_clear_pending_box"):
+    for attribute in ("_wsl_box", "_restart_wsl_box", "_language_box", "_clear_pending_box", "_stt_box"):
         box = getattr(companion, attribute)
         if box is not None:
             setattr(companion, attribute, None)

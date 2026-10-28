@@ -18,7 +18,7 @@ from app.core.session_status import CancelOutcome, SessionStatus, ToggleOutcome
 from app.daemon import server as server_module
 from app.daemon.lifecycle import Lifecycle
 from app.daemon.server import ApiServer, EngineInfo
-from app.protocol.models import FlowInfo, ShutdownReason, TriggerAction, TriggerExpect
+from app.protocol.models import FlowInfo, ShutdownReason, SttInfo, TriggerAction, TriggerExpect
 
 INFO = EngineInfo(
     platform="wsl2",
@@ -28,6 +28,7 @@ INFO = EngineInfo(
         FlowInfo(name="claude_chat", kind="claude_chat", hotkey="ctrl+alt+a"),
     ),
     tts=True,
+    stt=SttInfo(mode="gpu", device="cpu", backend="faster-whisper", model="large-v3-turbo"),
 )
 TOKEN = "s3cret-token"
 _NO_PROXY = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -175,6 +176,8 @@ def test_health_v2_fields(make_server: MakeServer, monkeypatch: pytest.MonkeyPat
     assert body["flow_info"][1] == {"name": "claude_chat", "kind": "claude_chat", "hotkey": "ctrl+alt+a"}
     assert body["tts"] is True
     assert body["auth"] is False
+    # Requested GPU, running on the CPU: the companion shows this fallback.
+    assert body["stt"] == {"mode": "gpu", "device": "cpu", "backend": "faster-whisper", "model": "large-v3-turbo"}
 
 
 # -- auth -----------------------------------------------------------------------

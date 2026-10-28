@@ -62,6 +62,9 @@ def test_round_trip_keeps_every_field(tmp_path: Path) -> None:
         notify_level="errors",
         start_at_login=True,
         tray_icon_visible=False,
+        stt_mode="gpu",
+        stt_cpu_model="medium",
+        stt_gpu_model="small",
     )
     text = dump_settings(settings)
     tomllib.loads(text)  # valid TOML
@@ -118,6 +121,8 @@ def test_invalid_values_fall_back_to_defaults_with_log_lines() -> None:
             "daemon_port = 80",
             "master_volume = 3",
             'notify_level = "loud"',
+            'stt_mode = "tpu"',
+            'stt_gpu_model = "tiny"',
             "start_at_login = 1",
             "mystery = true",
             "[[hotkeys]]",
@@ -146,9 +151,10 @@ def test_invalid_values_fall_back_to_defaults_with_log_lines() -> None:
     assert settings.master_volume == defaults.master_volume
     assert settings.notify_level == defaults.notify_level
     assert settings.start_at_login is False
+    assert (settings.stt_mode, settings.stt_gpu_model) == (defaults.stt_mode, defaults.stt_gpu_model)
     assert settings.hotkeys == (HotkeyBinding("claude_chat", "ctrl+alt+a"),)
     assert settings.cues["start"] == CueSettings()
-    assert len(result.problems) >= 13
+    assert len(result.problems) >= 15
     assert any("mystery" in problem for problem in result.problems)
 
 

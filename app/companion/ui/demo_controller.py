@@ -30,7 +30,7 @@ from app.companion.contract import (
 )
 from app.companion.ui.chords import normalize_chord
 from app.i18n import _
-from app.protocol.models import ResultKind, ResultRecord
+from app.protocol.models import ResultKind, ResultRecord, SttCheckReport, SttDevice, SttModeStatus
 
 DEMO_FLOWS = (
     FlowEntry(name="clipboard", kind="clipboard", engine_chord="ctrl+alt+v"),
@@ -66,6 +66,10 @@ def _record(seq: int, text: str, kind: ResultKind = "transcript", delivery: str 
     )
 
 
+def _stt_status(ready: bool) -> SttModeStatus:
+    return {"ready": ready, "supported": True, "detail": "demo", "download_mb": 0 if ready else 4300}
+
+
 class FakeController:
     """Records every command in `calls`; tests steer it with `publish`, `notify`,
     `apply_errors` and `hotkey_results`. `autoplay=True` cycles through every tray
@@ -98,6 +102,9 @@ class FakeController:
         self.apply_errors: list[str] = []
         self.hotkey_results: dict[str, HotkeyCheck] = {}
         self.quit_delay = 0.0
+        # Both modes installed by default; tests remove one to exercise the install flow.
+        self.stt_report: SttCheckReport = {"cpu": _stt_status(True), "gpu": _stt_status(True)}
+        self.stt_install_ok = True
 
     # ----------------------------------------------------------------- test hooks
 
@@ -285,6 +292,17 @@ class FakeController:
 
     def open_logs(self) -> None:
         self._call("open_logs")
+
+    def check_stt(self, settings: CompanionSettings) -> SttCheckReport | None:
+        self._call("check_stt", settings.stt_mode)
+        return self.stt_report
+
+    def install_stt(self, settings: CompanionSettings, mode: SttDevice, on_line: Callable[[str], None]) -> bool:
+        self._call("install_stt", mode)
+        for line in ("[stt] Installing...", "[stt] Downloading the model..."):
+            on_line(line)
+        self.stt_report[mode]["ready"] = self.stt_install_ok
+        return self.stt_install_ok
 
     # ----------------------------------------------------------------- demo mode
 

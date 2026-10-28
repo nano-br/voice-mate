@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
+
 from app.cli.args import parse_args
 from app.cli.config_builder import build_config
+from app.setup.gpu_detect import GpuInfo
 from app.setup.persisted_config import PersistedConfig
 
 
@@ -65,3 +68,45 @@ def test_persisted_clipboard_flow_disables_claude() -> None:
 def test_no_tts_flag_overrides_persisted_enabled() -> None:
     config = build_config(parse_args(["--no-tts"]), PersistedConfig(gpu_vendor="cpu", tts_enabled=True))
     assert config.tts.enabled is False
+
+
+def test_stt_mode_defaults_to_auto() -> None:
+    config = build_config(parse_args(["--gpu-backend", "amd"]))
+    assert config.stt_mode == "auto"
+    assert config.cpu_threads == 0
+
+
+def test_stt_mode_flag_overrides_persisted() -> None:
+    config = build_config(parse_args(["--stt-mode", "gpu"]), PersistedConfig(gpu_vendor="amd", stt_mode="cpu"))
+    assert config.stt_mode == "gpu"
+
+
+def test_persisted_stt_mode_used_without_flag() -> None:
+    config = build_config(parse_args([]), PersistedConfig(gpu_vendor="amd", stt_mode="cpu"))
+    assert config.stt_mode == "cpu"
+
+
+def test_cpu_flag_forces_cpu_mode() -> None:
+    config = build_config(parse_args(["--cpu", "--stt-mode", "gpu"]))
+    assert config.stt_mode == "cpu"
+
+
+def test_cpu_threads_flag() -> None:
+    config = build_config(parse_args(["--gpu-backend", "cpu", "--cpu-threads", "4"]))
+    assert config.cpu_threads == 4
+
+
+def test_gpu_mode_redetects_when_saved_vendor_is_cpu(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.cli import config_builder
+
+    monkeypatch.setattr(config_builder, "detect_gpu", lambda: GpuInfo(vendor="amd"))
+    config = build_config(parse_args(["--stt-mode", "gpu"]), PersistedConfig(gpu_vendor="cpu"))
+    assert config.gpu_vendor == "amd"
+
+
+def test_auto_mode_keeps_saved_cpu_vendor(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.cli import config_builder
+
+    monkeypatch.setattr(config_builder, "detect_gpu", lambda: GpuInfo(vendor="amd"))
+    config = build_config(parse_args([]), PersistedConfig(gpu_vendor="cpu"))
+    assert config.gpu_vendor == "cpu"

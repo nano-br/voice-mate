@@ -22,13 +22,16 @@ from app.companion.contract import (
     RecentItem,
     UiLanguage,
 )
+from app.companion.ui import texts
 from app.companion.ui.bridge import ControllerBridge
 from app.companion.ui.icons import app_icon
 from app.companion.ui.notifications import NotificationPresenter
 from app.companion.ui.settings_window import SettingsDialog
 from app.companion.ui.status_window import StatusWindow
+from app.companion.ui.stt_install import SttInstallDialog, mode_title
 from app.companion.ui.tray import TrayIcon
 from app.i18n import _, active_language, catalog_for
+from app.protocol.models import SttCheckReport, SttDevice, SttMode
 
 log = logging.getLogger(__name__)
 
@@ -87,6 +90,9 @@ class CompanionUi(QObject):
         self._restart_wsl_box: QMessageBox | None = None
         self._language_box: QMessageBox | None = None
         self._clear_pending_box: QMessageBox | None = None
+        self._stt_box: QMessageBox | None = None
+        self._stt_dialog: SttInstallDialog | None = None
+        self._stt_busy = False  # a transcription mode check, question or install is under way
         self._jump_list_mode: str | None = None
 
         self.tray: TrayIcon | None = None
@@ -296,6 +302,130 @@ class CompanionUi(QObject):
         self._clear_pending_box = box
         box.show()
 
+    def switch_stt_mode(self, mode: SttMode) -> None:
+        """Tray menu: make sure the mode is installed (asking first), then switch to it."""
+        if self._quitting or mode == self.settings().stt_mode:
+            return
+        controller = self._controller
+
+        def switch(ready: bool) -> None:
+            if not ready or self._quitting:
+                self.settings_changed()  # the menu check goes back to the mode in use
+                return
+
+            def apply() -> list[str]:
+                return controller.apply_settings(replace(controller.settings(), stt_mode=mode))
+
+            self._bridge.run_async(apply, self._stt_applied, lambda exc: self._stt_applied([str(exc)]))
+
+        self.ensure_stt_ready(replace(self.settings(), stt_mode=mode), switch)
+
+    def _stt_applied(self, errors: list[str]) -> None:
+        if errors:
+            self._present_notification(Notification("error", _("Could not change the transcription mode"), errors[0]))
+        self.settings_changed()
+
+    def ensure_stt_ready(self, settings: CompanionSettings, on_result: Callable[[bool], None]) -> None:
+        """Before `settings` are applied: is their transcription mode installed? If not, ask
+        and install it. `on_result(True)` = go ahead and apply. When the check cannot tell
+        (WSL down, no engine folder), go ahead: the engine falls back to the CPU and says so."""
+        if settings.stt_mode == "auto" or settings.engine_mode == "external":
+            on_result(True)
+            return
+        if self._stt_busy:
+            pending = self._stt_dialog or self._stt_box
+            if pending is not None:
+                pending.raise_()
+                pending.activateWindow()
+            self._present_notification(
+                Notification(
+                    "info",
+                    _("Transcription mode change under way"),
+                    _("Wait for the current change to finish, then try again."),
+                )
+            )
+            on_result(False)
+            return
+        self._stt_busy = True
+        controller = self._controller
+
+        def done(ready: bool) -> None:
+            self._stt_busy = False
+            on_result(ready)
+
+        self._bridge.run_async(
+            lambda: controller.check_stt(settings),
+            lambda report: self._stt_checked(settings, report, done),
+            lambda _exc: self._stt_checked(settings, None, done),
+        )
+
+    def _stt_checked(
+        self, settings: CompanionSettings, report: SttCheckReport | None, done: Callable[[bool], None]
+    ) -> None:
+        mode: SttDevice = "gpu" if settings.stt_mode == "gpu" else "cpu"
+        if self._quitting:
+            done(False)
+            return
+        if report is None:
+            log.warning("could not check the %s mode; switching anyway", mode)
+            done(True)
+            return
+        status = report["gpu"] if mode == "gpu" else report["cpu"]
+        if status["ready"]:
+            done(True)
+            return
+        if not status["supported"]:
+            self._present_notification(
+                Notification(
+                    "error",
+                    _("No GPU mode on this computer"),
+                    _("VoiceMate found no graphics card it can use. The CPU mode keeps working."),
+                )
+            )
+            done(False)
+            return
+        box, install = _question(
+            _("Install the {mode}?").format(mode=mode_title(mode)),
+            _(
+                "The {mode} is not installed yet. VoiceMate will download {size} and install it only inside "
+                "its own engine environment (nothing else on the computer changes). This can take several "
+                "minutes. Install now?"
+            ).format(mode=mode_title(mode), size=texts.download_size(status["download_mb"])),
+            _("Install"),
+            _("Cancel"),
+        )
+
+        def answered(_result: int) -> None:
+            current = self._stt_box
+            if current is None or current is not box:
+                done(False)  # closed by quit, not answered
+                return
+            self._stt_box = None
+            current.deleteLater()
+            if current.clickedButton() is not install or self._quitting:
+                done(False)
+                return
+            dialog = SttInstallDialog(self, settings, mode, lambda ok: self._stt_installed(ok, done))
+            # The dialog has no parent: this reference keeps it (and the install log it shows
+            # after a failure) alive until the user closes it.
+            dialog.finished.connect(lambda _result: self._stt_dialog_closed(dialog))
+            self._stt_dialog = dialog
+            dialog.start()
+
+        box.finished.connect(answered)
+        self._stt_box = box
+        box.show()
+        box.raise_()
+        box.activateWindow()
+
+    def _stt_installed(self, ok: bool, done: Callable[[bool], None]) -> None:
+        done(ok and not self._quitting)
+
+    def _stt_dialog_closed(self, dialog: SttInstallDialog) -> None:
+        if self._stt_dialog is dialog:
+            self._stt_dialog = None
+        dialog.deleteLater()
+
     # ------------------------------------------------------------------ lifecycle
 
     def start(self, show_window: bool, wait_for_tray: bool = False) -> None:
@@ -371,12 +501,14 @@ class CompanionUi(QObject):
         if self.settings_dialog is not None:
             self.settings_dialog.hotkeys_page.cancel_capture()
             self.settings_dialog.hide()
-        for attribute in ("_wsl_box", "_restart_wsl_box", "_language_box", "_clear_pending_box"):
+        for attribute in ("_wsl_box", "_restart_wsl_box", "_language_box", "_clear_pending_box", "_stt_box"):
             box = getattr(self, attribute)
             if box is not None:
                 setattr(self, attribute, None)
                 box.close()
                 box.deleteLater()
+        if self._stt_dialog is not None:
+            self._stt_dialog.close()  # the install itself runs on: it must not stop half way
         if self.tray is not None:
             self.tray.set_quitting()
         self.status_window.set_quitting()

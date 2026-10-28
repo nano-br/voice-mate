@@ -11,6 +11,7 @@ from numpy.typing import NDArray
 
 from app.core.config import Config
 from app.i18n import _
+from app.protocol.models import SttBackendName, SttDevice
 
 
 def _write_wav_16k(audio: NDArray[np.float32], sample_rate: int, path: Path) -> None:
@@ -35,9 +36,14 @@ class WhisperCppBackend:
     reads the `.txt`, and cleans up the temporaries.
     """
 
+    name: SttBackendName = "whispercpp"
+
     def __init__(self, config: Config, exe: Path, model: Path) -> None:
         self._exe = exe
         self._model = model
+        self.model_name = model.stem.removeprefix("ggml-")
+        # On WSL2 Vulkan only sees llvmpipe (a software renderer), so whisper.cpp runs on the CPU there.
+        self.device: SttDevice = "cpu" if config.platform == "wsl2" else "gpu"
         self._beam = config.beam_size
         self._sample_rate = config.sample_rate
         self._language = config.transcription_language

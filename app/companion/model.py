@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
-from typing import Final, Literal
+from typing import Final, Literal, get_args
 
 from app.companion.chords import display_chord
 from app.companion.contract import (
@@ -52,6 +52,10 @@ from app.protocol.models import (
     SessionState,
     SnapshotData,
     StateData,
+    SttBackendName,
+    SttDevice,
+    SttInfo,
+    SttMode,
     WarningCode,
 )
 
@@ -146,6 +150,7 @@ class CoreState:
     engine_outdated: bool = False
     instance: str = ""
     flows: tuple[FlowEntry, ...] = ()
+    stt: SttInfo | None = None
     audio: AudioHealth = "unknown"
     mic_count: int = -1
     engine: EngineView = EngineView()
@@ -396,7 +401,7 @@ def _supervisor(step: _Step, update: SupervisorUpdate) -> None:
     }
     if update.state not in ("healthy", "degraded"):
         # The engine is gone or loading: whatever it was doing is over.
-        changes.update(engine_ready=False, engine=EngineView(), recording_since=None, ready_until=None)
+        changes.update(engine_ready=False, engine=EngineView(), recording_since=None, ready_until=None, stt=None)
     step.set(**changes)
 
 
@@ -416,10 +421,24 @@ def _health(step: _Step, payload: HealthPayload) -> None:
         engine_outdated=outdated,
         instance=str(payload.get("instance", "")),
         flows=tuple(flows) or step.state.flows,
+        stt=_stt_info(payload.get("stt")),
     )
     audio = payload.get("audio", "unknown")
     if audio in ("ok", "down", "unknown"):
         _audio(step, audio)
+
+
+def _stt_info(raw: object) -> SttInfo | None:
+    """`/health` stt, only when well formed (absent on older engines, null while loading)."""
+    if not isinstance(raw, dict):
+        return None
+    mode = next((option for option in get_args(SttMode) if option == raw.get("mode")), None)
+    device = next((option for option in get_args(SttDevice) if option == raw.get("device")), None)
+    backend = next((option for option in get_args(SttBackendName) if option == raw.get("backend")), None)
+    model = raw.get("model")
+    if mode is None or device is None or backend is None or not isinstance(model, str):
+        return None
+    return SttInfo(mode=mode, device=device, backend=backend, model=model)
 
 
 def _audio(step: _Step, audio: AudioHealth) -> None:
@@ -678,6 +697,7 @@ def to_snapshot(state: CoreState, rev: int, now: Now) -> CompanionSnapshot:
         flow=state.engine.flow if state.engine.state != "idle" else None,
         instance=state.instance,
         flows=state.flows,
+        stt=state.stt,
         hotkeys_owned_by_engine=state.hotkeys_owned_by_engine,
         recording_since=state.recording_since if state.engine.state == "recording" else None,
         last_text_snippet=state.last_text_snippet,

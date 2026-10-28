@@ -798,6 +798,9 @@ class FakeBackend:
     def other_running_distros(self) -> list[str]:
         return list(self.distros)
 
+    def tool_command(self, engine_dir: str, target: str) -> list[str] | None:
+        return ["tool", engine_dir, target] if self.can_spawn else None
+
     def close(self) -> None:
         self.closed = True
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QObject, QTimer, Signal
-from PySide6.QtGui import QAction, QGuiApplication, QIcon
+from PySide6.QtGui import QAction, QActionGroup, QGuiApplication, QIcon
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon
 
 from app.companion.contract import CompanionSnapshot, FlowEntry, NotificationLevel, RecentItem, TrayState
@@ -21,8 +21,11 @@ from app.companion.ui.view_model import (
     settings_read_only,
 )
 from app.i18n import _
+from app.protocol.models import SttMode
 
 THEME_POLL_MS = 4000
+# The tray offers the two modes; "auto" (the engine's own choice) stays in the settings.
+STT_MENU_MODES: tuple[SttMode, ...] = ("cpu", "gpu")
 MENU_TEXT_LIMIT = 48
 _MESSAGE_ICONS = {
     "info": QSystemTrayIcon.MessageIcon.Information,
@@ -93,6 +96,18 @@ class TrayIcon(QObject):
         self.mute_action = menu.addAction(_("Mute sounds"))
         self.mute_action.setCheckable(True)
         self.mute_action.triggered.connect(self._shell.set_muted)
+        # Where the engine transcribes: two modes, switched (and installed when missing) here.
+        self.stt_menu = menu.addMenu(_("Transcription"))
+        self.stt_group = QActionGroup(self.stt_menu)
+        self.stt_group.setExclusive(True)
+        self.stt_actions: dict[SttMode, QAction] = {}
+        labels = texts.stt_mode_labels()
+        for mode in STT_MENU_MODES:
+            action = self.stt_menu.addAction(labels[mode])
+            action.setCheckable(True)
+            action.triggered.connect(lambda _checked=False, mode=mode: self._shell.switch_stt_mode(mode))
+            self.stt_group.addAction(action)
+            self.stt_actions[mode] = action
         self.engine_menu = menu.addMenu(_("Engine"))
         self.restart_engine_action = self.engine_menu.addAction(_("Restart engine"))
         self.restart_engine_action.triggered.connect(self._shell.controller.restart_engine)
@@ -166,6 +181,17 @@ class TrayIcon(QObject):
         self.mute_action.setChecked(not settings.cues_enabled)
         self.mute_action.setEnabled(not settings_read_only(settings))
         self.restart_wsl_action.setVisible(settings.engine_mode == "wsl2")
+        # External mode: the engine is not ours to start, so its flags are not ours either.
+        self.stt_menu.menuAction().setVisible(settings.engine_mode != "external")
+        self.stt_menu.setEnabled(not settings_read_only(settings))
+        for mode, action in self.stt_actions.items():
+            action.setChecked(settings.stt_mode == mode)
+        if settings.stt_mode not in self.stt_actions:  # "auto": neither mode is pinned
+            checked = self.stt_group.checkedAction()
+            if checked is not None:
+                self.stt_group.setExclusive(False)
+                checked.setChecked(False)
+                self.stt_group.setExclusive(True)
 
     def _before_menu_shows(self) -> None:
         if self._quitting:

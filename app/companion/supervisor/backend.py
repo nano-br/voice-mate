@@ -19,12 +19,15 @@ from collections import deque
 from collections.abc import Callable
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Final, Protocol
+from typing import TYPE_CHECKING, Final, Protocol
 
 from app.companion.client import DaemonClient, DaemonError
 from app.companion.dictation import EngineLanguage
 from app.companion.paths import home_dir
 from app.protocol.models import ShutdownReason
+
+if TYPE_CHECKING:
+    from app.companion.stt import EngineStt  # app.companion.stt imports this module
 
 log = logging.getLogger(__name__)
 
@@ -52,16 +55,27 @@ LOG_BACKUPS: Final = 3
 ExitCallback = Callable[[int, int, bool], None]
 
 
-def engine_script(engine_dir: str, port: int, language: EngineLanguage | None = None) -> str:
-    """`cd` into the engine checkout and run it. Never `shlex.quote` a `~` path: relative
-    paths are joined to "$HOME" inside double quotes (settings reject `"`, `$`, backtick and
-    newlines in `engine_dir`). `language` adds the dictation language flags to ARGS (their
-    values come from closed sets, so they need no quoting); None leaves the engine's own
-    defaults."""
+def make_script(engine_dir: str, target: str) -> str:
+    """`cd` into the engine checkout and run a make target (`target` includes its variables).
+    Never `shlex.quote` a `~` path: relative paths are joined to "$HOME" inside double quotes
+    (settings reject `"`, `$`, backtick and newlines in `engine_dir`)."""
     directory = engine_dir.strip()
-    target = f'"{directory}"' if directory.startswith("/") else f'"$HOME/{directory}"'
-    args = f"--daemon-port {port}" if language is None else f"--daemon-port {port} {language.cli_args()}"
-    return f'cd {target} && exec make run-engine ARGS="{args}"'
+    folder = f'"{directory}"' if directory.startswith("/") else f'"$HOME/{directory}"'
+    return f"cd {folder} && exec make {target}"
+
+
+def engine_script(
+    engine_dir: str, port: int, language: EngineLanguage | None = None, stt: EngineStt | None = None
+) -> str:
+    """Run the engine. `language` adds the dictation language flags to ARGS and `stt` the
+    transcription mode and model (their values come from closed sets, so they need no
+    quoting); None leaves the engine's own defaults."""
+    args = f"--daemon-port {port}"
+    if language is not None:
+        args += f" {language.cli_args()}"
+    if stt is not None and stt.cli_args():
+        args += f" {stt.cli_args()}"
+    return make_script(engine_dir, f'run-engine ARGS="{args}"')
 
 
 def env_token() -> str | None:
@@ -253,6 +267,10 @@ class EngineBackend(Protocol):
 
     def other_running_distros(self) -> list[str]: ...
 
+    def tool_command(self, engine_dir: str, target: str) -> list[str] | None:
+        """The command that runs `make <target>` in the engine checkout (`make stt-check`...),
+        None when this mode cannot reach the engine's files (external)."""
+
     def close(self) -> None: ...
 
 
@@ -306,6 +324,9 @@ class ExternalBackend:
 
     def other_running_distros(self) -> list[str]:
         return []
+
+    def tool_command(self, engine_dir: str, target: str) -> list[str] | None:
+        return None
 
     def close(self) -> None:
         return None

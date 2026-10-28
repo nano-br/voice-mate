@@ -8,6 +8,7 @@ from numpy.typing import NDArray
 
 from app.core.config import Config
 from app.i18n import _
+from app.protocol.models import SttBackendName, SttDevice
 
 _WHISPER_SAMPLE_RATE = 16000
 # Above this, it's worth running VAD to trim silence (long audio). Below, the
@@ -24,10 +25,14 @@ class OpenAIWhisperBackend:
     falls back to faster-whisper on CPU (faster than openai-whisper on CPU).
     """
 
+    name: SttBackendName = "openai-whisper"
+
     def __init__(self, config: Config) -> None:
         import whisper  # openai-whisper
 
         device = self._resolve_device(config)
+        self.device: SttDevice = "gpu" if device == "cuda" else "cpu"
+        self.model_name = config.model_size
         self._beam_size = config.beam_size
         self._fp16 = device == "cuda"
         # Fixed language (≠"auto"): stability + skips spoken-language detection

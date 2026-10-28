@@ -16,6 +16,7 @@ from typing import Any
 
 from app.core.config import FlowKind, GpuVendor, SttStrategy, TTSEngine, WhisperBackend
 from app.platform.kinds import PlatformKind, TriggerKind
+from app.protocol.models import SttMode
 
 CONFIG_DIR = Path.home() / ".config" / "voicemate"
 CONFIG_PATH = CONFIG_DIR / "config.toml"
@@ -27,6 +28,7 @@ _PLATFORMS: tuple[PlatformKind, ...] = ("windows", "linux-x11", "linux-wayland",
 _TRIGGERS: tuple[TriggerKind, ...] = ("keyboard-hooks", "pynput", "evdev", "socket")
 _STT_STRATEGIES: tuple[SttStrategy, ...] = ("auto", "faster-whisper-rocm", "whispercpp", "openai-whisper")
 _TTS_ENGINES: tuple[TTSEngine, ...] = ("omnivoice", "kokoro", "voxcpm", "none")
+_STT_MODES: tuple[SttMode, ...] = ("auto", "cpu", "gpu")
 
 
 @dataclass
@@ -45,6 +47,8 @@ class PersistedConfig:
     # False = failed (don't retry on every boot), None = never attempted.
     ct2_rocm_ok: bool | None = None
     daemon_port: int | None = None
+    # Default STT mode when the engine is started without --stt-mode.
+    stt_mode: SttMode | None = None
 
     def is_empty(self) -> bool:
         return all(getattr(self, f.name) is None for f in fields(self))
@@ -71,6 +75,7 @@ def load_persisted(path: Path = CONFIG_PATH) -> PersistedConfig:
         stt_strategy=_read_choice(data, "stt_strategy", _STT_STRATEGIES),
         ct2_rocm_ok=_read_bool(data, "ct2_rocm_ok"),
         daemon_port=_read_int(data, "daemon_port"),
+        stt_mode=_read_choice(data, "stt_mode", _STT_MODES),
     )
 
 

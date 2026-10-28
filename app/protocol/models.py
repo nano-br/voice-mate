@@ -7,7 +7,7 @@ docs/companion-app.md describes every endpoint; these are its payload shapes.
 
 from __future__ import annotations
 
-from typing import Literal, TypedDict
+from typing import Literal, NotRequired, TypedDict
 
 API_VERSION = 2
 
@@ -36,6 +36,44 @@ DeliveryStatus = Literal["pending", "delivered", "failed", "dismissed", "daemon"
 AckStatus = Literal["delivered", "failed", "dismissed"]
 ResultsQuery = Literal["unacked", "recent"]
 
+# Speech-to-text mode the user picks (passed to the engine as `--stt-mode`):
+#   - auto: the per-vendor chain picks the best backend installed (the historical behavior).
+#   - cpu: faster-whisper int8 on the processor; leaves the GPU entirely free.
+#   - gpu: the graphics card; falls back to the CPU (and says so in /health) when the
+#     GPU backend is not installed or the card is not usable.
+SttMode = Literal["auto", "cpu", "gpu"]
+# Where the transcription actually runs (may differ from the requested mode on fallback).
+SttDevice = Literal["cpu", "gpu"]
+SttBackendName = Literal["faster-whisper", "whispercpp", "openai-whisper"]
+# Whisper models offered per mode. large-v3-turbo is the default for both: on the CPU it
+# was more accurate than medium for about the same latency (docs/configuration.md).
+SttModel = Literal["large-v3-turbo", "large-v3", "medium", "small"]
+STT_MODELS: tuple[SttModel, ...] = ("large-v3-turbo", "large-v3", "medium", "small")
+DEFAULT_STT_MODEL: SttModel = "large-v3-turbo"
+
+
+class SttInfo(TypedDict):
+    """The transcription engine the daemon is running (in `/health` once ready)."""
+
+    mode: SttMode  # requested
+    device: SttDevice  # effective
+    backend: SttBackendName
+    model: str
+
+
+class SttModeStatus(TypedDict):
+    """One mode in the `make stt-check` JSON report (read by the companion through WSL)."""
+
+    ready: bool  # installed and usable on this machine
+    supported: bool  # the hardware can run it at all (false = no installable GPU backend)
+    detail: str  # English, for logs and the install dialog's details
+    download_mb: int  # rough size of what `make stt-install` would fetch (0 when ready)
+
+
+class SttCheckReport(TypedDict):
+    cpu: SttModeStatus
+    gpu: SttModeStatus
+
 
 class FlowInfo(TypedDict):
     name: str
@@ -61,6 +99,8 @@ class HealthPayload(TypedDict):
     flow_info: list[FlowInfo]
     tts: bool  # the claude_chat flow speaks its answers
     auth: bool  # a bearer token is required (all endpoints but /health)
+    # Null until the model is loaded; absent on engines older than the STT modes.
+    stt: NotRequired[SttInfo | None]
 
 
 class RegisterRequest(TypedDict, total=False):

@@ -27,7 +27,7 @@ from app.companion.contract import (
 )
 from app.companion.ui.chords import display_chord
 from app.i18n import _
-from app.protocol.models import AudioHealth, FlowKind
+from app.protocol.models import AudioHealth, FlowKind, SttInfo, SttMode, SttModel
 
 APP_NAME = "VoiceMate"  # product name: never translated
 # Windows truncates tray tooltips at 127 characters.
@@ -227,3 +227,38 @@ def hotkey_check_labels() -> dict[HotkeyCheck, str]:
 
 def hotkey_rule() -> str:
     return _("Use Ctrl, Alt, Shift or Win with a key, or a function key alone. F12 is reserved by Windows.")
+
+
+def stt_mode_labels() -> dict[SttMode, str]:
+    return {
+        "cpu": _("CPU (leaves the GPU free)"),
+        "gpu": _("GPU (fastest)"),
+        "auto": _("Automatic (engine setup)"),
+    }
+
+
+def stt_model_labels() -> dict[SttModel, str]:
+    # Model names are Whisper's own: never translated, only described.
+    return {
+        "large-v3-turbo": _("large-v3-turbo (recommended)"),
+        "large-v3": _("large-v3 (most accurate, slowest)"),
+        "medium": _("medium (faster)"),
+        "small": _("small (fastest, less accurate)"),
+    }
+
+
+def stt_line(stt: SttInfo | None) -> str:
+    """Where the engine is transcribing, for the status window."""
+    if stt is None:
+        return _("Not known yet")
+    device = _("GPU") if stt["device"] == "gpu" else _("CPU")
+    line = _("{device}, {model}").format(device=device, model=stt["model"])
+    if stt["mode"] == "gpu" and stt["device"] == "cpu":
+        line += "\n" + _("The GPU mode is not working. Install it from the Transcription menu.")
+    return line
+
+
+def download_size(megabytes: int) -> str:
+    if megabytes >= 1000:
+        return _("about {size} GB").format(size=f"{megabytes / 1000:.1f}")
+    return _("about {size} MB").format(size=max(megabytes, 1))
