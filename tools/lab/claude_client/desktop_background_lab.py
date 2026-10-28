@@ -8,65 +8,40 @@ Notepad stands in for "the spreadsheet the person is working in". Steps:
   3. switch conversations by invoking sidebar buttons, in the background
   4. "flash" mode: bring the Desktop forward, type, Enter, give the focus back
 
-Only acts on the conversation named by --lab-title; every send is prefixed with a
+Only acts on the conversation titled exactly --lab-title; every send is prefixed with a
 marker so the transcript shows where it came from.
 """
 
 from __future__ import annotations
 
 import argparse
+import contextlib
 import ctypes
 import subprocess
 import sys
 import time
-from collections.abc import Iterator
 
 import uiautomation as auto
+from uia_common import (
+    claude_window,
+    conversation_doc,
+    ensure_focus_in_prompt,
+    ensure_foreground,
+    find_prompt,
+    prompt_text,
+    require_title,
+    title_matches,
+    walk,
+)
 
 user32 = ctypes.windll.user32
-WM_CHAR, WM_KEYDOWN, WM_KEYUP, VK_RETURN = 0x0102, 0x0100, 0x0101, 0x0D
+WM_CHAR, WM_KEYDOWN, WM_KEYUP, WM_CLOSE, VK_RETURN = 0x0102, 0x0100, 0x0101, 0x0010, 0x0D
 
 
-def walk(c: auto.Control, d: int = 0, max_depth: int = 90) -> Iterator[auto.Control]:
-    yield c
-    if d < max_depth:
-        for ch in c.GetChildren():
-            yield from walk(ch, d + 1, max_depth)
-
-
-def claude_window() -> auto.Control:
-    for w in auto.GetRootControl().GetChildren():
-        if w.ClassName.startswith("Chrome_WidgetWin") and w.Name == "Claude":
-            return w
-    sys.exit("Claude window not found")
-
-
-def conversation_doc(win: auto.Control) -> auto.Control | None:
-    for c in walk(win, max_depth=30):
-        if (
-            c.ControlTypeName == "DocumentControl"
-            and c.AutomationId == "RootWebArea"
-            and c.Name.endswith("Claude Code")
-        ):
-            return c
-    return None
-
-
-def render_hwnd(doc: auto.Control) -> int:
-    """The Chrome_RenderWidgetHostHWND that hosts the conversation page."""
+def render_hwnd(doc: auto.Control) -> tuple[int, str]:
+    """Handle and class of the window that hosts the conversation page (Chrome_RenderWidgetHostHWND)."""
     parent = doc.GetParentControl()
-    return parent.NativeWindowHandle
-
-
-def prompt(win: auto.Control) -> auto.Control | None:
-    for c in walk(win):
-        if c.ControlTypeName == "EditControl" and "ProseMirror" in c.ClassName:
-            return c
-    return None
-
-
-def prompt_text(p: auto.Control) -> str:
-    return "".join(t.Name for t in walk(p) if t.ControlTypeName == "TextControl").strip()
+    return parent.NativeWindowHandle, parent.ClassName
 
 
 def post_text(hwnd: int, text: str, enter: bool) -> None:
@@ -85,10 +60,52 @@ def fg_title() -> str:
     return buf.value
 
 
+def notepad_handles() -> dict[int, int]:
+    """Top-level Notepad windows as {hwnd: pid}."""
+    return {w.NativeWindowHandle: w.ProcessId for w in auto.GetRootControl().GetChildren() if w.ClassName == "Notepad"}
+
+
+def launch_notepad(known: set[int]) -> tuple[subprocess.Popen, int]:
+    """Start Notepad and return (process, hwnd of its window), or abort.
+
+    On Windows 11 notepad.exe may hand over to another process, so the window can belong to
+    a pid other than the launched one; then accept the Notepad window that did not exist before."""
+    note = subprocess.Popen(["notepad.exe"])
+    deadline = time.monotonic() + 8
+    while time.monotonic() < deadline:
+        found = notepad_handles()
+        for hwnd, pid in found.items():
+            if pid == note.pid:
+                return note, hwnd
+        new = [h for h in found if h not in known]
+        if new:
+            return note, new[0]
+        time.sleep(0.2)
+    note.kill()
+    sys.exit("Notepad window not found")
+
+
 def sidebar_button(win: auto.Control, title_prefix: str) -> auto.Control | None:
-    for c in walk(win, max_depth=40):
-        if c.ControlTypeName == "ButtonControl" and c.Name.startswith(title_prefix) and "Mais opções" not in c.Name:
+    for c, _ in walk(win, max_depth=40):
+        if c.ControlTypeName == "ButtonControl" and title_matches(c.Name, title_prefix) and "Mais opções" not in c.Name:
             return c
+    return None
+
+
+def doc_name(win: auto.Control) -> str:
+    doc = conversation_doc(win)
+    return doc.Name if doc else ""
+
+
+def switch_to(win: auto.Control, button: auto.Control, timeout: float = 5.0) -> float | None:
+    """Invoke a sidebar button; seconds until the document name changes (None on timeout)."""
+    before = doc_name(win)
+    t0 = time.perf_counter()
+    button.GetInvokePattern().Invoke()
+    while time.perf_counter() - t0 < timeout:
+        if doc_name(win) != before:
+            return time.perf_counter() - t0
+        time.sleep(0.05)
     return None
 
 
@@ -101,18 +118,34 @@ def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
 
     win = claude_window()
-    note = subprocess.Popen(["notepad.exe"])
-    time.sleep(1.5)
-    other_app = user32.GetForegroundWindow()
+    note, other_app = launch_notepad(set(notepad_handles()))
+    try:
+        run(win, other_app, args)
+    finally:
+        # The run may stop with the Desktop minimized, and the Notepad window may not belong to the
+        # launched pid, so restore the Desktop and close Notepad by window handle.
+        with contextlib.suppress(Exception):
+            win.GetWindowPattern().SetWindowVisualState(auto.WindowVisualState.Normal)
+        user32.PostMessageW(other_app, WM_CLOSE, 0, 0)
+        note.kill()
+
+
+def run(win: auto.Control, other_app: int, args: argparse.Namespace) -> None:
+    user32.SetForegroundWindow(other_app)
+    time.sleep(0.5)
     print("foreground (stand-in for Excel):", fg_title())
 
+    require_title(win, args.lab_title)
     doc = conversation_doc(win)
-    assert doc is not None and doc.Name.startswith(args.lab_title), f"open conversation is {doc and doc.Name!r}"
-    p = prompt(win)
-    assert p is not None
-    hwnd = render_hwnd(doc)
+    p = find_prompt(win)
+    assert doc is not None and p is not None
+    hwnd, hwnd_class = render_hwnd(doc)
+    print(f"render window: hwnd={hwnd:#x} class={hwnd_class!r}")
+    if not hwnd:
+        sys.exit("render window handle is 0, the posted keys would not reach the page")
 
     # 1. background, window visible but not in front
+    require_title(win, args.lab_title)
     post_text(hwnd, "VOICEMATE BG LAB 1 (background) ", enter=False)
     time.sleep(0.8)
     print("1. prompt now:", repr(prompt_text(p)), "| foreground:", fg_title())
@@ -120,9 +153,10 @@ def main() -> None:
     # 2. minimized
     win.GetWindowPattern().SetWindowVisualState(auto.WindowVisualState.Minimized)
     time.sleep(1.0)
+    require_title(win, args.lab_title)
     post_text(hwnd, "+ 2 (minimized)", enter=args.send)
     time.sleep(1.5)
-    p = prompt(win)
+    p = find_prompt(win)
     print(
         "2. tree readable while minimized:",
         p is not None,
@@ -132,18 +166,20 @@ def main() -> None:
         fg_title(),
     )
 
-    # 3. switch conversations while minimized, then back
-    t0 = time.perf_counter()
+    # 3. switch conversations while minimized, then back; time from Invoke() to the new document name
     other = sidebar_button(win, args.other_title)
     if other is not None:
-        other.GetInvokePattern().Invoke()
-        time.sleep(2.5)  # the document name updates after the view switches
-        print("3. after invoke:", conversation_doc(win) and conversation_doc(win).Name)
+        took = switch_to(win, other)
+        print("3. after invoke:", doc_name(win), f"({'timeout' if took is None else f'{took:.2f}s'})")
         back = sidebar_button(win, args.lab_title)
         if back is not None:
-            back.GetInvokePattern().Invoke()
-            time.sleep(1.5)
-        print("3. back on:", conversation_doc(win) and conversation_doc(win).Name, f"({time.perf_counter() - t0:.1f}s)")
+            took = switch_to(win, back)
+            print("3. back on:", doc_name(win), f"({'timeout' if took is None else f'{took:.2f}s'})")
+            # A label like "<title> - notes" also matches; say so instead of trusting it.
+            if doc_name(win) != f"{args.lab_title} - Claude Code":
+                print("3. warning: the sidebar match opened another conversation")
+        else:
+            print("3. sidebar button for the lab conversation not found")
     else:
         print("3. sidebar button not found (sidebar hidden while minimized?)")
 
@@ -156,21 +192,29 @@ def main() -> None:
     before = user32.GetForegroundWindow()
     print("4. before flash, foreground:", fg_title())
     t0 = time.perf_counter()
-    win.SetActive()
-    p = prompt(win)
-    doc = conversation_doc(win)
-    # Re-check right before typing: a conversation switch changes where the keys land.
-    if p is not None and doc is not None and doc.Name.startswith(args.lab_title):
+    try:
+        win.SetActive()
+        p = find_prompt(win)
+        if p is None:
+            sys.exit("prompt box not found")
         p.SetFocus()
+        time.sleep(0.2)
+        # Re-check right before typing: a conversation switch changes where the keys land.
+        ensure_foreground(win)
+        require_title(win, args.lab_title)
+        ensure_focus_in_prompt()
         auto.SendKeys("{Ctrl}a{Delete}", waitTime=0.05)
         auto.SendKeys("VOICEMATE BG LAB 4 (flash)", interval=0.002, waitTime=0.05)
         if args.send:
+            ensure_foreground(win)
+            require_title(win, args.lab_title)
+            ensure_focus_in_prompt()
             auto.SendKeys("{Enter}", waitTime=0.05)
-    user32.SetForegroundWindow(before)
+    finally:
+        user32.SetForegroundWindow(before)
     print(f"4. flash took {time.perf_counter() - t0:.2f}s, foreground back to: {fg_title()}")
 
     time.sleep(1.0)
-    note.kill()
 
 
 if __name__ == "__main__":

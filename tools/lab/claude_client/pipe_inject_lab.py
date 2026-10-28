@@ -33,13 +33,12 @@ def session_files(pid: int) -> tuple[dict, str | None]:
     return info, keys[0] if keys else None
 
 
-def send_over_pipe(pipe: str, lines: list[dict]) -> str:
-    """Write JSON lines to a Windows named pipe and return whatever it answers."""
+def send_over_pipe(pipe: str, lines: list[dict]) -> None:
+    """Write JSON lines to a Windows named pipe. The answer is not read: the effect is checked on the target side."""
     with open(pipe, "r+b", buffering=0) as p:
         for obj in lines:
             p.write((json.dumps(obj) + "\n").encode())
         time.sleep(1.0)
-        return ""  # the pipe may not answer; the effect is checked on the target side
 
 
 def main() -> None:
@@ -75,6 +74,14 @@ def main() -> None:
         encoding="utf-8",
     )
 
+    try:
+        inject(target, args)
+    finally:
+        if target.poll() is None:
+            target.kill()
+
+
+def inject(target: subprocess.Popen, args: argparse.Namespace) -> None:
     def reader() -> None:
         assert target.stdout is not None
         for line in target.stdout:
@@ -90,8 +97,13 @@ def main() -> None:
     target.stdin.flush()
     time.sleep(8)
 
-    info, key_path = session_files(target.pid)
+    try:
+        info, key_path = session_files(target.pid)
+    except FileNotFoundError:
+        sys.exit("the target has not registered ~/.claude/sessions/<pid>.json yet")
     pipe = info.get("messagingSocketPath")
+    if not pipe:
+        sys.exit("session file has no messagingSocketPath")
     token = open(key_path, encoding="utf-8").read().strip() if key_path else ""
     print(
         f"pipe={pipe} key_file={'yes' if key_path else 'no'} key_len={len(token)} key_is_json={token.startswith('{')}"
@@ -119,7 +131,11 @@ def main() -> None:
         time.sleep(args.wait / 2)
 
     target.stdin.close()
-    target.wait(timeout=30)
+    try:
+        target.wait(timeout=30)
+    except subprocess.TimeoutExpired:
+        print("target still busy after 30 s, killing it", flush=True)
+        target.kill()
     print("target session:", info.get("sessionId"))
 
 

@@ -4,12 +4,13 @@ Research prototype, not production code. Needs `pip install uiautomation` (Windo
 
   python desktop_uia_lab.py dump [--depth 40]   print the accessibility tree of the Claude window
   python desktop_uia_lab.py prompt              find the prompt box and print what it holds
-  python desktop_uia_lab.py type "text"         put text in the prompt box without sending it
-  python desktop_uia_lab.py send "text"         put text in the prompt box and press Enter
+  python desktop_uia_lab.py type "text" --expect-title T   put text in the prompt box without sending it
+  python desktop_uia_lab.py send "text" --expect-title T   put text in the prompt box and press Enter
   python desktop_uia_lab.py read [--last 5]     print the last messages shown in the conversation
 
-`type`/`send` act on whatever conversation is open in the window; open the right one
-first (for example with the deep link `claude://claude.ai/epitaxy/local_<id>`).
+`type`/`send` act on the conversation open in the window, and only when its title starts
+is exactly --expect-title (checked right before the keys and again before Enter); open the
+right one first (for example with the deep link `claude://claude.ai/epitaxy/local_<id>`).
 """
 
 from __future__ import annotations
@@ -19,51 +20,31 @@ import sys
 import time
 
 import uiautomation as auto
+from uia_common import (
+    claude_window,
+    conversation_title,
+    ensure_focus_in_prompt,
+    ensure_foreground,
+    escape_sendkeys,
+    find_prompt,
+    prompt_text,
+    require_title,
+    walk,
+)
 
 
-def claude_window() -> auto.WindowControl:
-    for w in auto.GetRootControl().GetChildren():
-        if w.ControlTypeName == "WindowControl" and w.ClassName.startswith("Chrome_WidgetWin") and "Claude" in w.Name:
-            return w
-    sys.exit("Claude Desktop window not found")
-
-
-def walk(ctrl: auto.Control, depth: int = 0, max_depth: int = 40):  # noqa: ANN201
-    yield ctrl, depth
-    if depth >= max_depth:
-        return
-    for child in ctrl.GetChildren():
-        yield from walk(child, depth + 1, max_depth)
-
-
-def find_prompt(win: auto.Control) -> auto.Control | None:
-    """The Code tab prompt is a ProseMirror (tiptap) editor exposed as an Edit control named "Prompt"."""
-    for c, _ in walk(win, max_depth=90):
-        if c.ControlTypeName == "EditControl" and "ProseMirror" in c.ClassName:
-            return c
-    return None
-
-
-def prompt_text(c: auto.Control) -> str:
-    """ProseMirror exposes no Value; the text lives in the Text children of the editor."""
-    return "".join(t.Name for t, _ in walk(c) if t.ControlTypeName == "TextControl").strip()
-
-
-def conversation_title(win: auto.Control) -> str:
-    for c, _ in walk(win, max_depth=30):
-        if c.ControlTypeName == "DocumentControl" and c.AutomationId == "RootWebArea" and c.Name:
-            return c.Name
-    return ""
-
-
-def set_prompt(win: auto.Control, c: auto.Control, text: str) -> None:
+def set_prompt(win: auto.Control, c: auto.Control, text: str, expected_title: str) -> None:
     """Bring the window forward, focus the editor and type. Keystrokes go to the foreground
-    window, so without SetActive they can land in whatever app the person is using."""
+    window, so SetActive is not enough: confirm the foreground, the conversation and the
+    focused element right before the first key."""
     win.SetActive()
     c.SetFocus()
     time.sleep(0.2)
+    ensure_foreground(win)
+    require_title(win, expected_title)
+    ensure_focus_in_prompt()
     auto.SendKeys("{Ctrl}a{Delete}", waitTime=0.1)
-    auto.SendKeys(text.replace("{", "{{}").replace("}", "{}}"), interval=0.005, waitTime=0.2)
+    auto.SendKeys(escape_sendkeys(text), interval=0.005, waitTime=0.2)
 
 
 def main() -> None:
@@ -72,7 +53,10 @@ def main() -> None:
     ap.add_argument("text", nargs="?")
     ap.add_argument("--depth", type=int, default=40)
     ap.add_argument("--last", type=int, default=5)
+    ap.add_argument("--expect-title", help="required by type/send: exact title of the conversation to write to")
     args = ap.parse_args()
+    if args.cmd in ("type", "send") and not args.expect_title:
+        ap.error("type and send require --expect-title")
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     win = claude_window()
     t0 = time.perf_counter()
@@ -89,9 +73,14 @@ def main() -> None:
         if p is None:
             sys.exit("prompt box not found")
         print("conversation:", conversation_title(win))
-        set_prompt(win, p, args.text or "")
+        require_title(win, args.expect_title)
+        set_prompt(win, p, args.text or "", args.expect_title)
         print(f"box now holds {prompt_text(p)!r}")
         if args.cmd == "send":
+            # The conversation may have changed while typing: check again before Enter.
+            ensure_foreground(win)
+            require_title(win, args.expect_title)
+            ensure_focus_in_prompt()
             auto.SendKeys("{Enter}", waitTime=0.3)
             print("sent")
     elif args.cmd == "read":
