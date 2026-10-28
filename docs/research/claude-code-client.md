@@ -171,6 +171,16 @@ Every Claude Code process binds `\\.\pipe\LOCAL\cc-msg-<hex>`, listed as `messag
 
 The phone talks to the session through claude.ai, and the CLI binary contains the endpoints it uses (`/v1/code/sessions/{id}/events`, `/events/stream`, `/bridge`, ...). Using them from VoiceMate would mean taking the person's OAuth token out of `~/.claude/.credentials.json` and calling an undocumented API as if VoiceMate were a first-party client. That was not done: it is fragile, and handling the token by hand is not acceptable for a lab. If Anthropic documents a Remote Control client API, this becomes the cleanest route.
 
+### 8.4 What UI Automation can do while the person works in another app
+
+Scenario: the person is typing in a spreadsheet and presses the VoiceMate hotkey. Tested with Notepad as the stand-in app ([`desktop_background_lab.py`](../../tools/lab/claude_client/desktop_background_lab.py)):
+
+- **Reading works in the background and minimized.** The whole tree (conversation text, prompt box, sidebar) stays readable with the Desktop minimized; no focus change.
+- **Buttons work in the background and minimized.** Invoking a sidebar entry switched the open conversation in about 0.8 s with the window minimized and Notepad in front. Other invokable controls seen: the `Claude`/`Code` tabs, the session panes (`Terminal`, `Alterações`, `Navegador`, `Arquivos`), `Nova sessão em <project>` per project, the send button. Sidebar labels change with state (the title plus a running suffix, or `Mensagem recebida de <title>`), so match by prefix and re-read after each action.
+- **Typing does not work without focus.** Posting `WM_CHAR` messages to the Desktop's web view, in the background or minimized, put nothing in the prompt box. The ProseMirror editor only takes real keyboard input, and that goes to the foreground window.
+- **"Flash" mode works.** Bring the Desktop forward, focus the prompt, type, invoke the send button, give the foreground back to the previous window. Notepad got the focus back and kept receiving the person's typing; the prompt arrived in the Desktop as a normal message. The run took 2.2 s, most of it walking the accessibility tree from scratch; the part where the Desktop holds the focus is the typing itself. Pasting instead of typing and caching the prompt element should bring it to a few hundred milliseconds. Keystrokes the person makes during that window go to the Desktop, so VoiceMate should do it in one short burst (or ask the person to pause).
+- **Lesson from an incident in the lab.** After a conversation switch the lab typed into the wrong conversation (text only, not sent, then removed), because it checked the open conversation once at the start. Check the open conversation's title immediately before every keystroke burst and refuse to type when it does not match.
+
 ## 9. Disk reader prototype
 
 [`session_watch.py`](../../tools/lab/claude_client/session_watch.py), standard library only:
@@ -217,9 +227,9 @@ flowchart LR
     desk <-->|"Remote Control"| phone
 ```
 
-1. **Input through the Desktop.** A companion hotkey (or the voice flow) sends the transcribed text to the conversation open in the Desktop: UI Automation finds the `Prompt` box, types (or pastes) and presses Enter. Optionally a "fill only" mode leaves the text in the box for the person to review and send. The conversation then shows in the Desktop and on the phone like any typed prompt.
+1. **Input through the Desktop.** A companion hotkey (or the voice flow) sends the transcribed text to the chosen conversation: UI Automation switches to it if needed (works in the background), takes the focus for a short burst, pastes into the `Prompt` box, invokes send and gives the focus back to the app the person was using (§8.4). Optionally a "fill only" mode leaves the text in the box for the person to review and send. The conversation then shows in the Desktop and on the phone like any typed prompt.
 2. **Output from disk.** The session reader maps the open conversation to its `.jsonl` (Desktop index, §5), follows it and emits the assistant text at `turn_end` (or as it arrives) for the engine to speak. No SDK or CLI process is spawned to read.
-3. **Picking a conversation.** The reader lists conversations with title and busy/idle; VoiceMate opens one with the deep link `claude://claude.ai/epitaxy/local_<uuid>` before typing.
+3. **Picking a conversation.** The reader lists conversations with title and busy/idle; VoiceMate opens one by invoking its sidebar entry (tested, works minimized) or with the deep link `claude://claude.ai/epitaxy/local_<uuid>`.
 4. **SDK core only as an option.** A persistent `ClaudeSDKClient` (§3, about 1.5 s to the first token) stays useful for quick voice questions that do not need to be in the Desktop. It must never resume a conversation the Desktop is running (§7). With the requirement above, it is a secondary mode, not the base.
 5. **Windows side.** Both pieces live in the companion, next to the Desktop window and `~/.claude`; the WSL engine keeps doing speech and talks to the companion over the existing local HTTP channel.
 
