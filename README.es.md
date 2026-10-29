@@ -157,7 +157,7 @@ El asistente es una conversación de Claude, la central, que sabe qué hacen tus
 | Cómo escribe VoiceMate en ella | Directamente, por el proceso | Un "flash" breve: la ventana de Desktop pasa al frente, se pega y envía el texto, y el foco vuelve (unos 2 segundos) |
 | Necesita | La CLI `claude` y un inicio de sesión de Claude | Claude Desktop abierto y la pantalla desbloqueada; solo en Windows |
 
-1. **Requisitos:** la CLI de Claude Code (`claude` en el `PATH` de Windows, o su ruta en `VOICEMATE_CLAUDE_CLI`) y un inicio de sesión de Claude en ese equipo (`claude auth login`, una vez).
+1. **Requisitos:** la CLI de Claude Code (`claude` en el `PATH` de Windows, en `~/.local/bin` o en `%APPDATA%\npm`, o su ruta en `VOICEMATE_CLAUDE_CLI`) y un inicio de sesión de Claude en ese equipo (`claude auth login`, una vez).
 2. **Activarlo:** pulsa **Asistente** en la ventana de estado (explica cómo cuando el asistente está desactivado), o ve a Ajustes > **Asistente** y define "Modo del asistente:".
 3. **Usarlo:** pulsa `Ctrl+Alt+S`, habla, pulsa `Ctrl+Alt+S` otra vez, y responde con la voz del motor. O escribe en su ventana (`Ctrl+Alt+W`). `Ctrl+Alt+R` lee las respuestas que están en espera.
 
@@ -476,7 +476,7 @@ Vista general. Diagrama completo: [docs/architecture.md, Supervisor](docs/archit
 | Un texto no llegó al portapapeles | Está en **No copiadas** (menú de la bandeja y ventana de estado). Haz clic en él para copiarlo de nuevo. |
 | El habla en inglés sale mal, o los mensajes del motor están en portugués | Un motor iniciado a mano usa portugués por defecto: añade `ARGS="--output-lang en"` a `make run`. |
 | La GPU está ocupada con otro trabajo | Elige el modo CPU: Configuración > **General** > "Transcripción", o menú de la bandeja > "Transcripción". VoiceMate pregunta antes de instalar un modo que falta. |
-| El asistente dice "No se encontró Claude Code" o "Claude Code no ha iniciado sesión" | Instala Claude Code (o define `VOICEMATE_CLAUDE_CLI`), o ejecuta `claude auth login` en un terminal, y pulsa **Reiniciar** en la ventana del asistente. Más en [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental). |
+| El asistente dice "No se encontró Claude Code" o "Claude Code no ha iniciado sesión" | Ejecuta `where claude` en un terminal. VoiceMate también busca en `~/.local/bin` y en `%APPDATA%\npm`; si `claude` está en otro sitio, define `VOICEMATE_CLAUDE_CLI` con la ruta completa. Si no está instalado, instala Claude Code. Para el aviso de inicio de sesión, ejecuta `claude auth login`. Después pulsa **Reiniciar** en la ventana del asistente. Más en [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental). |
 | El modo Desktop dice "No se ha elegido ninguna conversación de Claude Desktop" o "No se pudo preparar el asistente" | "Conversación de Desktop:" está vacía, o ninguna conversación de Claude Desktop tiene ese título exacto: escribe el título tal como aparece en la barra lateral de Claude Desktop, abre Claude Desktop y pulsa **Reiniciar**. Más en [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental). |
 | Otro problema del lado del motor | Ejecuta `make doctor` en la carpeta del motor. Imprime una solución para cada comprobación fallida. |
 

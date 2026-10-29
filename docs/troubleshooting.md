@@ -52,7 +52,7 @@ In this order: the detected platform; on WSL2 only, the WSLg PulseAudio socket, 
 
 | Symptom | Cause | What to do |
 |---|---|---|
-| "Claude Code was not found" | The `claude` command is not on the `PATH` of Windows | Install Claude Code, or set `VOICEMATE_CLAUDE_CLI` to its full path, then press **Restart** in the assistant window |
+| "Claude Code was not found", and a voice prompt answers "The assistant could not start" | VoiceMate, started at sign-in, gets the `PATH` stored in the Windows registry. The native Claude Code installer puts `claude.exe` in `%USERPROFILE%\.local\bin`, a folder that often only a shell profile adds to the `PATH`, so a terminal finds `claude` and VoiceMate does not | Nothing to do on a current version: VoiceMate also looks in `~/.local/bin` and in `%APPDATA%\npm`. To check, run `where claude` in a terminal: if it prints nothing, install Claude Code. If `claude` lives somewhere else, set `VOICEMATE_CLAUDE_CLI` to its full path ([configuration.md](configuration.md#environment-variables)), then press **Restart** in the assistant window |
 | "Claude Code is not signed in" | No Claude login on this computer | Run `claude auth login` in a terminal, then **Restart**. The login of Claude Desktop does not count |
 | "The assistant could not start" or "The assistant stopped" | The process failed or ended | Open `companion.log` (tray menu > **Engine** > **Open logs**), fix the cause, then **Restart** |
 | "The assistant could not be set up" | VoiceMate could not install the skill or write `~/.voicemate/assistant.json` | Check that your user folder and `~/.claude` are writable; the log has the details |

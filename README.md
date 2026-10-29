@@ -157,7 +157,7 @@ The assistant is one Claude conversation, the central one, that knows what your 
 | How VoiceMate writes to it | Directly, through the process | A brief "flash": the Desktop window comes forward, the text is pasted and sent, and the focus goes back (about 2 seconds) |
 | Needs | The `claude` CLI and a Claude login | Claude Desktop open and the screen unlocked; Windows only |
 
-1. **Requirements:** the Claude Code CLI (`claude` on the `PATH` of Windows, or its path in `VOICEMATE_CLAUDE_CLI`) and a Claude login on that computer (`claude auth login` once).
+1. **Requirements:** the Claude Code CLI (`claude` on the `PATH` of Windows, in `~/.local/bin` or `%APPDATA%\npm`, or its path in `VOICEMATE_CLAUDE_CLI`) and a Claude login on that computer (`claude auth login` once).
 2. **Turn it on:** press **Assistant** in the status window (it says how when the assistant is off), or go to Settings > **Assistant** and set "Assistant mode:".
 3. **Use it:** press `Ctrl+Alt+S`, speak, press `Ctrl+Alt+S` again, and it answers in the engine's voice. Or type in its window (`Ctrl+Alt+W`). `Ctrl+Alt+R` reads the answers that are waiting.
 
@@ -465,7 +465,7 @@ Overview. Full diagram: [docs/architecture.md, Supervisor](docs/architecture.md#
 | A text did not reach the clipboard | It is in **Not copied** (tray menu and status window). Click it to copy it again. |
 | English speech comes out wrong, or engine messages are in Portuguese | An engine started by hand defaults to Portuguese: add `ARGS="--output-lang en"` to `make run`. |
 | The GPU is busy with other work | Choose the CPU mode: Settings > **General** > "Transcription", or tray menu > "Transcription". VoiceMate asks before it installs a mode that is missing. |
-| The assistant says "Claude Code was not found" or "Claude Code is not signed in" | Install Claude Code (or set `VOICEMATE_CLAUDE_CLI`), or run `claude auth login` in a terminal, then press **Restart** in the assistant window. More in [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental). |
+| The assistant says "Claude Code was not found" or "Claude Code is not signed in" | Run `where claude` in a terminal. VoiceMate also looks in `~/.local/bin` and `%APPDATA%\npm`; if `claude` is somewhere else, set `VOICEMATE_CLAUDE_CLI` to its full path. If it is not installed, install Claude Code. For the sign-in message, run `claude auth login`. Then press **Restart** in the assistant window. More in [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental). |
 | The Desktop mode says "No Claude Desktop conversation is chosen" or "The assistant could not be set up" | "Desktop conversation:" is empty, or no Claude Desktop conversation has that exact title: type the title exactly as in the Claude Desktop sidebar, open Claude Desktop, then press **Restart**. More in [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental). |
 | Something else on the engine side | Run `make doctor` in the engine folder. It prints a fix for each failed check. |
 

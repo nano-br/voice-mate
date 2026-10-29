@@ -157,7 +157,7 @@ make run ARGS="--output-lang en"     # 用引擎自带的快捷键启动引擎�
 | VoiceMate 如何写入 | 直接通过进程 | 短暂的“闪现”：Desktop 窗口来到前台，文本被粘贴并发送，焦点随后返回（约 2 秒） |
 | 需要 | `claude` CLI 和 Claude 登录 | Claude Desktop 已打开且屏幕未锁定；仅限 Windows |
 
-1. **要求：**Claude Code CLI（Windows 的 `PATH` 中有 `claude`，或在 `VOICEMATE_CLAUDE_CLI` 中给出路径）以及这台电脑上的 Claude 登录（执行一次 `claude auth login`）。
+1. **要求：**Claude Code CLI（Windows 的 `PATH` 中，或 `~/.local/bin`、`%APPDATA%\npm` 中有 `claude`，或在 `VOICEMATE_CLAUDE_CLI` 中给出路径）以及这台电脑上的 Claude 登录（执行一次 `claude auth login`）。
 2. **开启：**在状态窗口中点 **助手**（助手关闭时它会说明怎么做），或到 设置 > **助手** 设定“助手模式：”。
 3. **使用：**按 `Ctrl+Alt+S`，说话，再按一次 `Ctrl+Alt+S`，它会用引擎的声音回答。或者在它的窗口里输入文字（`Ctrl+Alt+W`）。`Ctrl+Alt+R` 朗读待听的回答。
 
@@ -476,7 +476,7 @@ flowchart TD
 | 文本没有进入剪贴板 | 它在 **未复制** 列表中（托盘菜单和状态窗口里都有）。单击它即可再次复制。 |
 | 英语语音识别结果不对，或者引擎消息是葡萄牙语 | 手动启动的引擎默认使用葡萄牙语：给 `make run` 加上 `ARGS="--output-lang en"`。 |
 | GPU 正忙于其他工作 | 选择 CPU 模式：设置 > **常规** > “转写”，或托盘菜单 > “转写”。尚未安装的模式会先询问你，再安装。 |
-| 助手提示“未找到 Claude Code”或“Claude Code 尚未登录” | 安装 Claude Code（或设置 `VOICEMATE_CLAUDE_CLI`），或在终端运行 `claude auth login`，然后在助手窗口点“重新启动”。更多见 [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental)。 |
+| 助手提示“未找到 Claude Code”或“Claude Code 尚未登录” | 在终端运行 `where claude`。VoiceMate 还会在 `~/.local/bin` 和 `%APPDATA%\npm` 中查找；如果 `claude` 在其他位置，请把 `VOICEMATE_CLAUDE_CLI` 设为它的完整路径。如果尚未安装，请安装 Claude Code。遇到未登录的提示时，运行 `claude auth login`。然后在助手窗口点“重新启动”。更多见 [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental)。 |
 | Desktop 模式提示“未选择 Claude Desktop 对话”或“无法准备助手” | “Desktop 对话：”为空，或没有 Claude Desktop 对话有这个确切标题：按 Claude Desktop 侧边栏中的样子准确输入标题，打开 Claude Desktop，然后点 **重新启动**。更多见 [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental)。 |
 | 引擎一侧的其他问题 | 在引擎文件夹中运行 `make doctor`。每一项未通过的检查它都会给出修复方法。 |
 

@@ -276,6 +276,37 @@ You talk with the **talk hotkey** (`Ctrl+Alt+S` by default): press, speak, press
 
 Replies are spoken by the engine, sentence by sentence, so the first sentence plays while the next one is made. The voice comes from Kokoro or from your own provider, any service that follows the [TTS provider protocol](tts-provider-protocol.md) (Settings > **Voice**). If the engine cannot speak, the replies stay text and the short notices use the Windows voice.
 
+### Never over a recording
+
+The assistant's voice never speaks over the microphone. While VoiceMate records, anything the assistant has to say waits: a reply, an answer from another conversation delivered by voice, a short notice. It is said when the recording ends.
+
+If you start a recording while it is speaking, the sentence you were hearing is cut and said again from its start afterwards, followed by whatever was waiting. The voice goes quiet at the moment you press the key, before the microphone opens.
+
+A recording that does not reach the assistant does not lose anything: the voice simply goes on. What does silence it for good is a new prompt to the assistant, "stop talking", and the other assistant hotkeys ("Hear what's ready", the window, the mode and "Back to the assistant").
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Speaking: a reply or a notice
+    Speaking --> Held: you start a recording,<br/>the sentence is cut
+    Held --> Held: more replies queue up
+    Held --> Resumed: the recording ends
+    Resumed --> Speaking: the cut sentence again,<br/>then the queue
+    Speaking --> Silenced: new prompt, "stop talking"<br/>or an assistant hotkey
+    Held --> Silenced: new prompt, "stop talking"<br/>or an assistant hotkey
+    Speaking --> [*]: nothing left to say
+    Silenced --> [*]
+
+    classDef ok fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+    classDef warn fill:#f9a825,stroke:#c17900,color:#000000
+    classDef bad fill:#c0392b,stroke:#922b21,color:#ffffff
+    classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
+    class Speaking ok
+    class Held warn
+    class Resumed system
+    class Silenced bad
+```
+
 ## 8. Settings by voice
 
 Ask "only play a sound when a conversation answers" or "use Sonnet" and the central changes that setting through a `set_setting` action. VoiceMate checks it against a fixed list, applies it the same way the settings window does, and shows a notice ("Setting changed: Answers from other conversations = Only play a sound and keep the answer").
