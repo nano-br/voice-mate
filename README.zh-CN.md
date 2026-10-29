@@ -37,7 +37,7 @@ VoiceMate 能立刻把语音变成文字，随时交给任何 AI 工具：给编
 
 ## 目录
 
-[功能](#功能) · [截图](#截图) · [快速开始](#快速开始) · [使用](#使用) · [语音助手](#语音助手-实验性) · [配置](#配置) · [架构](#架构) · [故障排查](#故障排查) · [文档](#文档) · [参与贡献](#参与贡献) · [许可证](#许可证)
+[功能](#功能) · [截图](#截图) · [快速开始](#快速开始) · [使用](#使用) · [语音助手](#语音助手实验性) · [配置](#配置) · [架构](#架构) · [故障排查](#故障排查) · [文档](#文档) · [参与贡献](#参与贡献) · [许可证](#许可证)
 
 ## 功能
 
@@ -68,7 +68,7 @@ VoiceMate 能立刻把语音变成文字，随时交给任何 AI 工具：给编
 **语音助手（实验性，默认关闭）**
 - 一个中央 Claude 对话，有两种模式：VoiceMate 自己的对话（VoiceMate 启动的 Claude Code 进程，也能在 Claude Desktop 和手机上看到），或你已有的一个 Claude Desktop 对话（通过短暂的键盘“闪现”写入，仅限 Windows）。它会列出、阅读并向你的其他对话发消息，还能在后台启动新对话。
 - 用 `Ctrl+Alt+S` 对它说话，并用引擎的声音（Kokoro 或你自己的提供方）听它回答。英语、葡萄牙语和西班牙语的语音指令可以朗读上一条回答、切换到某个对话、向它发送消息或直接与它交谈。窗口显示聊天和待听的回答；托盘上的蓝色角标和“回答已就绪”提示音会在回答到达时提醒你，`Ctrl+Alt+R` 朗读已就绪的内容。
-- 它能用语音修改一份固定清单中的 VoiceMate 设置，支持个性（文件、Obsidian 笔记库中的笔记或你自己写的文本），并使用英语或巴西葡萄牙语的技能，该技能也可以在任何 Claude Code 对话中单独使用。参见[语音助手](#语音助手-实验性)。
+- 它能用语音修改一份固定清单中的 VoiceMate 设置，支持个性（文件、Obsidian 笔记库中的笔记或你自己写的文本），并使用英语或巴西葡萄牙语的技能，该技能也可以在任何 Claude Code 对话中单独使用。参见[语音助手](#语音助手实验性)和[完整指南](docs/voice-assistant.md)（英文）。
 
 ## 截图
 
@@ -147,42 +147,24 @@ make run ARGS="--output-lang en"     # 用引擎自带的快捷键启动引擎�
 
 ### 语音助手（实验性）
 
-助手是一个 Claude 对话，即中央对话，它知道你的其他对话在做什么，并替你统筹它们：列出、阅读、发消息、在后台启动新对话，并在它们回答时告诉你。默认关闭。在 设置 > **助手** 中，“助手模式：”决定中央对话运行在哪里。
+助手是一个 Claude 对话，即中央对话，它知道你的其他对话在做什么，并替你统筹它们：列出、阅读、发消息、在后台启动新对话，并在它们回答时告诉你。默认关闭。
+
+**完整流程，附图示：[docs/voice-assistant.md](docs/voice-assistant.md)**（英文；VoiceMate 如何接入 Claude、两种模式、对你其他对话的统筹、回答如何返回、声音与安全）。
 
 | | VoiceMate 自己的对话 | 一个 Claude Desktop 对话 |
 |---|---|---|
 | 是什么 | VoiceMate 启动并持有的 Claude Code 进程 | 你已有的对话，在“Desktop 对话：”中按确切标题选择 |
-| VoiceMate 如何写入 | 直接通过进程 | 短暂的 UI Automation“闪现”：Desktop 窗口来到前台，草稿被清除，文本被粘贴并发送，焦点随后返回（约 2 秒） |
-| 工具 | `voicemate` 工具：列出、阅读并向对话发消息、启动对话、设置其模型、停止 | Desktop 自带的会话工具 |
+| VoiceMate 如何写入 | 直接通过进程 | 短暂的“闪现”：Desktop 窗口来到前台，文本被粘贴并发送，焦点随后返回（约 2 秒） |
 | 需要 | `claude` CLI 和 Claude 登录 | Claude Desktop 已打开且屏幕未锁定；仅限 Windows |
-| 手机 | Remote Control 已开启 | 不由 VoiceMate 管理 |
 
-1. **要求：**Claude Code CLI（Windows 的 `PATH` 中有 `claude`，或在 `VOICEMATE_CLAUDE_CLI` 中给出路径）以及这台电脑上的 Claude 登录（执行一次 `claude auth login`）。缺少时助手窗口会说明缺什么。
-2. **开启：**在 设置 > **助手** 中，把“助手模式：”设为“VoiceMate 自己的对话”或“一个 Claude Desktop 对话”（并输入它的确切标题），然后点 OK。托盘菜单会出现“助手”项。
-3. **使用：**按 `Ctrl+Alt+S`，说话，再按一次 `Ctrl+Alt+S`，它会用引擎的声音回答。或者打开“助手”输入文字（Enter 发送，Shift+Enter 换行）。窗口显示最近 30 条消息和“待听的回答”分组和“等待中”列表（助手在其他对话里等待的事项）。
-
-`Ctrl+Alt+S` 说话，`Ctrl+Alt+W` 打开窗口，`Ctrl+Alt+R` 朗读已就绪的内容。“切换助手模式”和“返回助手”没有默认快捷键，可在 设置 > **快捷键** 中设定。
-
-**语音指令。**部分短语无需任何 AI 即可识别，支持英语、葡萄牙语和西班牙语：朗读上一条回答、停止说话、转到某个对话、向某个对话发送消息、直接与某个对话交谈、返回助手。直接模式会把你说的话直接发给该对话，直到你返回。短语列表见[使用文档](docs/usage.md#voice-commands)。
-
-**其他对话的回答。**“其他对话的回答：”有“回答一到就告诉我”“简短提醒，并把回答留到稍后”（默认）“只播放提示音并保留回答”和“仅保留”。保留的回答在收件箱中等待（最多 50 条，重启后仍在），显示在窗口的“待听的回答”下，托盘图标上有蓝色角标，并有“回答已就绪”提示音。录音、转写或听回答期间不会播报任何内容。
-
-**助手启动的对话。**同时最多 4 个，Remote Control 开启，重启后仍会记住。“新对话使用：”和“推理强度：”设定它们的模型和推理强度，“权限：”设定它们可以做什么。
+1. **要求：**Claude Code CLI（Windows 的 `PATH` 中有 `claude`，或在 `VOICEMATE_CLAUDE_CLI` 中给出路径）以及这台电脑上的 Claude 登录（执行一次 `claude auth login`）。
+2. **开启：**在状态窗口中点 **助手**（助手关闭时它会说明怎么做），或到 设置 > **助手** 设定“助手模式：”。
+3. **使用：**按 `Ctrl+Alt+S`，说话，再按一次 `Ctrl+Alt+S`，它会用引擎的声音回答。或者在它的窗口里输入文字（`Ctrl+Alt+W`）。`Ctrl+Alt+R` 朗读待听的回答。
 
 > [!WARNING]
-> “完全访问，从不询问（有风险）”（`bypassPermissions`）会让这些对话不经询问就修改任何文件、运行任何命令。除非你信任要交给它们的事，否则请保持默认值。
+> “完全访问，从不询问（有风险）”（`bypassPermissions`）会让助手启动的对话不经询问就修改任何文件、运行任何命令。除非你信任要交给它们的事，否则请保持默认值。
 
-**Desktop 模式的闪现。**它会占用前台约 2 秒，清除该输入框中的任何草稿，并且在屏幕锁定或其他窗口夺走焦点时不输入任何内容。这 2 秒内请不要碰键盘。
-
-**用语音改设置。**助手可以修改固定清单中的 23 项设置：模式（在两者之间）、模型、力度、权限、回答递送方式、新对话的模型和力度、Desktop 对话、声音、语音指令、表情标签、你的名字、个性来源、配置文件更新、技能语言、提示音开关和音量、听写语言、转写模式和通知。快捷键、文件和文件夹、语音引擎及其设置，以及关闭助手，是有意排除的。清单见[使用文档](docs/usage.md#change-voicemate-by-voice)。
-
-**个性与技能。**在“个性”分组里，“来源：”可以是无、一个 Markdown 文件（例如 Obsidian 笔记库中的笔记）或你写的文本；“笔记库文件夹：”说明你的笔记在哪里，助手只在你要求时才读取。“技能语言：”可选自动、英语或巴西葡萄牙语，“自定义技能：”用你自己包含 `SKILL.md` 的文件夹替换该技能。技能是可选的，也可分享：把 `app/companion/assistant/skill/en/voicemate-assistant`（或 `pt-BR`）复制到 `~/.claude/skills`，然后在任何 Claude Code 对话中请求“助手”。它的设置在 `~/.voicemate/assistant.json`。
-
-**声音。**助手使用引擎的声音说话：Kokoro 或你自己的提供方（设置 > **声音**，`make tts-provider-check`，[协议](docs/tts-provider-protocol.md)）。如果引擎无法发声，回答保持为文字，简短提示改用 Windows 的声音。
-
-**Claude Desktop 配置文件。**一个 JSON 文件告诉 Desktop 模式各控件在哪里，所以 Claude Desktop 更新后只需换一个新配置文件，不必发新版本。VoiceMate 在助手启动时查找更新的配置文件（可关闭）；设置 > **助手** 中有 **立即检查**、**导入...**、**导出...** 和 **使用默认**。参见 [desktop-profile.md](docs/desktop-profile.md)。
-
-设计见 [docs/research/voice-assistant-design.md](docs/research/voice-assistant-design.md)，其背后的 Claude Desktop 和手机测试见 [docs/research/claude-code-client.md](docs/research/claude-code-client.md)，每一步见 [docs/usage.md](docs/usage.md#voice-assistant-experimental)。
+更多（英文）：[语音指令与直接模式](docs/voice-assistant.md#6-direct-mode-and-voice-commands)、[其他对话的回答](docs/voice-assistant.md#5-answers-coming-back)、[用语音改设置](docs/voice-assistant.md#8-settings-by-voice)、[每项设置的步骤](docs/usage.md#voice-assistant-experimental)、[Claude Desktop 配置文件](docs/desktop-profile.md)和 [TTS 提供方协议](docs/tts-provider-protocol.md)。
 
 ## 配置
 
@@ -430,7 +412,7 @@ flowchart LR
     class other,phone external
 ```
 
-两种模式走同一个循环：助手联系你的其他对话，回答经服务返回，服务把它们读出来或存入收件箱。蓝色：VoiceMate；青色：存储的数据；灰色：VoiceMate 之外。完整图表：[docs/architecture.md](docs/architecture.md#61-voice-assistant-experimental)。
+两种模式走同一个循环：助手联系你的其他对话，回答经服务返回，服务把它们读出来或存入收件箱。蓝色：VoiceMate；青色：存储的数据；灰色：VoiceMate 之外。完整图表：[docs/architecture.md](docs/architecture.md#61-voice-assistant-experimental)。完整流程：[docs/voice-assistant.md](docs/voice-assistant.md)。
 
 </details>
 
@@ -495,7 +477,7 @@ flowchart TD
 | 英语语音识别结果不对，或者引擎消息是葡萄牙语 | 手动启动的引擎默认使用葡萄牙语：给 `make run` 加上 `ARGS="--output-lang en"`。 |
 | GPU 正忙于其他工作 | 选择 CPU 模式：设置 > **常规** > “转写”，或托盘菜单 > “转写”。尚未安装的模式会先询问你，再安装。 |
 | 助手提示“未找到 Claude Code”或“Claude Code 尚未登录” | 安装 Claude Code（或设置 `VOICEMATE_CLAUDE_CLI`），或在终端运行 `claude auth login`，然后在助手窗口点“重新启动”。更多见 [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental)。 |
-| Desktop 模式提示“未选择 Claude Desktop 对话”或“无法准备助手” | “Desktop 对话：”为空，或没有 Claude Desktop 对话有这个确切标题 | 按 Claude Desktop 侧边栏中的样子准确输入标题，打开 Claude Desktop，然后点 **重新启动**。更多见 [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental)。 |
+| Desktop 模式提示“未选择 Claude Desktop 对话”或“无法准备助手” | “Desktop 对话：”为空，或没有 Claude Desktop 对话有这个确切标题：按 Claude Desktop 侧边栏中的样子准确输入标题，打开 Claude Desktop，然后点 **重新启动**。更多见 [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental)。 |
 | 引擎一侧的其他问题 | 在引擎文件夹中运行 `make doctor`。每一项未通过的检查它都会给出修复方法。 |
 
 更多问题和确切的消息文本：[docs/troubleshooting.md](docs/troubleshooting.md)。
@@ -505,6 +487,7 @@ flowchart TD
 详细文档（英文）：
 
 - [安装](docs/installation.md)：所有安装方式、更新和卸载。
+- [语音助手与 Claude](docs/voice-assistant.md)：助手的完整流程（含图示）、两种模式，以及它如何统筹你的其他对话（实验性）。
 - [使用](docs/usage.md)：流程、快捷键、托盘图标、转写模式、模型、语音选项和语音助手。
 - [配置](docs/configuration.md)：引擎参数、设置文件、环境变量、语音识别模式和基准测试。
 - [故障排查](docs/troubleshooting.md)：`make doctor`、WSL 音频、日志、已知消息。

@@ -68,7 +68,7 @@ A third one is just starting: a **voice assistant**. It is one Claude conversati
 **Voice assistant (experimental, off by default)**
 - One central Claude conversation in two modes: VoiceMate's own conversation (a Claude Code process that VoiceMate starts, also visible in Claude Desktop and on your phone) or a Claude Desktop conversation you already have (written by a brief keyboard "flash", Windows only). It lists, reads and sends to your other conversations and starts new ones in the background.
 - Talk to it with `Ctrl+Alt+S` and hear it in the engine's voice (Kokoro or your own provider). Voice commands in English, Portuguese and Spanish read the last answer, switch to a conversation, send to it or talk directly to it. A window shows the chat and the answers waiting; a blue tray badge and an "Answer ready" sound tell you when one arrives, and `Ctrl+Alt+R` reads what is ready.
-- It can change a fixed list of VoiceMate settings by voice, takes a personality (a file, a note in an Obsidian vault or a text you write) and uses a skill in English or Brazilian Portuguese that also works on its own in any Claude Code conversation. See [Voice assistant](#voice-assistant-experimental).
+- It can change a fixed list of VoiceMate settings by voice, takes a personality (a file, a note in an Obsidian vault or a text you write) and uses a skill in English or Brazilian Portuguese that also works on its own in any Claude Code conversation. See [Voice assistant](#voice-assistant-experimental) and the [full guide](docs/voice-assistant.md).
 
 ## Screenshots
 
@@ -147,46 +147,24 @@ The voice conversation with Claude needs the Claude Code CLI installed and signe
 
 ### Voice assistant (experimental)
 
-The assistant is one Claude conversation, the central one, that knows what your other conversations are doing and conducts them for you: it lists them, reads them, sends them a message, starts new ones in the background and tells you when they answer. It is off by default. In Settings > **Assistant**, "Assistant mode:" chooses where the central conversation lives.
+The assistant is one Claude conversation, the central one, that knows what your other conversations are doing and conducts them for you: it lists them, reads them, sends them a message, starts new ones in the background and tells you when they answer. It is off by default.
+
+**The whole flow, with diagrams: [docs/voice-assistant.md](docs/voice-assistant.md)** (how VoiceMate plugs into Claude, the two modes, the orchestration of your conversations, how answers come back, the voice and safety).
 
 | | VoiceMate's own conversation | A Claude Desktop conversation |
 |---|---|---|
 | What it is | A Claude Code process that VoiceMate starts and owns | A conversation you already have, chosen by its exact title in "Desktop conversation:" |
-| How VoiceMate writes to it | Directly, through the process | A brief UI Automation "flash": the Desktop window comes forward, the draft is cleared, the text is pasted and sent, and the focus goes back (about 2 seconds) |
-| Tools | The `voicemate` tools: list, read and send to conversations, start one, set its model, stop it | The Desktop's own session tools |
+| How VoiceMate writes to it | Directly, through the process | A brief "flash": the Desktop window comes forward, the text is pasted and sent, and the focus goes back (about 2 seconds) |
 | Needs | The `claude` CLI and a Claude login | Claude Desktop open and the screen unlocked; Windows only |
-| Phone | Remote Control is on | Not managed by VoiceMate |
 
-1. **Requirements:** the Claude Code CLI (`claude` on the `PATH` of Windows, or its path in `VOICEMATE_CLAUDE_CLI`) and a Claude login on that computer (`claude auth login` once). Without them the assistant window says what is missing.
-2. **Turn it on:** in Settings > **Assistant**, set "Assistant mode:" to "VoiceMate's own conversation" or "A Claude Desktop conversation" (then type its exact title), then OK. The tray menu gets an "Assistant" entry.
-3. **Use it:** press `Ctrl+Alt+S`, speak, press `Ctrl+Alt+S` again, and it answers in the engine's voice. Or open "Assistant" and type (Enter sends, Shift+Enter adds a line). The window shows the last 30 messages, an "Answers waiting" group and a "Waiting for" list (what the assistant is waiting on in other conversations).
-
-`Ctrl+Alt+S` talks, `Ctrl+Alt+W` opens the window and `Ctrl+Alt+R` reads what is ready. "Switch the assistant mode" and "Back to the assistant" have no default key; set them in Settings > **Hotkeys**.
-
-**Voice commands.** Some phrases are detected without any AI, in English, Portuguese and Spanish: read the last answer, stop talking, go to a conversation, send to a conversation, "talk directly to the conversation X" and "back to the assistant". Direct mode sends what you say straight to that conversation until you go back. The phrases are in [usage](docs/usage.md#voice-commands).
-
-**Answers from other conversations.** "Answers from other conversations:" is "Tell me the answer as soon as it arrives", "Say a short notice and keep the answer for later" (default), "Only play a sound and keep the answer" or "Just keep it". Kept answers wait in the inbox (50 at most, kept across restarts), in the window under "Answers waiting", with a blue badge on the tray icon and an "Answer ready" sound. Nothing is announced while you record, transcribe or hear a reply.
-
-**Conversations the assistant starts.** At most 4 at once, with Remote Control on, remembered across restarts. "New conversations use:" and "With the effort:" set their model and effort, and "Permissions:" sets what they may do.
+1. **Requirements:** the Claude Code CLI (`claude` on the `PATH` of Windows, or its path in `VOICEMATE_CLAUDE_CLI`) and a Claude login on that computer (`claude auth login` once).
+2. **Turn it on:** press **Assistant** in the status window (it says how when the assistant is off), or go to Settings > **Assistant** and set "Assistant mode:".
+3. **Use it:** press `Ctrl+Alt+S`, speak, press `Ctrl+Alt+S` again, and it answers in the engine's voice. Or type in its window (`Ctrl+Alt+W`). `Ctrl+Alt+R` reads the answers that are waiting.
 
 > [!WARNING]
-> "Full access, never ask (risky)" (`bypassPermissions`) lets those conversations change any file and run any command without asking. Keep the default unless you trust what you ask them to do.
+> "Full access, never ask (risky)" (`bypassPermissions`) lets the conversations the assistant starts change any file and run any command without asking. Keep the default unless you trust what you ask them to do.
 
-**The Desktop mode flash.** It takes the foreground for about 2 seconds, clears any draft in that prompt, and types nothing if the screen is locked or another window takes the focus. Leave the keyboard alone for those 2 seconds.
-
-**Settings by voice.** The assistant can change 23 settings from a fixed list: the mode (between the two), model, effort, permissions, answer delivery, the model and effort of new conversations, the Desktop conversation, voice, voice commands, expression tags, your name, the personality source, the profile update, the skill language, the sound switches and volumes, the dictation language, the transcription mode and notifications.
-
-Hotkeys, files and folders, the voice engine and its settings, and turning the assistant off are left out on purpose. The list: [usage](docs/usage.md#change-voicemate-by-voice).
-
-**Personality and skill.** Under Personality, "Source:" is none, a Markdown file (for example a note in an Obsidian vault) or a text you write; "Vault folder:" says where your notes are, and the assistant reads them only when asked. "Skill language:" is automatic, English or Brazilian Portuguese, and "Custom skill:" replaces the skill with a folder of your own that holds a `SKILL.md`.
-
-The skill is optional and shareable: copy `app/companion/assistant/skill/en/voicemate-assistant` (or `pt-BR`) into `~/.claude/skills` and ask for "the assistant" in any Claude Code conversation. Its settings are in `~/.voicemate/assistant.json`.
-
-**Voice.** The assistant speaks with the engine's voice: Kokoro, or your own provider (Settings > **Voice**, `make tts-provider-check`, [protocol](docs/tts-provider-protocol.md)). If the engine cannot speak, the replies stay text and the short notices use the Windows voice.
-
-**Claude Desktop profile.** A JSON file tells the Desktop mode where the controls are, so a Claude Desktop update is fixed by a new profile and not a release. VoiceMate looks for a newer one when the assistant starts (switchable); Settings > **Assistant** has **Check now**, **Import...**, **Export...** and **Use default**. See [desktop-profile.md](docs/desktop-profile.md).
-
-The design is in [docs/research/voice-assistant-design.md](docs/research/voice-assistant-design.md), the Claude Desktop and phone tests behind it in [docs/research/claude-code-client.md](docs/research/claude-code-client.md), and every step in [docs/usage.md](docs/usage.md#voice-assistant-experimental).
+More: [voice commands and direct mode](docs/voice-assistant.md#6-direct-mode-and-voice-commands), [answers from other conversations](docs/voice-assistant.md#5-answers-coming-back), [settings by voice](docs/voice-assistant.md#8-settings-by-voice), [every setting step by step](docs/usage.md#voice-assistant-experimental), the [Claude Desktop profile](docs/desktop-profile.md) and the [TTS provider protocol](docs/tts-provider-protocol.md).
 
 ## Configuration
 
@@ -423,7 +401,7 @@ flowchart LR
     class other,phone external
 ```
 
-Both modes share the same loop: the assistant reaches your other conversations, the answers come back through the service, and the service speaks them or keeps them in the inbox. Blue: VoiceMate; teal: stored data; grey: outside VoiceMate. Full diagram: [docs/architecture.md](docs/architecture.md#61-voice-assistant-experimental).
+Both modes share the same loop: the assistant reaches your other conversations, the answers come back through the service, and the service speaks them or keeps them in the inbox. Blue: VoiceMate; teal: stored data; grey: outside VoiceMate. Full diagram: [docs/architecture.md](docs/architecture.md#61-voice-assistant-experimental). The whole flow: [docs/voice-assistant.md](docs/voice-assistant.md).
 
 </details>
 
@@ -488,7 +466,7 @@ Overview. Full diagram: [docs/architecture.md, Supervisor](docs/architecture.md#
 | English speech comes out wrong, or engine messages are in Portuguese | An engine started by hand defaults to Portuguese: add `ARGS="--output-lang en"` to `make run`. |
 | The GPU is busy with other work | Choose the CPU mode: Settings > **General** > "Transcription", or tray menu > "Transcription". VoiceMate asks before it installs a mode that is missing. |
 | The assistant says "Claude Code was not found" or "Claude Code is not signed in" | Install Claude Code (or set `VOICEMATE_CLAUDE_CLI`), or run `claude auth login` in a terminal, then press **Restart** in the assistant window. More in [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental). |
-| The Desktop mode says "No Claude Desktop conversation is chosen" or "The assistant could not be set up" | "Desktop conversation:" is empty, or no Claude Desktop conversation has that exact title | Type the title exactly as in the Claude Desktop sidebar, open Claude Desktop, then press **Restart**. More in [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental). |
+| The Desktop mode says "No Claude Desktop conversation is chosen" or "The assistant could not be set up" | "Desktop conversation:" is empty, or no Claude Desktop conversation has that exact title: type the title exactly as in the Claude Desktop sidebar, open Claude Desktop, then press **Restart**. More in [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental). |
 | Something else on the engine side | Run `make doctor` in the engine folder. It prints a fix for each failed check. |
 
 More problems and the exact messages: [docs/troubleshooting.md](docs/troubleshooting.md).
@@ -496,6 +474,7 @@ More problems and the exact messages: [docs/troubleshooting.md](docs/troubleshoo
 ## Documentation
 
 - [Installation](docs/installation.md): every install path, updating and uninstalling.
+- [Voice assistant and Claude](docs/voice-assistant.md): the whole assistant flow with diagrams, the two modes and how it conducts your other conversations (experimental).
 - [Usage](docs/usage.md): flows, hotkeys, tray icon, transcription modes, models, voice options and the voice assistant.
 - [Configuration](docs/configuration.md): engine flags, settings files, environment variables, speech-to-text modes and benchmark.
 - [Troubleshooting](docs/troubleshooting.md): `make doctor`, WSL audio, logs, known messages.
