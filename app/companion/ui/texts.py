@@ -246,6 +246,14 @@ def assistant_hotkey_titles() -> dict[AssistantHotkeyAction, str]:
     }
 
 
+def assistant_button_tip(window_chord: str) -> str:
+    """Tooltip of the status window's Assistant button: what it does and its hotkey."""
+    title = _("Open the assistant window")
+    if not window_chord:
+        return title
+    return f"{title} ({display_chord(window_chord)})"
+
+
 def assistant_state_line(snapshot: AssistantSnapshot) -> str:
     """The assistant window's status text (the session link is added by the window)."""
     if snapshot.state == "error":

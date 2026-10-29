@@ -104,6 +104,17 @@ def test_buttons_open_settings_logs_and_restart(ui: CompanionUi, fake: FakeContr
     assert ui.settings_dialog is not None and ui.settings_dialog.isVisible()
 
 
+def test_assistant_button_is_always_there_and_opens_its_window(ui: CompanionUi) -> None:
+    """People could not tell the assistant existed: the button shows even while it is off
+    (its window then says how to turn it on), with the window hotkey in the tooltip."""
+    window = ui.status_window
+    assert ui.settings().assistant.mode == "off"
+    assert window.assistant_button.text() == "Assistant"
+    assert window.assistant_button.toolTip() == "Open the assistant window (Ctrl+Alt+W)"
+    window.assistant_button.click()
+    assert ui.assistant_window is not None and ui.assistant_window.isVisible()
+
+
 def test_quit_button_quits_through_the_controller(
     ui: CompanionUi, fake: FakeController, exits: list[int], process_events: Callable[..., bool]
 ) -> None:

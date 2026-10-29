@@ -80,6 +80,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- A microphone open that the audio system refuses is tried again by itself (3 attempts, 0.4 s
+  apart) before "Microphone unavailable" shows. On WSLg the first open sometimes fails at once
+  and the next one works, which used to cost a second key press.
+- The status window has an "Assistant" button, shown even while the assistant is off (its window
+  then says how to turn it on), with the window hotkey in its tooltip: people could not tell the
+  assistant existed.
 - The CPU path decodes greedily with a VAD filter, and the `gpu` mode decodes greedily:
   in the benchmark (docs/configuration.md) beam search cost time for little or no
   accuracy. `auto` keeps the configured beam.

@@ -145,6 +145,10 @@ class StatusWindow(QWidget):
         self.cancel_button.clicked.connect(self._shell.controller.cancel)
         self.actions_row.addWidget(self.cancel_button)
         self.actions_row.addStretch(1)
+        # Always shown, so people find the assistant; when it is off its window says how to turn it on.
+        self.assistant_button = QPushButton(_("Assistant"))
+        self.assistant_button.clicked.connect(self._shell.show_assistant)
+        self.actions_row.addWidget(self.assistant_button)
         root.addLayout(self.actions_row)
 
         info = QFormLayout()
@@ -227,6 +231,7 @@ class StatusWindow(QWidget):
         flows = displayed_flows(snapshot, settings)
         self._render_flow_buttons(snapshot, flows)
         self.cancel_button.setEnabled(state in CANCELLABLE_STATES)
+        self.assistant_button.setToolTip(texts.assistant_button_tip(settings.assistant.window_hotkey))
 
         self.engine_value.setText(texts.supervisor_labels()[snapshot.supervisor])
         self.audio_value.setText(texts.audio_labels()[snapshot.audio])
@@ -299,7 +304,7 @@ class StatusWindow(QWidget):
                 self.actions_row.insertWidget(index, button)
                 self._flow_buttons.append(button)
             # New buttons would come last in the tab order: put them before Cancel.
-            chain = [self.message_close, *self._flow_buttons, self.cancel_button]
+            chain = [self.message_close, *self._flow_buttons, self.cancel_button, self.assistant_button]
             for first, second in zip(chain, chain[1:], strict=False):
                 QWidget.setTabOrder(first, second)
         settings = self._shell.settings()
