@@ -523,7 +523,7 @@ A WSL restart is wanted when `audio` is `down` twice in a row, or on `mic_unavai
 
 ### 6.1 Voice assistant (experimental)
 
-The assistant lives in the companion; the engine takes part only to transcribe the speech and to speak the replies. **Flow: how a request reaches the central conversation in either mode, how other conversations answer, and how the reply is spoken.**
+The assistant lives in the companion; the engine takes part only to transcribe the speech and to speak the replies. **Flow: how a request reaches the central conversation in either mode, how other conversations answer, and how the reply is spoken.** The same flow from the user's side, step by step: [voice-assistant.md](voice-assistant.md).
 
 ```mermaid
 flowchart LR

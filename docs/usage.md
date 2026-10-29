@@ -160,7 +160,7 @@ The companion ignores it.
 
 ## Voice assistant (experimental)
 
-The voice assistant is one Claude conversation, the "central conversation", that you talk to by voice or by typing. It knows what your other Claude conversations are doing: it can list them, read them, ask them things, start new ones in the background and tell you when they answer. It is **experimental** and off by default. The full flow, with both modes, is in [architecture.md](architecture.md#61-voice-assistant-experimental); the design is in the [research notes](research/voice-assistant-design.md).
+The voice assistant is one Claude conversation, the "central conversation", that you talk to by voice or by typing. It knows what your other Claude conversations are doing: it can list them, read them, ask them things, start new ones in the background and tell you when they answer. It is **experimental** and off by default. The whole flow, explained with diagrams (the two modes, how it conducts your other conversations, how answers come back), is in [voice-assistant.md](voice-assistant.md); the component diagram is in [architecture.md](architecture.md#61-voice-assistant-experimental), and the design is in the [research notes](research/voice-assistant-design.md).
 
 ```mermaid
 sequenceDiagram

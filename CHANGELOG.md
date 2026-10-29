@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- [docs/voice-assistant.md](docs/voice-assistant.md): the whole voice assistant flow with Claude in one
+  guide, with diagrams (the two modes, how it conducts other conversations, how answers come back,
+  direct mode, the voice and safety). The README section is now a short summary that links to it.
+
 ## [0.2.0] - 2026-10-29
 
 ### Added
