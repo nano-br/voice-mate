@@ -190,7 +190,7 @@ The reply follows a template the skill defines: a `<voice>` block (what is spoke
 
 ### Requirements
 
-- The Claude Code CLI: the `claude` command on the `PATH` of Windows, or its full path in the environment variable `VOICEMATE_CLAUDE_CLI`.
+- The Claude Code CLI: the `claude` command, found on the `PATH` of Windows or in the installers' own folders (`~/.local/bin`, `%APPDATA%\npm`), or its full path in the environment variable `VOICEMATE_CLAUDE_CLI`.
 - A Claude login on that computer: run `claude auth login` once in a terminal. The Claude Desktop app keeps its login to itself, so the CLI needs its own ([research](research/claude-code-client.md#2-authentication-is-the-first-blocker)).
 - Claude Desktop and the phone are optional in the first mode and required in the second (see below).
 
@@ -250,7 +250,7 @@ The assistant has its own hotkeys, in Settings > **Hotkeys** (under "Assistant")
 | "Switch the assistant mode" | none | Alternates between the own mode and the Desktop mode (does nothing while the assistant is off) |
 | "Back to the assistant" | none | Leaves direct mode or the conversation the window is following |
 
-As with dictation, the key that stops the recording decides the destination: start with `Ctrl+Alt+V` and stop with `Ctrl+Alt+S` and the text goes to the assistant. A new recording, a new prompt, "stop talking" and a mode change silence the assistant at once.
+As with dictation, the key that stops the recording decides the destination: start with `Ctrl+Alt+V` and stop with `Ctrl+Alt+S` and the text goes to the assistant. A new prompt, "stop talking" and a mode change silence the assistant at once. A recording only pauses it: nothing is said over the microphone, and what came meanwhile (an answer, a notice) is said once the recording ends, starting again from the sentence the recording cut.
 
 The assistant speaks its replies with the engine's voice: the companion sends the `<voice>` block, sentence by sentence, to the engine's `/tts/v1` endpoint and plays the audio while the next sentence is made. The voice comes from Settings > **Voice** (the built-in Kokoro voice, or your [custom provider](#external-tts-provider)), and Settings > **Assistant** has "Speak the replies" and "Assistant voice:" (**Load voices**, **Test**).
 

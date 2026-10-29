@@ -12,6 +12,7 @@ from companion_core_fakes import use_english, wait_until
 
 from app.companion.voice import (
     LOADING_RETRY_S,
+    PAUSE_GRACE_S,
     RETRY_AFTER_S,
     EngineVoice,
     complete_sentences,
@@ -99,11 +100,13 @@ class Rig:
         self.voice_name = voice
         self.fallback: list[str] = []
         self.reasons: list[str] = []
+        self.holding = False  # VoiceMate is recording the microphone
         self.voice = EngineVoice(
             lambda: _client(self.server) if self.server is not None else None,
             (lambda: self.output) if output else (lambda: None),
             voice=lambda: self.voice_name,
             fallback=lambda text, _language: self.fallback.append(text),
+            hold=lambda: self.holding,
             clock=self.clock,
         )
         self.voice.on_unavailable(self.reasons.append)
@@ -202,6 +205,61 @@ def test_stop_silences_at_once_and_drops_what_was_queued(rigs: list[Rig]) -> Non
     finally:
         server.shutdown()
         server.server_close()
+
+
+# --- the microphone ------------------------------------------------------------------------------------
+
+
+def test_nothing_is_said_while_recording_and_it_all_comes_after(provider: ProviderServer, rigs: list[Rig]) -> None:
+    rig = _rig(rigs, provider)
+    rig.holding = True
+    rig.voice.notice("An answer is ready.", "en")
+    rig.voice.speak("r", "First sentence. Second one.", final=True)
+    threading.Event().wait(0.3)
+    assert _texts(provider) == []  # an instant answer or an older one: both wait
+    rig.holding = False
+    assert wait_until(lambda: len(_texts(provider)) == 3)
+    assert _texts(provider) == ["An answer is ready.", "First sentence.", "Second one."]
+
+
+def test_a_recording_cuts_the_line_being_heard_and_says_it_again_afterwards(rigs: list[Rig]) -> None:
+    server = _serve(pace=1.0)  # real time: a long sentence plays for seconds
+    try:
+        rig = _rig(rigs, server)
+        long_line = " ".join(["speaking"] * 40) + "."
+        rig.voice.speak("r", f"{long_line} Second sentence.", final=True)
+        assert wait_until(lambda: rig.output.writes > 0)
+        rig.holding = True
+        assert wait_until(lambda: rig.output.flushes == 1)  # quiet over the microphone
+        assert wait_until(lambda: not server.state.active)  # and the engine stopped producing
+        written = len(rig.output.data)
+        threading.Event().wait(0.3)
+        assert len(rig.output.data) == written
+        assert _texts(server) == [long_line]
+        rig.holding = False
+        assert wait_until(lambda: len(_texts(server)) == 2)
+        assert _texts(server) == [long_line, long_line]  # from its start, then the rest
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_pause_holds_before_the_recording_shows_and_stop_still_drops_everything(
+    provider: ProviderServer, rigs: list[Rig]
+) -> None:
+    rig = _rig(rigs, provider)
+    rig.voice.pause()  # the hotkey: the recording is not confirmed yet
+    rig.voice.speak("r", "Held for a moment.", final=True)
+    threading.Event().wait(0.3)
+    assert _texts(provider) == []
+    rig.clock.now += PAUSE_GRACE_S
+    assert wait_until(lambda: _texts(provider) == ["Held for a moment."])
+    rig.holding = True
+    rig.voice.speak("r2", "Never said.", final=True)
+    rig.voice.stop()  # a new prompt: what waited is dropped
+    rig.holding = False
+    threading.Event().wait(0.3)
+    assert _texts(provider) == ["Held for a moment."]
 
 
 def test_close_ends_the_worker_and_ignores_later_lines(provider: ProviderServer, rigs: list[Rig]) -> None:

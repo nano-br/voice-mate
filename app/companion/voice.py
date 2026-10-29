@@ -9,7 +9,10 @@ gaps are the synthesis itself. The engine uses whatever voice the person configu
 is the one that reaches an external provider, inside or outside WSL.
 
 `stop()` silences at once: the queue is dropped, the audio flushed, the stream's connection
-closed and the engine asked to cancel. When the engine cannot speak (not running, no voice
+closed and the engine asked to cancel. While `hold()` is true (VoiceMate is recording the
+microphone) nothing is said: the line being heard is cut and said again from its start once the
+recording ends, and everything queued meanwhile waits for it. `pause()` holds right away, before
+the recording shows in `hold()`. When the engine cannot speak (not running, no voice
 engine, a voice engine it cannot serve), replies stay text only and a listener hears the reason
 once per outage; the short notices then fall back to `fallback` (Windows speech).
 
@@ -27,7 +30,7 @@ import threading
 import time
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Final, Literal, Protocol
 
 from app.i18n import _
@@ -55,6 +58,11 @@ BUSY_TRIES: Final = 10
 BUSY_STEP_S: Final = 0.1
 DEFAULT_MAX_CHARS: Final = 2000
 IDLE_POLL_S: Final = 0.02
+# How often a held voice looks whether the recording ended.
+HOLD_POLL_S: Final = 0.05
+# `pause()` holds this long by itself: the recording only shows in `hold()` once the engine
+# confirms it started, and the voice must already be quiet when the microphone opens.
+PAUSE_GRACE_S: Final = 1.0
 # What `test()` says (the Assistant tab's Test button).
 TEST_KEY: Final = "voice-test"
 
@@ -63,6 +71,8 @@ TEST_KEY: Final = "voice-test"
 _SENTENCE_END: Final = re.compile(r"[.!?…。！？]+[\"'”’)\]]*(?=\s)")
 
 Kind = Literal["reply", "notice"]
+# How one /v1/speak request ended: played, stopped (the line is over) or cut by a hold.
+Outcome = Literal["done", "stop", "held"]
 
 
 class PcmOutput(Protocol):
@@ -169,12 +179,14 @@ class EngineVoice:
         *,
         voice: Callable[[], str] = lambda: "",
         fallback: Callable[[str, str], None] = lambda _text, _language: None,
+        hold: Callable[[], bool] = lambda: False,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self._client_factory = client
         self._output_factory = output
         self._voice = voice
         self._fallback = fallback
+        self._hold = hold
         self._clock = clock
         self._lock = threading.Lock()
         self._queue: queue.Queue[_Item | None] = queue.Queue()
@@ -193,6 +205,10 @@ class EngineVoice:
         self._reason = ""  # why the engine cannot speak ("" = it can, or it was not tried yet)
         self._closed = False
         self._thread: threading.Thread | None = None  # started with the first line
+        self._paused_until = 0.0  # `pause()`: held until then even if `hold()` is not yet true
+        self._pause_cut_audio = False  # `pause()` flushed audio that was still playing
+        self._last_piece: _Item | None = None  # the piece most recently played to its end
+        self._replay: _Item | None = None  # that piece, when a hold cut it while it still played
 
     def _put(self, item: _Item) -> None:
         with self._lock:
@@ -269,6 +285,23 @@ class EngineVoice:
             # engine drops the request when it gets the cancel instead of holding the voice busy.
             threading.Thread(target=_cancel, args=opening, daemon=True).start()
 
+    def pause(self) -> None:
+        """The microphone is about to record: go quiet now and keep what was being said (and the
+        queue) for when the recording ends."""
+        with self._lock:
+            self._paused_until = self._clock() + PAUSE_GRACE_S
+            output = self._output
+        if output is None:
+            return
+        try:
+            playing = output.pending()
+            output.flush()
+        except OSError:
+            log.info("voice: pausing the audio output failed", exc_info=True)
+            return
+        with self._lock:
+            self._pause_cut_audio = self._pause_cut_audio or playing
+
     def close(self) -> None:
         """Quit: stop and end the worker (bounded wait)."""
         self.stop()
@@ -310,11 +343,50 @@ class EngineVoice:
         with self._lock:
             return item.generation == self._generation and not self._closed
 
+    def _holding(self) -> bool:
+        with self._lock:
+            if self._clock() < self._paused_until:
+                return True
+        try:
+            return self._hold()
+        except Exception:  # noqa: BLE001 - a broken hold check must not silence the voice for good
+            log.exception("voice: the hold check failed")
+            return False
+
+    def _wait_while_held(self, item: _Item) -> None:
+        while self._current(item) and self._holding():
+            time.sleep(HOLD_POLL_S)
+
+    def _cut_for_hold(self, *, wrote: bool) -> None:
+        """A hold began while audio played: silence it. When nothing of the piece being streamed
+        was heard yet, the piece before it was still playing: that one is said again too."""
+        output = self._output
+        playing = False
+        if output is not None:
+            try:
+                playing = output.pending()
+                output.flush()
+            except OSError:
+                log.info("voice: flushing the audio output failed", exc_info=True)
+        with self._lock:
+            playing = playing or self._pause_cut_audio
+            self._pause_cut_audio = False
+            if playing and not wrote and self._last_piece is not None:
+                self._replay = self._last_piece
+
+    def _take_replay(self) -> _Item | None:
+        with self._lock:
+            replay, self._replay = self._replay, None
+        return replay
+
     def _run(self) -> None:
         while True:
             item = self._queue.get()
             if item is None:
                 break
+            if not self._current(item):
+                continue
+            self._wait_while_held(item)
             if not self._current(item):
                 continue
             try:
@@ -341,9 +413,21 @@ class EngineVoice:
                 )
                 return
             text = item.text if info.supports(FEATURE_EXPRESSION_TAGS) else strip_expressions(item.text)
-            for piece in split_text(text, info.max_chars or DEFAULT_MAX_CHARS):
-                if not self._current(item) or not self._speak_piece(client, info, piece, item):
+            pieces = split_text(text, info.max_chars or DEFAULT_MAX_CHARS)
+            index = 0
+            while index < len(pieces):
+                self._wait_while_held(item)
+                replay = self._take_replay()
+                if replay is not None and self._current(replay):
+                    self._say_again(client, info, replay)
+                    continue  # a hold may have cut the replay too: look again before this piece
+                if not self._current(item):
                     return
+                outcome = self._speak_piece(client, info, pieces[index], item)
+                if outcome == "stop":
+                    return
+                if outcome == "done":
+                    index += 1
         except ProviderError as exc:
             if not self._current(item):
                 return  # stopped meanwhile: the broken request is the stop, not an outage
@@ -362,6 +446,13 @@ class EngineVoice:
             self._unavailable(exc, item)
             return
         self._available()
+
+    def _say_again(self, client: ProviderClient, info: ProviderInfo, piece: _Item) -> None:
+        """A piece a hold cut while it played (its text is already split and stripped)."""
+        while self._current(piece):
+            self._wait_while_held(piece)
+            if self._speak_piece(client, info, piece.text, piece) != "held":
+                return
 
     def _engine_info(self, client: ProviderClient) -> ProviderInfo:
         if self._info is None or self._info_url != client.url:
@@ -428,27 +519,37 @@ class EngineVoice:
             return None
         return None
 
-    def _speak_piece(self, client: ProviderClient, info: ProviderInfo, text: str, item: _Item) -> bool:
-        """One /v1/speak request, played as it streams. False when the line should stop."""
+    def _speak_piece(self, client: ProviderClient, info: ProviderInfo, text: str, item: _Item) -> Outcome:
+        """One /v1/speak request, played as it streams. "held": a hold cut it, say it again."""
         stream = self._open_stream(client, info, text, item)
         if stream is None:
-            return False
+            return "stop"
+        wrote = False
         try:
             output = self._ensure_output(stream.sample_rate, stream.channels)
             if output is None:
-                return False
+                return "stop"
             frame = 2 * stream.channels
             pending = b""
             for data in stream.chunks():
                 if not self._current(item):
-                    return False
+                    return "stop"
+                if self._holding():
+                    self._cut_for_hold(wrote=wrote)
+                    _cancel_later(client, stream.request_id)
+                    return "held"
                 pending += data
                 usable = len(pending) - len(pending) % frame
                 if usable:
                     output.write(pending[:usable])
+                    wrote = True
                     pending = pending[usable:]
             output.commit()
-            return self._current(item)
+            if not self._current(item):
+                return "stop"
+            with self._lock:
+                self._last_piece = replace(item, text=text)
+            return "done"
         finally:
             with self._lock:
                 if self._stream is stream:
@@ -478,6 +579,11 @@ class EngineVoice:
         if output is None:
             return
         while self._queue.empty() and not self._closed:
+            if self._holding():
+                self._cut_for_hold(wrote=False)
+                self._say_held_tail()
+                time.sleep(IDLE_POLL_S)
+                continue  # the line said again (if any) plays out before the device is let go
             try:
                 if not output.pending():
                     break
@@ -486,6 +592,20 @@ class EngineVoice:
             time.sleep(IDLE_POLL_S)
         if self._queue.empty():
             self._close_output()
+
+    def _say_held_tail(self) -> None:
+        """The last line was cut by a hold as it finished playing: say it once the hold ends."""
+        replay = self._take_replay()
+        if replay is None or not self._current(replay):
+            return
+        self._wait_while_held(replay)
+        client = self._client_factory()
+        if client is None or not self._current(replay):
+            return
+        try:
+            self._say_again(client, self._engine_info(client), replay)
+        except ProviderError as exc:
+            log.info("voice: saying a cut line again failed: %s", exc.detail)
 
     def _close_output(self) -> None:
         with self._lock:
@@ -524,6 +644,10 @@ class EngineVoice:
             if self._reason:
                 log.info("voice: the engine speaks again")
             self._reason = ""
+
+
+def _cancel_later(client: ProviderClient, request_id: str) -> None:
+    threading.Thread(target=_cancel, args=(client, request_id), daemon=True).start()
 
 
 def _cancel(client: ProviderClient, request_id: str) -> None:

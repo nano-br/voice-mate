@@ -301,7 +301,11 @@ class CompanionControllerImpl:
         # Replies and notices of the assistant, spoken by the engine (`/tts`) and played here;
         # the short notices fall back to Windows speech when the engine cannot speak.
         self._voice = EngineVoice(
-            self._voice_client, voice_output, voice=lambda: self._store.get().assistant.voice, fallback=say
+            self._voice_client,
+            voice_output,
+            voice=lambda: self._store.get().assistant.voice,
+            fallback=say,
+            hold=self._recording,  # never over the microphone: what comes meanwhile waits for it
         )
         self._assistant = assistant_factory(
             AssistantHost(store.get, self.apply_settings, self._person_busy, self._play_assistant_cue, self._voice)
@@ -604,12 +608,17 @@ class CompanionControllerImpl:
     # --- CompanionController: commands ------------------------------------------------------------------
 
     def toggle(self, flow: str) -> None:
-        self._voice.stop()  # a new recording silences the assistant
+        self._voice.pause()  # quiet before the microphone opens; it goes on once the recording ends
         self._post(lambda: self._toggle(flow))
 
     def _on_hotkey(self, flow: str) -> None:
-        # Runs on the Win32 thread: hand it over at once (silencing the assistant is quick).
-        self._voice.stop()
+        # Runs on the Win32 thread: hand it over at once (quieting the assistant is quick).
+        if flow == "assistant_talk":
+            self._voice.pause()  # a new prompt will stop it; a recording that sends nothing lets it go on
+        elif flow in ASSISTANT_HOTKEY_ACTIONS:
+            self._voice.stop()
+        else:
+            self._voice.pause()
         if flow in ASSISTANT_HOTKEY_ACTIONS:
             self._post(lambda: self._assistant_hotkey(flow))  # type: ignore[arg-type]
             return
@@ -617,6 +626,9 @@ class CompanionControllerImpl:
 
     def _person_busy(self) -> bool:
         return self._snapshot.tray_state in _BUSY_TRAY_STATES
+
+    def _recording(self) -> bool:
+        return self._snapshot.tray_state == "recording"
 
     def _play_assistant_cue(self, cue: CueName) -> None:
         def play() -> None:

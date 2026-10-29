@@ -1127,9 +1127,11 @@ class VoiceCalls:
 
     def __init__(self, controller: CompanionControllerImpl, monkeypatch: pytest.MonkeyPatch) -> None:
         self.stops = 0
+        self.pauses = 0
         self.closes = 0
         self.tests: list[tuple[str, str]] = []
         monkeypatch.setattr(controller._voice, "stop", self._stop)
+        monkeypatch.setattr(controller._voice, "pause", self._pause)
         monkeypatch.setattr(controller._voice, "close", self._close)
         monkeypatch.setattr(
             controller._voice, "test", lambda text, voice, language="": self.tests.append((text, voice))
@@ -1138,11 +1140,14 @@ class VoiceCalls:
     def _stop(self) -> None:
         self.stops += 1
 
+    def _pause(self) -> None:
+        self.pauses += 1
+
     def _close(self) -> None:
         self.closes += 1
 
 
-def test_a_recording_a_hotkey_and_quitting_silence_the_assistant(
+def test_a_recording_pauses_the_assistant_and_an_assistant_hotkey_or_quitting_silences_it(
     make_controller: ControllerKit, daemon: FakeDaemon, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     controller, parts, _backend = make_controller(daemon)
@@ -1151,10 +1156,14 @@ def test_a_recording_a_hotkey_and_quitting_silence_the_assistant(
     assert wait_until(lambda: _connected(controller, daemon))
     assert wait_until(lambda: parts.hotkeys is not None and parts.hotkeys.held)
     controller.toggle("clipboard")
-    assert calls.stops == 1
+    assert (calls.pauses, calls.stops) == (1, 0)  # what was being said goes on after the recording
     assert parts.hotkeys is not None
     parts.hotkeys.press("clipboard")
-    assert wait_until(lambda: calls.stops == 2)
+    assert wait_until(lambda: calls.pauses == 2)
+    parts.hotkeys.press("assistant_talk")
+    assert wait_until(lambda: calls.pauses == 3)
+    parts.hotkeys.press("assistant_digest")
+    assert wait_until(lambda: calls.stops == 1)
     done = threading.Event()
     controller.quit(done.set)
     assert done.wait(6.0)

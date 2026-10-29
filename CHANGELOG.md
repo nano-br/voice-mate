@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   guide, with diagrams (the two modes, how it conducts other conversations, how answers come back,
   direct mode, the voice and safety). The README section is now a short summary that links to it.
 
+### Changed
+
+- The assistant's voice never speaks over a recording: whatever it has to say while VoiceMate
+  records the microphone (a reply, an answer from another conversation, a short notice) waits and
+  is said once the recording ends. A recording started while it speaks cuts the sentence being
+  heard and says it again from its start afterwards, unless the recording is a new prompt to the
+  assistant, which still silences it.
+
 ### Fixed
 
 - The voice assistant said "Claude Code was not found" when VoiceMate started at sign-in: the
