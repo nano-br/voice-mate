@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-28 15:32-0300\n"
+"POT-Creation-Date: 2026-10-28 22:07-0300\n"
 "PO-Revision-Date: 2026-10-02 03:38-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: ru\n"
@@ -18,36 +18,36 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: app/main.py:140
+#: app/main.py:145
 #, python-brace-format
 msgid "[VoiceMate] ❌ Could not read or create the API token ({path}): {exc}"
 msgstr "[VoiceMate] ❌ Не удалось прочитать или создать токен API ({path}): {exc}"
 
-#: app/main.py:147
+#: app/main.py:152
 #, python-brace-format
 msgid "[VoiceMate] API token required (taken from {env})."
 msgstr "[VoiceMate] Требуется токен API (взят из {env})."
 
-#: app/main.py:149
+#: app/main.py:154
 #, python-brace-format
 msgid "[VoiceMate] API token required (Bearer), stored in {path}."
 msgstr "[VoiceMate] Требуется токен API (Bearer), он хранится в {path}."
 
-#: app/main.py:168
+#: app/main.py:173
 #, python-brace-format
 msgid "[VoiceMate] ❌ Could not open the HTTP API on 127.0.0.1:{port}: {exc}"
 msgstr "[VoiceMate] ❌ Не удалось открыть HTTP API на 127.0.0.1:{port}: {exc}"
 
-#: app/main.py:174
+#: app/main.py:179
 #, python-brace-format
 msgid "[VoiceMate] HTTP API on http://127.0.0.1:{port}; loading the engine..."
 msgstr "[VoiceMate] HTTP API на http://127.0.0.1:{port}; загрузка движка..."
 
-#: app/main.py:198
+#: app/main.py:213
 msgid "[VoiceMate] No handler available; exiting."
 msgstr "[VoiceMate] Нет доступных обработчиков; выход."
 
-#: app/main.py:221
+#: app/main.py:236
 #, python-brace-format
 msgid ""
 "\n"
@@ -56,17 +56,17 @@ msgstr ""
 "\n"
 "[VoiceMate] Готово. Ввод: {input_method}"
 
-#: app/main.py:223
+#: app/main.py:238
 #, python-brace-format
 msgid "[VoiceMate] Platform: {platform} (trigger: {trigger})"
 msgstr "[VoiceMate] Платформа: {platform} (триггер: {trigger})"
 
-#: app/main.py:228
+#: app/main.py:243
 #, python-brace-format
 msgid "[VoiceMate] Daemon listening on http://127.0.0.1:{port} (POST /trigger)."
 msgstr "[VoiceMate] Демон слушает http://127.0.0.1:{port} (POST /trigger)."
 
-#: app/main.py:231
+#: app/main.py:246
 msgid ""
 "[VoiceMate] Register the Windows-side hotkeys with scripts/windows"
 "/voicemate-hotkeys.ahk (or .ps1)."
@@ -74,48 +74,53 @@ msgstr ""
 "[VoiceMate] Зарегистрируйте горячие клавиши на стороне Windows с помощью "
 "scripts/windows/voicemate-hotkeys.ahk (или .ps1)."
 
-#: app/main.py:235
+#: app/main.py:250
 msgid "clipboard"
 msgstr "буфер обмена"
 
-#: app/main.py:235
+#: app/main.py:250
 msgid "Claude (multi-turn)"
 msgstr "Claude (многоходовой диалог)"
 
-#: app/main.py:236
+#: app/main.py:251
 #, python-brace-format
 msgid "[VoiceMate] Hotkey {hotkey}: → {label}"
 msgstr "[VoiceMate] Горячая клавиша {hotkey}: → {label}"
 
-#: app/main.py:238
+#: app/main.py:253
 #, python-brace-format
 msgid "[VoiceMate] HTTP API on http://127.0.0.1:{port}."
 msgstr "[VoiceMate] HTTP API на http://127.0.0.1:{port}."
 
-#: app/main.py:239
+#: app/main.py:254
 #, python-brace-format
 msgid "[VoiceMate] Max recording: {seconds}s"
 msgstr "[VoiceMate] Максимальная длительность записи: {seconds} с"
 
-#: app/main.py:241
+#: app/main.py:256
 msgid "[VoiceMate] Ctrl+C to exit.\n"
 msgstr "[VoiceMate] Ctrl+C для выхода.\n"
 
-#: app/main.py:254
+#: app/main.py:269
 #, python-brace-format
 msgid "[VoiceMate] Failed to close handler: {exc}"
 msgstr "[VoiceMate] Не удалось закрыть обработчик: {exc}"
 
-#: app/main.py:262
+#: app/main.py:273
+#, python-brace-format
+msgid "[VoiceMate] Failed to close the speaker: {exc}"
+msgstr "[VoiceMate] Не удалось закрыть синтезатор речи: {exc}"
+
+#: app/main.py:281
 #, python-brace-format
 msgid "[VoiceMate] Failed to close transcriber: {exc}"
 msgstr "[VoiceMate] Не удалось закрыть модуль распознавания: {exc}"
 
-#: app/main.py:296
+#: app/main.py:315
 msgid "[VoiceMate] Supervised: closing stdin shuts the engine down."
 msgstr "[VoiceMate] Режим под управлением: закрытие stdin останавливает движок."
 
-#: app/main.py:315 app/main.py:387
+#: app/main.py:334 app/main.py:407
 msgid ""
 "\n"
 "[VoiceMate] Shutting down."
@@ -123,21 +128,25 @@ msgstr ""
 "\n"
 "[VoiceMate] Завершение работы."
 
-#: app/main.py:321
+#: app/main.py:340
 #, python-brace-format
 msgid "[VoiceMate] ❌ The engine failed to start: {exc}"
 msgstr "[VoiceMate] ❌ Не удалось запустить движок: {exc}"
 
-#: app/main.py:374
+#: app/main.py:394
 #, python-brace-format
 msgid "[VoiceMate] Failed to stop the listener: {exc}"
 msgstr "[VoiceMate] Не удалось остановить слушатель ввода: {exc}"
 
-#: app/cli/config_builder.py:125
+#: app/cli/config_builder.py:129
+msgid "[VoiceMate] ⚠ TTS options ignored: they must be a JSON object."
+msgstr "[VoiceMate] ⚠ Параметры TTS проигнорированы: это должен быть объект JSON."
+
+#: app/cli/config_builder.py:161
 msgid "[VoiceMate] ⚠ Claude flow requires input-method=keyboard. Disabling."
 msgstr "[VoiceMate] ⚠ Режиму Claude нужен input-method=keyboard. Режим отключён."
 
-#: app/cli/config_builder.py:144
+#: app/cli/config_builder.py:180
 msgid ""
 "[VoiceMate] ⚠ --claude-no-system-prompt and --claude-system-prompt were "
 "passed together; using --claude-no-system-prompt."
@@ -145,17 +154,17 @@ msgstr ""
 "[VoiceMate] ⚠ Переданы одновременно --claude-no-system-prompt и --claude-"
 "system-prompt; используется --claude-no-system-prompt."
 
-#: app/cli/config_builder.py:257
+#: app/cli/config_builder.py:297
 #, python-brace-format
 msgid "[VoiceMate] Auto-seed removed: {path}"
 msgstr "[VoiceMate] Автообразец голоса удалён: {path}"
 
-#: app/cli/config_builder.py:260
+#: app/cli/config_builder.py:300
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Failed to remove {path}: {exc}"
 msgstr "[VoiceMate] ⚠ Не удалось удалить {path}: {exc}"
 
-#: app/cli/wiring.py:71
+#: app/cli/wiring.py:72
 msgid ""
 "[VoiceMate]   Install the GPU mode from the companion or with `make stt-"
 "install MODE=gpu`."
@@ -163,12 +172,12 @@ msgstr ""
 "[VoiceMate]   Установите режим GPU в приложении или командой `make stt-"
 "install MODE=gpu`."
 
-#: app/cli/wiring.py:83
+#: app/cli/wiring.py:84
 #, python-brace-format
 msgid "[VoiceMate] ⚠ openai-whisper failed: {exc}"
 msgstr "[VoiceMate] ⚠ Ошибка openai-whisper: {exc}"
 
-#: app/cli/wiring.py:90
+#: app/cli/wiring.py:91
 msgid ""
 "[VoiceMate] ⚠ whisper.cpp not found (run `make configure`); trying "
 "fallback."
@@ -176,26 +185,26 @@ msgstr ""
 "[VoiceMate] ⚠ whisper.cpp не найден (выполните `make configure`); пробуем"
 " резервный вариант."
 
-#: app/cli/wiring.py:97
+#: app/cli/wiring.py:98
 #, python-brace-format
 msgid "[VoiceMate] ⚠ whisper.cpp failed; falling back: {exc}"
 msgstr "[VoiceMate] ⚠ Ошибка whisper.cpp; переход на резервный вариант: {exc}"
 
-#: app/cli/wiring.py:117
+#: app/cli/wiring.py:118
 #, python-brace-format
 msgid "[VoiceMate] ⚠ faster-whisper (CT2-ROCm) failed on the AMD GPU: {exc}"
 msgstr "[VoiceMate] ⚠ faster-whisper (CT2-ROCm) не работает на GPU AMD: {exc}"
 
-#: app/cli/wiring.py:120
+#: app/cli/wiring.py:121
 msgid "[VoiceMate]   Disabling until the next `make configure`."
 msgstr "[VoiceMate]   Отключён до следующего запуска `make configure`."
 
-#: app/cli/wiring.py:127
+#: app/cli/wiring.py:128
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Failed to persist ct2_rocm_ok: {persist_exc}"
 msgstr "[VoiceMate] ⚠ Не удалось сохранить ct2_rocm_ok: {persist_exc}"
 
-#: app/cli/wiring.py:168
+#: app/cli/wiring.py:169
 msgid ""
 "[VoiceMate] ⚠ No GPU backend available on AMD; using faster-whisper on "
 "CPU."
@@ -203,16 +212,23 @@ msgstr ""
 "[VoiceMate] ⚠ Для AMD нет доступного GPU-бэкенда; используется faster-"
 "whisper на CPU."
 
-#: app/cli/wiring.py:190
+#: app/cli/wiring.py:191
 msgid "[VoiceMate] ⚠ GPU mode requested but no supported GPU was found."
 msgstr "[VoiceMate] ⚠ Запрошен режим GPU, но совместимая видеокарта не найдена."
 
-#: app/cli/wiring.py:223
+#: app/cli/wiring.py:235
+#, python-brace-format
+msgid ""
+"[VoiceMate] ⚠ TTS disabled: the external provider URL '{url}' is not "
+"valid."
+msgstr "[VoiceMate] ⚠ TTS отключён: адрес внешнего провайдера '{url}' недопустим."
+
+#: app/cli/wiring.py:243
 #, python-brace-format
 msgid "[VoiceMate] ⚠ TTS disabled: engine '{engine}' packages not installed."
 msgstr "[VoiceMate] ⚠ TTS отключён: пакеты движка '{engine}' не установлены."
 
-#: app/cli/wiring.py:227
+#: app/cli/wiring.py:247
 #, python-brace-format
 msgid ""
 "[VoiceMate]   Install with: poetry install --extras {extra} (or run with "
@@ -221,12 +237,12 @@ msgstr ""
 "[VoiceMate]   Установите: poetry install --extras {extra} (или запустите "
 "с --no-tts)."
 
-#: app/cli/wiring.py:237
+#: app/cli/wiring.py:257
 #, python-brace-format
 msgid "[VoiceMate] ⚠ TTS disabled (failed to start engine '{engine}'): {exc}"
 msgstr "[VoiceMate] ⚠ TTS отключён (не удалось запустить движок '{engine}'): {exc}"
 
-#: app/cli/wiring.py:244
+#: app/cli/wiring.py:264
 #, python-brace-format
 msgid ""
 "[VoiceMate]   Check `poetry install --extras {extra}`, GPU availability, "
@@ -235,27 +251,27 @@ msgstr ""
 "[VoiceMate]   Проверьте `poetry install --extras {extra}`, доступность "
 "GPU или запустите с `--no-tts`."
 
-#: app/cli/wiring.py:284
+#: app/cli/wiring.py:304
 msgid "[VoiceMate] ⚠ Claude flow disabled: extra 'claude' not installed."
 msgstr "[VoiceMate] ⚠ Режим Claude отключён: extra 'claude' не установлен."
 
-#: app/cli/wiring.py:288
+#: app/cli/wiring.py:308
 msgid "[VoiceMate]   Install with: poetry install --extras claude"
 msgstr "[VoiceMate]   Установите: poetry install --extras claude"
 
-#: app/cli/wiring.py:304
+#: app/cli/wiring.py:324
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Failed to start Claude (run `claude login`): {exc}"
 msgstr ""
 "[VoiceMate] ⚠ Не удалось запустить Claude (выполните `claude login`): "
 "{exc}"
 
-#: app/cli/wiring.py:316
+#: app/cli/wiring.py:336
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Unknown flow ignored: {kind}"
 msgstr "[VoiceMate] ⚠ Неизвестный режим пропущен: {kind}"
 
-#: app/cli/wiring.py:355
+#: app/cli/wiring.py:375
 #, python-brace-format
 msgid ""
 "[VoiceMate] ⚠ --input-method mouse is only supported on Windows "
@@ -264,7 +280,7 @@ msgstr ""
 "[VoiceMate] ⚠ --input-method mouse поддерживается только в Windows "
 "(trigger={trigger}); используются горячие клавиши."
 
-#: app/companion/controller.py:629
+#: app/companion/controller.py:754
 msgid ""
 "The settings file was written by a newer version of VoiceMate, so it is "
 "read-only here."
@@ -272,43 +288,66 @@ msgstr ""
 "Файл настроек записан более новой версией VoiceMate, поэтому здесь он "
 "доступен только для чтения."
 
-#: app/companion/controller.py:648
+#: app/companion/controller.py:773
 msgid "Could not save the settings file."
 msgstr "Не удалось сохранить файл настроек."
 
-#: app/companion/controller.py:676
+#: app/companion/controller.py:801
 #, python-brace-format
 msgid "{hotkey} is already used by another app."
 msgstr "{hotkey} уже используется другим приложением."
 
-#: app/companion/controller.py:741
+#: app/companion/controller.py:867
 msgid "Could not change the start at login setting."
 msgstr "Не удалось изменить параметр запуска при входе в систему."
 
-#: app/companion/cues.py:80 app/companion/ui/texts.py:151
+#: app/companion/assistant/service.py:342 app/companion/controller.py:1042
+#, python-brace-format
+msgid "No voice available: {reason}"
+msgstr "Голос недоступен: {reason}"
+
+#: app/companion/controller.py:1045
+#, python-brace-format
+msgid "The engine speaks with {name}. Voices found: {count}."
+msgstr "Движок говорит через {name}. Найдено голосов: {count}."
+
+#: app/companion/controller.py:1053
+msgid "Hello! This is how the assistant sounds with this voice."
+msgstr "Привет! Так звучит ассистент с этим голосом."
+
+#: app/companion/controller.py:1054
+msgid "Playing a test sentence with the engine's voice."
+msgstr "Воспроизводится тестовая фраза голосом движка."
+
+#: app/companion/cues.py:83 app/companion/ui/texts.py:166
 msgid "Recording started"
 msgstr "Запись началась"
 
-#: app/companion/cues.py:81 app/companion/ui/texts.py:152
+#: app/companion/cues.py:84 app/companion/ui/texts.py:167
 msgid "Transcribing"
 msgstr "Расшифровка"
 
-#: app/companion/cues.py:82 app/companion/ui/texts.py:106
-#: app/companion/ui/texts.py:153
+#: app/companion/cues.py:85 app/companion/ui/texts.py:117
+#: app/companion/ui/texts.py:168
 msgid "Copied"
 msgstr "Скопировано"
 
-#: app/companion/cues.py:83 app/companion/ui/texts.py:154
+#: app/companion/cues.py:86 app/companion/ui/texts.py:169
 msgid "Claude answered"
 msgstr "Claude ответил"
 
-#: app/companion/cues.py:84 app/companion/ui/texts.py:155
+#: app/companion/cues.py:87 app/companion/ui/texts.py:170
 msgid "Warning"
 msgstr "Предупреждение"
 
-#: app/companion/cues.py:85 app/companion/ui/texts.py:156
+#: app/companion/cues.py:88 app/companion/ui/texts.py:171
 msgid "Error"
 msgstr "Ошибка"
+
+#: app/companion/assistant/settings_catalog.py:269 app/companion/cues.py:89
+#: app/companion/ui/texts.py:172
+msgid "Answer ready"
+msgstr "Ответ готов"
 
 #: app/companion/main.py:130
 #, python-brace-format
@@ -326,16 +365,16 @@ msgid "Settings"
 msgstr "Настройки"
 
 #: app/companion/main.py:193 app/companion/ui/status_window.py:122
-#: app/companion/ui/status_window.py:180 app/companion/ui/tray.py:112
+#: app/companion/ui/status_window.py:180 app/companion/ui/tray.py:123
 msgid "Restart engine"
 msgstr "Перезапустить движок"
 
-#: app/companion/main.py:195 app/companion/ui/tray.py:114
+#: app/companion/main.py:195 app/companion/ui/tray.py:125
 msgid "Restart WSL..."
 msgstr "Перезапустить WSL..."
 
 #: app/companion/main.py:196 app/companion/ui/status_window.py:184
-#: app/companion/ui/tray.py:122
+#: app/companion/ui/tray.py:133
 msgid "Quit VoiceMate"
 msgstr "Выйти из VoiceMate"
 
@@ -358,7 +397,7 @@ msgstr ""
 "«Перезапустить движок»."
 
 #: app/companion/model.py:616 app/companion/model.py:916
-#: app/companion/ui/texts.py:109
+#: app/companion/ui/texts.py:120
 msgid "No microphone"
 msgstr "Нет микрофона"
 
@@ -367,7 +406,7 @@ msgid "Connect a microphone to record."
 msgstr "Подключите микрофон, чтобы записывать."
 
 #: app/companion/model.py:619 app/companion/model.py:903
-#: app/companion/ui/demo_controller.py:351 app/companion/ui/texts.py:111
+#: app/companion/ui/demo_controller.py:517 app/companion/ui/texts.py:122
 msgid "WSL audio stopped"
 msgstr "Звук в WSL остановлен"
 
@@ -462,11 +501,11 @@ msgstr ""
 "«Перезапустить движок»."
 
 #: app/companion/model.py:656 app/companion/model.py:749
-#: app/companion/ui/texts.py:87
+#: app/companion/ui/texts.py:98
 msgid "VoiceMate is stopped"
 msgstr "VoiceMate остановлен"
 
-#: app/companion/model.py:658 app/companion/ui/texts.py:89
+#: app/companion/model.py:658 app/companion/ui/texts.py:100
 msgid "Starting engine..."
 msgstr "Запуск движка..."
 
@@ -475,7 +514,7 @@ msgstr "Запуск движка..."
 msgid "Waiting for the engine on port {port}."
 msgstr "Ожидание движка на порту {port}."
 
-#: app/companion/model.py:662 app/companion/ui/texts.py:93
+#: app/companion/model.py:662 app/companion/ui/texts.py:104
 #, python-brace-format
 msgid "Restarting (attempt {attempt})"
 msgstr "Перезапуск (попытка {attempt})"
@@ -485,24 +524,25 @@ msgstr "Перезапуск (попытка {attempt})"
 msgid "Listening for {hotkey}"
 msgstr "Ожидание нажатия {hotkey}"
 
-#: app/companion/model.py:666 app/companion/ui/texts.py:98
+#: app/companion/model.py:666 app/companion/ui/texts.py:109
+#: app/companion/ui/texts.py:306
 msgid "Ready"
 msgstr "Готов к работе"
 
-#: app/companion/model.py:669 app/companion/ui/texts.py:79
+#: app/companion/model.py:669 app/companion/ui/texts.py:90
 #, python-brace-format
 msgid "Recording {elapsed}"
 msgstr "Запись {elapsed}"
 
-#: app/companion/model.py:671 app/companion/ui/texts.py:100
+#: app/companion/model.py:671 app/companion/ui/texts.py:111
 msgid "Transcribing..."
 msgstr "Расшифровка..."
 
-#: app/companion/model.py:673 app/companion/ui/texts.py:102
+#: app/companion/model.py:673 app/companion/ui/texts.py:113
 msgid "Claude is answering..."
 msgstr "Claude отвечает..."
 
-#: app/companion/model.py:675 app/companion/ui/texts.py:105
+#: app/companion/model.py:675 app/companion/ui/texts.py:116
 #, python-brace-format
 msgid "Copied: {text}"
 msgstr "Скопировано: {text}"
@@ -837,54 +877,135 @@ msgstr ""
 "скрипт горячих клавиш VoiceMate, закройте его и удалите из shell:startup "
 "или выберите другие горячие клавиши в настройках."
 
-#: app/companion/settings_store.py:90 app/companion/ui/settings_window.py:604
+#: app/companion/settings_store.py:121 app/companion/ui/settings_window.py:1311
 msgid "Language"
 msgstr "Язык"
 
-#: app/companion/settings_store.py:91 app/companion/ui/settings_window.py:605
+#: app/companion/assistant/settings_catalog.py:286
+#: app/companion/settings_store.py:122 app/companion/ui/settings_window.py:1312
 msgid "Dictation language"
 msgstr "Язык диктовки"
 
-#: app/companion/settings_store.py:92
+#: app/companion/settings_store.py:123
 msgid "Engine mode"
 msgstr "Режим движка"
 
-#: app/companion/settings_store.py:93
+#: app/companion/settings_store.py:124
 msgid "WSL restart"
 msgstr "Перезапуск WSL"
 
-#: app/companion/settings_store.py:94 app/companion/ui/settings_window.py:606
+#: app/companion/assistant/settings_catalog.py:304
+#: app/companion/settings_store.py:125 app/companion/ui/settings_window.py:1313
 msgid "Notifications"
 msgstr "Уведомления"
 
-#: app/companion/settings_store.py:95 app/companion/ui/settings_window.py:733
+#: app/companion/settings_store.py:126 app/companion/ui/settings_window.py:1599
 msgid "Hotkeys"
 msgstr "Горячие клавиши"
 
-#: app/companion/settings_store.py:96 app/companion/ui/settings_window.py:567
-#: app/companion/ui/settings_window.py:611 app/companion/ui/tray.py:100
+#: app/companion/assistant/settings_catalog.py:295
+#: app/companion/settings_store.py:127 app/companion/ui/settings_window.py:1274
+#: app/companion/ui/settings_window.py:1318 app/companion/ui/tray.py:111
 msgid "Transcription"
 msgstr "Распознавание"
 
-#: app/companion/settings_store.py:97 app/companion/ui/settings_window.py:612
+#: app/companion/settings_store.py:128 app/companion/ui/settings_window.py:1319
 msgid "CPU model"
 msgstr "Модель для CPU"
 
-#: app/companion/settings_store.py:98 app/companion/ui/settings_window.py:613
+#: app/companion/settings_store.py:129 app/companion/ui/settings_window.py:1320
 msgid "GPU model"
 msgstr "Модель для GPU"
 
-#: app/companion/settings_store.py:383 app/companion/settings_store.py:405
-#: app/companion/settings_store.py:421
+#: app/companion/assistant/settings_catalog.py:108
+#: app/companion/settings_store.py:130 app/companion/ui/settings_window.py:867
+msgid "Assistant mode"
+msgstr "Режим ассистента"
+
+#: app/companion/assistant/settings_catalog.py:118
+#: app/companion/settings_store.py:131
+msgid "Assistant model"
+msgstr "Модель ассистента"
+
+#: app/companion/assistant/settings_catalog.py:128
+#: app/companion/settings_store.py:132
+msgid "Assistant effort"
+msgstr "Глубина рассуждений ассистента"
+
+#: app/companion/assistant/settings_catalog.py:208
+#: app/companion/settings_store.py:133 app/companion/ui/settings_window.py:876
+msgid "Expression tags"
+msgstr "Теги выражений"
+
+#: app/companion/assistant/settings_catalog.py:138
+#: app/companion/settings_store.py:134 app/companion/ui/settings_window.py:873
+msgid "Permissions"
+msgstr "Разрешения"
+
+#: app/companion/assistant/settings_catalog.py:243
+#: app/companion/settings_store.py:135 app/companion/ui/settings_window.py:881
+msgid "Skill language"
+msgstr "Язык навыка"
+
+#: app/companion/assistant/settings_catalog.py:148
+#: app/companion/settings_store.py:136 app/companion/ui/settings_window.py:874
+msgid "Answers from other conversations"
+msgstr "Ответы из других разговоров"
+
+#: app/companion/assistant/settings_catalog.py:157
+#: app/companion/settings_store.py:137 app/companion/ui/settings_window.py:871
+msgid "Model of new conversations"
+msgstr "Модель новых разговоров"
+
+#: app/companion/assistant/settings_catalog.py:166
+#: app/companion/settings_store.py:138 app/companion/ui/settings_window.py:872
+msgid "Effort of new conversations"
+msgstr "Глубина рассуждений новых разговоров"
+
+#: app/companion/assistant/settings_catalog.py:226
+#: app/companion/settings_store.py:139 app/companion/ui/settings_window.py:730
+#: app/companion/ui/settings_window.py:878
+msgid "Personality"
+msgstr "Личность"
+
+#: app/companion/assistant/settings_catalog.py:183
+#: app/companion/settings_store.py:140 app/companion/ui/settings_window.py:699
+msgid "Speak the replies"
+msgstr "Озвучивать ответы"
+
+#: app/companion/assistant/settings_catalog.py:192
+#: app/companion/settings_store.py:141 app/companion/ui/settings_window.py:875
+msgid "Assistant voice"
+msgstr "Голос ассистента"
+
+#: app/companion/settings_store.py:142 app/companion/ui/settings_window.py:1487
+msgid "Voice engine"
+msgstr "Движок голоса"
+
+#: app/companion/settings_store.py:143 app/companion/ui/settings_window.py:1488
+msgid "Provider address"
+msgstr "Адрес провайдера"
+
+#: app/companion/settings_store.py:144 app/companion/ui/settings_window.py:1489
+#: app/companion/ui/settings_window.py:1601
+msgid "Voice"
+msgstr "Голос"
+
+#: app/companion/settings_store.py:145 app/companion/ui/settings_window.py:1490
+msgid "Token"
+msgstr "Токен"
+
+#: app/companion/settings_store.py:580 app/companion/settings_store.py:610
+#: app/companion/settings_store.py:626 app/companion/settings_store.py:656
 #, python-brace-format
 msgid "Invalid value for {setting}."
 msgstr "Недопустимое значение параметра «{setting}»."
 
-#: app/companion/settings_store.py:387
+#: app/companion/settings_store.py:584
 msgid "This engine mode is not available on this system."
 msgstr "Этот режим движка недоступен в этой системе."
 
-#: app/companion/settings_store.py:389
+#: app/companion/settings_store.py:586
 msgid ""
 "The engine folder cannot contain quotes, $, backticks, backslashes or "
 "line breaks."
@@ -892,54 +1013,443 @@ msgstr ""
 "Папка движка не может содержать кавычки, $, обратные апострофы, обратные "
 "косые черты или переводы строк."
 
-#: app/companion/settings_store.py:391
+#: app/companion/settings_store.py:588
 msgid "The WSL distribution name is not valid."
 msgstr "Недопустимое имя дистрибутива WSL."
 
-#: app/companion/settings_store.py:393
+#: app/companion/settings_store.py:590
+msgid ""
+"The provider address must look like http://127.0.0.1:8765 (no spaces, "
+"quotes or $)."
+msgstr ""
+"Адрес провайдера должен выглядеть как http://127.0.0.1:8765 (без "
+"пробелов, кавычек и $)."
+
+#: app/companion/settings_store.py:592
+msgid ""
+"The voice id cannot contain spaces, quotes, $, backticks, backslashes or "
+"line breaks."
+msgstr ""
+"Идентификатор голоса не может содержать пробелы, кавычки, $, обратные "
+"кавычки, обратные косые черты и переводы строк."
+
+#: app/companion/settings_store.py:594
+msgid "The token cannot contain line breaks or other control characters."
+msgstr "Токен не может содержать переводы строк и другие управляющие символы."
+
+#: app/companion/settings_store.py:596
+msgid ""
+"The assistant voice cannot contain line breaks or other control "
+"characters."
+msgstr ""
+"Голос ассистента не может содержать переводы строк и другие управляющие "
+"символы."
+
+#: app/companion/settings_store.py:598
 #, python-brace-format
 msgid "The port must be between {low} and {high}."
 msgstr "Порт должен быть в диапазоне от {low} до {high}."
 
-#: app/companion/settings_store.py:395 app/companion/settings_store.py:417
+#: app/companion/settings_store.py:600 app/companion/settings_store.py:622
 msgid "The volume must be between 0 and 1."
 msgstr "Громкость должна быть в диапазоне от 0 до 1."
 
-#: app/companion/settings_store.py:402 app/companion/ui/demo_controller.py:235
+#: app/companion/settings_store.py:607 app/companion/ui/demo_controller.py:381
 #, python-brace-format
 msgid "{hotkey} is not a valid hotkey."
 msgstr "{hotkey} не является допустимой горячей клавишей."
 
-#: app/companion/settings_store.py:408
+#: app/companion/settings_store.py:613
 #, python-brace-format
 msgid "The action {flow} has more than one hotkey."
 msgstr "У действия {flow} больше одной горячей клавиши."
 
-#: app/companion/settings_store.py:410
+#: app/companion/settings_store.py:615
 #, python-brace-format
 msgid "{hotkey} is assigned to more than one action."
 msgstr "{hotkey} назначена нескольким действиям."
 
-#: app/companion/settings_store.py:428
+#: app/companion/settings_store.py:633
 #, python-brace-format
 msgid "The sound file for the {cue} cue was not found."
 msgstr "Звуковой файл для сигнала «{cue}» не найден."
 
-#: app/companion/settings_store.py:430
+#: app/companion/settings_store.py:635
 #, python-brace-format
 msgid "The sound file for the {cue} cue must be a PCM 8 or 16-bit WAV file."
 msgstr "Звуковой файл для сигнала «{cue}» должен быть WAV-файлом PCM 8 или 16 бит."
 
-#: app/companion/settings_store.py:433
+#: app/companion/settings_store.py:638
 #, python-brace-format
 msgid "The sound file for the {cue} cue is longer than {seconds} seconds."
 msgstr "Звуковой файл для сигнала «{cue}» длиннее {seconds} с."
 
-#: app/companion/ui/app.py:164
+#: app/companion/settings_store.py:658
+msgid "Choose the personality file, or another personality option."
+msgstr "Выберите файл личности или другой вариант личности."
+
+#: app/companion/settings_store.py:664
+msgid "The personality file must be an existing Markdown (.md) file."
+msgstr "Файл личности должен быть существующим файлом Markdown (.md)."
+
+#: app/companion/settings_store.py:666
+msgid "The custom skill folder must contain a SKILL.md file."
+msgstr "Папка своего навыка должна содержать файл SKILL.md."
+
+#: app/companion/tts.py:89
+#, python-brace-format
+msgid "Could not reach the provider at {url}. Is it running?"
+msgstr "Не удалось связаться с провайдером по адресу {url}. Он запущен?"
+
+#: app/companion/tts.py:91
+msgid "The provider refused the token. Check the Token field."
+msgstr "Провайдер отклонил токен. Проверьте поле «Токен»."
+
+#: app/companion/tts.py:93
+#, python-brace-format
+msgid "That address is not a compatible VoiceMate TTS provider: {detail}"
+msgstr "Этот адрес не является совместимым TTS-провайдером VoiceMate: {detail}"
+
+#: app/companion/tts.py:95
+msgid "The provider is busy. Try again in a moment."
+msgstr "Провайдер занят. Повторите попытку чуть позже."
+
+#: app/companion/tts.py:97
+msgid "The provider is still loading its models. Try again in a moment."
+msgstr "Провайдер ещё загружает модели. Повторите попытку чуть позже."
+
+#: app/companion/tts.py:99
+#, python-brace-format
+msgid ""
+"The provider does not know the voice '{voice}'. Load the voices and pick "
+"one."
+msgstr ""
+"Провайдер не знает голос '{voice}'. Загрузите список голосов и выберите "
+"один."
+
+#: app/companion/tts.py:101
+#, python-brace-format
+msgid "The provider refused the request: {detail}"
+msgstr "Провайдер отклонил запрос: {detail}"
+
+#: app/companion/tts.py:102
+#, python-brace-format
+msgid "The provider failed: {detail}"
+msgstr "Сбой провайдера: {detail}"
+
+#: app/companion/tts.py:114 app/companion/tts.py:135
+msgid "The provider address must look like http://127.0.0.1:8765."
+msgstr "Адрес провайдера должен выглядеть как http://127.0.0.1:8765."
+
+#: app/companion/tts.py:120
+#, python-brace-format
+msgid "Connected to {name}. Voices found: {count}."
+msgstr "Подключено к {name}. Найдено голосов: {count}."
+
+#: app/companion/tts.py:143
+msgid "Hello! This is how VoiceMate sounds with this voice."
+msgstr "Привет! Так звучит VoiceMate с этим голосом."
+
+#: app/companion/tts.py:163
+msgid "The provider sent no audio."
+msgstr "Провайдер не прислал аудио."
+
+#: app/companion/tts.py:167
+#, python-brace-format
+msgid "Playing a test sentence from {name}."
+msgstr "Воспроизводится тестовая фраза от {name}."
+
+#: app/companion/voice.py:137
+msgid "the engine is not running"
+msgstr "движок не запущен"
+
+#: app/companion/voice.py:139
+msgid "the engine refused the access token"
+msgstr "движок отклонил токен доступа"
+
+#: app/companion/voice.py:141
+msgid "the engine is too old for the assistant voice"
+msgstr "движок слишком старый для голоса ассистента"
+
+#: app/companion/voice.py:143
+msgid "the voice engine set up in the engine cannot speak for the assistant"
+msgstr "голосовой движок, настроенный в движке, не может говорить за ассистента"
+
+#: app/companion/voice.py:145
+msgid "text to speech is off in the engine"
+msgstr "синтез речи выключен в движке"
+
+#: app/companion/voice.py:147
+msgid "the engine is still loading"
+msgstr "движок ещё загружается"
+
+#: app/companion/voice.py:149
+#, python-brace-format
+msgid "the engine's voice is not available ({detail})"
+msgstr "голос движка недоступен ({detail})"
+
+#: app/companion/voice.py:150
+#, python-brace-format
+msgid "the engine's voice failed ({detail})"
+msgstr "сбой голоса движка ({detail})"
+
+#: app/companion/voice.py:358
+#, python-brace-format
+msgid "the engine has no voice '{voice}'. Pick one in Settings, Assistant"
+msgstr ""
+"в движке нет голоса '{voice}'. Выберите другой в настройках, в разделе "
+"«Ассистент»"
+
+#: app/companion/voice.py:469
+msgid "no audio output is available on this computer"
+msgstr "на этом компьютере нет доступного аудиовыхода"
+
+#: app/companion/assistant/service.py:174
+msgid "the Claude Desktop window was not found"
+msgstr "окно Claude Desktop не найдено"
+
+#: app/companion/assistant/service.py:175
+msgid "the conversation is not in the Claude Desktop sidebar"
+msgstr "разговора нет на боковой панели Claude Desktop"
+
+#: app/companion/assistant/service.py:176
+msgid "more than one Claude Desktop conversation has that title"
+msgstr "это название есть у нескольких разговоров Claude Desktop"
+
+#: app/companion/assistant/service.py:177
+msgid "the Claude Desktop prompt lost the focus, nothing was typed"
+msgstr "поле ввода Claude Desktop потеряло фокус, ничего не напечатано"
+
+#: app/companion/assistant/service.py:178
+msgid "the screen is locked"
+msgstr "экран заблокирован"
+
+#: app/companion/assistant/service.py:179
+msgid "Claude Desktop is busy with another message"
+msgstr "Claude Desktop занят другим сообщением"
+
+#: app/companion/assistant/service.py:180
+msgid "writing to Claude Desktop is not available on this computer"
+msgstr "запись в Claude Desktop недоступна на этом компьютере"
+
+#: app/companion/assistant/service.py:181
+msgid "Claude Desktop did not take the message"
+msgstr "Claude Desktop не принял сообщение"
+
+#: app/companion/assistant/service.py:207
+#, python-brace-format
+msgid "A newer Claude Desktop profile is in use (version {version})."
+msgstr "Используется более новый профиль Claude Desktop (версия {version})."
+
+#: app/companion/assistant/service.py:209
+#, python-brace-format
+msgid "The Claude Desktop profile is up to date (version {version})."
+msgstr "Профиль Claude Desktop актуален (версия {version})."
+
+#: app/companion/assistant/service.py:211
+msgid ""
+"The published Claude Desktop profile needs a newer VoiceMate; the current"
+" one stays."
+msgstr ""
+"Опубликованному профилю Claude Desktop нужен более новый VoiceMate; "
+"остаётся текущий."
+
+#: app/companion/assistant/service.py:213
+msgid "The published Claude Desktop profile is not valid; the current one stays."
+msgstr "Опубликованный профиль Claude Desktop недействителен; остаётся текущий."
+
+#: app/companion/assistant/service.py:214
+msgid "Could not check for a newer Claude Desktop profile; the current one stays."
+msgstr ""
+"Не удалось проверить наличие нового профиля Claude Desktop; остаётся "
+"текущий."
+
+#: app/companion/assistant/service.py:452
+#, python-brace-format
+msgid "That Claude Desktop profile was not imported: {reason}"
+msgstr "Этот профиль Claude Desktop не импортирован: {reason}"
+
+#: app/companion/assistant/service.py:460
+#, python-brace-format
+msgid "Claude Desktop profile imported (version {version})."
+msgstr "Профиль Claude Desktop импортирован (версия {version})."
+
+#: app/companion/assistant/service.py:477
+#, python-brace-format
+msgid "The Claude Desktop profile was not saved: {reason}"
+msgstr "Профиль Claude Desktop не сохранён: {reason}"
+
+#: app/companion/assistant/service.py:480
+#, python-brace-format
+msgid "Claude Desktop profile saved to {path}."
+msgstr "Профиль Claude Desktop сохранён в {path}."
+
+#: app/companion/assistant/service.py:491
+msgid "The default Claude Desktop profile is in use again."
+msgstr "Снова используется стандартный профиль Claude Desktop."
+
+#: app/companion/assistant/service.py:691
+#, python-brace-format
+msgid ""
+"The custom skill folder {folder} has no SKILL.md, so the packaged skill "
+"is used."
+msgstr ""
+"В папке своего навыка {folder} нет SKILL.md, поэтому используется навык "
+"VoiceMate."
+
+#: app/companion/assistant/service.py:1024
+#: app/companion/assistant/service.py:1040
+#, python-brace-format
+msgid "Setting not changed: {label} ({reason})"
+msgstr "Настройка не изменена: {label} ({reason})"
+
+#: app/companion/assistant/service.py:1029
+#, python-brace-format
+msgid "Setting changed: {label} = {value}"
+msgstr "Настройка изменена: {label} = {value}"
+
+#: app/companion/assistant/service.py:1077
+#, python-brace-format
+msgid "\"{title}\" answered."
+msgstr "«{title}» ответил."
+
+#: app/companion/assistant/service.py:1087
+#, python-brace-format
+msgid "The conversation {title} has an answer."
+msgstr "В разговоре {title} есть ответ."
+
+#: app/companion/assistant/service.py:1101
+msgid "Nothing new yet."
+msgstr "Пока ничего нового."
+
+#: app/companion/assistant/service.py:1108
+#: app/companion/assistant/service.py:1128
+#: app/companion/assistant/service.py:1179
+msgid "The assistant is not running. Try again in a moment."
+msgstr "Ассистент не запущен. Повторите попытку через минуту."
+
+#: app/companion/assistant/service.py:1114
+#, python-brace-format
+msgid "The assistant is going over {count} answer(s)."
+msgstr "Ассистент просматривает ответы: {count}."
+
+#: app/companion/assistant/service.py:1188
+msgid "There is no answer to show yet."
+msgstr "Пока нет ответа, который можно показать."
+
+#: app/companion/assistant/service.py:1190
+#, python-brace-format
+msgid "Last answer: {text}"
+msgstr "Последний ответ: {text}"
+
+#: app/companion/assistant/service.py:1197
+#: app/companion/assistant/service.py:1230
+#, python-brace-format
+msgid "No conversation called \"{title}\" was found."
+msgstr "Разговор с названием \"{title}\" не найден."
+
+#: app/companion/assistant/service.py:1207
+#, python-brace-format
+msgid "Asking the assistant to send to \"{title}\": {body}"
+msgstr "Прошу ассистента отправить в разговор \"{title}\": {body}"
+
+#: app/companion/assistant/service.py:1219
+#, python-brace-format
+msgid "More than one conversation matches \"{query}\": {titles}. Say which one."
+msgstr ""
+"Под \"{query}\" подходит несколько разговоров: {titles}. Скажите, какую "
+"именно."
+
+#: app/companion/assistant/service.py:1224
+#, python-brace-format
+msgid "No conversation matches \"{query}\"."
+msgstr "Ни один разговор не подходит под \"{query}\"."
+
+#: app/companion/assistant/service.py:1233
+msgid "That is the assistant's own conversation."
+msgstr "Это собственный разговор ассистента."
+
+#: app/companion/assistant/service.py:1255
+#: app/companion/assistant/service.py:1267
+#, python-brace-format
+msgid "Not sent to \"{title}\": {reason}"
+msgstr "Не отправлено в «{title}»: {reason}"
+
+#: app/companion/assistant/settings_catalog.py:175
+#: app/companion/ui/settings_window.py:868
+msgid "Desktop conversation"
+msgstr "Разговор в Desktop"
+
+#: app/companion/assistant/settings_catalog.py:200
+msgid "Voice commands"
+msgstr "Голосовые команды"
+
+#: app/companion/assistant/settings_catalog.py:217
+#: app/companion/ui/settings_window.py:877
+msgid "Your name"
+msgstr "Ваше имя"
+
+#: app/companion/assistant/settings_catalog.py:235
+msgid "Update the Claude Desktop profile automatically"
+msgstr "Обновлять профиль Claude Desktop автоматически"
+
+#: app/companion/assistant/settings_catalog.py:252
+#: app/companion/ui/settings_window.py:510
+#: app/companion/ui/settings_window.py:1600
+msgid "Sounds"
+msgstr "Звуки"
+
+#: app/companion/assistant/settings_catalog.py:260
+msgid "Sound volume"
+msgstr "Громкость звуков"
+
+#: app/companion/assistant/settings_catalog.py:277
+msgid "Answer sound volume"
+msgstr "Громкость звука ответа"
+
+#: app/companion/assistant/settings_catalog.py:372
+msgid "on"
+msgstr "вкл."
+
+#: app/companion/assistant/settings_catalog.py:372
+msgid "off"
+msgstr "выкл."
+
+#: app/companion/assistant/settings_catalog.py:381
+msgid "the assistant cannot change this setting"
+msgstr "ассистент не может менять эту настройку"
+
+#: app/companion/assistant/settings_catalog.py:383
+#, python-brace-format
+msgid "the value must be one of: {values}"
+msgstr "значение должно быть одним из: {values}"
+
+#: app/companion/assistant/settings_catalog.py:385
+#, python-brace-format
+msgid "the value must be in the range {range}"
+msgstr "значение должно быть в диапазоне {range}"
+
+#: app/companion/assistant/settings_catalog.py:387
+msgid "the value must be on or off"
+msgstr "значение должно быть «вкл.» или «выкл.»"
+
+#: app/companion/assistant/settings_catalog.py:389
+msgid "the value must be a short single line of text"
+msgstr "значение должно быть короткой строкой текста"
+
+#: app/companion/assistant/settings_catalog.py:391
+msgid "choose the personality file first, in Settings, Assistant"
+msgstr "сначала выберите файл личности в Настройках, Ассистент"
+
+#: app/companion/assistant/settings_catalog.py:392
+msgid "choose the Desktop conversation first, in Settings, Assistant"
+msgstr "сначала выберите разговор Desktop в Настройках, Ассистент"
+
+#: app/companion/ui/app.py:184
 msgid "Restart WSL now?"
 msgstr "Перезапустить WSL сейчас?"
 
-#: app/companion/ui/app.py:165 app/companion/ui/status_window.py:128
+#: app/companion/ui/app.py:185 app/companion/ui/status_window.py:128
 msgid ""
 "WSL audio is not working. Restarting WSL fixes it, but it also stops "
 "every running distro."
@@ -947,19 +1457,19 @@ msgstr ""
 "Звук в WSL не работает. Перезапуск WSL это исправит, но при этом "
 "остановятся все запущенные дистрибутивы."
 
-#: app/companion/ui/app.py:166 app/companion/ui/app.py:192
+#: app/companion/ui/app.py:186 app/companion/ui/app.py:212
 msgid "Restart WSL"
 msgstr "Перезапустить WSL"
 
-#: app/companion/ui/app.py:167 app/companion/ui/status_window.py:132
+#: app/companion/ui/app.py:187 app/companion/ui/status_window.py:132
 msgid "Not now"
 msgstr "Не сейчас"
 
-#: app/companion/ui/app.py:190
+#: app/companion/ui/app.py:210
 msgid "Restart WSL?"
 msgstr "Перезапустить WSL?"
 
-#: app/companion/ui/app.py:191
+#: app/companion/ui/app.py:211
 msgid ""
 "This stops every running WSL distro, Docker included, and starts the "
 "engine again."
@@ -967,45 +1477,45 @@ msgstr ""
 "Будут остановлены все запущенные дистрибутивы WSL, включая Docker, а "
 "затем движок запустится снова."
 
-#: app/companion/ui/app.py:193 app/companion/ui/app.py:292
-#: app/companion/ui/app.py:395 app/companion/ui/settings_window.py:748
-#: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:82
+#: app/companion/ui/app.py:213 app/companion/ui/app.py:312
+#: app/companion/ui/app.py:415 app/companion/ui/settings_window.py:1616
+#: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:93
 msgid "Cancel"
 msgstr "Отмена"
 
-#: app/companion/ui/app.py:217
+#: app/companion/ui/app.py:237
 msgid "Could not change the sounds"
 msgstr "Не удалось изменить звуки"
 
-#: app/companion/ui/app.py:234
+#: app/companion/ui/app.py:254
 msgid "Restart VoiceMate?"
 msgstr "Перезапустить VoiceMate?"
 
-#: app/companion/ui/app.py:235
+#: app/companion/ui/app.py:255
 msgid "VoiceMate needs to restart to change the language. Restart now?"
 msgstr "Чтобы сменить язык, нужно перезапустить VoiceMate. Перезапустить сейчас?"
 
-#: app/companion/ui/app.py:236
+#: app/companion/ui/app.py:256
 msgid "Restart now"
 msgstr "Перезапустить сейчас"
 
-#: app/companion/ui/app.py:237
+#: app/companion/ui/app.py:257
 msgid "Later"
 msgstr "Позже"
 
-#: app/companion/ui/app.py:271
+#: app/companion/ui/app.py:291
 msgid "Could not restart VoiceMate"
 msgstr "Не удалось перезапустить VoiceMate"
 
-#: app/companion/ui/app.py:272
+#: app/companion/ui/app.py:292
 msgid "Quit VoiceMate and start it again to change the language."
 msgstr "Чтобы сменить язык, выйдите из VoiceMate и запустите его снова."
 
-#: app/companion/ui/app.py:289
+#: app/companion/ui/app.py:309
 msgid "Clear the \"Not copied\" list?"
 msgstr "Очистить список «Нескопированные»?"
 
-#: app/companion/ui/app.py:290
+#: app/companion/ui/app.py:310
 msgid ""
 "These transcriptions never reached the clipboard. Once cleared, they "
 "cannot be copied any more."
@@ -1013,36 +1523,36 @@ msgstr ""
 "Эти расшифровки так и не попали в буфер обмена. После очистки скопировать"
 " их будет нельзя."
 
-#: app/companion/ui/app.py:291 app/companion/ui/tray.py:225
+#: app/companion/ui/app.py:311 app/companion/ui/tray.py:258
 msgid "Clear list"
 msgstr "Очистить список"
 
-#: app/companion/ui/app.py:325
+#: app/companion/ui/app.py:345
 msgid "Could not change the transcription mode"
 msgstr "Не удалось сменить режим распознавания"
 
-#: app/companion/ui/app.py:343
+#: app/companion/ui/app.py:363
 msgid "Transcription mode change under way"
 msgstr "Смена режима распознавания уже идёт"
 
-#: app/companion/ui/app.py:344
+#: app/companion/ui/app.py:364
 msgid "Wait for the current change to finish, then try again."
 msgstr "Дождитесь завершения текущей смены и попробуйте снова."
 
-#: app/companion/ui/app.py:381
+#: app/companion/ui/app.py:401
 msgid "No GPU mode on this computer"
 msgstr "На этом компьютере нет режима GPU"
 
-#: app/companion/ui/app.py:382
+#: app/companion/ui/app.py:402
 msgid "VoiceMate found no graphics card it can use. The CPU mode keeps working."
 msgstr "VoiceMate не нашёл подходящую видеокарту. Режим CPU продолжает работать."
 
-#: app/companion/ui/app.py:388
+#: app/companion/ui/app.py:408
 #, python-brace-format
 msgid "Install the {mode}?"
 msgstr "Установить {mode}?"
 
-#: app/companion/ui/app.py:390
+#: app/companion/ui/app.py:410
 #, python-brace-format
 msgid ""
 "The {mode} is not installed yet. VoiceMate will download {size} and "
@@ -1053,19 +1563,137 @@ msgstr ""
 " в собственное окружение движка (больше ничего на компьютере не "
 "меняется). Это может занять несколько минут. Установить сейчас?"
 
-#: app/companion/ui/app.py:394
+#: app/companion/ui/app.py:414
 msgid "Install"
 msgstr "Установить"
 
-#: app/companion/ui/demo_controller.py:152
+#: app/companion/ui/assistant_window.py:72
+msgid "You"
+msgstr "Вы"
+
+#: app/companion/ui/assistant_window.py:74
+#: app/companion/ui/settings_window.py:241
+#: app/companion/ui/settings_window.py:1602 app/companion/ui/tray.py:88
+msgid "Assistant"
+msgstr "Ассистент"
+
+#: app/companion/ui/assistant_window.py:75
+msgid "VoiceMate"
+msgstr "VoiceMate"
+
+#: app/companion/ui/assistant_window.py:87
+#, python-brace-format
+msgid "{app} assistant"
+msgstr "Ассистент {app}"
+
+#: app/companion/ui/assistant_window.py:110
+msgid "Restart"
+msgstr "Перезапустить"
+
+#: app/companion/ui/assistant_window.py:113 app/companion/ui/texts.py:275
+msgid "Back to the assistant"
+msgstr "Вернуться к ассистенту"
+
+#: app/companion/ui/assistant_window.py:125
+msgid "Messages"
+msgstr "Сообщения"
+
+#: app/companion/ui/assistant_window.py:128
+#: app/companion/ui/assistant_window.py:131
+msgid "Answers waiting"
+msgstr "Ожидающие ответы"
+
+#: app/companion/ui/assistant_window.py:136
+msgid "The selected answer"
+msgstr "Выбранный ответ"
+
+#: app/companion/ui/assistant_window.py:142
+msgid "Hear all"
+msgstr "Прослушать все"
+
+#: app/companion/ui/assistant_window.py:145
+#: app/companion/ui/settings_window.py:750
+#: app/companion/ui/settings_window.py:788
+#: app/companion/ui/status_window.py:168
+msgid "Clear"
+msgstr "Очистить"
+
+#: app/companion/ui/assistant_window.py:151
+#: app/companion/ui/assistant_window.py:154
+msgid "Waiting for"
+msgstr "В ожидании"
+
+#: app/companion/ui/assistant_window.py:160
+msgid "Message to the assistant"
+msgstr "Сообщение ассистенту"
+
+#: app/companion/ui/assistant_window.py:161
+msgid "Message to the assistant (Enter sends, Shift+Enter adds a line)"
+msgstr "Сообщение ассистенту (Enter отправляет, Shift+Enter добавляет строку)"
+
+#: app/companion/ui/assistant_window.py:170
+msgid "Send"
+msgstr "Отправить"
+
+#: app/companion/ui/assistant_window.py:189
+#, python-brace-format
+msgid "Showing: {title}"
+msgstr "Показано: {title}"
+
+#: app/companion/ui/assistant_window.py:192
+msgid "Open on claude.ai"
+msgstr "Открыть на claude.ai"
+
+#: app/companion/ui/assistant_window.py:200
+#, python-brace-format
+msgid ""
+"Talking directly to \"{title}\": what you say goes there as it is. Say "
+"\"back to the assistant\" or press the button to come back."
+msgstr ""
+"Прямой разговор с «{title}»: сказанное уходит туда как есть. Скажите "
+"«back to the assistant» или нажмите кнопку, чтобы вернуться."
+
+#: app/companion/ui/assistant_window.py:249
+#, python-brace-format
+msgid "{title}, {time}"
+msgstr "{title}, {time}"
+
+#: app/companion/ui/assistant_window.py:250
+#: app/companion/ui/assistant_window.py:268
+msgid "(untitled)"
+msgstr "(без названия)"
+
+#: app/companion/ui/assistant_window.py:270
+#, python-brace-format
+msgid "{title}: {reason}, since {time}"
+msgstr "{title}: {reason}, с {time}"
+
+#: app/companion/ui/assistant_window.py:272
+#, python-brace-format
+msgid "{title}, since {time}"
+msgstr "{title}, с {time}"
+
+#: app/companion/ui/assistant_window.py:283
+msgid "(no text in the answer)"
+msgstr "(в ответе нет текста)"
+
+#: app/companion/ui/demo_controller.py:148
+msgid "This is a demo answer."
+msgstr "Это демонстрационный ответ."
+
+#: app/companion/ui/demo_controller.py:292
+msgid "Hello! What would you like to pick up today?"
+msgstr "Здравствуйте! К чему хотите вернуться сегодня?"
+
+#: app/companion/ui/demo_controller.py:297
 msgid "VoiceMate demo"
 msgstr "Демонстрация VoiceMate"
 
-#: app/companion/ui/demo_controller.py:153
+#: app/companion/ui/demo_controller.py:298
 msgid "Nothing is recorded: the states change by themselves."
 msgstr "Ничего не записывается: состояния меняются сами."
 
-#: app/companion/ui/demo_controller.py:352
+#: app/companion/ui/demo_controller.py:518
 msgid "Restart WSL to bring the microphone back."
 msgstr "Перезапустите WSL, чтобы вернуть микрофон."
 
@@ -1087,134 +1715,414 @@ msgstr "Эту клавишу нельзя использовать"
 msgid "No shortcut"
 msgstr "Нет сочетания"
 
-#: app/companion/ui/settings_window.py:144
+#: app/companion/ui/settings_window.py:230
 msgid "Click a shortcut, then press the new keys. Esc cancels, Backspace clears."
 msgstr ""
 "Щёлкните поле сочетания клавиш, затем нажмите новые клавиши. Esc "
 "отменяет, Backspace очищает."
 
-#: app/companion/ui/settings_window.py:147
+#: app/companion/ui/settings_window.py:233
 msgid "The engine owns these shortcuts. Change them in the engine configuration."
 msgstr "Эти сочетания клавиш задаёт движок. Измените их в конфигурации движка."
 
-#: app/companion/ui/settings_window.py:160
+#: app/companion/ui/settings_window.py:256
 msgid "Restore defaults"
 msgstr "По умолчанию"
 
-#: app/companion/ui/settings_window.py:187
+#: app/companion/ui/settings_window.py:324
 #, python-brace-format
 msgid "{action}:"
 msgstr "{action}:"
 
-#: app/companion/ui/settings_window.py:189
+#: app/companion/ui/settings_window.py:326
 #, python-brace-format
 msgid "Shortcut for {action}"
 msgstr "Сочетание клавиш для действия «{action}»"
 
-#: app/companion/ui/settings_window.py:262
+#: app/companion/ui/settings_window.py:405
 msgid "No shortcut: use the menu"
 msgstr "Нет сочетания: используйте меню"
 
-#: app/companion/ui/settings_window.py:267
+#: app/companion/ui/settings_window.py:410
 msgid "Checking..."
 msgstr "Проверка..."
 
-#: app/companion/ui/settings_window.py:349
+#: app/companion/ui/settings_window.py:493
 msgid "Play sound cues"
 msgstr "Воспроизводить звуковые сигналы"
 
-#: app/companion/ui/settings_window.py:353
+#: app/companion/ui/settings_window.py:497
 msgid "Volume:"
 msgstr "Громкость:"
 
-#: app/companion/ui/settings_window.py:354
+#: app/companion/ui/settings_window.py:498
 msgid "Master volume"
 msgstr "Общая громкость"
 
-#: app/companion/ui/settings_window.py:366
-#: app/companion/ui/settings_window.py:734
-msgid "Sounds"
-msgstr "Звуки"
-
-#: app/companion/ui/settings_window.py:383
+#: app/companion/ui/settings_window.py:527
 msgid "Custom sounds must be WAV files (PCM, 8 or 16 bit)."
 msgstr "Свои звуки должны быть WAV-файлами (PCM, 8 или 16 бит)."
 
-#: app/companion/ui/settings_window.py:390
+#: app/companion/ui/settings_window.py:534
 #, python-brace-format
 msgid "Source: {sound}"
 msgstr "Источник: {sound}"
 
-#: app/companion/ui/settings_window.py:392
+#: app/companion/ui/settings_window.py:536
 #, python-brace-format
 msgid "Built-in sound: {sound}"
 msgstr "Встроенный звук: {sound}"
 
-#: app/companion/ui/settings_window.py:395
+#: app/companion/ui/settings_window.py:539
 msgid "No file chosen"
 msgstr "Файл не выбран"
 
-#: app/companion/ui/settings_window.py:396
+#: app/companion/ui/settings_window.py:540
 #, python-brace-format
 msgid "Sound file: {sound}"
 msgstr "Звуковой файл: {sound}"
 
-#: app/companion/ui/settings_window.py:398
+#: app/companion/ui/settings_window.py:542
+#: app/companion/ui/settings_window.py:739
+#: app/companion/ui/settings_window.py:749
+#: app/companion/ui/settings_window.py:787
 msgid "Browse..."
 msgstr "Обзор..."
 
-#: app/companion/ui/settings_window.py:399
+#: app/companion/ui/settings_window.py:543
 #, python-brace-format
 msgid "Choose a file for {sound}"
 msgstr "Выберите файл для сигнала «{sound}»"
 
-#: app/companion/ui/settings_window.py:411
+#: app/companion/ui/settings_window.py:555
 #, python-brace-format
 msgid "Volume: {sound}"
 msgstr "Громкость: {sound}"
 
-#: app/companion/ui/settings_window.py:417
+#: app/companion/ui/settings_window.py:561
 msgid "Preview"
 msgstr "Прослушать"
 
-#: app/companion/ui/settings_window.py:418
+#: app/companion/ui/settings_window.py:562
 #, python-brace-format
 msgid "Preview: {sound}"
 msgstr "Прослушать: {sound}"
 
-#: app/companion/ui/settings_window.py:482
+#: app/companion/ui/settings_window.py:626
 msgid "Choose a sound file"
 msgstr "Выберите звуковой файл"
 
-#: app/companion/ui/settings_window.py:482
+#: app/companion/ui/settings_window.py:626
 msgid "WAV audio"
 msgstr "Аудиофайлы WAV"
 
-#: app/companion/ui/settings_window.py:511
+#: app/companion/ui/settings_window.py:669
+msgid "Assistant mode:"
+msgstr "Режим ассистента:"
+
+#: app/companion/ui/settings_window.py:673
+msgid "Exact title in the Claude Desktop sidebar"
+msgstr "Точное название на боковой панели Claude Desktop"
+
+#: app/companion/ui/settings_window.py:674
+msgid "Desktop conversation:"
+msgstr "Разговор в Desktop:"
+
+#: app/companion/ui/settings_window.py:677
+msgid "Model:"
+msgstr "Модель:"
+
+#: app/companion/ui/settings_window.py:679
+msgid "Effort:"
+msgstr "Глубина рассуждений:"
+
+#: app/companion/ui/settings_window.py:683
+msgid "New conversations use:"
+msgstr "Новые разговоры используют:"
+
+#: app/companion/ui/settings_window.py:685
+msgid "With the effort:"
+msgstr "С глубиной рассуждений:"
+
+#: app/companion/ui/settings_window.py:687
+msgid "Permissions:"
+msgstr "Разрешения:"
+
+#: app/companion/ui/settings_window.py:691
+msgid ""
+"Full access lets the conversations VoiceMate starts change any file and "
+"run any command on this computer without asking."
+msgstr ""
+"Полный доступ позволяет разговорам, которые запускает VoiceMate, менять "
+"любые файлы и выполнять любые команды на этом компьютере без вопросов."
+
+#: app/companion/ui/settings_window.py:698
+msgid "Answers from other conversations:"
+msgstr "Ответы из других разговоров:"
+
+#: app/companion/ui/settings_window.py:701
+msgid ""
+"The engine reads the spoken part of each reply aloud, using the voice "
+"configured in the engine."
+msgstr ""
+"Движок зачитывает вслух голосовую часть каждого ответа голосом, "
+"настроенным в движке."
+
+#: app/companion/ui/settings_window.py:705
+#: app/companion/ui/settings_window.py:903
+#: app/companion/ui/settings_window.py:1047
+msgid "Engine default"
+msgstr "По умолчанию движка"
+
+#: app/companion/ui/settings_window.py:705
+msgid "Load the engine's voices, then type part of a name to find one."
+msgstr "Загрузите голоса движка, затем введите часть имени, чтобы найти нужный."
+
+#: app/companion/ui/settings_window.py:707
+#: app/companion/ui/settings_window.py:1451
+msgid "Load voices"
+msgstr "Загрузить голоса"
+
+#: app/companion/ui/settings_window.py:708
+msgid "Test"
+msgstr "Проверить"
+
+#: app/companion/ui/settings_window.py:709
+msgid "Speaks a short sentence with the chosen voice."
+msgstr "Произносит короткую фразу выбранным голосом."
+
+#: app/companion/ui/settings_window.py:716
+msgid "Assistant voice:"
+msgstr "Голос ассистента:"
+
+#: app/companion/ui/settings_window.py:721
+msgid "Understand voice commands in typed text"
+msgstr "Понимать голосовые команды в набранном тексте"
+
+#: app/companion/ui/settings_window.py:724
+msgid "Expression tags:"
+msgstr "Теги выражений:"
+
+#: app/companion/ui/settings_window.py:726
+msgid "Your name:"
+msgstr "Ваше имя:"
+
+#: app/companion/ui/settings_window.py:734
+msgid "Source:"
+msgstr "Источник:"
+
+#: app/companion/ui/settings_window.py:738
+msgid "The folder of your notes vault"
+msgstr "Папка вашего хранилища заметок"
+
+#: app/companion/ui/settings_window.py:743
+msgid "Vault folder:"
+msgstr "Папка хранилища:"
+
+#: app/companion/ui/settings_window.py:748
+msgid "Optional Markdown file"
+msgstr "Необязательный файл Markdown"
+
+#: app/companion/ui/settings_window.py:755
+msgid "Personality file:"
+msgstr "Файл личности:"
+
+#: app/companion/ui/settings_window.py:760
+msgid ""
+"Describe how the assistant should be: its tone, its humor, how formal it "
+"is and how it addresses you."
+msgstr ""
+"Опишите, каким должен быть ассистент: тон, юмор, степень формальности и "
+"как он к вам обращается."
+
+#: app/companion/ui/settings_window.py:767
+msgid "Your personality text"
+msgstr "Ваш текст личности"
+
+#: app/companion/ui/settings_window.py:770
+msgid "Save"
+msgstr "Сохранить"
+
+#: app/companion/ui/settings_window.py:780
+msgid "Skill"
+msgstr "Навык"
+
+#: app/companion/ui/settings_window.py:784
+msgid "Skill language:"
+msgstr "Язык навыка:"
+
+#: app/companion/ui/settings_window.py:786
+msgid "Optional folder with a SKILL.md"
+msgstr "Необязательная папка с SKILL.md"
+
+#: app/companion/ui/settings_window.py:793
+msgid "Custom skill:"
+msgstr "Свой навык:"
+
+#: app/companion/ui/settings_window.py:797
+msgid "Claude Desktop profile"
+msgstr "Профиль Claude Desktop"
+
+#: app/companion/ui/settings_window.py:799
+#: app/companion/ui/settings_window.py:1156
+msgid "Loaded when the assistant starts."
+msgstr "Загружается при запуске ассистента."
+
+#: app/companion/ui/settings_window.py:801
+msgid "Check for a newer profile when the assistant starts"
+msgstr "Проверять новый профиль при запуске ассистента"
+
+#: app/companion/ui/settings_window.py:804
+msgid "Check now"
+msgstr "Проверить сейчас"
+
+#: app/companion/ui/settings_window.py:805
+msgid "Import..."
+msgstr "Импорт..."
+
+#: app/companion/ui/settings_window.py:806
+msgid "Export..."
+msgstr "Экспорт..."
+
+#: app/companion/ui/settings_window.py:807
+msgid "Use default"
+msgstr "Использовать стандартный"
+
+#: app/companion/ui/settings_window.py:818
+msgid ""
+"The assistant is a Claude Code conversation that VoiceMate starts, or a "
+"Claude Desktop conversation you choose. Changing the mode, the effort, "
+"the permissions or the skill restarts it."
+msgstr ""
+"Ассистент это разговор Claude Code, который запускает VoiceMate, или "
+"выбранный вами разговор Claude Desktop. Смена режима, глубины "
+"рассуждений, разрешений или навыка перезапускает его."
+
+#: app/companion/ui/settings_window.py:869
+msgid "Model"
+msgstr "Модель"
+
+#: app/companion/ui/settings_window.py:870
+msgid "Effort"
+msgstr "Глубина рассуждений"
+
+#: app/companion/ui/settings_window.py:879
+msgid "Vault folder"
+msgstr "Папка хранилища"
+
+#: app/companion/ui/settings_window.py:880
+msgid "Personality file"
+msgstr "Файл личности"
+
+#: app/companion/ui/settings_window.py:882
+msgid "Custom skill"
+msgstr "Свой навык"
+
+#: app/companion/ui/settings_window.py:995
+msgid ""
+"VoiceMate cannot set the model of a Desktop conversation: it asks the "
+"conversation to switch its own model and effort."
+msgstr ""
+"VoiceMate не может задать модель разговора Desktop: он просит разговор "
+"сменить свою модель и глубину рассуждений."
+
+#: app/companion/ui/settings_window.py:999
+msgid ""
+"A new model applies from the next answer; a new effort restarts the "
+"conversation."
+msgstr ""
+"Новая модель действует со следующего ответа; новая глубина рассуждений "
+"перезапускает разговор."
+
+#: app/companion/ui/settings_window.py:1023
+msgid "This folder does not exist."
+msgstr "Этой папки не существует."
+
+#: app/companion/ui/settings_window.py:1024
+msgid "This folder has no .obsidian folder: it may not be an Obsidian vault."
+msgstr "В этой папке нет папки .obsidian: возможно, это не хранилище Obsidian."
+
+#: app/companion/ui/settings_window.py:1039
+msgid "Asking the engine..."
+msgstr "Запрос к движку..."
+
+#: app/companion/ui/settings_window.py:1110
+msgid "Choose a personality file"
+msgstr "Выберите файл личности"
+
+#: app/companion/ui/settings_window.py:1110
+msgid "Markdown"
+msgstr "Markdown"
+
+#: app/companion/ui/settings_window.py:1116
+msgid "Choose your vault folder"
+msgstr "Выберите папку хранилища"
+
+#: app/companion/ui/settings_window.py:1122
+msgid "Choose a folder with a SKILL.md"
+msgstr "Выберите папку с SKILL.md"
+
+#: app/companion/ui/settings_window.py:1143
+#, python-brace-format
+msgid "Not saved: {reason}"
+msgstr "Не сохранено: {reason}"
+
+#: app/companion/ui/settings_window.py:1146
+msgid "Saved."
+msgstr "Сохранено."
+
+#: app/companion/ui/settings_window.py:1158
+#, python-brace-format
+msgid "In use: version {version}, {source}."
+msgstr "Используется: версия {version}, {source}."
+
+#: app/companion/ui/settings_window.py:1162
+msgid "Checking for a newer one..."
+msgstr "Проверяю, есть ли новее..."
+
+#: app/companion/ui/settings_window.py:1164
+#, python-brace-format
+msgid "Problem: {error}"
+msgstr "Проблема: {error}"
+
+#: app/companion/ui/settings_window.py:1180
+msgid "Import a Claude Desktop profile"
+msgstr "Импортировать профиль Claude Desktop"
+
+#: app/companion/ui/settings_window.py:1180
+#: app/companion/ui/settings_window.py:1191
+msgid "Profile"
+msgstr "Профиль"
+
+#: app/companion/ui/settings_window.py:1191
+msgid "Export the Claude Desktop profile"
+msgstr "Экспортировать профиль Claude Desktop"
+
+#: app/companion/ui/settings_window.py:1218
 msgid "Language:"
 msgstr "Язык:"
 
-#: app/companion/ui/settings_window.py:513
+#: app/companion/ui/settings_window.py:1220
 msgid "Takes effect after VoiceMate restarts."
 msgstr "Вступит в силу после перезапуска VoiceMate."
 
-#: app/companion/ui/settings_window.py:518
+#: app/companion/ui/settings_window.py:1225
 msgid "Dictation language:"
 msgstr "Язык диктовки:"
 
-#: app/companion/ui/settings_window.py:526
+#: app/companion/ui/settings_window.py:1233
 msgid "Notifications:"
 msgstr "Уведомления:"
 
-#: app/companion/ui/settings_window.py:527
+#: app/companion/ui/settings_window.py:1234
 msgid "Start VoiceMate when I sign in"
 msgstr "Запускать VoiceMate при входе в систему"
 
-#: app/companion/ui/settings_window.py:532
+#: app/companion/ui/settings_window.py:1239
 msgid "Always show the VoiceMate icon on the taskbar"
 msgstr "Всегда показывать значок VoiceMate на панели задач"
 
-#: app/companion/ui/settings_window.py:535
+#: app/companion/ui/settings_window.py:1242
 msgid ""
 "Shows the icon with the recording and transcription state next to the "
 "clock, instead of hiding it behind the arrow. An icon hidden in the "
@@ -1226,35 +2134,35 @@ msgstr ""
 "Windows, остаётся скрытым, пока вы не снимете этот флажок, не нажмёте "
 "«Применить» и не установите его снова."
 
-#: app/companion/ui/settings_window.py:544 app/companion/ui/tray.py:111
+#: app/companion/ui/settings_window.py:1251 app/companion/ui/tray.py:122
 msgid "Engine"
 msgstr "Движок"
 
-#: app/companion/ui/settings_window.py:551
+#: app/companion/ui/settings_window.py:1258
 msgid "Mode:"
 msgstr "Режим:"
 
-#: app/companion/ui/settings_window.py:553
+#: app/companion/ui/settings_window.py:1260
 msgid "Default distro"
 msgstr "Дистрибутив по умолчанию"
 
-#: app/companion/ui/settings_window.py:554
+#: app/companion/ui/settings_window.py:1261
 msgid "WSL distro:"
 msgstr "Дистрибутив WSL:"
 
-#: app/companion/ui/settings_window.py:556 app/companion/ui/texts.py:184
+#: app/companion/ui/settings_window.py:1263 app/companion/ui/texts.py:200
 msgid "Detect automatically"
 msgstr "Определять автоматически"
 
-#: app/companion/ui/settings_window.py:557
+#: app/companion/ui/settings_window.py:1264
 msgid "The voice-mate folder: relative to your home folder, or absolute."
 msgstr "Папка voice-mate: относительно домашней папки или абсолютный путь."
 
-#: app/companion/ui/settings_window.py:558
+#: app/companion/ui/settings_window.py:1265
 msgid "Engine folder:"
 msgstr "Папка движка:"
 
-#: app/companion/ui/settings_window.py:561
+#: app/companion/ui/settings_window.py:1268
 msgid ""
 "Restarting WSL brings its audio back, but it stops every running distro, "
 "Docker included."
@@ -1262,11 +2170,11 @@ msgstr ""
 "Перезапуск WSL возвращает звук, но останавливает все запущенные "
 "дистрибутивы, включая Docker."
 
-#: app/companion/ui/settings_window.py:563
+#: app/companion/ui/settings_window.py:1270
 msgid "Restart WSL when audio fails:"
 msgstr "Перезапускать WSL при сбое звука:"
 
-#: app/companion/ui/settings_window.py:573
+#: app/companion/ui/settings_window.py:1280
 msgid ""
 "CPU leaves the graphics card free for other programs. GPU is faster. A "
 "mode that is not installed yet is installed when you apply (VoiceMate "
@@ -1276,35 +2184,35 @@ msgstr ""
 "быстрее. Режим, который ещё не установлен, устанавливается при применении"
 " (VoiceMate сначала спросит). Смена режима перезапускает движок."
 
-#: app/companion/ui/settings_window.py:578
+#: app/companion/ui/settings_window.py:1285
 msgid "Run on:"
 msgstr "Выполнять на:"
 
-#: app/companion/ui/settings_window.py:580
+#: app/companion/ui/settings_window.py:1287
 msgid "CPU model:"
 msgstr "Модель для CPU:"
 
-#: app/companion/ui/settings_window.py:582
+#: app/companion/ui/settings_window.py:1289
 msgid "GPU model:"
 msgstr "Модель для GPU:"
 
-#: app/companion/ui/settings_window.py:607
+#: app/companion/ui/settings_window.py:1314
 msgid "Mode"
 msgstr "Режим"
 
-#: app/companion/ui/settings_window.py:608
+#: app/companion/ui/settings_window.py:1315
 msgid "WSL distro"
 msgstr "Дистрибутив WSL"
 
-#: app/companion/ui/settings_window.py:609
+#: app/companion/ui/settings_window.py:1316
 msgid "Engine folder"
 msgstr "Папка движка"
 
-#: app/companion/ui/settings_window.py:610
+#: app/companion/ui/settings_window.py:1317
 msgid "Restart WSL when audio fails"
 msgstr "Перезапускать WSL при сбое звука"
 
-#: app/companion/ui/settings_window.py:685
+#: app/companion/ui/settings_window.py:1392
 msgid ""
 "Connect only: set by the engine's own\n"
 "--transcription-language and --output-lang flags."
@@ -1312,7 +2220,7 @@ msgstr ""
 "Только подключаться: язык задают параметры самого движка\n"
 "--transcription-language и --output-lang."
 
-#: app/companion/ui/settings_window.py:688
+#: app/companion/ui/settings_window.py:1395
 msgid ""
 "Whisper detects the language of each recording. Claude still answers in "
 "the interface language. Changing it restarts the engine."
@@ -1320,11 +2228,11 @@ msgstr ""
 "Whisper определяет язык каждой записи. Claude по-прежнему отвечает на "
 "языке интерфейса. При изменении движок перезапускается."
 
-#: app/companion/ui/settings_window.py:691
+#: app/companion/ui/settings_window.py:1398
 msgid "Claude still answers in the interface language."
 msgstr "Claude по-прежнему отвечает на языке интерфейса."
 
-#: app/companion/ui/settings_window.py:694
+#: app/companion/ui/settings_window.py:1401
 msgid ""
 "The language you speak when dictating. It also sets the language of "
 "Claude's spoken answers. Changing it restarts the engine."
@@ -1332,15 +2240,85 @@ msgstr ""
 "Язык, на котором вы говорите при диктовке. Он также задаёт язык голосовых"
 " ответов Claude. При изменении движок перезапускается."
 
-#: app/companion/ui/settings_window.py:697
+#: app/companion/ui/settings_window.py:1404
 msgid "Also sets the language of Claude's spoken answers."
 msgstr "Также задаёт язык голосовых ответов Claude."
 
-#: app/companion/ui/settings_window.py:714
+#: app/companion/ui/settings_window.py:1430
+msgid "Spoken answers"
+msgstr "Голосовые ответы"
+
+#: app/companion/ui/settings_window.py:1436
+msgid ""
+"Where Claude's spoken answers come from. A custom provider is a service "
+"you run that follows the VoiceMate TTS provider protocol (docs/tts-"
+"provider-protocol.md). Changing it restarts the engine."
+msgstr ""
+"Откуда берутся голосовые ответы Claude. Свой провайдер, это ваш сервис, "
+"который следует протоколу TTS-провайдера VoiceMate (docs/tts-provider-"
+"protocol.md). Изменение перезапускает движок."
+
+#: app/companion/ui/settings_window.py:1440
+msgid "Voice engine:"
+msgstr "Движок голоса:"
+
+#: app/companion/ui/settings_window.py:1444
+msgid ""
+"The address the engine reaches the provider at. Inside WSL, 127.0.0.1 is "
+"the WSL side."
+msgstr ""
+"Адрес, по которому движок обращается к провайдеру. Внутри WSL 127.0.0.1 "
+"означает сторону WSL."
+
+#: app/companion/ui/settings_window.py:1446
+msgid "Provider address:"
+msgstr "Адрес провайдера:"
+
+#: app/companion/ui/settings_window.py:1449
+#: app/companion/ui/settings_window.py:1522
+msgid "Provider default"
+msgstr "По умолчанию у провайдера"
+
+#: app/companion/ui/settings_window.py:1449
+msgid "Load the voices, then type part of a name to find one, or type a voice id."
+msgstr ""
+"Загрузите голоса и введите часть имени, чтобы найти нужный, или введите "
+"идентификатор голоса."
+
+#: app/companion/ui/settings_window.py:1454
+msgid "Voice:"
+msgstr "Голос:"
+
+#: app/companion/ui/settings_window.py:1457 app/companion/ui/texts.py:256
+#: app/companion/ui/texts.py:337
+msgid "None"
+msgstr "Не показывать"
+
+#: app/companion/ui/settings_window.py:1459
+msgid ""
+"Optional. Sent to the provider as a bearer token. It is kept in this "
+"computer's settings file."
+msgstr ""
+"Необязательно. Отправляется провайдеру как bearer-токен. Хранится в файле"
+" настроек на этом компьютере."
+
+#: app/companion/ui/settings_window.py:1461
+msgid "Token:"
+msgstr "Токен:"
+
+#: app/companion/ui/settings_window.py:1462
+msgid "Test voice"
+msgstr "Проверить голос"
+
+#: app/companion/ui/settings_window.py:1463
+msgid "Speaks a short sentence with the provider and voice above."
+msgstr "Произносит короткую фразу с указанными выше провайдером и голосом."
+
+#: app/companion/ui/settings_window.py:1578
 msgid "VoiceMate Settings"
 msgstr "Настройки VoiceMate"
 
-#: app/companion/ui/settings_window.py:725
+#: app/companion/ui/settings_window.py:1589
 msgid ""
 "These settings were saved by a newer version of VoiceMate. They are shown"
 " read-only."
@@ -1348,23 +2326,27 @@ msgstr ""
 "Эти настройки сохранены более новой версией VoiceMate. Они показаны "
 "только для чтения."
 
-#: app/companion/ui/settings_window.py:735
+#: app/companion/ui/settings_window.py:1603
 msgid "General"
 msgstr "Общие"
 
-#: app/companion/ui/settings_window.py:747
+#: app/companion/ui/settings_window.py:1615
 msgid "OK"
 msgstr "ОК"
 
-#: app/companion/ui/settings_window.py:749
+#: app/companion/ui/settings_window.py:1617
 msgid "Apply"
 msgstr "Применить"
 
-#: app/companion/ui/settings_window.py:832
+#: app/companion/ui/settings_window.py:1662
+msgid "Contacting the provider..."
+msgstr "Связываемся с провайдером..."
+
+#: app/companion/ui/settings_window.py:1738
 msgid "Checking the transcription mode..."
 msgstr "Проверка режима распознавания..."
 
-#: app/companion/ui/settings_window.py:846
+#: app/companion/ui/settings_window.py:1752
 msgid ""
 "The transcription mode is not ready (not installed, or another change is "
 "under way), so nothing was changed."
@@ -1372,20 +2354,20 @@ msgstr ""
 "Режим распознавания не готов (не установлен или идёт другая смена), "
 "поэтому ничего не изменено."
 
-#: app/companion/ui/settings_window.py:853
+#: app/companion/ui/settings_window.py:1759
 msgid "Saving..."
 msgstr "Сохранение..."
 
-#: app/companion/ui/settings_window.py:865
+#: app/companion/ui/settings_window.py:1771
 #, python-brace-format
 msgid "Unexpected error: {error}"
 msgstr "Непредвиденная ошибка: {error}"
 
-#: app/companion/ui/settings_window.py:872
+#: app/companion/ui/settings_window.py:1778
 msgid "The settings were not saved:"
 msgstr "Настройки не сохранены:"
 
-#: app/companion/ui/settings_window.py:884
+#: app/companion/ui/settings_window.py:1790
 msgid "Settings saved."
 msgstr "Настройки сохранены."
 
@@ -1421,8 +2403,8 @@ msgstr "Микрофоны:"
 msgid "Restarts:"
 msgstr "Перезапуски:"
 
-#: app/companion/ui/status_window.py:166 app/companion/ui/tray.py:89
-#: app/companion/ui/tray.py:164
+#: app/companion/ui/status_window.py:166 app/companion/ui/tray.py:100
+#: app/companion/ui/tray.py:175
 msgid "Not copied"
 msgstr "Нескопированные"
 
@@ -1430,19 +2412,15 @@ msgstr "Нескопированные"
 msgid "Transcriptions that never reached the clipboard. Copy them from here."
 msgstr "Расшифровки, которые так и не попали в буфер обмена. Скопируйте их отсюда."
 
-#: app/companion/ui/status_window.py:168
-msgid "Clear"
-msgstr "Очистить"
-
-#: app/companion/ui/status_window.py:173 app/companion/ui/tray.py:86
+#: app/companion/ui/status_window.py:173 app/companion/ui/tray.py:97
 msgid "Recent"
 msgstr "Недавние"
 
-#: app/companion/ui/status_window.py:178 app/companion/ui/tray.py:119
+#: app/companion/ui/status_window.py:178 app/companion/ui/tray.py:130
 msgid "Settings..."
 msgstr "Настройки..."
 
-#: app/companion/ui/status_window.py:182 app/companion/ui/tray.py:117
+#: app/companion/ui/status_window.py:182 app/companion/ui/tray.py:128
 msgid "Open logs"
 msgstr "Открыть журналы"
 
@@ -1450,11 +2428,11 @@ msgstr "Открыть журналы"
 msgid "Copy"
 msgstr "Копировать"
 
-#: app/companion/ui/status_window.py:243 app/companion/ui/tray.py:218
+#: app/companion/ui/status_window.py:243 app/companion/ui/tray.py:251
 msgid "No transcriptions yet"
 msgstr "Расшифровок пока нет"
 
-#: app/companion/ui/status_window.py:360 app/companion/ui/tray.py:255
+#: app/companion/ui/status_window.py:360 app/companion/ui/tray.py:289
 msgid "Quitting..."
 msgstr "Выход..."
 
@@ -1498,185 +2476,385 @@ msgid ""
 "current mode."
 msgstr "Установка не удалась. Подробности ниже; движок остаётся в текущем режиме."
 
-#: app/companion/ui/texts.py:52
+#: app/companion/ui/texts.py:63
 msgid "Dictate"
 msgstr "Диктовка"
 
-#: app/companion/ui/texts.py:52
+#: app/companion/ui/texts.py:63
 msgid "Ask Claude"
 msgstr "Спросить Claude"
 
-#: app/companion/ui/texts.py:59
+#: app/companion/ui/texts.py:70
 #, python-brace-format
 msgid "{title} ({flow})"
 msgstr "{title} ({flow})"
 
-#: app/companion/ui/texts.py:65
+#: app/companion/ui/texts.py:76
 msgid "Stop and copy"
 msgstr "Остановить и скопировать"
 
-#: app/companion/ui/texts.py:65
+#: app/companion/ui/texts.py:76
 msgid "Stop and ask Claude"
 msgstr "Остановить и спросить Claude"
 
-#: app/companion/ui/texts.py:77
+#: app/companion/ui/texts.py:88
 msgid "Recording"
 msgstr "Запись"
 
-#: app/companion/ui/texts.py:94
+#: app/companion/ui/texts.py:105
 msgid "Restarting engine..."
 msgstr "Перезапуск движка..."
 
-#: app/companion/ui/texts.py:97
+#: app/companion/ui/texts.py:108
 #, python-brace-format
 msgid "Listening for {chord}"
 msgstr "Ожидание нажатия {chord}"
 
-#: app/companion/ui/texts.py:112
+#: app/companion/ui/texts.py:123
 msgid "Check the microphone"
 msgstr "Проверьте микрофон"
 
-#: app/companion/ui/texts.py:114
+#: app/companion/ui/texts.py:125
 msgid "The engine stopped working"
 msgstr "Движок перестал работать"
 
-#: app/companion/ui/texts.py:120
+#: app/companion/ui/texts.py:133
 msgid "Shortcuts paused"
 msgstr "Горячие клавиши приостановлены"
 
-#: app/companion/ui/texts.py:127
+#: app/companion/ui/texts.py:136
+#, python-brace-format
+msgid "Answers waiting: {count}"
+msgstr "Ожидающих ответов: {count}"
+
+#: app/companion/ui/texts.py:142 app/companion/ui/texts.py:308
 msgid "Stopped"
 msgstr "Остановлен"
 
-#: app/companion/ui/texts.py:128
+#: app/companion/ui/texts.py:143
 msgid "Starting"
 msgstr "Запускается"
 
-#: app/companion/ui/texts.py:129
+#: app/companion/ui/texts.py:144
 msgid "Running"
 msgstr "Работает"
 
-#: app/companion/ui/texts.py:130
+#: app/companion/ui/texts.py:145
 msgid "Not responding"
 msgstr "Не отвечает"
 
-#: app/companion/ui/texts.py:131
+#: app/companion/ui/texts.py:146
 msgid "Restarting"
 msgstr "Перезапускается"
 
-#: app/companion/ui/texts.py:132
+#: app/companion/ui/texts.py:147
 msgid "Waiting to restart"
 msgstr "Ожидает перезапуска"
 
-#: app/companion/ui/texts.py:133
+#: app/companion/ui/texts.py:148
 msgid "Failed"
 msgstr "Сбой"
 
-#: app/companion/ui/texts.py:138
+#: app/companion/ui/texts.py:153
 msgid "Working"
 msgstr "Работает"
 
-#: app/companion/ui/texts.py:138
+#: app/companion/ui/texts.py:153
 msgid "Not working"
 msgstr "Не работает"
 
-#: app/companion/ui/texts.py:138 app/companion/ui/texts.py:143
+#: app/companion/ui/texts.py:153 app/companion/ui/texts.py:158
 msgid "Unknown"
 msgstr "Неизвестно"
 
-#: app/companion/ui/texts.py:145
+#: app/companion/ui/texts.py:160
 msgid "None found"
 msgstr "Не найдены"
 
-#: app/companion/ui/texts.py:161
+#: app/companion/ui/texts.py:177
 msgid "Built-in"
 msgstr "Встроенный"
 
-#: app/companion/ui/texts.py:161
+#: app/companion/ui/texts.py:177
 msgid "Custom file"
 msgstr "Свой файл"
 
-#: app/companion/ui/texts.py:165
+#: app/companion/ui/texts.py:181
 msgid "Classic"
 msgstr "Классический"
 
-#: app/companion/ui/texts.py:165
+#: app/companion/ui/texts.py:181
 msgid "Soft"
 msgstr "Мягкий"
 
-#: app/companion/ui/texts.py:165
+#: app/companion/ui/texts.py:181
 msgid "Click"
 msgstr "Щелчок"
 
-#: app/companion/ui/texts.py:171
+#: app/companion/ui/texts.py:187
 msgid "Automatic (system language)"
 msgstr "Автоматически (язык системы)"
 
-#: app/companion/ui/texts.py:183
+#: app/companion/ui/texts.py:199
 msgid "Same as the interface"
 msgstr "Как в интерфейсе"
 
-#: app/companion/ui/texts.py:199
+#: app/companion/ui/texts.py:215
 msgid "Start it in WSL"
 msgstr "Запускать в WSL"
 
-#: app/companion/ui/texts.py:200
+#: app/companion/ui/texts.py:216
 msgid "Start it on this computer"
 msgstr "Запускать на этом компьютере"
 
-#: app/companion/ui/texts.py:201
+#: app/companion/ui/texts.py:217
 msgid "Connect only"
 msgstr "Только подключаться"
 
-#: app/companion/ui/texts.py:206
+#: app/companion/ui/texts.py:222
 msgid "Automatically"
 msgstr "Автоматически"
 
-#: app/companion/ui/texts.py:206
+#: app/companion/ui/texts.py:222
 msgid "Ask first"
 msgstr "Сначала спрашивать"
 
-#: app/companion/ui/texts.py:206
+#: app/companion/ui/texts.py:222
 msgid "Never"
 msgstr "Никогда"
 
-#: app/companion/ui/texts.py:211
+#: app/companion/ui/texts.py:227 app/companion/ui/texts.py:289
+msgid "Off"
+msgstr "Выключено"
+
+#: app/companion/ui/texts.py:228
+msgid "VoiceMate's own conversation"
+msgstr "Собственный разговор VoiceMate"
+
+#: app/companion/ui/texts.py:229
+msgid "A Claude Desktop conversation"
+msgstr "Разговор Claude Desktop"
+
+#: app/companion/ui/texts.py:235
+msgid "Ask before every change"
+msgstr "Спрашивать перед каждым изменением"
+
+#: app/companion/ui/texts.py:236
+msgid "Accept file edits, ask for the rest"
+msgstr "Принимать правки файлов, спрашивать об остальном"
+
+#: app/companion/ui/texts.py:237
+msgid "Full access, never ask (risky)"
+msgstr "Полный доступ, никогда не спрашивать (рискованно)"
+
+#: app/companion/ui/texts.py:242
+msgid "Same as VoiceMate"
+msgstr "Как в VoiceMate"
+
+#: app/companion/ui/texts.py:242
+msgid "English"
+msgstr "Английский"
+
+#: app/companion/ui/texts.py:242
+msgid "Portuguese (Brazil)"
+msgstr "Португальский (Бразилия)"
+
+#: app/companion/ui/texts.py:247
+msgid "Tell me the answer as soon as it arrives"
+msgstr "Сообщать ответ сразу, как он придёт"
+
+#: app/companion/ui/texts.py:248
+msgid "Say a short notice and keep the answer for later"
+msgstr "Коротко сообщать и сохранять ответ на потом"
+
+#: app/companion/ui/texts.py:249
+msgid "Only play a sound and keep the answer"
+msgstr "Только проиграть звук и сохранить ответ"
+
+#: app/companion/ui/texts.py:250
+msgid "Just keep it"
+msgstr "Просто сохранить"
+
+#: app/companion/ui/texts.py:257
+msgid "A Markdown file (for example a note in your Obsidian vault)"
+msgstr "Файл Markdown (например, заметка из вашего хранилища Obsidian)"
+
+#: app/companion/ui/texts.py:258
+msgid "Write my own"
+msgstr "Написать свою"
+
+#: app/companion/ui/texts.py:264
+msgid "imported file"
+msgstr "импортированный файл"
+
+#: app/companion/ui/texts.py:265
+msgid "downloaded update"
+msgstr "загруженное обновление"
+
+#: app/companion/ui/texts.py:266
+msgid "built into VoiceMate"
+msgstr "встроенный в VoiceMate"
+
+#: app/companion/ui/texts.py:272
+msgid "Talk to the assistant"
+msgstr "Говорить с ассистентом"
+
+#: app/companion/ui/texts.py:273
+msgid "Open the assistant window"
+msgstr "Открыть окно ассистента"
+
+#: app/companion/ui/texts.py:274
+msgid "Switch the assistant mode"
+msgstr "Переключить режим ассистента"
+
+#: app/companion/ui/texts.py:276 app/companion/ui/tray.py:90
+#: app/companion/ui/tray.py:198
+msgid "Hear what's ready"
+msgstr "Прослушать готовое"
+
+#: app/companion/ui/texts.py:281
+msgid "Haiku (fastest)"
+msgstr "Haiku (самая быстрая)"
+
+#: app/companion/ui/texts.py:281
+msgid "Sonnet"
+msgstr "Sonnet"
+
+#: app/companion/ui/texts.py:281
+msgid "Opus (deepest)"
+msgstr "Opus (самая глубокая)"
+
+#: app/companion/ui/texts.py:285
+msgid "Low"
+msgstr "Низкое"
+
+#: app/companion/ui/texts.py:285
+msgid "Medium"
+msgstr "Среднее"
+
+#: app/companion/ui/texts.py:285
+msgid "High"
+msgstr "Высокое"
+
+#: app/companion/ui/texts.py:289
+msgid "On"
+msgstr "Включено"
+
+#: app/companion/ui/texts.py:296
+msgid "Claude Code was not found"
+msgstr "Claude Code не найден"
+
+#: app/companion/ui/texts.py:297
+msgid "Claude Code is not signed in"
+msgstr "Вход в Claude Code не выполнен"
+
+#: app/companion/ui/texts.py:298
+msgid "The assistant could not start"
+msgstr "Не удалось запустить ассистента"
+
+#: app/companion/ui/texts.py:299
+msgid "The assistant stopped"
+msgstr "Ассистент остановился"
+
+#: app/companion/ui/texts.py:300
+msgid "The assistant could not be set up"
+msgstr "Не удалось подготовить ассистента"
+
+#: app/companion/ui/texts.py:301
+msgid "No Claude Desktop conversation is chosen"
+msgstr "Разговор Claude Desktop не выбран"
+
+#: app/companion/ui/texts.py:302
+msgid "The assistant has a problem"
+msgstr "У ассистента возникла проблема"
+
+#: app/companion/ui/texts.py:304
+msgid "The assistant is off"
+msgstr "Ассистент выключен"
+
+#: app/companion/ui/texts.py:305
+msgid "Starting..."
+msgstr "Запуск..."
+
+#: app/companion/ui/texts.py:307
+msgid "Answering..."
+msgstr "Отвечает..."
+
+#: app/companion/ui/texts.py:319
+msgid ""
+"Install Claude Code, or set VOICEMATE_CLAUDE_CLI to its path, then "
+"restart the assistant."
+msgstr ""
+"Установите Claude Code или укажите путь к нему в VOICEMATE_CLAUDE_CLI, "
+"затем перезапустите ассистента."
+
+#: app/companion/ui/texts.py:321
+msgid ""
+"Sign in with \"claude auth login\" in a terminal, then restart the "
+"assistant."
+msgstr ""
+"Войдите командой \"claude auth login\" в терминале, затем перезапустите "
+"ассистента."
+
+#: app/companion/ui/texts.py:322
+msgid "Choose the Claude Desktop conversation in Settings, Assistant."
+msgstr "Выберите разговор Claude Desktop в Настройках, Ассистент."
+
+#: app/companion/ui/texts.py:323
+msgid "Restart the assistant to try again. The VoiceMate log has the details."
+msgstr ""
+"Перезапустите ассистента, чтобы повторить попытку. Подробности в журнале "
+"VoiceMate."
+
+#: app/companion/ui/texts.py:325
+msgid "The assistant is off. Turn it on in Settings, Assistant."
+msgstr "Ассистент выключен. Включите его в настройках, в разделе «Ассистент»."
+
+#: app/companion/ui/texts.py:326
+msgid "The assistant is starting. Please wait."
+msgstr "Ассистент запускается. Подождите."
+
+#: app/companion/ui/texts.py:327
+msgid "The assistant is answering. Please wait."
+msgstr "Ассистент отвечает. Подождите."
+
+#: app/companion/ui/texts.py:328
+msgid "The assistant is stopped."
+msgstr "Ассистент остановлен."
+
+#: app/companion/ui/texts.py:334
 msgid "All"
 msgstr "Все"
 
-#: app/companion/ui/texts.py:212
+#: app/companion/ui/texts.py:335
 msgid "Warnings and errors"
 msgstr "Предупреждения и ошибки"
 
-#: app/companion/ui/texts.py:213
+#: app/companion/ui/texts.py:336
 msgid "Errors only"
 msgstr "Только ошибки"
 
-#: app/companion/ui/texts.py:214
-msgid "None"
-msgstr "Не показывать"
-
-#: app/companion/ui/texts.py:220
+#: app/companion/ui/texts.py:343
 msgid "Available"
 msgstr "Свободно"
 
-#: app/companion/ui/texts.py:221
+#: app/companion/ui/texts.py:344
 msgid "Used by another app"
 msgstr "Занято другим приложением"
 
-#: app/companion/ui/texts.py:222
+#: app/companion/ui/texts.py:345
 msgid "Used by another action"
 msgstr "Занято другим действием"
 
-#: app/companion/ui/texts.py:223
+#: app/companion/ui/texts.py:346
 msgid "Not allowed"
 msgstr "Недопустимо"
 
-#: app/companion/ui/texts.py:224
+#: app/companion/ui/texts.py:347
 msgid "Set by the engine"
 msgstr "Задано движком"
 
-#: app/companion/ui/texts.py:229
+#: app/companion/ui/texts.py:352
 msgid ""
 "Use Ctrl, Alt, Shift or Win with a key, or a function key alone. F12 is "
 "reserved by Windows."
@@ -1684,87 +2862,100 @@ msgstr ""
 "Используйте Ctrl, Alt, Shift или Win вместе с клавишей либо одну "
 "функциональную клавишу. F12 зарезервирована Windows."
 
-#: app/companion/ui/texts.py:234
+#: app/companion/ui/texts.py:357
 msgid "CPU (leaves the GPU free)"
 msgstr "CPU (видеокарта остаётся свободной)"
 
-#: app/companion/ui/texts.py:235
+#: app/companion/ui/texts.py:358
 msgid "GPU (fastest)"
 msgstr "GPU (быстрее всего)"
 
-#: app/companion/ui/texts.py:236
+#: app/companion/ui/texts.py:359
 msgid "Automatic (engine setup)"
 msgstr "Автоматически (настройка движка)"
 
-#: app/companion/ui/texts.py:243
+#: app/companion/ui/texts.py:366
 msgid "large-v3-turbo (recommended)"
 msgstr "large-v3-turbo (рекомендуется)"
 
-#: app/companion/ui/texts.py:244
+#: app/companion/ui/texts.py:367
 msgid "large-v3 (most accurate, slowest)"
 msgstr "large-v3 (самая точная, самая медленная)"
 
-#: app/companion/ui/texts.py:245
+#: app/companion/ui/texts.py:368
 msgid "medium (faster)"
 msgstr "medium (быстрее)"
 
-#: app/companion/ui/texts.py:246
+#: app/companion/ui/texts.py:369
 msgid "small (fastest, less accurate)"
 msgstr "small (самая быстрая, менее точная)"
 
-#: app/companion/ui/texts.py:253
+#: app/companion/ui/texts.py:375
+msgid "Built-in (engine setup)"
+msgstr "Встроенный (настройка движка)"
+
+#: app/companion/ui/texts.py:376
+msgid "Custom provider (HTTP)"
+msgstr "Свой провайдер (HTTP)"
+
+#: app/companion/ui/texts.py:383
 msgid "Not known yet"
 msgstr "Пока неизвестно"
 
-#: app/companion/ui/texts.py:254
+#: app/companion/ui/texts.py:384
 msgid "GPU"
 msgstr "GPU"
 
-#: app/companion/ui/texts.py:254
+#: app/companion/ui/texts.py:384
 msgid "CPU"
 msgstr "CPU"
 
-#: app/companion/ui/texts.py:255
+#: app/companion/ui/texts.py:385
 #, python-brace-format
 msgid "{device}, {model}"
 msgstr "{device}, {model}"
 
-#: app/companion/ui/texts.py:257
+#: app/companion/ui/texts.py:387
 msgid "The GPU mode is not working. Install it from the Transcription menu."
 msgstr "Режим GPU не работает. Установите его через меню «Распознавание»."
 
-#: app/companion/ui/texts.py:263
+#: app/companion/ui/texts.py:393
 #, python-brace-format
 msgid "about {size} GB"
 msgstr "около {size} ГБ"
 
-#: app/companion/ui/texts.py:264
+#: app/companion/ui/texts.py:394
 #, python-brace-format
 msgid "about {size} MB"
 msgstr "около {size} МБ"
 
-#: app/companion/ui/tray.py:79
+#: app/companion/ui/tray.py:86
 msgid "Open VoiceMate"
 msgstr "Открыть VoiceMate"
 
-#: app/companion/ui/tray.py:92
+#: app/companion/ui/tray.py:103
 msgid "Restart WSL now..."
 msgstr "Перезапустить WSL сейчас..."
 
-#: app/companion/ui/tray.py:96
+#: app/companion/ui/tray.py:107
 msgid "Mute sounds"
 msgstr "Выключить звуки"
 
-#: app/companion/ui/tray.py:164
+#: app/companion/ui/tray.py:175
 #, python-brace-format
 msgid "Not copied ({count})"
 msgstr "Нескопированные ({count})"
 
-#: app/companion/ui/tray.py:222
+#: app/companion/ui/tray.py:198
+#, python-brace-format
+msgid "Hear what's ready ({count})"
+msgstr "Прослушать готовое ({count})"
+
+#: app/companion/ui/tray.py:255
 msgid "Nothing to copy"
 msgstr "Нечего копировать"
 
-#: app/companion/ui/tray.py:268
+#: app/companion/ui/tray.py:302
 #, python-brace-format
 msgid "Claude: {text}"
 msgstr "Claude: {text}"
@@ -1949,17 +3140,17 @@ msgstr "[VoiceMate] Запрошено завершение во время за
 msgid "[VoiceMate] stdin closed: shutting down."
 msgstr "[VoiceMate] stdin закрыт: завершение работы."
 
-#: app/daemon/server.py:440
+#: app/daemon/server.py:467
 #, python-brace-format
 msgid "[VoiceMate] Client {client} unregistered."
 msgstr "[VoiceMate] Регистрация клиента {client} отменена."
 
-#: app/daemon/server.py:469
+#: app/daemon/server.py:496
 #, python-brace-format
 msgid "[VoiceMate] ❌ Error in trigger for flow '{flow}':"
 msgstr "[VoiceMate] ❌ Ошибка в триггере режима '{flow}':"
 
-#: app/daemon/server.py:526
+#: app/daemon/server.py:553
 msgid "[VoiceMate] Shutdown requested over HTTP."
 msgstr "[VoiceMate] Завершение работы запрошено по HTTP."
 
@@ -1978,7 +3169,7 @@ msgid "[VoiceMate] 📋 Transcription copied to clipboard."
 msgstr "[VoiceMate] 📋 Расшифровка скопирована в буфер обмена."
 
 #: app/features/claude/chat_handler.py:119
-#: app/features/claude/chat_handler.py:160
+#: app/features/claude/chat_handler.py:164
 msgid "[VoiceMate] 📋 The clipboard lease holder copies it to the clipboard."
 msgstr "[VoiceMate] 📋 В буфер обмена текст копирует владелец аренды буфера."
 
@@ -1988,59 +3179,59 @@ msgid ""
 "recording took over."
 msgstr "[VoiceMate] Claude не вызван: операция отменена или началась новая запись."
 
-#: app/features/claude/chat_handler.py:134
+#: app/features/claude/chat_handler.py:138
 msgid "[VoiceMate] 🤖 Calling Claude..."
 msgstr "[VoiceMate] 🤖 Обращение к Claude..."
 
-#: app/features/claude/chat_handler.py:147
+#: app/features/claude/chat_handler.py:151
 msgid "[VoiceMate] ✗ Claude response discarded (cancelled)."
 msgstr "[VoiceMate] ✗ Ответ Claude отброшен (операция отменена)."
 
-#: app/features/claude/chat_handler.py:150
+#: app/features/claude/chat_handler.py:154
 msgid "[VoiceMate] Claude returned an empty response."
 msgstr "[VoiceMate] Claude вернул пустой ответ."
 
-#: app/features/claude/chat_handler.py:153
+#: app/features/claude/chat_handler.py:157
 #, python-brace-format
 msgid "[VoiceMate] 💬 Claude: {preview}"
 msgstr "[VoiceMate] 💬 Claude: {preview}"
 
-#: app/features/claude/chat_handler.py:154
+#: app/features/claude/chat_handler.py:158
 #, python-brace-format
 msgid "[VoiceMate] ⏱ Full response in {elapsed:.1f}s"
 msgstr "[VoiceMate] ⏱ Полный ответ за {elapsed:.1f} с"
 
-#: app/features/claude/chat_handler.py:158
+#: app/features/claude/chat_handler.py:162
 msgid "[VoiceMate] 📋 Claude response copied to clipboard."
 msgstr "[VoiceMate] 📋 Ответ Claude скопирован в буфер обмена."
 
-#: app/features/claude/chat_handler.py:164
+#: app/features/claude/chat_handler.py:168
 msgid "[VoiceMate] ✗ Claude call cancelled."
 msgstr "[VoiceMate] ✗ Обращение к Claude отменено."
 
-#: app/features/claude/chat_handler.py:167
+#: app/features/claude/chat_handler.py:171
 #, python-brace-format
 msgid "[VoiceMate] ⏱ Claude exceeded timeout ({timeout:.0f}s), discarding turn."
 msgstr ""
 "[VoiceMate] ⏱ Claude превысил время ожидания ({timeout:.0f} с), реплика "
 "отброшена."
 
-#: app/features/claude/chat_handler.py:176
+#: app/features/claude/chat_handler.py:180
 #, python-brace-format
 msgid "Claude did not answer within {timeout:.0f}s."
 msgstr "Claude не ответил за {timeout:.0f} с."
 
-#: app/features/claude/chat_handler.py:180
+#: app/features/claude/chat_handler.py:184
 #, python-brace-format
 msgid "[VoiceMate] ❌ Error talking to Claude: {exc}"
 msgstr "[VoiceMate] ❌ Ошибка при обращении к Claude: {exc}"
 
-#: app/features/claude/chat_handler.py:184
+#: app/features/claude/chat_handler.py:188
 #, python-brace-format
 msgid "Error talking to Claude: {detail}"
 msgstr "Ошибка при обращении к Claude: {detail}"
 
-#: app/features/claude/chat_handler.py:207
+#: app/features/claude/chat_handler.py:211
 msgid "[VoiceMate] 💬 Claude responding..."
 msgstr "[VoiceMate] 💬 Claude отвечает..."
 
@@ -2061,12 +3252,78 @@ msgstr "[VoiceMate] ⚠ Прогрев openai-whisper не удался (про�
 msgid "[VoiceMate] ⚠ VAD failed (using full audio): {exc}"
 msgstr "[VoiceMate] ⚠ Ошибка VAD (используется всё аудио): {exc}"
 
-#: app/features/tts/kokoro_speaker.py:80
+#: app/features/tts/external_speaker.py:111
+#: app/features/tts/external_speaker.py:168
+#, python-brace-format
+msgid "[ExternalSpeaker] warmup skipped: {detail}"
+msgstr "[ExternalSpeaker] прогрев пропущен: {detail}"
+
+#: app/features/tts/external_speaker.py:119
+msgid ""
+"[ExternalSpeaker] ⚠ AudioPlayer drain timed out, audio may have been left"
+" incomplete."
+msgstr ""
+"[ExternalSpeaker] ⚠ AudioPlayer не успел доиграть буфер; звук мог "
+"остаться неполным."
+
+#: app/features/tts/external_speaker.py:219
+#, python-brace-format
+msgid "[ExternalSpeaker] Connected to '{name}' ({count} voices, {rate} Hz)."
+msgstr "[ExternalSpeaker] Подключено к '{name}' (голосов: {count}, {rate} Гц)."
+
+#: app/features/tts/external_speaker.py:234
+msgid "[ExternalSpeaker] The provider is loading, waiting for it..."
+msgstr "[ExternalSpeaker] Провайдер загружается, ожидание..."
+
+#: app/features/tts/external_speaker.py:272
+#: app/features/tts/external_speaker.py:320
+#, python-brace-format
+msgid "[ExternalSpeaker] error while speaking: {exc}"
+msgstr "[ExternalSpeaker] ошибка при озвучивании: {exc}"
+
+#: app/features/tts/external_speaker.py:295
+#, python-brace-format
+msgid "[ExternalSpeaker] ⚠ {message}"
+msgstr "[ExternalSpeaker] ⚠ {message}"
+
+#: app/features/tts/external_speaker.py:359
+#, python-brace-format
+msgid ""
+"The TTS provider at {url} is not reachable ({detail}). Speech is off "
+"until it is back."
+msgstr ""
+"TTS-провайдер по адресу {url} недоступен ({detail}). Озвучивание "
+"отключено, пока он не вернётся."
+
+#: app/features/tts/external_speaker.py:363
+msgid ""
+"The TTS provider rejected the token. Set it in the settings or in "
+"VOICEMATE_TTS_TOKEN."
+msgstr ""
+"TTS-провайдер отклонил токен. Задайте его в настройках или в "
+"VOICEMATE_TTS_TOKEN."
+
+#: app/features/tts/external_speaker.py:365
+#, python-brace-format
+msgid "The service at {url} is not a compatible TTS provider: {detail}"
+msgstr "Сервис по адресу {url} не является совместимым TTS-провайдером: {detail}"
+
+#: app/features/tts/external_speaker.py:367
+#, python-brace-format
+msgid "The TTS provider at {url} is not ready yet ({detail})."
+msgstr "TTS-провайдер по адресу {url} ещё не готов ({detail})."
+
+#: app/features/tts/external_speaker.py:368
+#, python-brace-format
+msgid "The TTS provider at {url} failed: {detail}"
+msgstr "Сбой TTS-провайдера по адресу {url}: {detail}"
+
+#: app/features/tts/kokoro_speaker.py:132
 #, python-brace-format
 msgid "[KokoroSpeaker] error while speaking: {exc}"
 msgstr "[KokoroSpeaker] ошибка при озвучивании: {exc}"
 
-#: app/features/tts/kokoro_speaker.py:89
+#: app/features/tts/kokoro_speaker.py:141
 msgid ""
 "[KokoroSpeaker] ⚠ AudioPlayer drain timed out — audio may have been left "
 "incomplete."
@@ -2074,20 +3331,20 @@ msgstr ""
 "[KokoroSpeaker] ⚠ Истекло время ожидания AudioPlayer: звук мог "
 "воспроизвестись не полностью."
 
-#: app/features/tts/kokoro_speaker.py:102
+#: app/features/tts/kokoro_speaker.py:154
 msgid "[KokoroSpeaker] Warmup..."
 msgstr "[KokoroSpeaker] Прогрев..."
 
-#: app/features/tts/kokoro_speaker.py:105
+#: app/features/tts/kokoro_speaker.py:157
 msgid "[KokoroSpeaker] Warmup done — synthesis ready."
 msgstr "[KokoroSpeaker] Прогрев завершён: синтез готов."
 
-#: app/features/tts/kokoro_speaker.py:107
+#: app/features/tts/kokoro_speaker.py:159
 #, python-brace-format
 msgid "[KokoroSpeaker] ⚠ warmup failed (continuing): {exc}"
 msgstr "[KokoroSpeaker] ⚠ Прогрев не удался (продолжаем): {exc}"
 
-#: app/features/tts/kokoro_speaker.py:136
+#: app/features/tts/kokoro_speaker.py:211
 #, python-brace-format
 msgid ""
 "[KokoroSpeaker] ⚠ Failed to load Kokoro: {exc}\n"
@@ -2096,7 +3353,7 @@ msgstr ""
 "[KokoroSpeaker] ⚠ Не удалось загрузить Kokoro: {exc}\n"
 "[KokoroSpeaker]   Для PT-BR нужен espeak-ng: sudo apt install -y espeak-ng"
 
-#: app/features/tts/kokoro_speaker.py:150
+#: app/features/tts/kokoro_speaker.py:225
 #, python-brace-format
 msgid ""
 "[KokoroSpeaker] Loading Kokoro (lang={lang_code}, {device}, first run "
@@ -2105,7 +3362,7 @@ msgstr ""
 "[KokoroSpeaker] Загрузка Kokoro (lang={lang_code}, {device}, при первом "
 "запуске скачиваются веса)..."
 
-#: app/features/tts/kokoro_speaker.py:155
+#: app/features/tts/kokoro_speaker.py:230
 msgid "[KokoroSpeaker] Model ready."
 msgstr "[KokoroSpeaker] Модель готова."
 

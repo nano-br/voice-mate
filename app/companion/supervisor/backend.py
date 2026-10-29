@@ -28,6 +28,7 @@ from app.protocol.models import ShutdownReason
 
 if TYPE_CHECKING:
     from app.companion.stt import EngineStt  # app.companion.stt imports this module
+    from app.companion.tts import EngineTts
 
 log = logging.getLogger(__name__)
 
@@ -65,16 +66,23 @@ def make_script(engine_dir: str, target: str) -> str:
 
 
 def engine_script(
-    engine_dir: str, port: int, language: EngineLanguage | None = None, stt: EngineStt | None = None
+    engine_dir: str,
+    port: int,
+    language: EngineLanguage | None = None,
+    stt: EngineStt | None = None,
+    tts: EngineTts | None = None,
 ) -> str:
-    """Run the engine. `language` adds the dictation language flags to ARGS and `stt` the
-    transcription mode and model (their values come from closed sets, so they need no
-    quoting); None leaves the engine's own defaults."""
+    """Run the engine. `language` adds the dictation language flags to ARGS, `stt` the
+    transcription mode and model and `tts` the external voice provider (their values come from
+    closed sets or are checked by the settings, so they need no quoting); None leaves the
+    engine's own defaults. The TTS token is not here: it travels in the environment."""
     args = f"--daemon-port {port}"
     if language is not None:
         args += f" {language.cli_args()}"
     if stt is not None and stt.cli_args():
         args += f" {stt.cli_args()}"
+    if tts is not None and tts.cli_args():
+        args += f" {tts.cli_args()}"
     return make_script(engine_dir, f'run-engine ARGS="{args}"')
 
 

@@ -30,8 +30,8 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field
-from typing import Final, Literal, Protocol, get_args
+from dataclasses import dataclass, field, replace
+from typing import TYPE_CHECKING, Final, Literal, Protocol, get_args
 
 from app.protocol.models import (
     DEFAULT_STT_MODEL,
@@ -44,6 +44,11 @@ from app.protocol.models import (
     SttMode,
     SttModel,
 )
+from app.protocol.tts_provider import DEFAULT_URL as DEFAULT_TTS_URL
+from app.protocol.tts_provider import Voice
+
+if TYPE_CHECKING:
+    from app.companion.assistant.contract import AssistantService
 
 # Shared identity: the Inno Setup shortcut, the jump list and the process must all
 # use the same AUMID, or Windows shows a second taskbar button next to the pin.
@@ -87,8 +92,39 @@ UiLanguage = Literal["auto", "pt-BR", "en", "es", "ru", "zh-CN"]
 # engine's `TranscriptionLanguage`). Resolved to engine flags by `app.companion.dictation`.
 DictationLanguage = Literal["interface", "auto", "pt", "en", "es", "ru", "zh", "fr", "de", "it", "ja"]
 NotifyLevel = Literal["all", "warnings", "errors", "none"]
+# Where the engine this app starts gets its spoken answers: "default" leaves the engine's own
+# choice (its saved setup); "external" is a provider that follows docs/tts-provider-protocol.md.
+TtsChoice = Literal["default", "external"]
 
-CueName = Literal["start", "transcribing", "ready", "ai_ready", "warning", "error"]
+# The voice assistant (docs/research/voice-assistant-design.md): "own_session" is a Claude Code
+# conversation VoiceMate starts and owns (the Desktop and the phone are remote clients of it);
+# "desktop" is a conversation of the Claude Desktop app, written by a short "flash" of typing
+# into its window and read from its transcript.
+AssistantMode = Literal["off", "own_session", "desktop"]
+AssistantModel = Literal["haiku", "sonnet", "opus"]
+AssistantEffort = Literal["low", "medium", "high"]
+ExpressionsMode = Literal["off", "on"]
+# The permission mode of every conversation VoiceMate starts (the central one and the ones the
+# assistant opens). "bypassPermissions" gives those conversations full access to the machine.
+AssistantPermission = Literal["default", "acceptEdits", "bypassPermissions"]
+# Which packaged skill is installed: "auto" = the pt-BR one when the interface is pt-BR.
+SkillLanguage = Literal["auto", "en", "pt-BR"]
+# How an answer of another conversation reaches the person: "speak" tells the assistant at once
+# (it summarizes it aloud); the others hold it in the inbox for "Hear what's ready", after a
+# short spoken notice and the answer sound ("announce"), the sound only, or nothing.
+AnswerDelivery = Literal["speak", "announce", "sound", "silent"]
+# Where the assistant's personality comes from: nothing, a Markdown file of the person's (for
+# example an Obsidian note), or a text written in the Assistant tab and kept by VoiceMate.
+PersonalitySource = Literal["none", "file", "custom"]
+# The companion's own hotkey actions for the assistant (not engine flows): they share the
+# hotkey table, the conflict checks and the Hotkeys tab with the flows.
+AssistantHotkeyAction = Literal[
+    "assistant_talk", "assistant_window", "assistant_mode", "assistant_back", "assistant_digest"
+]
+ASSISTANT_HOTKEY_ACTIONS: tuple[AssistantHotkeyAction, ...] = get_args(AssistantHotkeyAction)
+
+# "answer": another conversation answered and the answer waits in the assistant's inbox.
+CueName = Literal["start", "transcribing", "ready", "ai_ready", "warning", "error", "answer"]
 CueSource = Literal["preset", "file"]
 CuePreset = Literal["classic", "soft", "click"]
 CUE_NAMES: tuple[CueName, ...] = get_args(CueName)
@@ -109,6 +145,68 @@ class CueSettings:
     preset: CuePreset = "classic"
     file: str = ""  # absolute path of a PCM 8/16-bit .wav when source == "file"
     volume: float = 1.0  # 0.0 .. 1.0, multiplied by the master volume
+
+
+@dataclass(frozen=True)
+class AssistantSettings:
+    """The `[assistant]` table. The assistant is off until the person turns it on."""
+
+    mode: AssistantMode = "off"
+    model: AssistantModel = "haiku"
+    effort: AssistantEffort = "low"
+    voice_commands: bool = True
+    expressions: ExpressionsMode = "off"
+    user_name: str = ""
+    personality_source: PersonalitySource = "none"
+    personality_file: str = ""  # source "file": a .md (for example in an Obsidian vault); the skill reads it
+    obsidian_vault: str = ""  # the folder of the person's notes vault (assistant.json "notes_vault")
+    # Mode "desktop": the exact sidebar title of the Desktop conversation used as the central one
+    # ("" = none chosen: the assistant does not start and says why).
+    desktop_conversation: str = ""
+    permission_mode: AssistantPermission = "acceptEdits"
+    skill_language: SkillLanguage = "auto"
+    custom_skill_dir: str = ""  # a folder with a SKILL.md that replaces the packaged skill
+    answer_delivery: AnswerDelivery = "announce"
+    # The assistant's voice: replies are spoken by the engine's voice (its `/tts` endpoint) and
+    # `voice` is one of the voice ids the engine lists ("" = the engine's default voice).
+    speak_replies: bool = True
+    voice: str = ""
+    # What `start_conversation` gives a new conversation when the central names no model or effort.
+    new_conversation_model: AssistantModel = "sonnet"
+    new_conversation_effort: AssistantEffort = "medium"
+    # The Claude Desktop profile (how the Desktop's controls are found): check for a newer one
+    # at start, and an imported file that replaces it ("" = the downloaded or packaged one).
+    desktop_profile_auto_update: bool = True
+    desktop_profile_override: str = ""
+    # The assistant's hotkeys ("" = none). Kept here, not in `CompanionSettings.hotkeys`, so a
+    # settings file saved before they existed gets the defaults.
+    talk_hotkey: str = "ctrl+alt+s"
+    window_hotkey: str = "ctrl+alt+w"
+    mode_hotkey: str = ""
+    back_hotkey: str = ""
+    digest_hotkey: str = "ctrl+alt+r"
+
+    def hotkey(self, action: AssistantHotkeyAction) -> str:
+        return {
+            "assistant_talk": self.talk_hotkey,
+            "assistant_window": self.window_hotkey,
+            "assistant_mode": self.mode_hotkey,
+            "assistant_back": self.back_hotkey,
+            "assistant_digest": self.digest_hotkey,
+        }[action]
+
+    def with_hotkeys(self, chords: Mapping[str, str]) -> AssistantSettings:
+        """A copy with the actions in `chords` rebound ("" clears one); other keys are ignored."""
+        current = {action: self.hotkey(action) for action in ASSISTANT_HOTKEY_ACTIONS}
+        current.update({action: chords[action] for action in ASSISTANT_HOTKEY_ACTIONS if action in chords})
+        return replace(
+            self,
+            talk_hotkey=current["assistant_talk"],
+            window_hotkey=current["assistant_window"],
+            mode_hotkey=current["assistant_mode"],
+            back_hotkey=current["assistant_back"],
+            digest_hotkey=current["assistant_digest"],
+        )
 
 
 def _default_cues() -> dict[CueName, CueSettings]:
@@ -178,6 +276,44 @@ class CompanionSettings:
     stt_mode: SttMode = "auto"
     stt_cpu_model: SttModel = DEFAULT_STT_MODEL
     stt_gpu_model: SttModel = DEFAULT_STT_MODEL
+    # Spoken answers (`--tts-engine external --tts-url ... --tts-external-voice ...`; the token
+    # travels in the VOICEMATE_TTS_TOKEN environment variable, never on the command line).
+    # With "default" the other three are kept but unused; a change restarts the engine.
+    tts_engine: TtsChoice = "default"
+    tts_url: str = DEFAULT_TTS_URL
+    tts_voice: str = ""  # a provider voice id; "" = the provider's default
+    tts_token: str = field(default="", repr=False)
+    assistant: AssistantSettings = field(default_factory=AssistantSettings)
+
+
+def assistant_hotkeys(settings: CompanionSettings) -> tuple[HotkeyBinding, ...]:
+    """The assistant's bound hotkeys, as bindings named after their action."""
+    assistant = settings.assistant
+    return tuple(
+        HotkeyBinding(action, assistant.hotkey(action))
+        for action in ASSISTANT_HOTKEY_ACTIONS
+        if assistant.hotkey(action)
+    )
+
+
+def all_hotkeys(settings: CompanionSettings) -> tuple[HotkeyBinding, ...]:
+    """The flow bindings and the assistant's: what the conflict checks look at. The assistant's
+    only count while it is on: they are not held otherwise, so an old shortcut that uses the
+    same keys must not block saving an unrelated setting."""
+    if settings.assistant.mode == "off":
+        return settings.hotkeys
+    return settings.hotkeys + assistant_hotkeys(settings)
+
+
+@dataclass(frozen=True)
+class TtsProbe:
+    """The outcome of talking to a TTS provider from the settings window. `message` is
+    localized and fit to show; `voices` is what the provider offers (empty when it failed)."""
+
+    ok: bool
+    message: str
+    provider: str = ""
+    voices: tuple[Voice, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -292,6 +428,20 @@ class CompanionController(Protocol):
 
     def open_logs(self) -> None: ...
 
+    def tts_voices(self, settings: CompanionSettings) -> TtsProbe:
+        """BLOCKING (call it off the GUI thread): ask the provider of `settings` for its voices
+        (`GET /v1/info`), straight from this computer."""
+
+    def test_tts(self, settings: CompanionSettings) -> TtsProbe:
+        """BLOCKING: have the provider of `settings` speak a short sentence and play it."""
+
+    def assistant_voices(self) -> TtsProbe:
+        """BLOCKING: the voices of the engine's voice (`<engine>/tts/v1/info`), for the Assistant tab."""
+
+    def test_assistant_voice(self, voice: str) -> TtsProbe:
+        """BLOCKING: say a short sentence with `voice` ("" = the engine's default) the way the
+        assistant speaks, through the engine."""
+
     def check_stt(self, settings: CompanionSettings) -> SttCheckReport | None:
         """BLOCKING (call it off the GUI thread): which transcription modes the engine of
         `settings` has installed, for these models (`make stt-check`, through WSL on Windows).
@@ -301,3 +451,7 @@ class CompanionController(Protocol):
         """BLOCKING, minutes long: install what `mode` needs for its model in `settings`
         (`make stt-install`). `on_line` gets each output line on the calling thread.
         True when the mode is ready afterwards. The caller asks the user first."""
+
+    def assistant(self) -> AssistantService:
+        """The voice assistant's service (always there; with the mode "off" it does nothing).
+        It publishes its own snapshots, from its own worker thread."""

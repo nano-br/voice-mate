@@ -357,3 +357,12 @@ def test_the_dictation_language_options_are_a_subset_of_the_engines() -> None:
     from app.core.config import TranscriptionLanguage
 
     assert set(get_args(DictationLanguage)) - {"interface"} <= set(get_args(TranscriptionLanguage))
+
+
+def test_the_assistant_shortcuts_only_conflict_while_the_assistant_is_on() -> None:
+    from app.companion.contract import AssistantSettings
+
+    old_file = (HotkeyBinding("clipboard", "ctrl+alt+s"),)  # the assistant's default "talk" keys
+    assert validate_settings(CompanionSettings(hotkeys=old_file)) == []
+    on = CompanionSettings(hotkeys=old_file, assistant=AssistantSettings(mode="own_session"))
+    assert "Ctrl+Alt+S is assigned to more than one action." in validate_settings(on)

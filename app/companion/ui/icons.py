@@ -60,6 +60,7 @@ Badge = Literal[
     "check",
     "triangle",
     "cross",
+    "inbox",
 ]
 
 # Shipped by the packaging stream next to the package (the exe uses the same .ico).
@@ -82,6 +83,16 @@ STATE_BADGES: Final[dict[TrayState, Badge]] = {
     "warning": "triangle",
     "error": "cross",
 }
+# Answers wait in the assistant's inbox: shown only over a quiet state (no badge, or "ready"),
+# never over recording, a warning or an error.
+INBOX_BADGE: Final[Badge] = "inbox"
+_INBOX_OVER: Final = frozenset({"none", "check"})
+
+
+def badge_for(state: TrayState, answers_waiting: bool = False) -> Badge:
+    badge = STATE_BADGES[state]
+    return INBOX_BADGE if answers_waiting and badge in _INBOX_OVER else badge
+
 
 CORAL: Final = QColor("#FB7185")  # the head: the same in every state but `stopped`
 OUTER_TOP_RIGHT: Final = QColor("#4F6EF7")
@@ -95,6 +106,7 @@ _VIOLET: Final = QColor("#8B5CF6")
 _GREEN: Final = QColor("#1F9D55")
 _YELLOW: Final = QColor("#FFC83D")
 _GREY: Final = QColor("#8C8C8C")  # mid grey: readable on dark and light taskbars
+_BLUE: Final = QColor("#2F7DF6")  # answers waiting: none of the state badges is blue
 _WHITE: Final = QColor("#FFFFFF")
 _INK: Final = QColor("#1B1B1B")
 
@@ -269,29 +281,32 @@ def glyph_color(tone: GlyphTone, state: TrayState) -> QColor:
     return QColor(_WHITE) if tone == "light" else QColor("#111111")
 
 
-def tray_icon(state: TrayState, tone: GlyphTone) -> QIcon:
+def tray_icon(state: TrayState, tone: GlyphTone, answers_waiting: bool = False) -> QIcon:
     icon = QIcon()
     for size in TRAY_SIZES:
-        icon.addPixmap(tray_pixmap(state, tone, size))
+        icon.addPixmap(tray_pixmap(state, tone, size, answers_waiting))
     return icon
 
 
-def tray_pixmap(state: TrayState, tone: GlyphTone, size: int) -> QPixmap:
-    return state_pixmap(state, glyph_color(tone, state), size)
+def tray_pixmap(state: TrayState, tone: GlyphTone, size: int, answers_waiting: bool = False) -> QPixmap:
+    return state_pixmap(state, glyph_color(tone, state), size, answers_waiting=answers_waiting)
 
 
-def state_pixmap(state: TrayState, glyph: QColor, size: int, device_pixel_ratio: float = 1.0) -> QPixmap:
+def state_pixmap(
+    state: TrayState, glyph: QColor, size: int, device_pixel_ratio: float = 1.0, *, answers_waiting: bool = False
+) -> QPixmap:
     """The mark in `glyph` color with the badge of `state` (also used in the status window)."""
     pixels = max(int(round(size * device_pixel_ratio)), 1)
-    pixmap = QPixmap.fromImage(glyph_image(state, glyph, pixels))
+    pixmap = QPixmap.fromImage(glyph_image(state, glyph, pixels, answers_waiting))
     pixmap.setDevicePixelRatio(device_pixel_ratio)
     return pixmap
 
 
-def glyph_image(state: TrayState, glyph: QColor, size: int) -> QImage:
+def glyph_image(state: TrayState, glyph: QColor, size: int, answers_waiting: bool = False) -> QImage:
     """The tray glyph of `state` at `size` px: the mark without a tile, the same in every
-    state (only `stopped` dims it), plus the state's small badge in the bottom-right corner."""
-    badge = STATE_BADGES[state]
+    state (only `stopped` dims it), plus the state's small badge in the bottom-right corner
+    (the "answers waiting" badge instead, over a quiet state)."""
+    badge = badge_for(state, answers_waiting)
     image = QImage(size, size, QImage.Format.Format_ARGB32_Premultiplied)
     image.fill(Qt.GlobalColor.transparent)
     painter = QPainter(image)
@@ -333,6 +348,7 @@ _BADGE_ART: Final[dict[tuple[int, Badge], tuple[QColor, tuple[str, ...]]]] = {
     (16, "check"): (_GREEN, (".BBBB.", "BBBBWB", "BBBBWB", "BWBWBB", "BBWBBB", ".BBBB.")),
     (16, "triangle"): (_YELLOW, ("...B..", "..BKB.", "..BKB.", ".BBBBB", ".BBKBB", ".BBBBB")),
     (16, "cross"): (_RED, (".BBBB.", "BWBBWB", "BBWWBB", "BBWWBB", "BWBBWB", ".BBBB.")),
+    (16, "inbox"): (_BLUE, (".BBBB.", "BBBBBB", "BWBBWB", "BBWWBB", "BBBBBB", ".BBBB.")),
     (20, "octagon"): (_GREY, ("..BBB..", ".BBBBB.", "BBBBBBB", "BWWWWWB", "BBBBBBB", ".BBBBB.", "..BBB..")),
     (20, "ring"): (_GREY, ("..BBB..", ".BB.BB.", "BB...BB", "B.....B", "BB...BB", ".BB.BB.", "..BBB..")),
     (20, "arrows"): (_GREY, ("..BBBB.", ".BB.BBB", "BB...B.", "B......", "BB.....", ".BB....", "..BBB..")),
@@ -343,6 +359,7 @@ _BADGE_ART: Final[dict[tuple[int, Badge], tuple[QColor, tuple[str, ...]]]] = {
     (20, "check"): (_GREEN, ("..BBB..", ".BBBBB.", "BBBBBWB", "BBBBWWB", "BWBWWBB", ".BWWBB.", "..BBB..")),
     (20, "triangle"): (_YELLOW, ("...B...", "..BBB..", "..BKB..", ".BBKBB.", ".BBBBB.", "BBBKBBB", "BBBBBBB")),
     (20, "cross"): (_RED, (".BBBBB.", "BWBBBWB", "BBWBWBB", "BBBWBBB", "BBWBWBB", "BWBBBWB", ".BBBBB.")),
+    (20, "inbox"): (_BLUE, ("..BBB..", ".BBBBB.", "BWBBBWB", "BBWBWBB", "BBBWBBB", ".BBBBB.", "..BBB..")),
     (24, "octagon"): (
         _GREY,
         ("..BBBB..", ".BBBBBB.", "BBBBBBBB", "BWWWWWWB", "BWWWWWWB", "BBBBBBBB", ".BBBBBB.", "..BBBB.."),
@@ -382,6 +399,10 @@ _BADGE_ART: Final[dict[tuple[int, Badge], tuple[QColor, tuple[str, ...]]]] = {
     (24, "cross"): (
         _RED,
         (".BBBBBB.", "BWBBBBWB", "BBWBBWBB", "BBBWWBBB", "BBBWWBBB", "BBWBBWBB", "BWBBBBWB", ".BBBBBB."),
+    ),
+    (24, "inbox"): (
+        _BLUE,
+        ("..BBBB..", ".BBBBBB.", "BBBBBBBB", "BWBBBBWB", "BBWBBWBB", "BBBWWBBB", ".BBBBBB.", "..BBBB.."),
     ),
 }
 
@@ -750,6 +771,18 @@ def _paint_cross(painter: QPainter, spec: _BadgeSpec) -> None:
     painter.drawLine(QPointF(c.x() + arm, c.y() - arm), QPointF(c.x() - arm, c.y() + arm))
 
 
+def _paint_inbox(painter: QPainter, spec: _BadgeSpec) -> None:
+    """A blue disc with a white chevron (an envelope's flap): answers are waiting."""
+    _fill(painter, "inbox", spec, _BLUE)
+    c, r = spec.center, spec.radius
+    painter.setPen(_line_pen(_WHITE, 1.2 * spec.line))
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    path = QPainterPath(QPointF(c.x() - 0.5 * r, c.y() - 0.22 * r))
+    path.lineTo(QPointF(c.x(), c.y() + 0.3 * r))
+    path.lineTo(QPointF(c.x() + 0.5 * r, c.y() - 0.22 * r))
+    painter.drawPath(path)
+
+
 _BADGE_PAINTERS: Final[dict[Badge, Callable[[QPainter, _BadgeSpec], None]]] = {
     "octagon": _paint_octagon,
     "ring": _paint_ring,
@@ -761,4 +794,5 @@ _BADGE_PAINTERS: Final[dict[Badge, Callable[[QPainter, _BadgeSpec], None]]] = {
     "check": _paint_check,
     "triangle": _paint_triangle,
     "cross": _paint_cross,
+    "inbox": _paint_inbox,
 }

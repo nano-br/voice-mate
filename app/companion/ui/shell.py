@@ -36,6 +36,8 @@ class Shell(Protocol):
 
     def show_settings(self) -> None: ...
 
+    def show_assistant(self) -> None: ...
+
     def confirm_wsl_restart(self) -> None:
         """Answer the controller's pending question (policy "ask")."""
 

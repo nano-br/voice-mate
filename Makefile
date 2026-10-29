@@ -2,7 +2,7 @@
         format lint test stt-eval stt-check stt-install run run-large run-turbo run-vozes-aleatorias run-reset-voz \
         i18n-extract i18n-init-pt i18n-init-en i18n-init-es i18n-init-ru i18n-init-zh i18n-update i18n-compile i18n-mo clean \
         companion-venv companion-test companion-lint run-tray companion-build companion-installer \
-        docs-screenshots release-check
+        docs-screenshots release-check tts-provider-check tts-provider-example
 
 all: format lint test
 
@@ -162,9 +162,10 @@ companion_py = $(or $(COMPANION_PY),$(error No companion environment: run "make 
 windows_only = $(if $(filter Windows_NT,$(OS)),,$(error "make $@" runs on Windows only: run it on Windows))
 # The release helper too: the release workflow runs it on Windows.
 COMPANION_TESTS := $(wildcard tests/companion) tests/test_import_boundary.py tests/test_companion_packaging.py \
-                   tests/test_release_check.py
+                   tests/test_release_check.py tests/test_tts_provider_client.py
 COMPANION_SOURCES := app/companion app/protocol $(COMPANION_TESTS) \
                      tools/gen_icon.py tools/build_installer.py tools/release_check.py tools/render_screenshots.py \
+                     tools/tts_provider_check.py tools/examples \
                      packaging/windows/voicemate_launcher.py
 
 # Pinned (requirements/companion-constraints.txt), so builds are reproducible.
@@ -214,6 +215,19 @@ endif
 
 release-check:
 	$(RELEASE_PY) -m tools.release_check $(if $(TAG),--tag $(TAG))
+
+# ─── External TTS provider (docs/tts-provider-protocol.md) ───────────────────────────
+# Conformance check of a provider you wrote or installed: info, health, a spoken sentence
+# (time to first byte, saved as a .wav) and cancel. Standard library only. Ex.:
+#   make tts-provider-check URL=http://127.0.0.1:8765
+#   make tts-provider-check URL=http://127.0.0.1:8765 ARGS="--voice mid --token secret"
+# The reference provider (a test tone per word) to try the check and VoiceMate without a real TTS:
+#   make tts-provider-example ARGS="--port 8765"
+tts-provider-check:
+	$(RELEASE_PY) -m tools.tts_provider_check $(if $(URL),--url "$(URL)") $(ARGS)
+
+tts-provider-example:
+	$(RELEASE_PY) -m tools.examples.tts_provider_reference $(ARGS)
 
 clean:
 	rm -rf .pytest_cache .ruff_cache .mypy_cache

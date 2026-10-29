@@ -4,3 +4,5 @@
 # pyproject.toml lists the same packages (tests/test_companion_packaging.py).
 pyside6-essentials>=6.8
 pywin32>=306; sys_platform == "win32"
+# Claude Desktop window control for the assistant's desktop mode (UI Automation).
+uiautomation>=2.0.29; sys_platform == "win32"

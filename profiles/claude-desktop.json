@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "profile_version": 1,
+  "min_voicemate": "0.1.0",
+  "app": {
+    "name": "Claude Desktop",
+    "tested_versions": [
+      "4.29.0"
+    ],
+    "notes": "Code tab: sidebar rows are buttons with a label group, the conversation is a document named '<title> - Claude Code', the prompt is a ProseMirror editor."
+  },
+  "window": {
+    "control_type": "WindowControl",
+    "class_prefix": "Chrome_WidgetWin",
+    "name_equals": "Claude"
+  },
+  "sidebar": {
+    "container": {
+      "match": {
+        "control_type": "GroupControl",
+        "class_contains": "dframe-sidebar"
+      },
+      "max_depth": 40
+    },
+    "row": {
+      "match": {
+        "control_type": "ButtonControl",
+        "class_prefix": "w-full shrink-0 border-none"
+      },
+      "max_depth": 12
+    },
+    "label": {
+      "control_type": "GroupControl",
+      "class_contains": "dframe-fade-label"
+    },
+    "label_text": {
+      "match": {
+        "control_type": "TextControl"
+      },
+      "max_depth": 3
+    },
+    "status": {
+      "control_type": "StatusBarControl"
+    },
+    "status_text": {
+      "match": {
+        "control_type": "TextControl"
+      },
+      "max_depth": 3
+    }
+  },
+  "conversation": {
+    "title_format": "{title} - Claude Code",
+    "document": {
+      "match": {
+        "control_type": "DocumentControl",
+        "automation_id": "RootWebArea",
+        "name_suffix": "Claude Code"
+      },
+      "max_depth": 30
+    },
+    "visible_text": {
+      "match": {
+        "control_type": "TextControl"
+      },
+      "max_depth": 60
+    },
+    "max_visible_lines": 400
+  },
+  "prompt": {
+    "editor": {
+      "match": {
+        "control_type": "EditControl",
+        "class_contains": "ProseMirror"
+      },
+      "max_depth": 90
+    },
+    "text": {
+      "match": {
+        "control_type": "TextControl"
+      },
+      "max_depth": 12
+    },
+    "focus": {
+      "class_contains": "ProseMirror"
+    }
+  },
+  "keys": {
+    "clear_draft": [
+      "ctrl+a",
+      "delete"
+    ],
+    "paste": [
+      "ctrl+v"
+    ],
+    "submit": [
+      "enter"
+    ],
+    "interval_s": 0.002,
+    "wait_s": 0.05
+  },
+  "paste": {
+    "verify_max_chars": 2000,
+    "verify_head_chars": 30,
+    "unverified_wait_s": 0.5
+  },
+  "timeouts": {
+    "lock_wait_s": 30.0,
+    "open_wait_s": 5.0,
+    "foreground_wait_s": 1.5,
+    "focus_wait_s": 1.0,
+    "focus_prompt_wait_s": 3.0,
+    "paste_wait_s": 2.0,
+    "submit_wait_s": 1.5,
+    "poll_s": 0.05
+  }
+}

@@ -26,6 +26,8 @@ from pathlib import Path
 from typing import Final
 
 from app.companion import paths
+from app.companion.assistant.contract import AssistantService, VoicePort
+from app.companion.assistant.service import AssistantServiceImpl
 from app.companion.chords import display_chord, normalize_chord
 from app.companion.client import (
     COMPANION_NAME,
@@ -38,6 +40,9 @@ from app.companion.client import (
     EventPoller,
 )
 from app.companion.contract import (
+    ASSISTANT_HOTKEY_ACTIONS,
+    AssistantHotkeyAction,
+    AssistantMode,
     CompanionController,
     CompanionSettings,
     CompanionSnapshot,
@@ -49,7 +54,10 @@ from app.companion.contract import (
     NotificationListener,
     RecentItem,
     SnapshotListener,
+    TtsProbe,
     Unsubscribe,
+    all_hotkeys,
+    assistant_hotkeys,
 )
 from app.companion.cues import CueBank, CuePlayer
 from app.companion.delivery import (
@@ -63,7 +71,7 @@ from app.companion.delivery import (
     StartDelivery,
 )
 from app.companion.desktop import Desktop, HotkeyHost, autostart_command, create_desktop
-from app.companion.dictation import EngineLanguage, engine_language
+from app.companion.dictation import EngineLanguage, engine_language, interface_language
 from app.companion.model import (
     CoreState,
     DeliveryOutcome,
@@ -103,7 +111,11 @@ from app.companion.supervisor.policy import (
     StopEngine,
     SupervisorPolicy,
 )
-from app.i18n import _
+from app.companion.tts import EngineTts, engine_tts, probe_voices, try_voice
+from app.companion.voice import EngineVoice, OutputFactory, default_output, engine_tts_url
+from app.companion.voice import explain as explain_voice
+from app.companion.win.speech import say
+from app.i18n import _, catalog_for
 from app.protocol.models import (
     API_VERSION,
     Ack,
@@ -118,6 +130,7 @@ from app.protocol.models import (
     SttDevice,
     TriggerRequest,
 )
+from app.protocol.tts_provider import ProviderClient, ProviderError
 
 log = logging.getLogger(__name__)
 
@@ -152,6 +165,47 @@ class Timings:
 
 BackendFactory = Callable[[CompanionSettings, Path], EngineBackend]
 DesktopFactory = Callable[[], Desktop]
+# While the person dictates or VoiceMate speaks, the assistant holds its notices back.
+_BUSY_TRAY_STATES: Final = frozenset({"recording", "transcribing", "thinking", "speaking"})
+
+
+@dataclass(frozen=True)
+class AssistantHost:
+    """What the assistant service may use of the controller (any thread)."""
+
+    settings: Callable[[], CompanionSettings]  # the applied settings, read live
+    apply: Callable[[CompanionSettings], list[str]]  # `apply_settings` (blocking, localized errors)
+    person_busy: Callable[[], bool]
+    play_cue: Callable[[CueName], None]
+    voice: VoicePort | None = None  # the assistant's voice (through the engine)
+
+
+AssistantFactory = Callable[[AssistantHost], AssistantService]
+
+
+def default_assistant(host: AssistantHost) -> AssistantService:
+    def language() -> str:
+        current = host.settings()
+        return interface_language(current.language, catalog_for(current.language))
+
+    return AssistantServiceImpl(
+        lambda: host.settings().assistant,
+        language,
+        companion_settings=host.settings,
+        apply_companion=host.apply,
+        person_busy=host.person_busy,
+        play_cue=host.play_cue,
+        speak=say,
+        voice=host.voice,
+        voicemate_version=COMPANION_VERSION,
+    )
+
+
+def _assistant_bindings(settings: CompanionSettings) -> dict[str, str]:
+    """The assistant's hotkeys, held only while the assistant is on."""
+    if settings.assistant.mode == "off":
+        return {}
+    return {b.flow: b.chord for b in assistant_hotkeys(settings)}
 
 
 def is_outdated(health: HealthPayload) -> bool:
@@ -176,12 +230,17 @@ def default_backend(settings: CompanionSettings, logs_dir: Path) -> EngineBacken
             log_path,
             language=engine_language(settings),
             stt=engine_stt(settings),
+            tts=engine_tts(settings),
         )
     if settings.engine_mode == "local":
         from app.companion.supervisor.local import LocalBackend
 
         return LocalBackend(
-            settings.daemon_port, log_path, language=engine_language(settings), stt=engine_stt(settings)
+            settings.daemon_port,
+            log_path,
+            language=engine_language(settings),
+            stt=engine_stt(settings),
+            tts=engine_tts(settings),
         )
     if sys.platform == "win32":
         from app.companion.supervisor.wsl import read_wsl_token
@@ -196,7 +255,8 @@ def _engine_settings_changed(old: CompanionSettings, new: CompanionSettings) -> 
     # alone restarts the engine only while dictation follows the interface), and not at all
     # in external mode, where the engine is not ours to start. The same goes for the
     # transcription mode: only the flags it resolves to count (the model of the other mode
-    # does not), and restarting is what frees the GPU when switching to the CPU.
+    # does not), and restarting is what frees the GPU when switching to the CPU. The spoken
+    # answers count as the provider flags and token they resolve to.
     return (old.engine_mode, old.wsl_distro, old.engine_dir, old.daemon_port, _spawned_flags(old)) != (
         new.engine_mode,
         new.wsl_distro,
@@ -206,8 +266,10 @@ def _engine_settings_changed(old: CompanionSettings, new: CompanionSettings) -> 
     )
 
 
-def _spawned_flags(settings: CompanionSettings) -> tuple[EngineLanguage, EngineStt] | None:
-    return None if settings.engine_mode == "external" else (engine_language(settings), engine_stt(settings))
+def _spawned_flags(settings: CompanionSettings) -> tuple[EngineLanguage, EngineStt, EngineTts] | None:
+    if settings.engine_mode == "external":
+        return None
+    return (engine_language(settings), engine_stt(settings), engine_tts(settings))
 
 
 class CompanionControllerImpl:
@@ -217,11 +279,13 @@ class CompanionControllerImpl:
         *,
         desktop_factory: DesktopFactory = create_desktop,
         backend_factory: BackendFactory = default_backend,
+        assistant_factory: AssistantFactory = default_assistant,
         cues_dir: Path | None = None,
         logs_dir: Path | None = None,
         timings: Timings | None = None,
         host: str = DEFAULT_HOST,
         pending_store: PendingStore | None = None,
+        voice_output: OutputFactory = default_output,
     ) -> None:
         """`pending_store`: where the Not copied list survives a restart (None = memory
         only; `create_controller` passes the per-user file)."""
@@ -232,7 +296,16 @@ class CompanionControllerImpl:
         self._host = host
         self._logs_dir = logs_dir or paths.logs_dir()
         self._desktop = desktop_factory()
-        self._cues = CuePlayer(CueBank(cues_dir or paths.cues_dir()), self._play_file)
+        self._cues_dir = cues_dir or paths.cues_dir()
+        self._cues = CuePlayer(CueBank(self._cues_dir), self._play_file)
+        # Replies and notices of the assistant, spoken by the engine (`/tts`) and played here;
+        # the short notices fall back to Windows speech when the engine cannot speak.
+        self._voice = EngineVoice(
+            self._voice_client, voice_output, voice=lambda: self._store.get().assistant.voice, fallback=say
+        )
+        self._assistant = assistant_factory(
+            AssistantHost(store.get, self.apply_settings, self._person_busy, self._play_assistant_cue, self._voice)
+        )
         self._dispatcher = Dispatcher()
         self._io = SerialExecutor("companion-io")
         self._commands = SerialExecutor("companion-commands")
@@ -272,6 +345,9 @@ class CompanionControllerImpl:
         self._hotkey_flows: tuple[str, ...] | None = None
         self._timers: dict[str, TimerHandle] = {}
         self._tray_promotion = 0  # generation: a newer request makes older results stale
+        # The operations stopped by the "Talk to the assistant" hotkey: their final text goes to
+        # the assistant instead of the clipboard (the stop decides the destination).
+        self._talk_ops: set[int] = set()
         self._build_engine(settings)
 
     # --- wiring --------------------------------------------------------------------------------------
@@ -409,6 +485,7 @@ class CompanionControllerImpl:
         if pending_backup is not None:
             self._input(NoticeRequested("pending_reset", (str(pending_backup),)))
         self._io.submit(self._start_desktop)
+        self._assistant.start()
         self._poller.start()
         self._run(self._policy.start(time.monotonic()))
         self._sync_supervisor()
@@ -508,6 +585,8 @@ class CompanionControllerImpl:
                     self._client.unregister(session.client_id, timeout=QUIT_UNREGISTER_TIMEOUT_S)
                 except DaemonError as exc:
                     log.info("unregister failed: %s", exc)
+            self._voice.close()
+            self._assistant.stop()
             with self._spawn_lock:
                 # An attached daemon keeps running; only what we started is stopped.
                 self._backend.stop(self._client, "user_quit")
@@ -525,13 +604,56 @@ class CompanionControllerImpl:
     # --- CompanionController: commands ------------------------------------------------------------------
 
     def toggle(self, flow: str) -> None:
+        self._voice.stop()  # a new recording silences the assistant
         self._post(lambda: self._toggle(flow))
 
     def _on_hotkey(self, flow: str) -> None:
-        # Runs on the Win32 thread: hand it over at once.
+        # Runs on the Win32 thread: hand it over at once (silencing the assistant is quick).
+        self._voice.stop()
+        if flow in ASSISTANT_HOTKEY_ACTIONS:
+            self._post(lambda: self._assistant_hotkey(flow))  # type: ignore[arg-type]
+            return
         self._post(lambda: self._toggle(flow))
 
-    def _toggle(self, flow: str) -> None:
+    def _person_busy(self) -> bool:
+        return self._snapshot.tray_state in _BUSY_TRAY_STATES
+
+    def _play_assistant_cue(self, cue: CueName) -> None:
+        def play() -> None:
+            self._cues.play(cue)
+
+        self._io.submit(play)
+
+    def _assistant_hotkey(self, action: AssistantHotkeyAction) -> None:
+        if self._quitting or not self._started:
+            return
+        log.info("assistant hotkey: %s", action)
+        if action == "assistant_talk":
+            flow = next((f.name for f in self._core.flows if f.kind == "clipboard"), "clipboard")
+            self._toggle(flow, talk=True)
+        elif action == "assistant_window":
+            self._assistant.show_window()
+        elif action == "assistant_back":
+            self._assistant.back_to_assistant()
+        elif action == "assistant_digest":
+            self._assistant.hear_ready()
+        elif action == "assistant_mode":
+            self._io.submit(self._switch_assistant_mode)
+
+    def _switch_assistant_mode(self) -> None:
+        """The mode hotkey: VoiceMate's own conversation <-> the Desktop conversation."""
+        settings = self._store.get()
+        current = settings.assistant.mode
+        if current == "off":
+            return
+        mode: AssistantMode = "desktop" if current == "own_session" else "own_session"
+        errors = self.apply_settings(replace(settings, assistant=replace(settings.assistant, mode=mode)))
+        if errors:
+            log.info("assistant mode not switched: %s", " ".join(errors))
+        else:
+            log.info("assistant mode switched to %s by hotkey", mode)
+
+    def _toggle(self, flow: str, *, talk: bool = False) -> None:
         if self._quitting or not self._started:
             return
         state = self._policy.state
@@ -552,12 +674,15 @@ class CompanionControllerImpl:
         if session is not None:
             request["client_id"] = session.client_id
         client = self._client
-        self._commands.submit(lambda: self._trigger_job(client, request))
+        self._commands.submit(lambda: self._trigger_job(client, request, talk=talk))
 
-    def _trigger_job(self, client: DaemonClient, request: TriggerRequest) -> None:
+    def _trigger_job(self, client: DaemonClient, request: TriggerRequest, *, talk: bool = False) -> None:
         try:
             response = client.trigger(request)
             log.info("trigger %s -> %s (op %s)", request.get("flow"), response.get("action"), response.get("op_seq"))
+            op_seq = response.get("op_seq")
+            if talk and response.get("action") == "stopped" and isinstance(op_seq, int):
+                self._post(lambda: self._talk_ops.add(op_seq))
         except DaemonError as exc:
             log.warning("trigger %s failed: %s", request.get("flow"), exc)
             error = exc
@@ -661,7 +786,7 @@ class CompanionControllerImpl:
         if host is None or hotkeys_owned_by_engine(new.engine_mode) or not self._started:
             return False
         bindings = self._hotkey_bindings(new)
-        if new.hotkeys == old.hotkeys:
+        if bindings == self._hotkey_bindings(old):
             # Unchanged, but a chord may still be held by another app since startup: try the
             # missing ones again (best effort: an unrelated setting must still apply).
             self._register_best_effort(host, bindings, notify=False)
@@ -682,7 +807,8 @@ class CompanionControllerImpl:
         if hotkeys_owned_by_engine(settings.engine_mode):
             return {}
         flows = self._hotkey_flows
-        return {b.flow: b.chord for b in settings.hotkeys if flows is None or b.flow in flows}
+        bindings = {b.flow: b.chord for b in settings.hotkeys if flows is None or b.flow in flows}
+        return bindings | _assistant_bindings(settings)
 
     def _register_best_effort(self, host: HotkeyHost, bindings: dict[str, str], *, notify: bool) -> None:
         """Hold what can be held; chords another app holds are retried later. Call with `_hotkey_lock`."""
@@ -766,6 +892,12 @@ class CompanionControllerImpl:
     def _settings_applied(self, old: CompanionSettings, new: CompanionSettings) -> None:
         self._input(SettingsSeen(new, hotkeys_owned_by_engine(new.engine_mode)))
         self._io.submit(lambda: self._cues.configure(new))
+        if (new.assistant != old.assistant or new.language != old.language) and not self._quitting:
+            # A language change only rewrites assistant.json (the skill answers in that language).
+            self._assistant.apply_settings(new.assistant)
+        elif new != old and not self._quitting:
+            # The voice settings catalog in assistant.json shows sounds and general settings too.
+            self._assistant.refresh_context()
         if new.tray_icon_visible != old.tray_icon_visible and self._started and not self._quitting:
             # The user's own change in our settings: force the value. The icon is showing
             # already, so its entry most likely exists: try at once.
@@ -809,7 +941,7 @@ class CompanionControllerImpl:
         normalized_chord = normalize_chord(chord)
         if normalized_chord is None:
             return "invalid"
-        for binding in self._store.get().hotkeys:
+        for binding in all_hotkeys(self._store.get()):
             if binding.flow != flow and normalize_chord(binding.chord) == normalized_chord:
                 return "duplicate"
         host = self._desktop.hotkeys
@@ -851,6 +983,9 @@ class CompanionControllerImpl:
 
         self._post(run)
 
+    def assistant(self) -> AssistantService:
+        return self._assistant
+
     def open_logs(self) -> None:
         directory = self._logs_dir
 
@@ -884,6 +1019,40 @@ class CompanionControllerImpl:
             return False
         log.info("installing the %s transcription mode", mode)
         return run_install(command, on_line)
+
+    # --- spoken answers ---------------------------------------------------------------------------------
+
+    def tts_voices(self, settings: CompanionSettings) -> TtsProbe:
+        return probe_voices(normalized(settings))
+
+    def test_tts(self, settings: CompanionSettings) -> TtsProbe:
+        return try_voice(normalized(settings), self._cues_dir, self._play_file)
+
+    def _voice_client(self) -> ProviderClient | None:
+        client = getattr(self, "_client", None)
+        if client is None:
+            return None
+        return ProviderClient(engine_tts_url(self._host, client.port), client.token())
+
+    def assistant_voices(self) -> TtsProbe:
+        try:
+            info = self._voice.voices()
+        except ProviderError as exc:
+            log.info("assistant voices: %s", exc.detail)
+            return TtsProbe(False, _("No voice available: {reason}").format(reason=explain_voice(exc)))
+        return TtsProbe(
+            True,
+            _("The engine speaks with {name}. Voices found: {count}.").format(name=info.name, count=len(info.voices)),
+            info.name,
+            info.voices,
+        )
+
+    def test_assistant_voice(self, voice: str) -> TtsProbe:
+        probe = self.assistant_voices()
+        if probe.ok:
+            self._voice.test(_("Hello! This is how the assistant sounds with this voice."), voice)
+            return replace(probe, message=_("Playing a test sentence with the engine's voice."))
+        return probe
 
     # --- supervisor -------------------------------------------------------------------------------------
 
@@ -1188,6 +1357,7 @@ class CompanionControllerImpl:
                 bindings: dict[str, str] = {}
             else:
                 bindings = {b.flow: b.chord for b in settings.hotkeys if flows is None or b.flow in flows}
+                bindings |= _assistant_bindings(settings)
             self._register_best_effort(host, bindings, notify=notify)
 
     # --- events ---------------------------------------------------------------------------------------------
@@ -1269,7 +1439,9 @@ class CompanionControllerImpl:
 
     def _apply_delivery(self, effects: Sequence[DeliveryEffect]) -> None:
         for effect in effects:
-            if isinstance(effect, StartDelivery):
+            if isinstance(effect, StartDelivery) and effect.job.final and effect.job.op_seq in self._talk_ops:
+                self._talk_to_assistant(effect.job.key, effect.job.op_seq, effect.job.text)
+            elif isinstance(effect, StartDelivery):
                 self._start_delivery(effect.job.key, effect.job.text)
             elif isinstance(effect, SendAck):
                 self._send_ack(effect.instance, effect.acks, 0)
@@ -1314,6 +1486,13 @@ class CompanionControllerImpl:
         self._pending_writer.submit(written.set)
         if not written.wait(PENDING_FLUSH_TIMEOUT_S):
             log.warning("the Not copied list was still being written when quitting")
+
+    def _talk_to_assistant(self, key: tuple[str, int], op_seq: int, text: str) -> None:
+        """A dictation stopped by the talk hotkey: the text is the assistant's, not the clipboard's."""
+        self._talk_ops.discard(op_seq)
+        log.info("dictation %s goes to the assistant (%d chars)", op_seq, len(text))
+        self._assistant.send(text)
+        self._post(lambda: self._apply_delivery(self._delivery.on_delivery_done(key, True, time.monotonic())))
 
     def _start_delivery(self, key: tuple[str, int], text: str) -> None:
         def done(ok: bool) -> None:

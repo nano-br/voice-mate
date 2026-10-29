@@ -31,6 +31,7 @@ from app.companion.supervisor.backend import (
     read_local_token,
     stop_gracefully,
 )
+from app.companion.tts import EngineTts, spawn_env
 from app.protocol.models import ShutdownReason
 
 log = logging.getLogger(__name__)
@@ -47,18 +48,20 @@ class LocalBackend:
         *,
         language: EngineLanguage | None = None,
         stt: EngineStt | None = None,
+        tts: EngineTts | None = None,
         shell: str = "bash",
     ) -> None:
         self.port = port
         self.language = language
         self.stt = stt
+        self.tts = tts
         self._shell = shell
         self._log = EngineLog(log_path)
         self._lock = threading.Lock()
         self._process: ManagedProcess | None = None
 
     def spawn_command(self, engine_dir: str) -> list[str]:
-        return [self._shell, "-lc", engine_script(engine_dir, self.port, self.language, self.stt)]
+        return [self._shell, "-lc", engine_script(engine_dir, self.port, self.language, self.stt, self.tts)]
 
     def tool_command(self, engine_dir: str, target: str) -> list[str] | None:
         return [self._shell, "-lc", make_script(engine_dir, target)]
@@ -71,6 +74,7 @@ class LocalBackend:
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            env=spawn_env(self.tts, wsl=False),
             start_new_session=sys.platform != "win32",
         )
 

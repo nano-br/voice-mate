@@ -24,6 +24,13 @@ SETTINGS_FILE_NAME = "companion.toml"
 ENGINE_LOG_NAME = "engine.log"
 COMPANION_LOG_NAME = "companion.log"
 PENDING_FILE_NAME = "pending.json"
+ASSISTANT_DIR_NAME = "assistant"
+ASSISTANT_STATE_NAME = "assistant-session.json"
+ASSISTANT_CONVERSATIONS_DIR_NAME = "assistant-conversations"
+ASSISTANT_INBOX_NAME = "assistant-inbox.json"
+ASSISTANT_PERSONALITY_NAME = "assistant-personality.md"
+ASSISTANT_PENDING_NAME = "assistant-waiting.json"
+DESKTOP_PROFILE_DIR_NAME = "desktop-profile"
 
 
 class DataDirError(RuntimeError):
@@ -100,3 +107,39 @@ def companion_log_path() -> Path:
 def pending_path() -> Path:
     """The Not copied list (transcription text): see app/companion/pending_store.py."""
     return state_dir() / PENDING_FILE_NAME
+
+
+def assistant_cwd() -> Path:
+    """The stable working directory of the assistant's Claude Code session (a resume only
+    finds the conversation again from the same directory)."""
+    return state_dir() / ASSISTANT_DIR_NAME
+
+
+def assistant_state_path() -> Path:
+    """Which Claude Code session is the assistant's: see app/companion/assistant/own_session.py."""
+    return state_dir() / ASSISTANT_STATE_NAME
+
+
+def assistant_conversations_dir() -> Path:
+    """The conversations the assistant opens itself: see app/companion/assistant/conversations.py."""
+    return state_dir() / ASSISTANT_CONVERSATIONS_DIR_NAME
+
+
+def assistant_inbox_path() -> Path:
+    """Answers held for "Hear what's ready": see app/companion/assistant/inbox.py."""
+    return state_dir() / ASSISTANT_INBOX_NAME
+
+
+def assistant_pending_path() -> Path:
+    """The assistant's "Waiting for" list, kept across restarts: see app/companion/assistant/service.py."""
+    return state_dir() / ASSISTANT_PENDING_NAME
+
+
+def assistant_personality_path() -> Path:
+    """The personality the person writes in the Assistant tab (personality source "custom")."""
+    return state_dir() / ASSISTANT_PERSONALITY_NAME
+
+
+def desktop_profile_dir() -> Path:
+    """The downloaded and imported Claude Desktop profiles: see app/companion/win/desktop_profile.py."""
+    return state_dir() / DESKTOP_PROFILE_DIR_NAME

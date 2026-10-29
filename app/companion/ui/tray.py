@@ -6,6 +6,7 @@ from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtGui import QAction, QActionGroup, QGuiApplication, QIcon
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon
 
+from app.companion.assistant.contract import AssistantSnapshot
 from app.companion.contract import CompanionSnapshot, FlowEntry, NotificationLevel, RecentItem, TrayState
 from app.companion.ui import texts
 from app.companion.ui.chords import display_chord
@@ -43,13 +44,15 @@ class TrayIcon(QObject):
     """Owns the QSystemTrayIcon; renders snapshots; menu actions call the controller or the shell."""
 
     message_clicked = Signal()
+    _assistant_seen = Signal(object)  # AssistantSnapshot, from the assistant's worker
 
     def __init__(self, shell: Shell, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._shell = shell
         self._snapshot = shell.bridge.snapshot
         self._tone: GlyphTone = taskbar_glyph_tone()
-        self._icons: dict[tuple[TrayState, GlyphTone], QIcon] = {}
+        self._icons: dict[tuple[TrayState, GlyphTone, bool], QIcon] = {}
+        self._waiting = 0  # answers held in the assistant's inbox
         self._flow_key: tuple[tuple[str, str], ...] = ()
         self._flow_actions: list[QAction] = []
         self._quitting = False
@@ -68,6 +71,10 @@ class TrayIcon(QObject):
         self._theme_timer.timeout.connect(self._refresh_tone)
         self._theme_timer.start()
         QGuiApplication.styleHints().colorSchemeChanged.connect(self._refresh_tone)
+        self._assistant_seen.connect(self._show_assistant)
+        assistant = shell.controller.assistant()
+        self._waiting = len(assistant.snapshot().inbox)
+        self._unsubscribe_assistant = assistant.subscribe(self._assistant_seen.emit)
         self.show_snapshot(self._snapshot)
 
     # ------------------------------------------------------------------ building
@@ -78,6 +85,10 @@ class TrayIcon(QObject):
         self.status_action.setEnabled(False)
         self.open_action = menu.addAction(_("Open VoiceMate"))
         self.open_action.triggered.connect(self._shell.show_status)
+        self.assistant_action = menu.addAction(_("Assistant"))
+        self.assistant_action.triggered.connect(self._shell.show_assistant)
+        self.hear_action = menu.addAction(_("Hear what's ready"))
+        self.hear_action.triggered.connect(lambda _checked=False: self._shell.controller.assistant().hear_ready())
         self._flows_separator = menu.addSeparator()
         self.cancel_action = menu.addAction(_("Cancel"))
         self.cancel_action.triggered.connect(self._shell.controller.cancel)
@@ -168,16 +179,38 @@ class TrayIcon(QObject):
         self.tray.setIcon(self._icon_for(snapshot.tray_state))
         self.refresh_time()
 
+    def _show_assistant(self, snapshot: AssistantSnapshot) -> None:
+        """The inbox count: the corner badge, the tooltip and the "Hear what's ready" entry."""
+        if self._quitting or len(snapshot.inbox) == self._waiting:
+            return
+        self._waiting = len(snapshot.inbox)
+        self._refresh_hear_action()
+        self.tray.setIcon(self._icon_for(self._snapshot.tray_state))
+        self.refresh_time()
+
+    @property
+    def answers_waiting(self) -> int:
+        return self._waiting
+
+    def _refresh_hear_action(self) -> None:
+        waiting = self._waiting
+        self.hear_action.setText(
+            _("Hear what's ready ({count})").format(count=waiting) if waiting else _("Hear what's ready")
+        )
+
     def refresh_time(self) -> None:
         """Re-render the time-dependent texts (the recording timer)."""
         snapshot = self._snapshot
         chord = idle_chord(snapshot, self._shell.settings())
         self.status_action.setText(menu_text(texts.status_line(snapshot, chord)))
-        self.tray.setToolTip(texts.tooltip(snapshot, chord))
+        self.tray.setToolTip(texts.tooltip(snapshot, chord, answers_waiting=self._waiting))
 
     def _refresh_settings_items(self) -> None:
         """What depends on the settings, read live (also right before the menu shows)."""
         settings = self._shell.settings()
+        self.assistant_action.setVisible(settings.assistant.mode != "off")
+        self.hear_action.setVisible(settings.assistant.mode != "off")
+        self._refresh_hear_action()
         self.mute_action.setChecked(not settings.cues_enabled)
         self.mute_action.setEnabled(not settings_read_only(settings))
         self.restart_wsl_action.setVisible(settings.engine_mode == "wsl2")
@@ -200,10 +233,10 @@ class TrayIcon(QObject):
         self._render_flow_actions(displayed_flows(self._snapshot, self._shell.settings()), self._snapshot)
 
     def _icon_for(self, state: TrayState) -> QIcon:
-        key = (state, self._tone)
+        key = (state, self._tone, self._waiting > 0)
         icon = self._icons.get(key)
         if icon is None:
-            icon = self._icons[key] = tray_icon(state, self._tone)
+            icon = self._icons[key] = tray_icon(state, self._tone, self._waiting > 0)
         return icon
 
     def _refresh_tone(self) -> None:
@@ -252,6 +285,7 @@ class TrayIcon(QObject):
 
     def set_quitting(self) -> None:
         self._quitting = True
+        self._unsubscribe_assistant()
         self.tray.setToolTip(f"{texts.APP_NAME}\n{_('Quitting...')}")
         for action in self.menu.actions():
             action.setEnabled(False)

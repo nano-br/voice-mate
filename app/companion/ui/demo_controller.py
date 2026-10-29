@@ -14,7 +14,13 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from typing import Any
 
+from app.companion.assistant.contract import (
+    AssistantListener,
+    AssistantSnapshot,
+    ChatMessage,
+)
 from app.companion.contract import (
+    AssistantSettings,
     CompanionSettings,
     CompanionSnapshot,
     CueName,
@@ -26,11 +32,13 @@ from app.companion.contract import (
     NotificationListener,
     RecentItem,
     SnapshotListener,
+    TtsProbe,
     Unsubscribe,
 )
 from app.companion.ui.chords import normalize_chord
 from app.i18n import _
 from app.protocol.models import ResultKind, ResultRecord, SttCheckReport, SttDevice, SttModeStatus
+from app.protocol.tts_provider import Voice
 
 DEMO_FLOWS = (
     FlowEntry(name="clipboard", kind="clipboard", engine_chord="ctrl+alt+v"),
@@ -70,6 +78,116 @@ def _stt_status(ready: bool) -> SttModeStatus:
     return {"ready": ready, "supported": True, "detail": "demo", "download_mb": 0 if ready else 4300}
 
 
+class FakeAssistantService:
+    """An `AssistantService` without a process: records every command in `calls`; tests steer
+    it with `publish`. Sending a prompt appends the user's message and, in demo mode, a canned
+    reply."""
+
+    def __init__(self, *, reply: bool = False) -> None:
+        self._lock = threading.Lock()
+        self._snapshot = AssistantSnapshot()
+        self._listeners: list[AssistantListener] = []
+        self._reply = reply
+        self.calls: list[tuple[str, tuple[object, ...]]] = []
+
+    def publish(self, **changes: object) -> AssistantSnapshot:
+        with self._lock:
+            self._snapshot = replace(self._snapshot, rev=self._snapshot.rev + 1, **changes)  # type: ignore[arg-type]
+            snapshot = self._snapshot
+            listeners = list(self._listeners)
+        for listener in listeners:
+            listener(snapshot)
+        return snapshot
+
+    def _call(self, name: str, *args: object) -> None:
+        with self._lock:
+            self.calls.append((name, args))
+
+    def called(self, name: str) -> list[tuple[object, ...]]:
+        with self._lock:
+            return [args for call, args in self.calls if call == name]
+
+    def snapshot(self) -> AssistantSnapshot:
+        with self._lock:
+            return self._snapshot
+
+    def subscribe(self, listener: AssistantListener) -> Unsubscribe:
+        with self._lock:
+            self._listeners.append(listener)
+            snapshot = self._snapshot
+        listener(snapshot)
+
+        def remove() -> None:
+            with self._lock:
+                if listener in self._listeners:
+                    self._listeners.remove(listener)
+
+        return remove
+
+    def start(self) -> None:
+        self._call("start")
+
+    def stop(self) -> None:
+        self._call("stop")
+
+    def apply_settings(self, settings: AssistantSettings) -> None:
+        self._call("apply_settings", settings)
+        state = "off" if settings.mode == "off" else "ready"
+        self.publish(state=state, error=None)
+
+    def send(self, text: str) -> None:
+        self._call("send", text)
+        messages = (*self.snapshot().messages, ChatMessage("user", text))
+        self.publish(messages=messages, state="busy")
+        if self._reply:
+            timer = threading.Timer(1.0, self._answer)
+            timer.daemon = True
+            timer.start()
+
+    def _answer(self) -> None:
+        messages = (*self.snapshot().messages, ChatMessage("assistant", _("This is a demo answer.")))
+        self.publish(messages=messages, state="ready")
+
+    def restart(self) -> None:
+        self._call("restart")
+        self.publish(state="ready", error=None)
+
+    def follow_assistant(self) -> None:
+        self._call("follow_assistant")
+        self.publish(followed_title="", direct_title="")
+
+    def back_to_assistant(self) -> None:
+        self._call("back_to_assistant")
+        self.publish(followed_title="", direct_title="")
+
+    def show_window(self) -> None:
+        self._call("show_window")
+        self.publish(window_requests=self.snapshot().window_requests + 1)
+
+    def hear_ready(self) -> None:
+        self._call("hear_ready")
+        self.publish(inbox=())
+
+    def clear_inbox(self) -> None:
+        self._call("clear_inbox")
+        self.publish(inbox=())
+
+    def refresh_context(self) -> None:
+        self._call("refresh_context")
+
+    def check_profile(self) -> None:
+        self._call("check_profile")
+
+    def import_profile(self, path: str) -> None:
+        self._call("import_profile", path)
+
+    def export_profile(self, path: str) -> None:
+        self._call("export_profile", path)
+
+    def use_default_profile(self) -> None:
+        self._call("use_default_profile")
+
+
 class FakeController:
     """Records every command in `calls`; tests steer it with `publish`, `notify`,
     `apply_errors` and `hotkey_results`. `autoplay=True` cycles through every tray
@@ -85,7 +203,11 @@ class FakeController:
     ) -> None:
         self._lock = threading.Lock()
         self._settings = settings or CompanionSettings(
-            client_key="demo", wsl_distro="ai-lab", engine_dir="ai-lab/voice-mate"
+            client_key="demo",
+            wsl_distro="ai-lab",
+            engine_dir="ai-lab/voice-mate",
+            # The demo shows the assistant's screen; the tests start with it off.
+            assistant=AssistantSettings(mode="own_session" if autoplay else "off"),
         )
         self._snapshot = CompanionSnapshot(flows=flows, instance=DEMO_INSTANCE)
         self._listeners: list[SnapshotListener] = []
@@ -98,6 +220,7 @@ class FakeController:
         self._autoplay = autoplay
         self._step_scale = step_scale
         self._stop = threading.Event()
+        self.assistant_service = FakeAssistantService(reply=autoplay)
         self.calls: list[tuple[str, tuple[object, ...]]] = []
         self.apply_errors: list[str] = []
         self.hotkey_results: dict[str, HotkeyCheck] = {}
@@ -105,6 +228,24 @@ class FakeController:
         # Both modes installed by default; tests remove one to exercise the install flow.
         self.stt_report: SttCheckReport = {"cpu": _stt_status(True), "gpu": _stt_status(True)}
         self.stt_install_ok = True
+        # What the provider answers to the voice list and the test (a provider with two voices).
+        self.tts_probe = TtsProbe(
+            True,
+            "Connected to Demo provider. Voices found: 2.",
+            "Demo provider",
+            (Voice("a", "Anna"), Voice("b", "Ben")),
+        )
+        # What the engine's own voice (`/tts`) answers for the Assistant tab.
+        self.assistant_voice_probe = TtsProbe(
+            True,
+            "The engine speaks with Kokoro. Voices found: 3.",
+            "Kokoro",
+            (
+                Voice("pf_dora", "Dora (pf_dora)", default=True),
+                Voice("pm_alex", "Alex (pm_alex)"),
+                Voice("pm_santa", "Santa (pm_santa)"),
+            ),
+        )
 
     # ----------------------------------------------------------------- test hooks
 
@@ -146,6 +287,10 @@ class FakeController:
     def start(self) -> None:
         self._call("start")
         if self._autoplay:
+            self.assistant_service.publish(
+                state="ready",
+                messages=(ChatMessage("assistant", _("Hello! What would you like to pick up today?")),),
+            )
             self.notify(
                 Notification(
                     "info",
@@ -211,6 +356,7 @@ class FakeController:
     def quit(self, on_done: Callable[[], None]) -> None:
         self._call("quit")
         self._stop.set()
+        self.assistant_service.stop()
 
         def finish() -> None:
             if self.quit_delay:
@@ -236,6 +382,7 @@ class FakeController:
         hotkeys = tuple(HotkeyBinding(b.flow, normalize_chord(b.chord) or b.chord) for b in settings.hotkeys)
         engine_dir = settings.engine_dir.strip().removeprefix("~/")
         self.set_settings(replace(settings, hotkeys=hotkeys, engine_dir=engine_dir))
+        self.assistant_service.apply_settings(settings.assistant)
         return []
 
     def set_settings(self, settings: CompanionSettings) -> None:
@@ -290,6 +437,9 @@ class FakeController:
             count = len(self._pending)
         self.publish(pending_unacked=count)
 
+    def assistant(self) -> FakeAssistantService:
+        return self.assistant_service
+
     def open_logs(self) -> None:
         self._call("open_logs")
 
@@ -303,6 +453,22 @@ class FakeController:
             on_line(line)
         self.stt_report[mode]["ready"] = self.stt_install_ok
         return self.stt_install_ok
+
+    def tts_voices(self, settings: CompanionSettings) -> TtsProbe:
+        self._call("tts_voices", settings.tts_url)
+        return self.tts_probe
+
+    def test_tts(self, settings: CompanionSettings) -> TtsProbe:
+        self._call("test_tts", settings.tts_voice)
+        return self.tts_probe
+
+    def assistant_voices(self) -> TtsProbe:
+        self._call("assistant_voices")
+        return self.assistant_voice_probe
+
+    def test_assistant_voice(self, voice: str) -> TtsProbe:
+        self._call("test_assistant_voice", voice)
+        return self.assistant_voice_probe
 
     # ----------------------------------------------------------------- demo mode
 

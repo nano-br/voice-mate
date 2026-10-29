@@ -271,3 +271,24 @@ def test_taskbar_tone_follows_the_windows_registry(qapp: QApplication, monkeypat
     assert icons.taskbar_glyph_tone() == "dark"
     monkeypatch.setattr(icons, "_windows_taskbar_is_light", lambda: False)
     assert icons.taskbar_glyph_tone() == "light"
+
+
+# --- answers waiting in the assistant's inbox -----------------------------------------------------
+
+
+def test_the_inbox_badge_shows_only_over_a_quiet_state() -> None:
+    for state in ALL_STATES:
+        base = icons.STATE_BADGES[state]
+        expected = icons.INBOX_BADGE if base in ("none", "check") else base
+        assert icons.badge_for(state, True) == expected, state
+        assert icons.badge_for(state, False) == base
+
+
+@pytest.mark.parametrize("size", icons.TRAY_SIZES)
+@pytest.mark.parametrize("tone", TONES)
+def test_answers_waiting_change_only_the_quiet_icons(qapp: QApplication, tone: icons.GlyphTone, size: int) -> None:
+    for state in ALL_STATES:
+        plain = icons.tray_pixmap(state, tone, size).toImage()
+        waiting = icons.tray_pixmap(state, tone, size, True).toImage()
+        quiet = icons.STATE_BADGES[state] in ("none", "check")
+        assert (plain != waiting) == quiet, f"{state} at {size} px"

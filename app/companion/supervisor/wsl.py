@@ -37,6 +37,7 @@ from app.companion.supervisor.backend import (
     make_script,
     stop_gracefully,
 )
+from app.companion.tts import EngineTts, spawn_env
 from app.protocol.models import ShutdownReason
 
 log = logging.getLogger(__name__)
@@ -108,16 +109,18 @@ def read_wsl_token(distro: str, *, wsl_exe: str = WSL_EXE, runner: Runner = run_
 
 
 def _spawn(
-    args: list[str], *, stdout: int | None, stderr: int | None
+    args: list[str], *, stdout: int | None, stderr: int | None, env: dict[str, str] | None = None
 ) -> tuple[subprocess.Popen[bytes], Callable[[], None] | None, Callable[[], None] | None]:
     """Popen inside a Job Object on Windows -> (process, kill tree, release job)."""
     flags = hidden_window_flags()
     if sys.platform == "win32":
         from app.companion.win.job import popen_in_job
 
-        process, job = popen_in_job(args, stdin=subprocess.PIPE, stdout=stdout, stderr=stderr, creationflags=flags)
+        process, job = popen_in_job(
+            args, stdin=subprocess.PIPE, stdout=stdout, stderr=stderr, env=env, creationflags=flags
+        )
         return process, job.terminate, job.close
-    process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=stdout, stderr=stderr)
+    process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=stdout, stderr=stderr, env=env)
     return process, None, None
 
 
@@ -133,6 +136,7 @@ class WslBackend:
         *,
         language: EngineLanguage | None = None,
         stt: EngineStt | None = None,
+        tts: EngineTts | None = None,
         wsl_exe: str = WSL_EXE,
         runner: Runner = run_hidden,
     ) -> None:
@@ -140,6 +144,7 @@ class WslBackend:
         self.port = port
         self.language = language
         self.stt = stt
+        self.tts = tts
         self._wsl = wsl_exe
         self._run = runner
         self._log = EngineLog(log_path)
@@ -156,7 +161,13 @@ class WslBackend:
         return [self._wsl, "-d", self.distro] if self.distro else [self._wsl]
 
     def spawn_command(self, engine_dir: str) -> list[str]:
-        return [*self._base(), "-e", "bash", "-lc", engine_script(engine_dir, self.port, self.language, self.stt)]
+        return [
+            *self._base(),
+            "-e",
+            "bash",
+            "-lc",
+            engine_script(engine_dir, self.port, self.language, self.stt, self.tts),
+        ]
 
     def tool_command(self, engine_dir: str, target: str) -> list[str] | None:
         return [*self._base(), "-e", "bash", "-lc", make_script(engine_dir, target)]
@@ -178,7 +189,9 @@ class WslBackend:
     def spawn(self, engine_dir: str, generation: int, on_exit: ExitCallback) -> None:
         command = self.spawn_command(engine_dir)
         self._log.write(f"[companion] starting: {' '.join(command)}")
-        process, kill_tree, release = _spawn(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        process, kill_tree, release = _spawn(
+            command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=spawn_env(self.tts, wsl=True)
+        )
 
         def exited(gen: int, code: int, address_in_use: bool) -> None:
             if release is not None:

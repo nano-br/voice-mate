@@ -10,24 +10,58 @@ from __future__ import annotations
 
 import time
 
+from app.companion.assistant.contract import AssistantSnapshot
+from app.companion.choice_labels import (
+    answer_delivery_labels as answer_delivery_labels,
+)
+from app.companion.choice_labels import (
+    assistant_effort_labels as assistant_effort_labels,
+)
+from app.companion.choice_labels import (
+    assistant_mode_labels as assistant_mode_labels,
+)
+from app.companion.choice_labels import (
+    assistant_model_labels as assistant_model_labels,
+)
+from app.companion.choice_labels import (
+    assistant_permission_labels as assistant_permission_labels,
+)
+from app.companion.choice_labels import (
+    dictation_language_labels as dictation_language_labels,
+)
+from app.companion.choice_labels import (
+    expressions_labels as expressions_labels,
+)
+from app.companion.choice_labels import (
+    notify_level_labels as notify_level_labels,
+)
+from app.companion.choice_labels import (
+    personality_source_labels as personality_source_labels,
+)
+from app.companion.choice_labels import (
+    skill_language_labels as skill_language_labels,
+)
+from app.companion.choice_labels import (
+    stt_mode_labels as stt_mode_labels,
+)
 from app.companion.contract import (
+    AssistantHotkeyAction,
     CompanionSnapshot,
     CueName,
     CuePreset,
     CueSource,
-    DictationLanguage,
     EngineMode,
     FlowEntry,
     HotkeyCheck,
-    NotifyLevel,
     SupervisorState,
     TrayState,
+    TtsChoice,
     UiLanguage,
     WslRestartPolicy,
 )
 from app.companion.ui.chords import display_chord
 from app.i18n import _
-from app.protocol.models import AudioHealth, FlowKind, SttInfo, SttMode, SttModel
+from app.protocol.models import AudioHealth, FlowKind, SttInfo, SttModel
 
 APP_NAME = "VoiceMate"  # product name: never translated
 # Windows truncates tray tooltips at 127 characters.
@@ -114,11 +148,15 @@ def _fallback_line(snapshot: CompanionSnapshot, state: TrayState, idle_chord: st
     return snapshot.detail or _("The engine stopped working")
 
 
-def tooltip(snapshot: CompanionSnapshot, idle_chord: str = "", now: float | None = None) -> str:
+def tooltip(
+    snapshot: CompanionSnapshot, idle_chord: str = "", now: float | None = None, *, answers_waiting: int = 0
+) -> str:
     line = status_line(snapshot, idle_chord, now)
     if snapshot.hotkeys_suspended and snapshot.tray_state == "idle":
         line = _("Shortcuts paused")
     text = f"{APP_NAME}\n{line}"
+    if answers_waiting:
+        text += "\n" + _("Answers waiting: {count}").format(count=answers_waiting)
     return text if len(text) <= TOOLTIP_LIMIT else text[: TOOLTIP_LIMIT - 3] + "..."
 
 
@@ -154,6 +192,7 @@ def cue_labels() -> dict[CueName, str]:
         "ai_ready": _("Claude answered"),
         "warning": _("Warning"),
         "error": _("Error"),
+        "answer": _("Answer ready"),
     }
 
 
@@ -177,23 +216,6 @@ def language_labels() -> dict[UiLanguage, str]:
     }
 
 
-def dictation_language_labels() -> dict[DictationLanguage, str]:
-    # Same convention as the interface languages: each one in its own language.
-    return {
-        "interface": _("Same as the interface"),
-        "auto": _("Detect automatically"),
-        "pt": "Português",
-        "en": "English",
-        "es": "Español",
-        "ru": "Русский",
-        "zh": "中文",
-        "fr": "Français",
-        "de": "Deutsch",
-        "it": "Italiano",
-        "ja": "日本語",
-    }
-
-
 def engine_mode_labels() -> dict[EngineMode, str]:
     return {
         "wsl2": _("Start it in WSL"),
@@ -206,13 +228,62 @@ def wsl_restart_labels() -> dict[WslRestartPolicy, str]:
     return {"auto": _("Automatically"), "ask": _("Ask first"), "never": _("Never")}
 
 
-def notify_level_labels() -> dict[NotifyLevel, str]:
+def profile_source_label(source: str) -> str:
     return {
-        "all": _("All"),
-        "warnings": _("Warnings and errors"),
-        "errors": _("Errors only"),
-        "none": _("None"),
+        "override": _("imported file"),
+        "remote": _("downloaded update"),
+        "packaged": _("built into VoiceMate"),
+    }.get(source, source)
+
+
+def assistant_hotkey_titles() -> dict[AssistantHotkeyAction, str]:
+    return {
+        "assistant_talk": _("Talk to the assistant"),
+        "assistant_window": _("Open the assistant window"),
+        "assistant_mode": _("Switch the assistant mode"),
+        "assistant_back": _("Back to the assistant"),
+        "assistant_digest": _("Hear what's ready"),
     }
+
+
+def assistant_state_line(snapshot: AssistantSnapshot) -> str:
+    """The assistant window's status text (the session link is added by the window)."""
+    if snapshot.state == "error":
+        return {
+            "cli_missing": _("Claude Code was not found"),
+            "not_logged_in": _("Claude Code is not signed in"),
+            "start_failed": _("The assistant could not start"),
+            "exited": _("The assistant stopped"),
+            "setup_failed": _("The assistant could not be set up"),
+            "no_conversation": _("No Claude Desktop conversation is chosen"),
+        }.get(snapshot.error or "", _("The assistant has a problem"))
+    return {
+        "off": _("The assistant is off"),
+        "starting": _("Starting..."),
+        "ready": _("Ready"),
+        "busy": _("Answering..."),
+        "stopped": _("Stopped"),
+    }[snapshot.state]
+
+
+def assistant_input_block(snapshot: AssistantSnapshot) -> str:
+    """Why the message box is disabled, or "" when it accepts text."""
+    if snapshot.state == "ready":
+        return ""
+    if snapshot.state == "error":
+        return {
+            "cli_missing": _(
+                "Install Claude Code, or set VOICEMATE_CLAUDE_CLI to its path, then restart the assistant."
+            ),
+            "not_logged_in": _('Sign in with "claude auth login" in a terminal, then restart the assistant.'),
+            "no_conversation": _("Choose the Claude Desktop conversation in Settings, Assistant."),
+        }.get(snapshot.error or "", _("Restart the assistant to try again. The VoiceMate log has the details."))
+    return {
+        "off": _("The assistant is off. Turn it on in Settings, Assistant."),
+        "starting": _("The assistant is starting. Please wait."),
+        "busy": _("The assistant is answering. Please wait."),
+        "stopped": _("The assistant is stopped."),
+    }[snapshot.state]
 
 
 def hotkey_check_labels() -> dict[HotkeyCheck, str]:
@@ -229,14 +300,6 @@ def hotkey_rule() -> str:
     return _("Use Ctrl, Alt, Shift or Win with a key, or a function key alone. F12 is reserved by Windows.")
 
 
-def stt_mode_labels() -> dict[SttMode, str]:
-    return {
-        "cpu": _("CPU (leaves the GPU free)"),
-        "gpu": _("GPU (fastest)"),
-        "auto": _("Automatic (engine setup)"),
-    }
-
-
 def stt_model_labels() -> dict[SttModel, str]:
     # Model names are Whisper's own: never translated, only described.
     return {
@@ -244,6 +307,13 @@ def stt_model_labels() -> dict[SttModel, str]:
         "large-v3": _("large-v3 (most accurate, slowest)"),
         "medium": _("medium (faster)"),
         "small": _("small (fastest, less accurate)"),
+    }
+
+
+def tts_engine_labels() -> dict[TtsChoice, str]:
+    return {
+        "default": _("Built-in (engine setup)"),
+        "external": _("Custom provider (HTTP)"),
     }
 
 
