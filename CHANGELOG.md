@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-29
+
 ### Added
 
 - Voice assistant (experimental, off by default): one Claude conversation, the central one, that
@@ -351,5 +353,6 @@ Development happened on `main` and in seven pull requests before this first rele
 - [#7](https://github.com/nano-br/voice-mate/pull/7): choose the dictation language in
   the companion.
 
-[Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/nano-br/voice-mate/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/nano-br/voice-mate/releases/tag/v0.1.0
