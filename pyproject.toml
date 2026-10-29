@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "voice-mate"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local voice dictation to the clipboard with Whisper, with a Windows tray companion: press a hotkey, speak, paste."
 license = "MIT"
 authors = ["Álli Terhorst <alli.terhorst@gmail.com>"]
