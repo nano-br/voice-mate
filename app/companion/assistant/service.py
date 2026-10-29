@@ -1235,7 +1235,14 @@ class AssistantServiceImpl:
             self._start_port(settings)
             port = self._port
             if port is None or not port.send(text):
-                self._notice(_("The assistant is not running. Try again in a moment."))
+                # A start that already failed (Claude Code missing, say) will not mend in a moment:
+                # the status line says why, and "try again" would only lead back to the same wall.
+                failed = port is not None and port.status().state == "error"
+                self._notice(
+                    _("The assistant could not start")
+                    if failed
+                    else _("The assistant is not running. Try again in a moment.")
+                )
                 return
         self._publish()
 

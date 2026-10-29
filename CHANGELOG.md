@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   guide, with diagrams (the two modes, how it conducts other conversations, how answers come back,
   direct mode, the voice and safety). The README section is now a short summary that links to it.
 
+### Fixed
+
+- The voice assistant said "Claude Code was not found" when VoiceMate started at sign-in: the
+  `claude` command was installed in `~/.local/bin` (or `%APPDATA%/npm`), which only a shell profile
+  adds to PATH. VoiceMate now also looks in the installers' own folders. A start that failed this way
+  now says "The assistant could not start" instead of asking to try again in a moment.
+
 ## [0.2.0] - 2026-10-29
 
 ### Added

@@ -412,6 +412,22 @@ def test_send_restarts_a_dead_conversation(rig: Rig) -> None:
     assert rig.port.sent == ["hello"]
 
 
+def test_a_restart_that_fails_says_so_instead_of_try_again(rig: Rig, monkeypatch: pytest.MonkeyPatch) -> None:
+    rig.service.start()
+    rig.wait(lambda s: s.state == "starting")
+    rig.port.accepts = False
+
+    def start_missing(port: FakePort, on_change: PortListener) -> None:
+        port.listener = on_change
+        port.accepts = False
+        port.set(PortStatus(state="error", error="cli_missing"))
+
+    monkeypatch.setattr(FakePort, "start", start_missing)
+    rig.service.send("hello")
+    snapshot = rig.wait(lambda s: bool(_notices(s)))
+    assert _notices(snapshot)[-1] == "The assistant could not start"
+
+
 def test_send_is_ignored_when_off(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
     rig = Rig(tmp_path, AssistantSettings())

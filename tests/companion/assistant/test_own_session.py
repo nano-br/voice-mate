@@ -153,6 +153,24 @@ def test_find_cli_prefers_the_override_then_path(tmp_path: Path) -> None:
     assert find_cli({}, lambda _n: None) is None
 
 
+def test_find_cli_falls_back_to_the_installers_folders_when_claude_is_not_on_path(tmp_path: Path) -> None:
+    # A program started at sign-in may get a PATH without ~/.local/bin (a shell profile adds it),
+    # so the terminal finds `claude` and VoiceMate did not: "Claude Code was not found".
+    native = tmp_path / ".local" / "bin" / "claude.exe"
+    native.parent.mkdir(parents=True)
+    native.write_text("", encoding="utf-8")
+    assert find_cli({"USERPROFILE": str(tmp_path)}, lambda _n: None) == str(native)
+    assert find_cli({"USERPROFILE": str(tmp_path)}, lambda _n: "/bin/claude") == "/bin/claude"
+
+
+def test_find_cli_finds_an_npm_install(tmp_path: Path) -> None:
+    npm = tmp_path / "npm" / "claude.cmd"
+    npm.parent.mkdir()
+    npm.write_text("", encoding="utf-8")
+    assert find_cli({"APPDATA": str(tmp_path), "USERPROFILE": str(tmp_path / "nobody")}, lambda _n: None) == str(npm)
+    assert find_cli({"APPDATA": str(tmp_path / "empty")}, lambda _n: None) is None
+
+
 def test_missing_cli_is_an_error_state(tmp_path: Path) -> None:
     rig = Rig(tmp_path, find_cli_fn=lambda: None)
     rig.port.start(rig.on_change)

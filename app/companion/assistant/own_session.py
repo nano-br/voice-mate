@@ -68,13 +68,33 @@ def scrubbed_env(environ: Mapping[str, str]) -> dict[str, str]:
     }
 
 
+def install_locations(environ: Mapping[str, str]) -> list[Path]:
+    """Where the Claude Code installers put the command, for when it is not on PATH.
+
+    The native installer writes `~/.local/bin/claude(.exe)` and npm writes `%APPDATA%/npm/claude.cmd`,
+    but neither folder is always on the PATH a program started at sign-in gets: a shell profile
+    may be what adds it, so a terminal finds `claude` and VoiceMate does not."""
+    found: list[Path] = []
+    home = environ.get("USERPROFILE") or environ.get("HOME")
+    if home:
+        found += [Path(home) / ".local" / "bin" / "claude.exe", Path(home) / ".local" / "bin" / "claude"]
+    appdata = environ.get("APPDATA")
+    if appdata:
+        found.append(Path(appdata) / "npm" / "claude.cmd")
+    return found
+
+
 def find_cli(environ: Mapping[str, str] | None = None, which: Callable[[str], str | None] = shutil.which) -> str | None:
-    """`$VOICEMATE_CLAUDE_CLI` when set (a path or a command name), else `claude` on PATH."""
+    """`$VOICEMATE_CLAUDE_CLI` when set (a path or a command name), else `claude` on PATH, else
+    the installers' own folders (`install_locations`)."""
     env = os.environ if environ is None else environ
     override = env.get(CLI_ENV_VAR, "").strip()
     if override:
         return which(override) or (override if Path(override).is_file() else None)
-    return which("claude")
+    on_path = which("claude")
+    if on_path:
+        return on_path
+    return next((str(path) for path in install_locations(env) if path.is_file()), None)
 
 
 def build_command(
