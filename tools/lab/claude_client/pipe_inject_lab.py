@@ -20,12 +20,13 @@ import subprocess
 import sys
 import threading
 import time
+from typing import Any
 
 from bench_latency import _cli
 from persistent_client import scrub_host_env
 
 
-def session_files(pid: int) -> tuple[dict, str | None]:
+def session_files(pid: int) -> tuple[dict[str, Any], str | None]:
     home = os.path.join(os.path.expanduser("~"), ".claude", "sessions")
     with open(os.path.join(home, f"{pid}.json"), encoding="utf-8") as f:
         info = json.load(f)
@@ -33,7 +34,7 @@ def session_files(pid: int) -> tuple[dict, str | None]:
     return info, keys[0] if keys else None
 
 
-def send_over_pipe(pipe: str, lines: list[dict]) -> None:
+def send_over_pipe(pipe: str, lines: list[Any]) -> None:
     """Write JSON lines to a Windows named pipe. The answer is not read: the effect is checked on the target side."""
     with open(pipe, "r+b", buffering=0) as p:
         for obj in lines:
@@ -81,7 +82,7 @@ def main() -> None:
             target.kill()
 
 
-def inject(target: subprocess.Popen, args: argparse.Namespace) -> None:
+def inject(target: subprocess.Popen[str], args: argparse.Namespace) -> None:
     def reader() -> None:
         assert target.stdout is not None
         for line in target.stdout:

@@ -21,7 +21,7 @@ import json
 import os
 import subprocess
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from bench_latency import _cli
 from persistent_client import scrub_host_env
@@ -44,13 +44,13 @@ async def ask(client: ClaudeSDKClient, prompt: str) -> tuple[str, str]:
     return text.strip(), sid
 
 
-def cli_turn(args: argparse.Namespace, sid: str, prompt: str) -> dict:
+def cli_turn(args: argparse.Namespace, sid: str, prompt: str) -> dict[str, Any]:
     cmd = [_cli(), "-p", "--model", args.model, "--output-format", "json", "--resume", sid, "--tools", ""]
     out = subprocess.run(cmd, cwd=args.cwd, input=prompt, capture_output=True, text=True, encoding="utf-8")
     return json.loads(out.stdout) if out.stdout.strip() else {"error": out.stderr}
 
 
-async def cli_turn_async(args: argparse.Namespace, sid: str, prompt: str) -> dict:
+async def cli_turn_async(args: argparse.Namespace, sid: str, prompt: str) -> dict[str, Any]:
     return await asyncio.to_thread(cli_turn, args, sid, prompt)
 
 

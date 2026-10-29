@@ -517,6 +517,8 @@ _PROCESS_QUERY_LIMITED_INFORMATION: Final = 0x1000
 
 @functools.cache
 def _kernel32() -> Control:
+    if sys.platform != "win32":
+        raise DesktopUnavailable("the Claude Desktop port needs Windows")
     from ctypes import wintypes
 
     dll = ctypes.WinDLL("kernel32", use_last_error=True)

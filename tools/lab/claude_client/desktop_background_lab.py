@@ -34,7 +34,7 @@ from uia_common import (
     walk,
 )
 
-user32 = ctypes.windll.user32
+user32 = ctypes.windll.user32  # type: ignore[attr-defined,unused-ignore]
 WM_CHAR, WM_KEYDOWN, WM_KEYUP, WM_CLOSE, VK_RETURN = 0x0102, 0x0100, 0x0101, 0x0010, 0x0D
 
 
@@ -65,7 +65,7 @@ def notepad_handles() -> dict[int, int]:
     return {w.NativeWindowHandle: w.ProcessId for w in auto.GetRootControl().GetChildren() if w.ClassName == "Notepad"}
 
 
-def launch_notepad(known: set[int]) -> tuple[subprocess.Popen, int]:
+def launch_notepad(known: set[int]) -> tuple[subprocess.Popen[bytes], int]:
     """Start Notepad and return (process, hwnd of its window), or abort.
 
     On Windows 11 notepad.exe may hand over to another process, so the window can belong to

@@ -24,6 +24,7 @@ import sys
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
+from typing import Any
 
 MAX_SANITIZED_LENGTH = 200
 _SANITIZE_RE = re.compile(r"[^a-zA-Z0-9]")
@@ -74,9 +75,9 @@ def find_session_file(session_id: str) -> str | None:
     return hits[0] if hits else None
 
 
-def live_sessions() -> dict[str, dict]:
+def live_sessions() -> dict[str, dict[str, Any]]:
     """sessionId -> entry of ~/.claude/sessions/<pid>.json (running clients: status busy/idle, name)."""
-    out: dict[str, dict] = {}
+    out: dict[str, dict[str, Any]] = {}
     for path in glob.glob(os.path.join(claude_home(), "sessions", "*.json")):
         try:
             with open(path, encoding="utf-8") as f:
@@ -100,7 +101,7 @@ class Event:
     text: str = ""
     uuid: str | None = None
     timestamp: str | None = None
-    extra: dict = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
 
 
 def _text_blocks(content: object) -> str:
@@ -111,7 +112,7 @@ def _text_blocks(content: object) -> str:
     return ""
 
 
-def parse_line(d: dict) -> Iterator[Event]:
+def parse_line(d: dict[str, Any]) -> Iterator[Event]:
     """Map one transcript line to zero or more events."""
     t = d.get("type")
     sid = d.get("sessionId", "")
@@ -160,7 +161,7 @@ class Tail:
         self.offset = 0 if from_start else os.path.getsize(path)
         self._partial = b""
 
-    def read_new(self) -> list[dict]:
+    def read_new(self) -> list[dict[str, Any]]:
         try:
             size = os.path.getsize(self.path)
         except OSError:

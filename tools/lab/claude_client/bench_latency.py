@@ -77,7 +77,7 @@ def _delta_text(msg: object) -> str | None:
     if isinstance(msg, StreamEvent):
         ev = msg.event
         if ev.get("type") == "content_block_delta" and ev.get("delta", {}).get("type") == "text_delta":
-            return ev["delta"].get("text", "")
+            return str(ev["delta"].get("text", ""))
     return None
 
 

@@ -16,7 +16,7 @@ from collections.abc import Iterator
 
 import uiautomation as auto
 
-user32 = ctypes.windll.user32
+user32 = ctypes.windll.user32  # type: ignore[attr-defined,unused-ignore]
 GA_ROOT = 2
 
 

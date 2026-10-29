@@ -104,7 +104,7 @@ def _resolve_tts_enabled(args: argparse.Namespace, persisted: PersistedConfig) -
     # An engine named on the command line (the companion's Voice tab) is a choice made now:
     # it wins over the "TTS off" remembered from setup.
     if args.tts_engine is not None:
-        return args.tts_engine != "none"
+        return bool(args.tts_engine != "none")
     if persisted.tts_enabled is not None:
         return persisted.tts_enabled
     return True
