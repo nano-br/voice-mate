@@ -25,6 +25,7 @@ from app.companion.contract import (
 from app.companion.controller import CompanionControllerImpl, create_controller
 from app.companion.dictation import engine_language
 from app.companion.settings_store import SettingsStore, dump_settings
+from app.protocol.tts_provider import ProviderError, ProviderInfo, Voice
 
 
 @pytest.fixture(autouse=True)
@@ -485,6 +486,8 @@ def test_a_mic_error_then_a_retry(make_controller: ControllerKit, daemon: FakeDa
     recorder = Recorder(controller)
     controller.start()
     assert wait_until(lambda: _connected(controller, daemon))
+    # The cues are rendered on the I/O thread at start: a cue asked for before that is silent.
+    assert wait_until(lambda: controller._cues.path("error") is not None)  # type: ignore[attr-defined]
     controller.toggle("clipboard")
     assert wait_until(lambda: recorder.last.tray_state == "recording")
     daemon.fail_microphone()
@@ -1114,3 +1117,71 @@ def test_stt_tools_are_not_offered_in_external_mode(make_controller: ControllerK
     )
     assert controller.check_stt(settings) is None
     assert controller.install_stt(settings, "gpu", lambda _line: None) is False
+
+
+# --- the assistant's voice ---------------------------------------------------------------------------
+
+
+class VoiceCalls:
+    """Replaces the controller's `EngineVoice` methods to see when it is silenced."""
+
+    def __init__(self, controller: CompanionControllerImpl, monkeypatch: pytest.MonkeyPatch) -> None:
+        self.stops = 0
+        self.closes = 0
+        self.tests: list[tuple[str, str]] = []
+        monkeypatch.setattr(controller._voice, "stop", self._stop)
+        monkeypatch.setattr(controller._voice, "close", self._close)
+        monkeypatch.setattr(
+            controller._voice, "test", lambda text, voice, language="": self.tests.append((text, voice))
+        )
+
+    def _stop(self) -> None:
+        self.stops += 1
+
+    def _close(self) -> None:
+        self.closes += 1
+
+
+def test_a_recording_a_hotkey_and_quitting_silence_the_assistant(
+    make_controller: ControllerKit, daemon: FakeDaemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    controller, parts, _backend = make_controller(daemon)
+    calls = VoiceCalls(controller, monkeypatch)
+    controller.start()
+    assert wait_until(lambda: _connected(controller, daemon))
+    assert wait_until(lambda: parts.hotkeys is not None and parts.hotkeys.held)
+    controller.toggle("clipboard")
+    assert calls.stops == 1
+    assert parts.hotkeys is not None
+    parts.hotkeys.press("clipboard")
+    assert wait_until(lambda: calls.stops == 2)
+    done = threading.Event()
+    controller.quit(done.set)
+    assert done.wait(6.0)
+    assert calls.closes == 1
+
+
+def test_the_assistant_voices_come_from_the_engine(
+    make_controller: ControllerKit, daemon: FakeDaemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    controller, _parts, _backend = make_controller(daemon)
+    calls = VoiceCalls(controller, monkeypatch)
+    info = ProviderInfo("Kokoro", (Voice("a", "Anna"), Voice("b", "Ben")), 24000, ("pcm_s16le",), 2000, ())
+    monkeypatch.setattr(controller._voice, "voices", lambda: info)
+    probe = controller.assistant_voices()
+    assert probe.ok and probe.voices == info.voices
+    assert probe.message == "The engine speaks with Kokoro. Voices found: 2."
+    tested = controller.test_assistant_voice("b")
+    assert tested.message == "Playing a test sentence with the engine's voice."
+    assert calls.tests == [("Hello! This is how the assistant sounds with this voice.", "b")]
+
+    def down() -> ProviderInfo:
+        raise ProviderError("not_ready", "engine not supported for the assistant voice")
+
+    monkeypatch.setattr(controller._voice, "voices", down)
+    failed = controller.test_assistant_voice("b")
+    assert not failed.ok
+    assert failed.message == (
+        "No voice available: the voice engine set up in the engine cannot speak for the assistant"
+    )
+    assert len(calls.tests) == 1  # nothing is played when the engine cannot speak

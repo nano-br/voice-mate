@@ -976,6 +976,19 @@ files = [
 markers = {main = "(extra == \"kokoro\" or extra == \"all\") and sys_platform == \"win32\" or platform_system == \"Windows\"", dev = "sys_platform == \"win32\""}
 
 [[package]]
+name = "comtypes"
+version = "1.4.17"
+description = "Pure Python COM package"
+optional = true
+python-versions = ">=3.9"
+groups = ["main"]
+markers = "sys_platform == \"win32\" and extra == \"ui\""
+files = [
+    {file = "comtypes-1.4.17-py3-none-any.whl", hash = "sha256:4e0a221dde2c589b82977bed802efd71cd5eb67a380347b732e02735e597f586"},
+    {file = "comtypes-1.4.17.tar.gz", hash = "sha256:3d9c1e92ad8daf7600d371e76ee16161a627a5fb70c3144f6e52e78af6034363"},
+]
+
+[[package]]
 name = "confection"
 version = "1.3.3"
 description = "The sweetest config system for Python"
@@ -11438,6 +11451,22 @@ files = [
 ]
 
 [[package]]
+name = "uiautomation"
+version = "2.0.29"
+description = "Python UIAutomation for Windows"
+optional = true
+python-versions = "*"
+groups = ["main"]
+markers = "sys_platform == \"win32\" and extra == \"ui\""
+files = [
+    {file = "uiautomation-2.0.29-py3-none-any.whl", hash = "sha256:5dd51c9e77e70470142a13d903be67f256c445e7cf20b47ada0ece2bdaff9f32"},
+    {file = "uiautomation-2.0.29.tar.gz", hash = "sha256:3c169112043ce21065aead1d79c3baebdafc9cf03bd24ded02b2db11d423d88d"},
+]
+
+[package.dependencies]
+comtypes = ">=1.2.1"
+
+[[package]]
 name = "umap-learn"
 version = "0.5.12"
 description = "Uniform Manifold Approximation and Projection"
@@ -12079,11 +12108,11 @@ claude = ["claude-agent-sdk"]
 kokoro = ["kokoro", "soundfile"]
 linux = ["evdev", "pynput"]
 tts = ["omnivoice", "soundfile"]
-ui = ["pyside6-essentials", "pywin32"]
+ui = ["pyside6-essentials", "pywin32", "uiautomation"]
 voxcpm = ["soundfile", "voxcpm"]
 whisper-gpu = ["openai-whisper", "silero-vad"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.13"
-content-hash = "c771d2a6b22110ece49baf2c6cf782f534a3ac1f20bc0e4446da0f0b7d4f000b"
+content-hash = "0dedd96ccc7b62c717b3d6fda348a71cda3f31eceaddc9f8b3aeaa10a2058228"

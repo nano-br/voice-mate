@@ -47,6 +47,7 @@ evdev = { version = "*", optional = true, markers = "sys_platform == 'linux'" }
 # single source of truth (tests/test_companion_packaging.py checks they match).
 pyside6-essentials = { version = ">=6.8", optional = true }
 pywin32 = { version = ">=306", optional = true, markers = "sys_platform == 'win32'" }
+uiautomation = { version = ">=2.0.29", optional = true, markers = "sys_platform == 'win32'" }
 
 [tool.poetry.extras]
 claude = ["claude-agent-sdk"]
@@ -63,7 +64,7 @@ whisper-gpu = ["openai-whisper", "silero-vad"]
 linux = ["pynput", "evdev"]
 # Companion (tray app): `poetry install --extras ui` + `make run-tray`. Left out of
 # `all` on purpose: the engine (WSL2 daemon, CLI) never needs Qt.
-ui = ["pyside6-essentials", "pywin32"]
+ui = ["pyside6-essentials", "pywin32", "uiautomation"]
 all = ["claude-agent-sdk", "omnivoice", "kokoro", "voxcpm", "soundfile", "openai-whisper", "silero-vad", "pynput", "evdev"]
 
 [tool.poetry.group.dev.dependencies]

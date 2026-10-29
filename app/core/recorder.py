@@ -21,6 +21,10 @@ MicOpenedCallback = Callable[[], None]
 # server is considered stuck: on WSL2 a dead WSLg PulseAudio makes the open hang
 # for tens of seconds (or forever) instead of failing.
 DEFAULT_OPEN_TIMEOUT = 6.0
+# A refused open is tried again this many times in all, this far apart, before it is
+# reported (well inside DEFAULT_OPEN_TIMEOUT).
+DEFAULT_OPEN_ATTEMPTS = 3
+DEFAULT_RETRY_DELAY = 0.4
 
 
 def _describe(exc: BaseException) -> str:
@@ -42,9 +46,17 @@ class Recorder:
     mic is capturing.
     """
 
-    def __init__(self, sample_rate: int, open_timeout: float = DEFAULT_OPEN_TIMEOUT) -> None:
+    def __init__(
+        self,
+        sample_rate: int,
+        open_timeout: float = DEFAULT_OPEN_TIMEOUT,
+        open_attempts: int = DEFAULT_OPEN_ATTEMPTS,
+        retry_delay: float = DEFAULT_RETRY_DELAY,
+    ) -> None:
         self._sample_rate = sample_rate
         self._open_timeout = open_timeout
+        self._open_attempts = max(1, open_attempts)
+        self._retry_delay = retry_delay
         self._recording = False
         self._chunks: list[NDArray[np.float32]] = []
         self._lock = threading.Lock()
@@ -107,26 +119,41 @@ class Recorder:
     def _open_stream(
         self, generation: int, on_failure: MicFailureCallback | None, on_opened: MicOpenedCallback | None
     ) -> None:
-        """Open the capture stream (runs off-thread; may block/fail on a dead mic)."""
-        stream: sd.InputStream | None = None
-        try:
-            with self._open_lock:
-                stream = sd.InputStream(
-                    samplerate=self._sample_rate,
-                    channels=1,
-                    dtype="float32",
-                    # Bound to its generation: a stale stream's audio never lands in a newer recording.
-                    callback=functools.partial(self._callback, generation),
-                )
-                stream.start()
-        except Exception as exc:  # noqa: BLE001 (mic unavailable: report, clean state)
-            with self._lock:
-                self._inflight.pop(generation, None)
-            if stream is not None:
-                with contextlib.suppress(Exception):
-                    stream.close()  # created but failed to start: release the handle
-            self._fail(generation, on_failure, _describe(exc))
-            return
+        """Open the capture stream (runs off-thread; may block/fail on a dead mic).
+
+        A failed open is tried again a few times before it is reported: on WSLg the
+        PulseAudio bridge sometimes refuses the first open (PortAudio `paTimedOut`
+        within a fraction of a second) and accepts the next one, which used to cost a
+        second key press. A hung open is still caught by the `open_timeout` guard.
+        """
+        attempt = 0
+        while True:
+            attempt += 1
+            stream: sd.InputStream | None = None
+            try:
+                with self._open_lock:
+                    stream = sd.InputStream(
+                        samplerate=self._sample_rate,
+                        channels=1,
+                        dtype="float32",
+                        # Bound to its generation: a stale stream's audio never lands in a newer recording.
+                        callback=functools.partial(self._callback, generation),
+                    )
+                    stream.start()
+                break
+            except Exception as exc:  # noqa: BLE001 (mic unavailable: retry, then report and clean state)
+                if stream is not None:
+                    with contextlib.suppress(Exception):
+                        stream.close()  # created but failed to start: release the handle
+                if attempt < self._open_attempts and self._still_wanted(generation):
+                    print(f"[recorder] microphone open failed ({_describe(exc)}); trying again", file=sys.stderr)
+                    time.sleep(self._retry_delay)
+                    if self._still_wanted(generation):
+                        continue  # the person may have stopped during the pause
+                with self._lock:
+                    self._inflight.pop(generation, None)
+                self._fail(generation, on_failure, _describe(exc))
+                return
         with self._lock:
             self._inflight.pop(generation, None)
             attach = self._recording and self._generation == generation
@@ -140,6 +167,11 @@ class Recorder:
             return
         if on_opened is not None:
             on_opened()
+
+    def _still_wanted(self, generation: int) -> bool:
+        """True while this generation is the live recording and nothing was reported for it."""
+        with self._lock:
+            return self._recording and self._generation == generation and self._reported_generation < generation
 
     def _open_timed_out(self, generation: int, on_failure: MicFailureCallback | None) -> None:
         with self._lock:

@@ -125,6 +125,10 @@ class ClaudeChatHandler:
             with self._lock:
                 self._busy = False
                 self._cancelled = False
+            # A speaker shared with the engine's /tts voice (GatedSpeaker) is free again.
+            end_turn = getattr(self._speaker, "end_turn", None)
+            if callable(end_turn):
+                end_turn()
 
     def _ask(self, text: str, op: OperationHandle) -> None:
         if not op.active():

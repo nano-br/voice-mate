@@ -43,6 +43,17 @@ def english_texts() -> Iterator[None]:
     i18n_module._translation, i18n_module._active_language = original
 
 
+@pytest.fixture(autouse=True)
+def private_folders(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The Assistant tab reads the Obsidian vault list, the written personality and the
+    conversation titles: empty folders, never the person's own."""
+    base = tmp_path_factory.mktemp("folders")
+    for name in ("APPDATA", "LOCALAPPDATA", "XDG_STATE_HOME", "CLAUDE_CONFIG_DIR"):
+        folder = base / name.lower()
+        folder.mkdir()
+        monkeypatch.setenv(name, str(folder))
+
+
 @pytest.fixture
 def process_events(qapp: QApplication) -> Callable[..., bool]:
     """process_events(predicate=None, timeout=2.0): run the Qt loop until `predicate()` holds."""

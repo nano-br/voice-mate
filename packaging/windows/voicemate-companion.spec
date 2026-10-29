@@ -14,6 +14,7 @@
 # SPECPATH, workpath, Analysis, PYZ, EXE and COLLECT are globals that PyInstaller
 # provides when it executes this file.
 
+import importlib.util
 import re
 import sys
 import tomllib
@@ -21,7 +22,7 @@ from pathlib import Path
 
 from babel.messages.mofile import write_mo
 from babel.messages.pofile import read_po
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 from PyInstaller.utils.win32.versioninfo import (
     FixedFileInfo,
     StringFileInfo,
@@ -36,6 +37,7 @@ APP_NAME = "VoiceMate"
 ROOT = Path(SPECPATH).resolve().parents[1]
 LOCALES_DIR = ROOT / "app" / "i18n" / "locales"
 ASSETS_DIR = ROOT / "app" / "companion" / "assets"
+SKILL_ROOT = ROOT / "app" / "companion" / "assistant" / "skill"  # one voicemate-assistant folder per language
 
 # The version rules are tools/release_check.py's (one SemVer definition for the release
 # gate and the build): the spec is not importable, so this is where they are shared.
@@ -209,7 +211,21 @@ hiddenimports = collect_submodules(
     "app.companion", filter=lambda name: "linux" not in name.split(".")
 ) + collect_submodules("app.protocol")
 datas = compile_catalogs(Path(workpath) / "locales")
+# The Claude Desktop port (app/companion/win/claude_desktop.py) loads uiautomation lazily, so the
+# analysis does not see it: collect it with comtypes (its COM bindings and the native helper DLLs).
+# Skipped when the build environment lacks them: the port then reports itself unavailable at run time.
+if importlib.util.find_spec("uiautomation") is not None:
+    hiddenimports += collect_submodules("uiautomation") + collect_submodules("comtypes")
+    datas += collect_data_files("uiautomation") + collect_data_files("comtypes")
 datas += [(str(path), "app/companion/assets") for path in sorted(ASSETS_DIR.glob("voicemate*.*"))]
+# The assistant skill app/companion/assistant/skill_install.py copies into ~/.claude/skills.
+datas += [
+    (str(path), path.parent.relative_to(ROOT).as_posix())
+    for path in sorted(SKILL_ROOT.glob("*/voicemate-assistant/*"))
+    if path.is_file()
+]
+# The packaged Claude Desktop profile app/companion/win/desktop_profile.py reads (selectors and timings as data).
+datas += [(str(ROOT / "app" / "companion" / "win" / "profiles" / "claude-desktop.json"), "app/companion/win/profiles")]
 datas += baked_version_file(VERSION, Path(workpath) / "version")
 
 a = Analysis(

@@ -24,7 +24,7 @@ import pytest
 
 import app.i18n as i18n_module
 from app.companion.contract import CompanionSettings, HotkeyBinding, HotkeyCheck
-from app.companion.controller import CompanionControllerImpl, Timings
+from app.companion.controller import AssistantFactory, CompanionControllerImpl, Timings, default_assistant
 from app.companion.desktop import Desktop
 from app.companion.pending_store import PendingStore
 from app.companion.settings_store import SettingsStore, dump_settings
@@ -827,6 +827,7 @@ class ControllerKit:
         timings: Timings = FAST,
         port: int | None = None,
         platform: str = "win32",
+        assistant_factory: AssistantFactory = default_assistant,
     ) -> tuple[CompanionControllerImpl, FakeDesktopParts, FakeBackend]:
         """`platform`: which OS the settings are validated for (wsl2 mode needs "win32"),
         so the same controller tests run on Windows and Linux."""
@@ -854,6 +855,8 @@ class ControllerKit:
             logs_dir=self.tmp_path / "logs",
             timings=timings,
             pending_store=PendingStore(self.pending_path),
+            assistant_factory=assistant_factory,
+            voice_output=lambda: None,  # the assistant's voice never plays in tests
         )
         self.built.append(controller)
         return controller, desktop_parts, fake_backend

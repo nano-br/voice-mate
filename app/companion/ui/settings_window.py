@@ -1,4 +1,4 @@
-"""The settings window: Hotkeys, Sounds and General pages, applied with `apply_settings`.
+"""The settings window: Hotkeys, Sounds, Assistant and General pages, applied with `apply_settings`.
 
 The dialog edits a copy of `controller.settings()` and sends the whole
 `CompanionSettings` on OK/Apply (on a worker thread: applying re-registers the
@@ -13,7 +13,7 @@ while the selected language differs from the running one.
 from __future__ import annotations
 
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
 
@@ -23,16 +23,20 @@ from PySide6.QtWidgets import (
     QAbstractButton,
     QCheckBox,
     QComboBox,
+    QCompleter,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
     QFormLayout,
+    QFrame,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSlider,
     QStackedWidget,
@@ -43,8 +47,19 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.companion.assistant import personality
+from app.companion.assistant.contract import AssistantService, ProfileStatus
+from app.companion.assistant.session_reader import list_conversations
 from app.companion.contract import (
+    ASSISTANT_HOTKEY_ACTIONS,
     CUE_NAMES,
+    AnswerDelivery,
+    AssistantEffort,
+    AssistantHotkeyAction,
+    AssistantMode,
+    AssistantModel,
+    AssistantPermission,
+    AssistantSettings,
     CompanionSettings,
     CompanionSnapshot,
     CueName,
@@ -53,10 +68,15 @@ from app.companion.contract import (
     CueSource,
     DictationLanguage,
     EngineMode,
+    ExpressionsMode,
     FlowEntry,
     HotkeyBinding,
     HotkeyCheck,
     NotifyLevel,
+    PersonalitySource,
+    SkillLanguage,
+    TtsChoice,
+    TtsProbe,
     UiLanguage,
     WslRestartPolicy,
 )
@@ -69,6 +89,7 @@ from app.companion.ui.shell import Shell
 from app.companion.ui.view_model import chord_for, displayed_flows, settings_read_only
 from app.i18n import _
 from app.protocol.models import SttMode, SttModel
+from app.protocol.tts_provider import DEFAULT_URL, Voice
 
 SAVED_MESSAGE_MS = 4000
 
@@ -118,16 +139,80 @@ def _secondary(label: QLabel) -> QLabel:
     return label
 
 
+def _voice_combo(default_label: str, tooltip: str) -> QComboBox:
+    """An editable voice picker. Providers can offer hundreds of voices, so typing filters the
+    list by any part of a voice's name or id; a typed id that matches no entry is kept as is."""
+    combo = QComboBox()
+    combo.setEditable(True)
+    combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+    combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+    combo.setMaxVisibleItems(15)
+    completer = QCompleter(combo.model(), combo)
+    completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+    completer.setFilterMode(Qt.MatchFlag.MatchContains)
+    completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+    combo.setCompleter(completer)
+    line = combo.lineEdit()
+    if line is not None:
+        line.setPlaceholderText(default_label)
+    combo.setToolTip(tooltip)
+    return combo
+
+
+def _voice_label(voice: Voice) -> str:
+    if voice.name == voice.id or voice.name.endswith(f"({voice.id})"):
+        return voice.name
+    return f"{voice.name} ({voice.id})"
+
+
+def _fill_voices(combo: QComboBox, voices: Sequence[Voice], current: str, default_label: str) -> None:
+    """`default_label` (the voice "") first, then the voice the provider marks as its default,
+    then the others by name. `current` stays selected, even when the provider does not list it."""
+    ordered = sorted(voices, key=lambda voice: (not voice.default, voice.name.casefold(), voice.id))
+    with QSignalBlocker(combo):
+        combo.clear()
+        combo.addItem(default_label, "")
+        known = {""}
+        for voice in ordered:
+            if voice.id in known:
+                continue
+            combo.addItem(_voice_label(voice), voice.id)
+            known.add(voice.id)
+            if voice.languages:
+                combo.setItemData(combo.count() - 1, ", ".join(voice.languages), Qt.ItemDataRole.ToolTipRole)
+        if current not in known:
+            combo.addItem(current, current)
+        combo.setCurrentIndex(combo.findData(current))
+
+
+def _combo_voice_id(combo: QComboBox) -> str:
+    """The id of the picked voice, or what was typed when it matches none of the entries."""
+    index = combo.currentIndex()
+    text = str(combo.currentText()).strip()
+    if index >= 0 and text == combo.itemText(index):
+        return str(combo.itemData(index) or "")
+    found = combo.findText(text, Qt.MatchFlag.MatchExactly)
+    if found >= 0:  # a name picked from the search popup
+        return str(combo.itemData(found) or "")
+    return text
+
+
 # ---------------------------------------------------------------------- Hotkeys page
 
 
 @dataclass
 class _HotkeyRow:
-    flow: FlowEntry
+    flow: FlowEntry | None  # None: one of the assistant's actions (`action`)
     edit: HotkeyEdit
     status: QLabel
     token: object = field(default_factory=object)
     result: HotkeyCheck | None = None  # the colored status shown (re-colored on palette changes)
+    action: AssistantHotkeyAction | None = None
+
+    @property
+    def name(self) -> str:
+        """The flow or the assistant action, as the conflict checks know it."""
+        return self.flow.name if self.flow is not None else self.action or ""
 
 
 class HotkeysPage(QWidget):
@@ -137,6 +222,7 @@ class HotkeysPage(QWidget):
         super().__init__(parent)
         self._shell = shell
         self._rows: list[_HotkeyRow] = []
+        self._assistant_rows: list[_HotkeyRow] = []
         self._engine_owned = False
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
@@ -152,6 +238,16 @@ class HotkeysPage(QWidget):
         self.grid.setVerticalSpacing(10)
         self.grid.setColumnStretch(2, 1)
         layout.addLayout(self.grid)
+        self.assistant_title = QLabel(_("Assistant"))
+        font = self.assistant_title.font()
+        font.setBold(True)
+        self.assistant_title.setFont(font)
+        layout.addWidget(self.assistant_title)
+        self.assistant_grid = QGridLayout()
+        self.assistant_grid.setHorizontalSpacing(12)
+        self.assistant_grid.setVerticalSpacing(10)
+        self.assistant_grid.setColumnStretch(2, 1)
+        layout.addLayout(self.assistant_grid)
         self.rule = _secondary(QLabel(texts.hotkey_rule()))
         layout.addWidget(self.rule)
         layout.addStretch(1)
@@ -165,16 +261,26 @@ class HotkeysPage(QWidget):
 
     @property
     def rows(self) -> list[_HotkeyRow]:
+        """The engine flows' rows."""
         return list(self._rows)
+
+    @property
+    def assistant_rows(self) -> list[_HotkeyRow]:
+        return list(self._assistant_rows)
+
+    def _all_rows(self) -> list[_HotkeyRow]:
+        return self._rows + self._assistant_rows
 
     def load(self, settings: CompanionSettings, snapshot: CompanionSnapshot, read_only: bool) -> None:
         self.cancel_capture()
-        while self.grid.count():
-            item = self.grid.takeAt(0)
-            old = item.widget() if item is not None else None
-            if old is not None:
-                old.deleteLater()
+        for grid in (self.grid, self.assistant_grid):
+            while grid.count():
+                item = grid.takeAt(0)
+                old = item.widget() if item is not None else None
+                if old is not None:
+                    old.deleteLater()
         self._rows = []
+        self._assistant_rows = []
         self._engine_owned = snapshot.hotkeys_owned_by_engine
         self.engine_note.setVisible(self._engine_owned)
         self.intro.setVisible(not self._engine_owned)
@@ -184,37 +290,70 @@ class HotkeysPage(QWidget):
         flows = displayed_flows(snapshot, settings)
         for index, flow in enumerate(flows):
             title = texts.flow_title(flow, flows)
-            label = QLabel(_("{action}:").format(action=title))
-            edit = HotkeyEdit(chord_for(flow, snapshot, settings))
-            edit.setAccessibleName(_("Shortcut for {action}").format(action=title))
-            edit.set_editable(not self._engine_owned and not read_only)
-            label.setBuddy(edit)
-            status = QLabel()
-            status.setTextFormat(Qt.TextFormat.PlainText)
-            row = _HotkeyRow(flow, edit, status)
-            edit.chord_changed.connect(lambda _chord, current=row: self._on_chord_changed(current))
-            edit.capture_started.connect(lambda: self._suspend_hotkeys(True))
-            edit.capture_finished.connect(lambda: self._suspend_hotkeys(False))
-            self.grid.addWidget(label, index, 0)
-            self.grid.addWidget(edit, index, 1)
-            self.grid.addWidget(status, index, 2)
+            row = self._add_row(self.grid, index, title, chord_for(flow, snapshot, settings), read_only)
+            row.flow = flow
             self._rows.append(row)
+        titles = texts.assistant_hotkey_titles()
+        for index, action in enumerate(ASSISTANT_HOTKEY_ACTIONS):
+            row = self._add_row(
+                self.assistant_grid, index, titles[action], settings.assistant.hotkey(action), read_only
+            )
+            row.action = action
+            self._assistant_rows.append(row)
+        # In this mode no assistant shortcut is registered (the engine owns the keyboard and has
+        # no assistant shortcuts): showing their rows would promise keys that never fire.
+        self.assistant_title.setVisible(not self._engine_owned)
+        for row in self._assistant_rows:
+            for widget in self._row_widgets(self.assistant_grid, row):
+                widget.setVisible(not self._engine_owned)
         # Tab order: the shortcut fields first (they were created after the button).
         previous: QWidget | None = None
-        for row in self._rows:
+        for row in self._all_rows():
             if previous is not None:
                 QWidget.setTabOrder(previous, row.edit)
             previous = row.edit
         if previous is not None:
             QWidget.setTabOrder(previous, self.defaults_button)
-        for row in self._rows:
+        for row in self._all_rows():
             if self._engine_owned:
                 self._show_status(row, "engine_owned")
             else:
                 self._validate(row)
 
+    def _add_row(self, grid: QGridLayout, index: int, title: str, chord: str, read_only: bool) -> _HotkeyRow:
+        label = QLabel(_("{action}:").format(action=title))
+        edit = HotkeyEdit(chord)
+        edit.setAccessibleName(_("Shortcut for {action}").format(action=title))
+        edit.set_editable(not self._engine_owned and not read_only)
+        label.setBuddy(edit)
+        status = QLabel()
+        status.setTextFormat(Qt.TextFormat.PlainText)
+        row = _HotkeyRow(None, edit, status)
+        edit.chord_changed.connect(lambda _chord, current=row: self._on_chord_changed(current))
+        edit.capture_started.connect(lambda: self._suspend_hotkeys(True))
+        edit.capture_finished.connect(lambda: self._suspend_hotkeys(False))
+        grid.addWidget(label, index, 0)
+        grid.addWidget(edit, index, 1)
+        grid.addWidget(status, index, 2)
+        return row
+
+    @staticmethod
+    def _row_widgets(grid: QGridLayout, row: _HotkeyRow) -> list[QWidget]:
+        """The label, the shortcut field and the status of one row."""
+        widgets: list[QWidget] = [row.edit, row.status]
+        for index in range(grid.count()):
+            item = grid.itemAt(index)
+            widget = item.widget() if item is not None else None
+            if isinstance(widget, QLabel) and widget.buddy() is row.edit:
+                widgets.append(widget)
+        return widgets
+
     def chords(self) -> dict[str, str]:
-        return {row.flow.name: row.edit.chord for row in self._rows}
+        return {row.name: row.edit.chord for row in self._rows}
+
+    def assistant_chords(self) -> dict[str, str]:
+        """action -> chord ("" = none) of the assistant's rows."""
+        return {row.name: row.edit.chord for row in self._assistant_rows}
 
     def collect(self, base: tuple[HotkeyBinding, ...]) -> tuple[HotkeyBinding, ...]:
         """The edited bindings. A cleared shortcut drops its binding (no binding = no hotkey;
@@ -237,21 +376,25 @@ class HotkeysPage(QWidget):
 
     def restore_defaults(self) -> None:
         defaults = {binding.flow: binding.chord for binding in CompanionSettings().hotkeys}
-        for row in self._rows:
-            chord = defaults.get(row.flow.name, defaults.get(row.flow.kind, ""))
+        assistant = AssistantSettings()
+        for row in self._all_rows():
+            if row.flow is not None:
+                chord = defaults.get(row.flow.name, defaults.get(row.flow.kind, ""))
+            else:
+                chord = assistant.hotkey(row.action) if row.action is not None else ""
             if chord != row.edit.chord:
                 row.edit.set_chord(chord)
-        for row in self._rows:
+        for row in self._all_rows():
             self._validate(row)
         self.changed.emit()
 
     def cancel_capture(self) -> None:
-        for row in self._rows:
+        for row in self._all_rows():
             row.edit.finish_capture(None)
 
     def _on_chord_changed(self, row: _HotkeyRow) -> None:
         # A change can create or resolve a duplicate in the other rows too.
-        for current in self._rows:
+        for current in self._all_rows():
             self._validate(current)
         self.changed.emit()
 
@@ -261,14 +404,14 @@ class HotkeysPage(QWidget):
         if not chord:
             self._show_neutral(row, _("No shortcut: use the menu"))
             return
-        if any(other is not row and other.edit.chord == chord for other in self._rows):
+        if any(other is not row and other.edit.chord == chord for other in self._all_rows()):
             self._show_status(row, "duplicate")
             return
         self._show_neutral(row, _("Checking..."))
 
         def current() -> bool:
             # Still the latest check of a row that still exists (load() rebuilds the rows).
-            return row.token is token and any(existing is row for existing in self._rows)
+            return row.token is token and any(existing is row for existing in self._all_rows())
 
         def done(result: HotkeyCheck) -> None:
             if current():
@@ -282,10 +425,11 @@ class HotkeysPage(QWidget):
             if current():
                 self._show_neutral(row, "")
 
-        self._shell.bridge.run_async(lambda: self._shell.controller.check_hotkey(chord, row.flow.name), done, failed)
+        name = row.name
+        self._shell.bridge.run_async(lambda: self._shell.controller.check_hotkey(chord, name), done, failed)
 
     def _other_chords(self, row: _HotkeyRow) -> set[str]:
-        return {other.edit.chord for other in self._rows if other is not row}
+        return {other.edit.chord for other in self._all_rows() if other is not row}
 
     def _show_status(self, row: _HotkeyRow, result: HotkeyCheck) -> None:
         if result == "engine_owned":
@@ -309,7 +453,7 @@ class HotkeysPage(QWidget):
     def changeEvent(self, event: QEvent) -> None:
         # Light/dark switch: the green/orange status colors are picked per palette.
         if event.type() == QEvent.Type.PaletteChange:
-            for row in self._rows:
+            for row in self._all_rows():
                 if row.result is not None:
                     self._show_status(row, row.result)
         super().changeEvent(event)
@@ -490,6 +634,569 @@ class SoundsPage(QWidget):
         master = _slider_volume(self.master_volume, self._loaded_master_volume)
         controller = self._shell.controller
         self._shell.bridge.run_serial(lambda: controller.preview_cue(row.cue, settings, master))
+
+
+# ---------------------------------------------------------------------- Assistant page
+
+
+class AssistantPage(QWidget):
+    """The assistant's settings. The personality text and the Desktop profile actions act at
+    once (they are files, not settings); everything else is applied with the dialog."""
+
+    changed = Signal()
+    _profile_seen = Signal(object)  # ProfileStatus | None, from the service's worker
+
+    def __init__(self, shell: Shell | None = None, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._shell = shell
+        self._loaded = AssistantSettings()
+        self._loaded_custom = ""  # the written personality as it is on disk
+        self._unsubscribe: Callable[[], None] | None = None
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        outer.addWidget(scroll)
+        body = QWidget()
+        scroll.setWidget(body)
+        layout = QVBoxLayout(body)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(12)
+        form = QFormLayout()
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        self.mode = _option_combo(texts.assistant_mode_labels())
+        form.addRow(_("Assistant mode:"), self.mode)
+        self.desktop_conversation = QComboBox()
+        self.desktop_conversation.setEditable(True)
+        self.desktop_conversation.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.desktop_conversation.setPlaceholderText(_("Exact title in the Claude Desktop sidebar"))
+        self.desktop_conversation_label = QLabel(_("Desktop conversation:"))
+        form.addRow(self.desktop_conversation_label, self.desktop_conversation)
+        self.model = _option_combo(texts.assistant_model_labels())
+        form.addRow(_("Model:"), self.model)
+        self.effort = _option_combo(texts.assistant_effort_labels())
+        form.addRow(_("Effort:"), self.effort)
+        self.model_hint = _secondary(QLabel())
+        form.addRow("", self.model_hint)
+        self.new_model = _option_combo(texts.assistant_model_labels())
+        form.addRow(_("New conversations use:"), self.new_model)
+        self.new_effort = _option_combo(texts.assistant_effort_labels())
+        form.addRow(_("With the effort:"), self.new_effort)
+        self.permission = _option_combo(texts.assistant_permission_labels())
+        form.addRow(_("Permissions:"), self.permission)
+        self.permission_warning = _secondary(
+            QLabel(
+                _(
+                    "Full access lets the conversations VoiceMate starts change any file and run any "
+                    "command on this computer without asking."
+                )
+            )
+        )
+        form.addRow("", self.permission_warning)
+        self.answer_delivery = _option_combo(texts.answer_delivery_labels())
+        form.addRow(_("Answers from other conversations:"), self.answer_delivery)
+        self.speak_replies = QCheckBox(_("Speak the replies"))
+        self.speak_replies.setToolTip(
+            _("The engine reads the spoken part of each reply aloud, using the voice configured in the engine.")
+        )
+        form.addRow("", self.speak_replies)
+        self.voice = _voice_combo(
+            _("Engine default"), _("Load the engine's voices, then type part of a name to find one.")
+        )
+        self.load_voices_button = QPushButton(_("Load voices"))
+        self.test_voice_button = QPushButton(_("Test"))
+        self.test_voice_button.setToolTip(_("Speaks a short sentence with the chosen voice."))
+        for button in (self.load_voices_button, self.test_voice_button):
+            button.setAutoDefault(False)
+        assistant_voice_row = QHBoxLayout()
+        assistant_voice_row.addWidget(self.voice, 1)
+        assistant_voice_row.addWidget(self.load_voices_button)
+        assistant_voice_row.addWidget(self.test_voice_button)
+        form.addRow(_("Assistant voice:"), assistant_voice_row)
+        self.voice_status = _secondary(QLabel())
+        self.voice_status.setVisible(False)
+        form.addRow("", self.voice_status)
+        self._voice_busy = False
+        self.voice_commands = QCheckBox(_("Understand voice commands in typed text"))
+        form.addRow("", self.voice_commands)
+        self.expressions = _option_combo(texts.expressions_labels())
+        form.addRow(_("Expression tags:"), self.expressions)
+        self.user_name = QLineEdit()
+        form.addRow(_("Your name:"), self.user_name)
+        layout.addLayout(form)
+
+        # --- personality
+        persona = QGroupBox(_("Personality"))
+        persona_form = QFormLayout(persona)
+        persona_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        self.personality_source = _option_combo(texts.personality_source_labels())
+        persona_form.addRow(_("Source:"), self.personality_source)
+        self.vault = QComboBox()
+        self.vault.setEditable(True)
+        self.vault.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.vault.setPlaceholderText(_("The folder of your notes vault"))
+        self.vault_browse = QPushButton(_("Browse..."))
+        vault_row = QHBoxLayout()
+        vault_row.addWidget(self.vault, 1)
+        vault_row.addWidget(self.vault_browse)
+        self.vault_label = QLabel(_("Vault folder:"))
+        persona_form.addRow(self.vault_label, vault_row)
+        self.vault_warning = _secondary(QLabel())
+        persona_form.addRow("", self.vault_warning)
+        self.personality_file = QLineEdit()
+        self.personality_file.setPlaceholderText(_("Optional Markdown file"))
+        self.browse = QPushButton(_("Browse..."))
+        self.clear = QPushButton(_("Clear"))
+        file_row = QHBoxLayout()
+        file_row.addWidget(self.personality_file, 1)
+        file_row.addWidget(self.browse)
+        file_row.addWidget(self.clear)
+        self.personality_file_label = QLabel(_("Personality file:"))
+        persona_form.addRow(self.personality_file_label, file_row)
+        self.custom_hint = _secondary(
+            QLabel(
+                _(
+                    "Describe how the assistant should be: its tone, its humor, how formal it is "
+                    "and how it addresses you."
+                )
+            )
+        )
+        persona_form.addRow(self.custom_hint)
+        self.custom_text = QPlainTextEdit()
+        self.custom_text.setAccessibleName(_("Your personality text"))
+        self.custom_text.setMinimumHeight(self.custom_text.fontMetrics().lineSpacing() * 5 + 16)
+        persona_form.addRow(self.custom_text)
+        self.custom_save = QPushButton(_("Save"))
+        self.custom_save.setAutoDefault(False)
+        self.custom_status = _secondary(QLabel())
+        save_row = QHBoxLayout()
+        save_row.addWidget(self.custom_status, 1)
+        save_row.addWidget(self.custom_save)
+        persona_form.addRow(save_row)
+        layout.addWidget(persona)
+
+        # --- skill
+        skill = QGroupBox(_("Skill"))
+        skill_form = QFormLayout(skill)
+        skill_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        self.skill_language = _option_combo(texts.skill_language_labels())
+        skill_form.addRow(_("Skill language:"), self.skill_language)
+        self.custom_skill_dir = QLineEdit()
+        self.custom_skill_dir.setPlaceholderText(_("Optional folder with a SKILL.md"))
+        self.skill_browse = QPushButton(_("Browse..."))
+        self.skill_clear = QPushButton(_("Clear"))
+        skill_row = QHBoxLayout()
+        skill_row.addWidget(self.custom_skill_dir, 1)
+        skill_row.addWidget(self.skill_browse)
+        skill_row.addWidget(self.skill_clear)
+        skill_form.addRow(_("Custom skill:"), skill_row)
+        layout.addWidget(skill)
+
+        # --- Claude Desktop profile
+        profile = QGroupBox(_("Claude Desktop profile"))
+        profile_layout = QVBoxLayout(profile)
+        self.profile_status = _secondary(QLabel(_("Loaded when the assistant starts.")))
+        profile_layout.addWidget(self.profile_status)
+        self.profile_auto_update = QCheckBox(_("Check for a newer profile when the assistant starts"))
+        profile_layout.addWidget(self.profile_auto_update)
+        buttons = QHBoxLayout()
+        self.profile_check = QPushButton(_("Check now"))
+        self.profile_import = QPushButton(_("Import..."))
+        self.profile_export = QPushButton(_("Export..."))
+        self.profile_default = QPushButton(_("Use default"))
+        for button in (self.profile_check, self.profile_import, self.profile_export, self.profile_default):
+            button.setAutoDefault(False)
+            buttons.addWidget(button)
+        buttons.addStretch(1)
+        profile_layout.addLayout(buttons)
+        layout.addWidget(profile)
+
+        self.hint = _secondary(
+            QLabel(
+                _(
+                    "The assistant is a Claude Code conversation that VoiceMate starts, or a Claude Desktop "
+                    "conversation you choose. Changing the mode, the effort, the permissions or the skill "
+                    "restarts it."
+                )
+            )
+        )
+        layout.addWidget(self.hint)
+        layout.addStretch(1)
+
+        for combo in (
+            self.mode,
+            self.model,
+            self.effort,
+            self.new_model,
+            self.new_effort,
+            self.permission,
+            self.answer_delivery,
+            self.expressions,
+            self.personality_source,
+            self.skill_language,
+        ):
+            combo.currentIndexChanged.connect(lambda _index: self._sync())
+            combo.currentIndexChanged.connect(self.changed)
+        self.desktop_conversation.currentTextChanged.connect(self.changed)
+        self.vault.currentTextChanged.connect(lambda _text: self._sync_vault())
+        self.vault.currentTextChanged.connect(self.changed)
+        self.voice_commands.toggled.connect(self.changed)
+        self.speak_replies.toggled.connect(self.changed)
+        self.speak_replies.toggled.connect(lambda _checked: self._sync())
+        self.voice.currentTextChanged.connect(self.changed)
+        self.load_voices_button.clicked.connect(lambda: self._ask_engine(test=False))
+        self.test_voice_button.clicked.connect(lambda: self._ask_engine(test=True))
+        self.profile_auto_update.toggled.connect(self.changed)
+        self.user_name.textChanged.connect(self.changed)
+        self.personality_file.textChanged.connect(self.changed)
+        self.custom_skill_dir.textChanged.connect(self.changed)
+        self.browse.clicked.connect(self._choose_file)
+        self.clear.clicked.connect(self.personality_file.clear)
+        self.vault_browse.clicked.connect(self._choose_vault)
+        self.skill_browse.clicked.connect(self._choose_skill_dir)
+        self.skill_clear.clicked.connect(self.custom_skill_dir.clear)
+        self.custom_save.clicked.connect(self.save_custom_personality)
+        self.custom_text.textChanged.connect(self._custom_text_changed)
+        self.profile_check.clicked.connect(self._check_profile)
+        self.profile_import.clicked.connect(self._import_profile)
+        self.profile_export.clicked.connect(self._export_profile)
+        self.profile_default.clicked.connect(self._default_profile)
+        self._profile_seen.connect(self._show_profile)
+        for widget, name in (
+            (self.mode, _("Assistant mode")),
+            (self.desktop_conversation, _("Desktop conversation")),
+            (self.model, _("Model")),
+            (self.effort, _("Effort")),
+            (self.new_model, _("Model of new conversations")),
+            (self.new_effort, _("Effort of new conversations")),
+            (self.permission, _("Permissions")),
+            (self.answer_delivery, _("Answers from other conversations")),
+            (self.voice, _("Assistant voice")),
+            (self.expressions, _("Expression tags")),
+            (self.user_name, _("Your name")),
+            (self.personality_source, _("Personality")),
+            (self.vault, _("Vault folder")),
+            (self.personality_file, _("Personality file")),
+            (self.skill_language, _("Skill language")),
+            (self.custom_skill_dir, _("Custom skill")),
+        ):
+            widget.setAccessibleName(name)
+        if shell is not None:
+            service = shell.controller.assistant()
+            self._unsubscribe = service.subscribe(lambda snapshot: self._profile_seen.emit(snapshot.profile))
+            self.destroyed.connect(lambda _obj=None, stop=self._unsubscribe: stop())
+
+    def load(self, settings: CompanionSettings) -> None:
+        assistant = settings.assistant
+        self._loaded = assistant
+        with QSignalBlocker(self):
+            _select(self.mode, assistant.mode, texts.assistant_mode_labels())
+            _select(self.model, assistant.model, texts.assistant_model_labels())
+            _select(self.effort, assistant.effort, texts.assistant_effort_labels())
+            _select(self.new_model, assistant.new_conversation_model, texts.assistant_model_labels())
+            _select(self.new_effort, assistant.new_conversation_effort, texts.assistant_effort_labels())
+            _select(self.permission, assistant.permission_mode, texts.assistant_permission_labels())
+            _select(self.answer_delivery, assistant.answer_delivery, texts.answer_delivery_labels())
+            self.voice_commands.setChecked(assistant.voice_commands)
+            self.speak_replies.setChecked(assistant.speak_replies)
+            _fill_voices(self.voice, (), assistant.voice, _("Engine default"))
+            _select(self.expressions, assistant.expressions, texts.expressions_labels())
+            self.user_name.setText(assistant.user_name)
+            _select(self.personality_source, assistant.personality_source, texts.personality_source_labels())
+            self.personality_file.setText(assistant.personality_file)
+            self._fill_vaults(assistant.obsidian_vault)
+            _select(self.skill_language, assistant.skill_language, texts.skill_language_labels())
+            self.custom_skill_dir.setText(assistant.custom_skill_dir)
+            self.profile_auto_update.setChecked(assistant.desktop_profile_auto_update)
+            self.desktop_conversation.clear()
+            self.desktop_conversation.setEditText(assistant.desktop_conversation)
+            self._loaded_custom = personality.read_custom()
+            self.custom_text.setPlainText(self._loaded_custom)
+        self.custom_status.setText("")
+        self._show_voice_status(None)
+        self._fill_conversations(assistant.desktop_conversation)
+        self._sync()
+
+    def collect(self) -> AssistantSettings:
+        """The loaded `[assistant]` table with this page's edits (the hotkeys are the Hotkeys tab's)."""
+        mode: AssistantMode = self.mode.currentData()
+        model: AssistantModel = self.model.currentData()
+        effort: AssistantEffort = self.effort.currentData()
+        new_model: AssistantModel = self.new_model.currentData()
+        new_effort: AssistantEffort = self.new_effort.currentData()
+        permission: AssistantPermission = self.permission.currentData()
+        delivery: AnswerDelivery = self.answer_delivery.currentData()
+        expressions: ExpressionsMode = self.expressions.currentData()
+        source: PersonalitySource = self.personality_source.currentData()
+        skill_language: SkillLanguage = self.skill_language.currentData()
+        vault = str(self.vault.currentText()).strip()
+        return replace(
+            self._loaded,
+            mode=mode,
+            model=model,
+            effort=effort,
+            new_conversation_model=new_model,
+            new_conversation_effort=new_effort,
+            permission_mode=permission,
+            answer_delivery=delivery,
+            speak_replies=self.speak_replies.isChecked(),
+            voice=_combo_voice_id(self.voice),
+            voice_commands=self.voice_commands.isChecked(),
+            expressions=expressions,
+            user_name=self.user_name.text().strip(),
+            personality_source=source,
+            personality_file=self.personality_file.text().strip(),
+            obsidian_vault=vault if source == "file" else self._loaded.obsidian_vault,
+            desktop_conversation=self.desktop_conversation.currentText().strip(),
+            skill_language=skill_language,
+            custom_skill_dir=self.custom_skill_dir.text().strip(),
+            desktop_profile_auto_update=self.profile_auto_update.isChecked(),
+        )
+
+    def _sync(self) -> None:
+        mode = self.mode.currentData()
+        enabled = mode != "off"
+        for widget in (
+            self.desktop_conversation,
+            self.model,
+            self.effort,
+            self.new_model,
+            self.new_effort,
+            self.permission,
+            self.answer_delivery,
+            self.speak_replies,
+            self.voice_commands,
+            self.expressions,
+            self.user_name,
+            self.personality_source,
+            self.vault,
+            self.vault_browse,
+            self.personality_file,
+            self.browse,
+            self.clear,
+            self.custom_text,
+            self.custom_save,
+            self.skill_language,
+            self.custom_skill_dir,
+            self.skill_browse,
+            self.skill_clear,
+        ):
+            widget.setEnabled(enabled)
+        voiced = enabled and self.speak_replies.isChecked()
+        self.voice.setEnabled(voiced)
+        for button in (self.load_voices_button, self.test_voice_button):
+            button.setEnabled(voiced and not self._voice_busy and self._shell is not None)
+        desktop = mode == "desktop"
+        self.desktop_conversation.setVisible(desktop)
+        self.desktop_conversation_label.setVisible(desktop)
+        self.model_hint.setText(
+            _(
+                "VoiceMate cannot set the model of a Desktop conversation: it asks the conversation "
+                "to switch its own model and effort."
+            )
+            if desktop
+            else _("A new model applies from the next answer; a new effort restarts the conversation.")
+        )
+        self.permission_warning.setVisible(self.permission.currentData() == "bypassPermissions")
+        source = self.personality_source.currentData()
+        file_widgets: tuple[QWidget, ...] = (
+            self.vault_label,
+            self.vault,
+            self.vault_browse,
+            self.personality_file_label,
+            self.personality_file,
+            self.browse,
+            self.clear,
+        )
+        for shown in file_widgets:
+            shown.setVisible(source == "file")
+        custom_widgets: tuple[QWidget, ...] = (self.custom_hint, self.custom_text, self.custom_save, self.custom_status)
+        for shown in custom_widgets:
+            shown.setVisible(source == "custom")
+        self._sync_vault()
+
+    def _sync_vault(self) -> None:
+        problem = personality.vault_problem(self.vault.currentText().strip())
+        self.vault_warning.setText(
+            {
+                "missing": _("This folder does not exist."),
+                "no_obsidian": _("This folder has no .obsidian folder: it may not be an Obsidian vault."),
+            }.get(problem, "")
+        )
+        self.vault_warning.setVisible(bool(problem) and self.personality_source.currentData() == "file")
+
+    # ------------------------------------------------------------------ voice
+
+    def _ask_engine(self, *, test: bool) -> None:
+        """Load voices / Test: ask the engine (its voice as it runs now), off the GUI thread."""
+        if self._shell is None:
+            return
+        controller = self._shell.controller
+        voice = _combo_voice_id(self.voice)
+        self._voice_busy = True
+        self._sync()
+        self._show_voice_status(None, _("Asking the engine..."))
+
+        def work() -> TtsProbe:
+            return controller.test_assistant_voice(voice) if test else controller.assistant_voices()
+
+        def done(probe: TtsProbe) -> None:
+            self._voice_busy = False
+            if probe.voices:
+                _fill_voices(self.voice, probe.voices, _combo_voice_id(self.voice), _("Engine default"))
+            self._show_voice_status(probe)
+            self._sync()
+
+        def failed(exc: BaseException) -> None:
+            self._voice_busy = False
+            self._show_voice_status(TtsProbe(False, str(exc) or type(exc).__name__))
+            self._sync()
+
+        self._shell.bridge.run_async(work, done, failed)
+
+    def _show_voice_status(self, probe: TtsProbe | None, busy_text: str = "") -> None:
+        if busy_text:
+            self.voice_status.setStyleSheet("")
+            self.voice_status.setText(busy_text)
+        elif probe is None:
+            self.voice_status.setStyleSheet("")
+            self.voice_status.setText("")
+        else:
+            self.voice_status.setStyleSheet(f"color: {_status_color(self, probe.ok)};")
+            self.voice_status.setText(probe.message)
+        self.voice_status.setVisible(bool(self.voice_status.text()))
+
+    def _fill_vaults(self, chosen: str) -> None:
+        """The saved vault, or the vaults Obsidian knows as suggestions."""
+        self.vault.clear()
+        for path in personality.obsidian_vaults():
+            self.vault.addItem(str(path))
+        if chosen:
+            self.vault.setEditText(chosen)
+        elif self.vault.count():
+            self.vault.setCurrentIndex(0)  # a suggestion: saved with the next apply
+        else:
+            self.vault.setEditText("")
+
+    def _fill_conversations(self, chosen: str) -> None:
+        """The titles of recent conversations, read off the GUI thread."""
+        if self._shell is None:
+            return
+
+        def titles() -> list[str]:
+            return list(dict.fromkeys(info.title for info in list_conversations(40) if info.title))
+
+        def show(found: list[str]) -> None:
+            current = self.desktop_conversation.currentText()
+            with QSignalBlocker(self.desktop_conversation):
+                self.desktop_conversation.clear()
+                self.desktop_conversation.addItems(found)
+                self.desktop_conversation.setEditText(current or chosen)
+
+        self._shell.bridge.run_async(titles, show, lambda _exc: None)
+
+    # ------------------------------------------------------------------ files
+
+    def _start_folder(self) -> str:
+        vault = str(self.vault.currentText()).strip()
+        if vault and Path(vault).is_dir():
+            return vault
+        return str(home_dir() or "")
+
+    def _choose_file(self) -> None:
+        start = self.personality_file.text() or self._start_folder()
+        path, _filter = QFileDialog.getOpenFileName(
+            self, _("Choose a personality file"), start, _("Markdown") + " (*.md)"
+        )
+        if path:
+            self.personality_file.setText(str(Path(path)))
+
+    def _choose_vault(self) -> None:
+        path = QFileDialog.getExistingDirectory(self, _("Choose your vault folder"), self._start_folder())
+        if path:
+            self.vault.setEditText(str(Path(path)))
+
+    def _choose_skill_dir(self) -> None:
+        start = self.custom_skill_dir.text() or str(home_dir() or "")
+        path = QFileDialog.getExistingDirectory(self, _("Choose a folder with a SKILL.md"), start)
+        if path:
+            self.custom_skill_dir.setText(str(Path(path)))
+
+    def _custom_text_changed(self) -> None:
+        self.custom_status.setText("")
+        self.changed.emit()  # OK and Apply save it too
+
+    def custom_personality_dirty(self) -> bool:
+        return bool(self.custom_text.toPlainText() != self._loaded_custom)
+
+    def flush_custom_personality(self) -> bool:
+        """Save the written personality when it changed (OK and Apply call this). False: it
+        could not be saved (the reason is shown under the text)."""
+        return not self.custom_personality_dirty() or self.save_custom_personality()
+
+    def save_custom_personality(self) -> bool:
+        text = self.custom_text.toPlainText()
+        try:
+            personality.save_custom(text)
+        except (OSError, ValueError) as exc:
+            self.custom_status.setText(_("Not saved: {reason}").format(reason=exc))
+            return False
+        self._loaded_custom = text
+        self.custom_status.setText(_("Saved."))
+        self.changed.emit()
+        if self._shell is not None:
+            self._shell.controller.assistant().refresh_context()
+        return True
+
+    # ------------------------------------------------------------------ Desktop profile
+
+    def _show_profile(self, status: ProfileStatus | None) -> None:
+        if status is None:
+            self.profile_status.setText(_("Loaded when the assistant starts."))
+            return
+        line = _("In use: version {version}, {source}.").format(
+            version=status.version, source=texts.profile_source_label(status.source)
+        )
+        if status.checking:
+            line += " " + _("Checking for a newer one...")
+        if status.error:
+            line += "\n" + _("Problem: {error}").format(error=status.error)
+        self.profile_status.setText(line)
+
+    def _service(self) -> AssistantService | None:
+        return self._shell.controller.assistant() if self._shell is not None else None
+
+    def _check_profile(self) -> None:
+        service = self._service()
+        if service is not None:
+            service.check_profile()
+
+    def _import_profile(self) -> None:
+        service = self._service()
+        if service is None:
+            return
+        path, _filter = QFileDialog.getOpenFileName(
+            self, _("Import a Claude Desktop profile"), str(home_dir() or ""), _("Profile") + " (*.json)"
+        )
+        if path:
+            service.import_profile(str(Path(path)))
+
+    def _export_profile(self) -> None:
+        service = self._service()
+        if service is None:
+            return
+        start = str((home_dir() or Path()) / "claude-desktop.json")
+        path, _filter = QFileDialog.getSaveFileName(
+            self, _("Export the Claude Desktop profile"), start, _("Profile") + " (*.json)"
+        )
+        if path:
+            service.export_profile(str(Path(path)))
+
+    def _default_profile(self) -> None:
+        service = self._service()
+        if service is not None:
+            service.use_default_profile()
 
 
 # ---------------------------------------------------------------------- General page
@@ -703,6 +1410,163 @@ class GeneralPage(QWidget):
 # ---------------------------------------------------------------------- dialog
 
 
+# ---------------------------------------------------------------------- Voice page
+
+
+class VoicePage(QWidget):
+    """Where spoken answers come from: the engine's own voice, or a custom provider (HTTP)
+    that follows docs/tts-provider-protocol.md. The buttons only ask the dialog to talk to the
+    provider; it owns the shell and the worker threads."""
+
+    changed = Signal()
+    voices_requested = Signal()
+    test_requested = Signal()
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(12)
+        box = QGroupBox(_("Spoken answers"))
+        form = QFormLayout(box)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        self.tts_engine = _option_combo(texts.tts_engine_labels())
+        self.tts_engine.setToolTip(
+            _(
+                "Where Claude's spoken answers come from. A custom provider is a service you run that follows "
+                "the VoiceMate TTS provider protocol (docs/tts-provider-protocol.md). Changing it restarts the engine."
+            )
+        )
+        form.addRow(_("Voice engine:"), self.tts_engine)
+        self.tts_url = QLineEdit()
+        self.tts_url.setPlaceholderText(DEFAULT_URL)
+        self.tts_url.setToolTip(
+            _("The address the engine reaches the provider at. Inside WSL, 127.0.0.1 is the WSL side.")
+        )
+        form.addRow(_("Provider address:"), self.tts_url)
+        voice_row = QHBoxLayout()
+        self.tts_voice = _voice_combo(
+            _("Provider default"), _("Load the voices, then type part of a name to find one, or type a voice id.")
+        )
+        self.load_voices_button = QPushButton(_("Load voices"))
+        voice_row.addWidget(self.tts_voice, 1)
+        voice_row.addWidget(self.load_voices_button)
+        form.addRow(_("Voice:"), voice_row)
+        self.tts_token = QLineEdit()
+        self.tts_token.setEchoMode(QLineEdit.EchoMode.Password)
+        self.tts_token.setPlaceholderText(_("None"))
+        self.tts_token.setToolTip(
+            _("Optional. Sent to the provider as a bearer token. It is kept in this computer's settings file.")
+        )
+        form.addRow(_("Token:"), self.tts_token)
+        self.test_button = QPushButton(_("Test voice"))
+        self.test_button.setToolTip(_("Speaks a short sentence with the provider and voice above."))
+        form.addRow("", self.test_button)
+        layout.addWidget(box)
+        self._box = box
+
+        self.status = _secondary(QLabel())
+        self.status.setTextFormat(Qt.TextFormat.RichText)
+        self.status.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.status.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        self.status.setMinimumHeight(self.status.fontMetrics().lineSpacing() * 3)  # room for a wrapped error
+        layout.addWidget(self.status)
+        layout.addStretch(1)
+        self._probe: tuple[bool, str] | None = None
+        self._managed = True
+        self._busy = False
+
+        self.tts_engine.currentIndexChanged.connect(self.changed)
+        self.tts_engine.currentIndexChanged.connect(lambda _index: self._sync())
+        self.tts_url.textChanged.connect(self.changed)
+        self.tts_token.textChanged.connect(self.changed)
+        self.tts_voice.currentTextChanged.connect(self.changed)
+        self.load_voices_button.clicked.connect(self.voices_requested)
+        self.test_button.clicked.connect(self.test_requested)
+        for widget, name in (
+            (self.tts_engine, _("Voice engine")),
+            (self.tts_url, _("Provider address")),
+            (self.tts_voice, _("Voice")),
+            (self.tts_token, _("Token")),
+        ):
+            widget.setAccessibleName(name)
+
+    def load(self, settings: CompanionSettings) -> None:
+        with QSignalBlocker(self):
+            _select(self.tts_engine, settings.tts_engine, texts.tts_engine_labels())
+            self.tts_url.setText(settings.tts_url)
+            self.tts_token.setText(settings.tts_token)
+            self.set_voices((), settings.tts_voice)
+        self.show_status(None)
+        self._sync()
+
+    def apply_to(self, settings: CompanionSettings) -> CompanionSettings:
+        engine: TtsChoice = self.tts_engine.currentData()
+        return replace(
+            settings,
+            tts_engine=engine,
+            tts_url=self.tts_url.text().strip() or DEFAULT_URL,
+            tts_voice=self.voice_id(),
+            tts_token=self.tts_token.text().strip(),
+        )
+
+    # --- voices ---------------------------------------------------------------------------------------
+
+    def voice_id(self) -> str:
+        """The id of the picked voice, or what was typed when it matches none of the entries."""
+        return _combo_voice_id(self.tts_voice)
+
+    def set_voices(self, voices: Sequence[Voice], current: str) -> None:
+        """Offer the provider's voices (plus the provider default); `current` stays selected, even
+        when the provider does not list it."""
+        _fill_voices(self.tts_voice, voices, current, _("Provider default"))
+
+    # --- state ----------------------------------------------------------------------------------------
+
+    def set_engine_managed(self, managed: bool) -> None:
+        """False in the external engine mode: that engine is not ours to start, so these flags
+        would never reach it."""
+        self._managed = managed
+        self._sync()
+
+    def set_busy(self, busy: bool) -> None:
+        self._busy = busy
+        self._sync()
+
+    def _sync(self) -> None:
+        external = self.tts_engine.currentData() == "external"
+        self._box.setEnabled(self._managed)
+        for widget in (self.tts_url, self.tts_voice, self.tts_token):
+            widget.setEnabled(external)
+        for button in (self.load_voices_button, self.test_button):
+            button.setEnabled(external and not self._busy)
+
+    def show_status(self, probe: TtsProbe | None, busy_text: str = "") -> None:
+        """The result of the last call to the provider (None clears it); `busy_text` while one runs."""
+        if busy_text:
+            self._probe = None
+            self.status.setStyleSheet("")
+            self.status.setText(_escape(busy_text))
+            return
+        self._probe = None if probe is None else (probe.ok, probe.message)
+        self._paint_status()
+
+    def _paint_status(self) -> None:
+        if self._probe is None:
+            self.status.setStyleSheet("")
+            self.status.setText("")
+            return
+        ok, message = self._probe
+        self.status.setForegroundRole(QPalette.ColorRole.WindowText)
+        self.status.setStyleSheet(f"color: {_status_color(self, ok)};")
+        self.status.setText(_escape(message))
+
+    def changeEvent(self, event: QEvent) -> None:
+        if event.type() == QEvent.Type.PaletteChange and hasattr(self, "status"):
+            self._paint_status()
+        super().changeEvent(event)
+
+
 class SettingsDialog(QDialog):
     def __init__(self, shell: Shell, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -729,9 +1593,13 @@ class SettingsDialog(QDialog):
         self.tabs = QTabWidget()
         self.hotkeys_page = HotkeysPage(shell)
         self.sounds_page = SoundsPage(shell)
+        self.voice_page = VoicePage()
+        self.assistant_page = AssistantPage(shell)
         self.general_page = GeneralPage()
         self.tabs.addTab(self.hotkeys_page, _("Hotkeys"))
         self.tabs.addTab(self.sounds_page, _("Sounds"))
+        self.tabs.addTab(self.voice_page, _("Voice"))
+        self.tabs.addTab(self.assistant_page, _("Assistant"))
         self.tabs.addTab(self.general_page, _("General"))
         layout.addWidget(self.tabs, 1)
 
@@ -751,8 +1619,12 @@ class SettingsDialog(QDialog):
         self.buttons.clicked.connect(self._on_button)
         layout.addWidget(self.buttons)
 
-        for page in (self.hotkeys_page, self.sounds_page, self.general_page):
+        pages = (self.hotkeys_page, self.sounds_page, self.voice_page, self.assistant_page, self.general_page)
+        for page in pages:
             page.changed.connect(self._update_buttons)
+        self.voice_page.voices_requested.connect(lambda: self._ask_provider(test=False))
+        self.voice_page.test_requested.connect(lambda: self._ask_provider(test=True))
+        self.general_page.engine_mode.currentIndexChanged.connect(lambda _index: self._sync_voice_page())
         self.general_page.language.currentIndexChanged.connect(lambda _index: self._sync_language_hint())
         self._message_timer = QTimer(self)
         self._message_timer.setSingleShot(True)
@@ -771,10 +1643,38 @@ class SettingsDialog(QDialog):
         snapshot = self._shell.bridge.snapshot
         self.hotkeys_page.load(self._baseline, snapshot, self._read_only)
         self.sounds_page.load(self._baseline)
+        self.assistant_page.load(self._baseline)
         self.general_page.load(self._baseline)
+        self.voice_page.load(self._baseline)
+        self._sync_voice_page()
         self.message.hide()
         self._update_buttons()
         self._sync_language_hint()
+
+    def _sync_voice_page(self) -> None:
+        self.voice_page.set_engine_managed(self.general_page.engine_mode.currentData() != "external")
+
+    def _ask_provider(self, *, test: bool) -> None:
+        """Voice page buttons: talk to the provider as typed (not yet applied), off the GUI thread."""
+        edited = self.collect()
+        controller = self._shell.controller
+        self.voice_page.set_busy(True)
+        self.voice_page.show_status(None, _("Contacting the provider..."))
+
+        def work() -> TtsProbe:
+            return controller.test_tts(edited) if test else controller.tts_voices(edited)
+
+        def done(probe: TtsProbe) -> None:
+            self.voice_page.set_busy(False)
+            if probe.voices:
+                self.voice_page.set_voices(probe.voices, self.voice_page.voice_id())
+            self.voice_page.show_status(probe)
+
+        def failed(exc: BaseException) -> None:
+            self.voice_page.set_busy(False)
+            self.voice_page.show_status(TtsProbe(False, str(exc) or type(exc).__name__))
+
+        self._shell.bridge.run_async(work, done, failed)
 
     def _sync_language_hint(self) -> None:
         selected = self.general_page.selected_language()
@@ -789,11 +1689,12 @@ class SettingsDialog(QDialog):
             cues_enabled=cues_enabled,
             master_volume=master_volume,
             cues=cues,
+            assistant=self.assistant_page.collect().with_hotkeys(self.hotkeys_page.assistant_chords()),
         )
-        return self.general_page.apply_to(edited)
+        return self.voice_page.apply_to(self.general_page.apply_to(edited))
 
     def is_dirty(self) -> bool:
-        return self.collect() != self._baseline
+        return self.collect() != self._baseline or self.assistant_page.custom_personality_dirty()
 
     def _update_buttons(self) -> None:
         dirty = not self._read_only and self.is_dirty()
@@ -803,7 +1704,7 @@ class SettingsDialog(QDialog):
         # (Enabling a parent never re-enables a child disabled on its own, such as the
         # hotkeys page's Restore defaults in read-only mode.)
         self.hotkeys_page.setEnabled(not self._busy)
-        for page in (self.sounds_page, self.general_page):
+        for page in (self.sounds_page, self.assistant_page, self.general_page):
             page.setEnabled(not self._busy and not self._read_only)
 
     # ------------------------------------------------------------------ apply
@@ -820,8 +1721,13 @@ class SettingsDialog(QDialog):
         if self._busy:
             return
         self.hotkeys_page.cancel_capture()
+        if not self.assistant_page.flush_custom_personality():
+            self.tabs.setCurrentWidget(self.assistant_page)  # the reason is shown under the text
+            self._update_buttons()
+            return
         edited, baseline = self.collect(), self._baseline
         if edited == baseline:
+            self._update_buttons()
             if close_after:
                 self.accept()
             return
@@ -933,8 +1839,9 @@ def rebase_settings(
 ) -> CompanionSettings:
     """The user's edits (`edited` vs `baseline`) applied on top of the live `current` settings.
 
-    Untouched fields come from `current`. Hotkeys merge per flow and cues per cue, so an
-    edit of one shortcut or one sound never resets another one changed meanwhile.
+    Untouched fields come from `current`. Hotkeys merge per flow, cues per cue and the
+    assistant per field, so an edit of one shortcut, one sound or one assistant setting never
+    resets another one changed meanwhile (by voice, or by the switch-mode hotkey).
     """
     changes: dict[str, object] = {}
     for item in fields(CompanionSettings):
@@ -947,9 +1854,20 @@ def rebase_settings(
             merged = dict(current.cues)
             merged.update({cue: value for cue, value in edited.cues.items() if baseline.cues.get(cue) != value})
             changes[item.name] = merged
+        elif item.name == "assistant":
+            changes[item.name] = _rebase_assistant(edited.assistant, baseline.assistant, current.assistant)
         else:
             changes[item.name] = mine
     return replace(current, **changes)  # type: ignore[arg-type]
+
+
+def _rebase_assistant(mine: AssistantSettings, before: AssistantSettings, live: AssistantSettings) -> AssistantSettings:
+    touched = {
+        item.name: getattr(mine, item.name)
+        for item in fields(AssistantSettings)
+        if getattr(mine, item.name) != getattr(before, item.name)
+    }
+    return replace(live, **touched)
 
 
 def _rebase_hotkeys(

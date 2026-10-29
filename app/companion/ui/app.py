@@ -23,6 +23,7 @@ from app.companion.contract import (
     UiLanguage,
 )
 from app.companion.ui import texts
+from app.companion.ui.assistant_window import AssistantWindow
 from app.companion.ui.bridge import ControllerBridge
 from app.companion.ui.icons import app_icon
 from app.companion.ui.notifications import NotificationPresenter
@@ -98,6 +99,7 @@ class CompanionUi(QObject):
         self.tray: TrayIcon | None = None
         self.status_window = StatusWindow(self)
         self.settings_dialog: SettingsDialog | None = None
+        self.assistant_window: AssistantWindow | None = None
         self.notifications = NotificationPresenter(
             None,
             self.status_window,
@@ -115,6 +117,12 @@ class CompanionUi(QObject):
         self._tray_wait.setInterval(TRAY_POLL_MS)
         self._tray_wait.timeout.connect(self._poll_tray)
         self._tray_wait_deadline = 0.0
+        # The assistant's window hotkey: each new request presents the window.
+        assistant = controller.assistant()
+        self._window_requests = assistant.snapshot().window_requests
+        self._unsubscribe_assistant = assistant.subscribe(
+            lambda snapshot: self._bridge.call_soon(lambda: self._assistant_changed(snapshot.window_requests))
+        )
 
     # ------------------------------------------------------------------ Shell
 
@@ -154,6 +162,18 @@ class CompanionUi(QObject):
             self.settings_dialog.present(reload=False)
             return
         self.settings_dialog.present(reload=not self.settings_dialog.isVisible())
+
+    def _assistant_changed(self, window_requests: int) -> None:
+        if window_requests > self._window_requests:
+            self._window_requests = window_requests
+            self.show_assistant()
+
+    def show_assistant(self) -> None:
+        if self._quitting:
+            return
+        if self.assistant_window is None:
+            self.assistant_window = AssistantWindow(self)
+        self.assistant_window.present()
 
     def confirm_wsl_restart(self) -> None:
         if self._wsl_box is not None:
@@ -511,6 +531,9 @@ class CompanionUi(QObject):
             self._stt_dialog.close()  # the install itself runs on: it must not stop half way
         if self.tray is not None:
             self.tray.set_quitting()
+        self._unsubscribe_assistant()
+        if self.assistant_window is not None:
+            self.assistant_window.set_quitting()
         self.status_window.set_quitting()
         try:
             self._controller.quit(lambda: self._bridge.call_soon(self._finish_quit))

@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "language": "pt-BR",
+  "user_name": "",
+  "personality_file": "",
+  "notes_vault": "",
+  "expressions": "off",
+  "mode": "own_session",
+  "answer_delivery": "announce",
+  "inbox": [],
+  "pending": [],
+  "settings": [
+    {
+      "key": "assistant.mode",
+      "type": "choice",
+      "values": ["own_session", "desktop"],
+      "value": "own_session",
+      "description": "Where the central conversation runs: VoiceMate's own conversation or a Claude Desktop conversation."
+    },
+    {
+      "key": "cues.volume",
+      "type": "number",
+      "range": [0, 100],
+      "value": 70,
+      "description": "Volume of VoiceMate's sounds, in percent."
+    }
+  ]
+}

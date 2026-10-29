@@ -9,17 +9,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Voice assistant (experimental, off by default): one Claude conversation, the central one, that
+  conducts your other conversations. Two modes in Settings > Assistant: "VoiceMate's own
+  conversation" (a Claude Code process VoiceMate starts with the `voicemate-assistant` skill and the
+  `voicemate` tools to list, read and send to conversations, start one in the background, set the
+  model of one it started and stop it; shown in Claude Desktop and on the phone through Remote
+  Control) and "A Claude Desktop conversation" (a conversation you already have, written by a
+  brief UI Automation typing that takes the foreground for about 2 seconds, read from its transcript;
+  needs the Desktop open and the screen unlocked, and clears any draft in that prompt; Windows only).
+  A tray entry and a window with the last 30 messages and a message box. Needs the `claude`
+  command and a Claude login on this machine.
+- Assistant hotkeys, in the Hotkeys tab: "Talk to the assistant" (`Ctrl+Alt+S`, the recording goes to the
+  assistant instead of the clipboard), "Open the assistant window" (`Ctrl+Alt+W`), "Hear what's ready"
+  (`Ctrl+Alt+R`), "Switch the assistant mode" and "Back to the assistant" (no default).
+- Direct mode and voice commands in English, Portuguese and Spanish: read the last answer, go to a
+  conversation, send to a conversation, talk directly to a conversation, back to the assistant, stop
+  talking. No AI decides them.
+- Answers from other conversations: "Answers from other conversations" is "Tell me the answer as soon
+  as it arrives", "Say a short notice and keep the answer for later" (default), "Only play a sound and
+  keep the answer" or "Just keep it". Held answers wait in an inbox (50 at most, kept across restarts)
+  shown in the assistant window under "Answers waiting", with a blue badge and "Answers waiting: N" on
+  the tray icon, an "Answer ready" sound cue, and "Hear what's ready" (tray menu, hotkey or by asking)
+  for a single spoken summary of them all.
+- Conversations the assistant starts (at most 4 at once, Remote Control on, remembered across restarts)
+  with "New conversations use" and "With the effort" as their model and effort, and "Permissions"
+  (`default`, `acceptEdits`, or `bypassPermissions`, which gives them full access to the computer).
+- Settings by voice: the assistant can change a fixed catalog of settings (assistant mode, model,
+  effort, permissions, answer delivery, new conversation model and effort, Desktop conversation, voice,
+  voice commands, expression tags, name, personality source, Desktop profile update, skill language,
+  sound and answer sound switches and volumes, dictation language, transcription mode, notifications).
+  Hotkeys, files and folders, the voice engine and the engine settings are left out on purpose.
+- Personality: none, a Markdown file (for example a note in an Obsidian vault) or a text you write in
+  the tab. "Vault folder" tells the assistant where your notes are; it reads them only when asked.
+- The skill comes in English and Brazilian Portuguese ("Skill language"), and "Custom skill" replaces
+  it with a folder of your own that holds a `SKILL.md`. It still works by itself in any Claude Code
+  conversation (`app/companion/assistant/skill/{en,pt-BR}/voicemate-assistant`).
+- Claude Desktop profile ([docs/desktop-profile.md](docs/desktop-profile.md)): a JSON file that tells the
+  driver where the Desktop's controls are, so a Desktop update is fixed by a new profile and not a
+  release. VoiceMate checks the repository for a newer one when the assistant starts (switchable), and
+  Settings > Assistant can check now, import, export or go back to the default. Guards in code stay:
+  only the Claude Desktop process, five keys, and only while it owns the foreground.
+- The assistant's docs: usage, configuration, the companion contract and the architecture diagram
+  (`docs/architecture.md`, section 6.1) cover both modes, the inbox and the voice path.
 - Two speech-to-text modes, switchable from the tray menu ("Transcription") or the
   settings window: CPU (faster-whisper int8 with VAD, leaves the GPU free for other work)
   and GPU (the fastest). Each mode keeps its own Whisper model. A mode that is not
   installed is installed by the companion after asking, with the download size, inside the
   engine's own environment only. `make stt-check` and `make stt-install MODE=cpu|gpu` do
   the same by hand, and `make setup` and `make configure` ask for the default mode.
+- `make docs-screenshots` also renders the Assistant settings tab and the assistant window,
+  and the README, `docs/usage.md`, `docs/configuration.md`, `docs/architecture.md` and
+  `docs/troubleshooting.md` describe the transcription modes and the voice assistant.
+- External TTS provider: a generic "Custom provider (HTTP)" voice engine for any service that follows the new
+  `voicemate-tts` protocol (docs/tts-provider-protocol.md). Engine flags `--tts-engine external`,
+  `--tts-url`, `--tts-external-voice` and `--tts-options`; the token comes from `VOICEMATE_TTS_TOKEN`.
+  The companion has a Voice tab with the address, a voice picker loaded from the provider, a masked
+  token and a Test voice button. `make tts-provider-check URL=...` checks a provider, and
+  `make tts-provider-example` runs a test-tone reference provider.
+- The assistant speaks: the companion sends the `<voice>` block of each reply, sentence by sentence, to the
+  engine's new `/tts` endpoint (the `voicemate-tts` protocol, served by the engine with its own voice engine:
+  Kokoro, or the custom provider it relays) and plays the audio while the rest is synthesized. Settings >
+  Assistant has "Speak the replies" and an "Assistant voice" picker loaded from the engine, with a Test button
+  (`speak_replies` and `voice` in `[assistant]`, also changeable by voice). "Stop talking", a new prompt, a
+  dictation hotkey and a mode change silence it at once. When the engine cannot speak, the replies stay text
+  only with one "No voice available" notice, and the short notices use the Windows voice.
+- The voice pickers (Voice and Assistant tabs) are sorted by name with the default first, and typing part of a
+  name filters them, for providers with hundreds of voices.
 - Engine flags `--stt-mode {auto,cpu,gpu}` and `--cpu-threads`. `/health` reports where
   the engine transcribes (`stt`), and the status window shows it.
 
 ### Changed
 
+- A microphone open that the audio system refuses is tried again by itself (3 attempts, 0.4 s
+  apart) before "Microphone unavailable" shows. On WSLg the first open sometimes fails at once
+  and the next one works, which used to cost a second key press.
+- The status window has an "Assistant" button, shown even while the assistant is off (its window
+  then says how to turn it on), with the window hotkey in its tooltip: people could not tell the
+  assistant existed.
 - The CPU path decodes greedily with a VAD filter, and the `gpu` mode decodes greedily:
   in the benchmark (docs/configuration.md) beam search cost time for little or no
   accuracy. `auto` keeps the configured beam.

@@ -53,6 +53,8 @@ _CLASSIC_TONES: Final[dict[CueName, tuple[_Tone, ...]]] = {
     "ai_ready": (_Tone(523, 90), _Tone(659, 90), _Tone(784, 180)),
     "warning": (_Tone(440, 200),),
     "error": (_Tone(300, 300),),
+    # Rising fifth, then down to the third: unlike every other cue, which only rises or holds.
+    "answer": (_Tone(587, 80), _Tone(880, 80), _Tone(740, 200)),
 }
 _CLASSIC_AMPLITUDE: Final = 0.5  # the engine plays at 0.5
 _CLASSIC_FADE_MS: Final = 10.0
@@ -68,6 +70,7 @@ _CLICK_PATTERNS: Final[dict[CueName, tuple[tuple[float, float], ...]]] = {
     "ai_ready": ((1800, 0), (2300, 55), (2800, 55)),
     "warning": ((900, 0), (900, 80)),
     "error": ((600, 0), (600, 80), (600, 80)),
+    "answer": ((1600, 0), (2400, 45), (2000, 90)),
 }
 _CLICK_MS: Final = 16.0
 _CLICK_DECAY_S: Final = 0.0035
@@ -83,6 +86,7 @@ def cue_label(cue: CueName) -> str:
         "ai_ready": _("Claude answered"),
         "warning": _("Warning"),
         "error": _("Error"),
+        "answer": _("Answer ready"),
     }
     return labels[cue]
 

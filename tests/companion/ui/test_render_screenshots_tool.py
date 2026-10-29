@@ -11,6 +11,7 @@ import pytest
 pytest.importorskip("PySide6")
 
 from app.companion.contract import TrayState, UiLanguage  # noqa: E402
+from app.companion.ui.icons import INBOX_BADGE, badge_for  # noqa: E402
 from tools import render_screenshots  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -30,13 +31,22 @@ def test_every_language_has_its_own_samples() -> None:
     english = render_screenshots.SAMPLES["en"]
     for language, samples in render_screenshots.SAMPLES.items():
         assert samples.recent and samples.pending, language
+        assert samples.assistant and samples.inbox and samples.waiting, language
         assert {kind for kind, _text in samples.recent} == {"transcript", "ai_response"}, language
         if language != "en":
             assert samples.recent != english.recent, f"{language} reuses the English samples"
+            assert samples.inbox != english.inbox and samples.waiting != english.waiting, language
 
 
 def test_tray_states_image_shows_every_state_once() -> None:
     assert sorted(render_screenshots.TRAY_STATES) == sorted(get_args(TrayState))
+    # The "answers waiting" badge is drawn after them, over a quiet state that shows it.
+    assert badge_for(render_screenshots.TRAY_INBOX_OVER, answers_waiting=True) == INBOX_BADGE
+
+
+def test_there_is_one_image_per_settings_tab() -> None:
+    tabs = {name for name in render_screenshots.SCREENSHOT_NAMES if name.startswith("settings-")}
+    assert {"settings-voice", "settings-assistant", "settings-assistant-sections"} <= tabs
 
 
 def test_committed_images_match_the_tool() -> None:

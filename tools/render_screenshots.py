@@ -23,9 +23,12 @@ Each language renders in its own process, like the app picks its language once a
 
 Writes (`--lang all`, the default; `--lang <one>` writes only that language's folder):
 - `<out>/<lang>/<name>.png` for every name in `SCREENSHOT_NAMES`: the status window, one
-  image per settings tab, the tray menu, the two question boxes and `hero`, the status
-  window and the tray menu side by side.
-- `<out>/tray-states.png`: the tray glyph of every state on a dark and a light taskbar strip.
+  image per settings tab plus the lower sections of the Assistant tab (personality, skill and
+  Claude Desktop profile), the assistant text screen (a conversation, then answers waiting and
+  the "Waiting for" list), the tray menu, the two question boxes and `hero`, the status window
+  and the tray menu side by side.
+- `<out>/tray-states.png`: the tray glyph of every state on a dark and a light taskbar strip,
+  then the "answers waiting" badge (over the idle state).
 - `<brand-out>/banner-light.png` and `banner-dark.png`: the app icon and the wordmark, for
   light and dark page backgrounds.
 
@@ -47,7 +50,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Final
+from typing import Final, Literal
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, QRectF, Qt
 from PySide6.QtGui import (
@@ -70,16 +73,19 @@ from PySide6.QtWidgets import (
     QGraphicsDropShadowEffect,
     QGraphicsPixmapItem,
     QGraphicsScene,
+    QGroupBox,
     QLabel,
     QMenu,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QStyleFactory,
     QTabWidget,
     QWidget,
 )
 
-from app.companion.contract import CompanionSettings, RecentItem, TrayState
+from app.companion.assistant.contract import ChatMessage, InboxEntry, PendingEntry
+from app.companion.contract import AssistantSettings, CompanionSettings, RecentItem, TrayState
 from app.companion.ui.demo_controller import DEMO_INSTANCE, FakeController
 from app.companion.ui.icons import GlyphTone, brand_image, glyph_color, glyph_image
 from app.protocol.models import ResultKind, ResultRecord
@@ -98,7 +104,12 @@ SCREENSHOT_NAMES: Final = (
     "status",
     "settings-hotkeys",
     "settings-sounds",
+    "settings-voice",
+    "settings-assistant",
+    "settings-assistant-sections",
     "settings-general",
+    "assistant",
+    "assistant-inbox",
     "tray-menu",
     "dialog-restart-wsl",
     "dialog-language",
@@ -128,6 +139,8 @@ TRAY_STATES: Final[tuple[TrayState, ...]] = (
     "error",
     "stopped",
 )
+# After the states: the "answers waiting" badge, over the state it is drawn on.
+TRAY_INBOX_OVER: Final[TrayState] = "idle"
 TRAY_GLYPH_SIZE: Final = 32  # logical; the tray paints this size itself at 200 %
 TRAY_GLYPH_GAP: Final = 20
 TRAY_STRIP_PADDING: Final = 16
@@ -144,6 +157,8 @@ BANNER_WORDMARK: Final = "VoiceMate"  # product name: never translated
 BANNER_INK: Final = {"light": "#1F2328", "dark": "#F0F6FC"}  # GitHub's text colors per page theme
 
 PNG_DOTS_PER_METER: Final = round(96 * SCALE / 0.0254)
+# The clock time the sample answers and requests show (local time, so every time zone shows 09:40).
+SAMPLE_TIME: Final = time.mktime((2026, 3, 2, 9, 40, 0, 0, 0, -1))
 
 
 @dataclass(frozen=True)
@@ -152,6 +167,9 @@ class Samples:
 
     recent: tuple[tuple[ResultKind, str], ...]
     pending: tuple[str, ...]
+    assistant: tuple[tuple[Literal["user", "assistant"], str], ...]  # the assistant window's messages
+    inbox: tuple[tuple[str, str], ...]  # answers waiting: (conversation title, answer)
+    waiting: tuple[tuple[str, str], ...]  # the "Waiting for" list: (conversation title, reason)
 
 
 # Simulated user content, written per language (not UI text, so not in the catalogs).
@@ -165,6 +183,25 @@ SAMPLES: Final[dict[str, Samples]] = {
             ("transcript", "Book a table for four on Saturday evening."),
         ),
         pending=("Add milk, eggs and coffee to the shopping list.",),
+        assistant=(
+            (
+                "assistant",
+                "Good morning! Two conversations are open: the sign-up flow review is waiting for you, and the build fix finished an hour ago. Which one do you want to pick up?",
+            ),
+            ("user", "Let's go back to the sign-up flow review."),
+            (
+                "assistant",
+                "Done. I asked it where it stopped: it is waiting for your decision on the error messages. Want the details?",
+            ),
+        ),
+        inbox=(
+            ("Release notes", "The release notes draft is ready for review."),
+            ("Test cleanup", "All tests pass again."),
+        ),
+        waiting=(
+            ("Sign-up flow review", "your decision on the error messages"),
+            ("Release notes", "the final changelog"),
+        ),
     ),
     "pt-BR": Samples(
         recent=(
@@ -175,6 +212,25 @@ SAMPLES: Final[dict[str, Samples]] = {
             ("transcript", "Reservar uma mesa para quatro no sábado à noite."),
         ),
         pending=("Adicionar leite, ovos e café à lista de compras.",),
+        assistant=(
+            (
+                "assistant",
+                "Bom dia! Há duas conversas abertas: a revisão do fluxo de cadastro está esperando por você, e a correção do build terminou há uma hora. Qual você quer retomar?",
+            ),
+            ("user", "Vamos voltar para a revisão do fluxo de cadastro."),
+            (
+                "assistant",
+                "Pronto. Perguntei onde ela parou: está esperando sua decisão sobre as mensagens de erro. Quer os detalhes?",
+            ),
+        ),
+        inbox=(
+            ("Notas da versão", "O rascunho das notas da versão está pronto para revisão."),
+            ("Limpeza dos testes", "Todos os testes voltaram a passar."),
+        ),
+        waiting=(
+            ("Revisão do fluxo de cadastro", "sua decisão sobre as mensagens de erro"),
+            ("Notas da versão", "o changelog final"),
+        ),
     ),
     "es": Samples(
         recent=(
@@ -185,6 +241,25 @@ SAMPLES: Final[dict[str, Samples]] = {
             ("transcript", "Reservar una mesa para cuatro el sábado por la noche."),
         ),
         pending=("Añadir leche, huevos y café a la lista de la compra.",),
+        assistant=(
+            (
+                "assistant",
+                "¡Buenos días! Hay dos conversaciones abiertas: la revisión del flujo de registro te está esperando y la corrección de la build terminó hace una hora. ¿Cuál quieres retomar?",
+            ),
+            ("user", "Volvamos a la revisión del flujo de registro."),
+            (
+                "assistant",
+                "Listo. Le pregunté dónde se quedó: espera tu decisión sobre los mensajes de error. ¿Quieres los detalles?",
+            ),
+        ),
+        inbox=(
+            ("Notas de la versión", "El borrador de las notas de la versión está listo para revisar."),
+            ("Limpieza de pruebas", "Todas las pruebas vuelven a pasar."),
+        ),
+        waiting=(
+            ("Revisión del flujo de registro", "tu decisión sobre los mensajes de error"),
+            ("Notas de la versión", "el registro de cambios final"),
+        ),
     ),
     "ru": Samples(
         recent=(
@@ -195,6 +270,25 @@ SAMPLES: Final[dict[str, Samples]] = {
             ("transcript", "Забронировать столик на четверых на субботний вечер."),
         ),
         pending=("Добавить молоко, яйца и кофе в список покупок.",),
+        assistant=(
+            (
+                "assistant",
+                "Доброе утро! Открыты два разговора: проверка процесса регистрации ждёт вас, а исправление сборки закончилось час назад. К какому вернуться?",
+            ),
+            ("user", "Давай вернёмся к проверке процесса регистрации."),
+            (
+                "assistant",
+                "Готово. Я спросил, где он остановился: он ждёт вашего решения по сообщениям об ошибках. Рассказать подробнее?",
+            ),
+        ),
+        inbox=(
+            ("Примечания к выпуску", "Черновик примечаний к выпуску готов к проверке."),
+            ("Чистка тестов", "Все тесты снова проходят."),
+        ),
+        waiting=(
+            ("Проверка регистрации", "ваше решение по сообщениям об ошибках"),
+            ("Примечания к выпуску", "итоговый список изменений"),
+        ),
     ),
     "zh-CN": Samples(
         recent=(
@@ -205,6 +299,13 @@ SAMPLES: Final[dict[str, Samples]] = {
             ("transcript", "订一张周六晚上的四人桌。"),
         ),
         pending=("把牛奶、鸡蛋和咖啡加到购物清单里。",),
+        assistant=(
+            ("assistant", "早上好！现在有两个对话：注册流程的审查在等你，构建修复一小时前已经完成。你想接着哪一个？"),
+            ("user", "我们回到注册流程的审查吧。"),
+            ("assistant", "好了。我问了它停在哪里：它在等你决定错误提示怎么写。要听细节吗？"),
+        ),
+        inbox=(("发布说明", "发布说明的草稿已经可以审阅了。"), ("测试清理", "所有测试又都通过了。")),
+        waiting=(("注册流程审查", "你对错误提示的决定"), ("发布说明", "最终的更新日志")),
     ),
 }
 
@@ -402,6 +503,8 @@ def _render_with_catalogs(qapp: QApplication, language: str, out: Path, locales:
         language=language,  # type: ignore[arg-type]
         wsl_distro="",
         engine_dir="voice-mate",
+        stt_mode="cpu",  # the settings page and the tray menu show a chosen mode, not "auto"
+        assistant=AssistantSettings(mode="own_session"),  # the tray entry and the window need it on
     )
     fake = _SampleController(settings, SAMPLES[language])
     ui = CompanionUi(fake, tray_available=True, exit_app=lambda: None, relaunch=lambda: None, running_catalog=catalog)
@@ -428,6 +531,8 @@ def _render_with_catalogs(qapp: QApplication, language: str, out: Path, locales:
     pages: list[tuple[QWidget, str]] = [
         (dialog.hotkeys_page, "settings-hotkeys"),
         (dialog.sounds_page, "settings-sounds"),
+        (dialog.voice_page, "settings-voice"),
+        (dialog.assistant_page, "settings-assistant"),
         (dialog.general_page, "settings-general"),
     ]
     if len(pages) != tabs.count():
@@ -440,7 +545,52 @@ def _render_with_catalogs(qapp: QApplication, language: str, out: Path, locales:
         tabs.setCurrentWidget(page)
         _pump(qapp)
         _save(target, name, frame(_grab(dialog, name, warnings)), written)
+    # The Assistant tab's lower sections: scrolled so its personality box is at the top.
+    tabs.setCurrentWidget(dialog.assistant_page)
+    scroll = dialog.assistant_page.findChild(QScrollArea)
+    persona = next(
+        (box for box in dialog.assistant_page.findChildren(QGroupBox) if box.title() == _("Personality")), None
+    )
+    body = scroll.widget() if scroll is not None else None
+    if scroll is None or body is None or persona is None:
+        raise SystemExit("the Assistant tab has no scroll area or no Personality box")
+    _pump(qapp)
+    scroll.verticalScrollBar().setValue(persona.mapTo(body, QPoint(0, 0)).y() - 8)
+    _pump(qapp)
+    name = "settings-assistant-sections"
+    _save(target, name, frame(_grab(dialog, name, warnings)), written)
+    scroll.verticalScrollBar().setValue(0)
     dialog.hide()
+
+    # The assistant's text screen, with a short sample conversation and Remote Control on.
+    ui.show_assistant()
+    window = ui.assistant_window
+    assert window is not None
+    fake.assistant_service.publish(
+        state="ready",
+        remote="on",
+        session_url="https://claude.ai/code/session_demo",
+        messages=tuple(ChatMessage(role, text) for role, text in SAMPLES[language].assistant),
+    )
+    _pump(qapp)
+    _save(target, "assistant", frame(_grab(window, "assistant", warnings)), written)
+    # The same screen with answers waiting and the "Waiting for" list.
+    samples = SAMPLES[language]
+    fake.assistant_service.publish(
+        inbox=tuple(
+            InboxEntry(f"demo-{index}", title, SAMPLE_TIME + 60 * index, answer)
+            for index, (title, answer) in enumerate(samples.inbox, 1)
+        ),
+        pending=tuple(
+            PendingEntry(f"demo-wait-{index}", title, reason, SAMPLE_TIME - 600 * index)
+            for index, (title, reason) in enumerate(samples.waiting, 1)
+        ),
+    )
+    _pump(qapp)
+    _save(target, "assistant-inbox", frame(_grab(window, "assistant-inbox", warnings)), written)
+    fake.assistant_service.publish(inbox=(), pending=())
+    _pump(qapp)
+    window.hide()
 
     # The tray menu, as a right click on the tray icon opens it.
     tray = ui.tray
@@ -620,10 +770,12 @@ def hero(status: QImage, menu: QImage) -> QImage:
 
 def render_tray_states(path: Path) -> None:
     """Every state's tray glyph (the code the tray uses, at the 200 % tray size) on a
-    dark and a light taskbar strip. No text: the READMEs caption it."""
+    dark and a light taskbar strip, then the "answers waiting" badge. No text: the READMEs
+    caption it."""
     glyph = TRAY_GLYPH_SIZE * SCALE
     gap, padding = TRAY_GLYPH_GAP * SCALE, TRAY_STRIP_PADDING * SCALE
-    strip_width = len(TRAY_STATES) * glyph + (len(TRAY_STATES) - 1) * gap + 2 * padding
+    shown: list[tuple[TrayState, bool]] = [(state, False) for state in TRAY_STATES] + [(TRAY_INBOX_OVER, True)]
+    strip_width = len(shown) * glyph + (len(shown) - 1) * gap + 2 * padding
     strip_height = glyph + 2 * padding
     spacing = 12 * SCALE
     out = QImage(strip_width, 2 * strip_height + spacing, QImage.Format.Format_ARGB32_Premultiplied)
@@ -635,8 +787,8 @@ def render_tray_states(path: Path) -> None:
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(taskbar))
         painter.drawRoundedRect(QRectF(0, top, strip_width, strip_height), 8 * SCALE, 8 * SCALE)
-        for index, state in enumerate(TRAY_STATES):
-            image = glyph_image(state, glyph_color(tone, state), glyph)
+        for index, (state, waiting) in enumerate(shown):
+            image = glyph_image(state, glyph_color(tone, state), glyph, answers_waiting=waiting)
             painter.drawImage(QPointF(padding + index * (glyph + gap), top + padding), image)
     painter.end()
     save_png(out, path)

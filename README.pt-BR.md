@@ -33,9 +33,11 @@ O ditado para a área de transferência é o coração do VoiceMate. Uso no trab
 
 Um segundo módulo veio depois: uma conversa por voz com o Claude. Você fala, o Claude responde, e a resposta é lida em voz alta com síntese de voz (TTS). Esse módulo é opcional e **experimental**.
 
+Um terceiro está começando: um **assistente de voz**. É uma conversa do Claude que sabe o que as minhas outras conversas estão fazendo, pergunta coisas a elas por mim e avisa, por voz, quando elas respondem. Ele vive numa conversa que o VoiceMate inicia ou numa que eu já tenho no Claude Desktop. É **experimental** e vem desligado.
+
 ## Sumário
 
-[Recursos](#recursos) · [Capturas de tela](#capturas-de-tela) · [Início rápido](#início-rápido) · [Uso](#uso) · [Configuração](#configuração) · [Arquitetura](#arquitetura) · [Solução de problemas](#solução-de-problemas) · [Documentação](#documentação) · [Como contribuir](#como-contribuir) · [Licença](#licença)
+[Recursos](#recursos) · [Capturas de tela](#capturas-de-tela) · [Início rápido](#início-rápido) · [Uso](#uso) · [Assistente de voz](#assistente-de-voz-experimental) · [Configuração](#configuração) · [Arquitetura](#arquitetura) · [Solução de problemas](#solução-de-problemas) · [Documentação](#documentação) · [Como contribuir](#como-contribuir) · [Licença](#licença)
 
 ## Recursos
 
@@ -50,6 +52,7 @@ Um segundo módulo veio depois: uma conversa por voz com o Claude. Você fala, o
 - Entrega verificada na área de transferência: o aplicativo escreve o texto, lê de volta e compara. Um texto que não consegue chegar à área de transferência fica em **Não copiadas**, mesmo depois de reiniciar.
 - Um supervisor que inicia o motor dentro do WSL2, reinicia o motor quando ele falha e reinicia o WSL quando o áudio dele para.
 - Um instalador por usuário (sem pedir permissão de administrador) em 5 idiomas.
+- Dois modos de reconhecimento de fala, que você troca no menu da bandeja ("Transcrição") ou em Configurações: **CPU** (deixa a GPU livre para outros trabalhos) e **GPU** (a mais rápida). Cada modo guarda o próprio modelo Whisper. Um modo que ainda não está instalado é instalado pelo aplicativo depois de perguntar, mostrando o tamanho do download, e só dentro do ambiente do próprio motor.
 
 <a id="idiomas"></a>**Idiomas**: o companion, as mensagens do motor e o instalador falam inglês, português do Brasil, espanhol, russo e chinês simplificado.
 
@@ -60,7 +63,12 @@ Um segundo módulo veio depois: uma conversa por voz com o Claude. Você fala, o
 
 **Conversa por voz com o Claude (experimental)**
 - `Ctrl+Alt+A` envia a sua fala ao Claude pela CLI do Claude Code (com o seu próprio login: o texto transcrito vai para a Anthropic, o áudio não). A resposta é copiada para a área de transferência e lida em voz alta.
-- Motores de TTS: OmniVoice (o usado quando nada foi salvo), Kokoro (o que o `make setup` propõe) e VoxCPM2. A conversa continua entre os turnos; qualquer atalho interrompe a resposta e inicia uma nova gravação.
+- Motores de TTS: OmniVoice (o usado quando nada foi salvo), Kokoro (o que o `make setup` propõe) e VoxCPM2. Ou o seu: qualquer serviço que siga o [protocolo de provedor de TTS](docs/tts-provider-protocol.md) (Configurações > Voz > Provedor personalizado). A conversa continua entre os turnos; qualquer atalho interrompe a resposta e inicia uma nova gravação.
+
+**Assistente de voz (experimental, desligado por padrão)**
+- Uma conversa central do Claude em dois modos: a conversa própria do VoiceMate (um processo do Claude Code que o VoiceMate inicia, visível também no Claude Desktop e no celular) ou uma conversa do Claude Desktop que você já tem (escrita por um "flash" rápido de teclado, só no Windows). Ele lista, lê e envia mensagem às suas outras conversas e inicia novas em segundo plano.
+- Fale com ele em `Ctrl+Alt+S` e ouça na voz do motor (Kokoro ou o seu provedor). Comandos de voz em português, inglês e espanhol leem a última resposta, trocam de conversa, enviam para ela ou falam direto com ela. Uma janela mostra o chat e as respostas esperando; um selo azul na bandeja e o som "Resposta pronta" avisam quando uma chega, e `Ctrl+Alt+R` lê o que está pronto.
+- Ele muda por voz uma lista fixa de configurações do VoiceMate, aceita uma personalidade (um arquivo, uma nota num cofre do Obsidian ou um texto que você escreve) e usa uma skill em português ou inglês que também funciona sozinha em qualquer conversa do Claude Code. Veja [Assistente de voz](#assistente-de-voz-experimental).
 
 ## Capturas de tela
 
@@ -70,7 +78,15 @@ Um segundo módulo veio depois: uma conversa por voz com o Claude. Você fala, o
 
 <p align="center"><img src="docs/assets/screenshots/pt-BR/settings-general.png" width="770" alt="A aba Geral de Configurações do VoiceMate"><br><sub>"Configurações do VoiceMate", aba "Geral". Veja também as abas <a href="docs/assets/screenshots/pt-BR/settings-hotkeys.png">"Atalhos"</a> e <a href="docs/assets/screenshots/pt-BR/settings-sounds.png">"Sons"</a>.</sub></p>
 
-<p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="O ícone da bandeja em cada estado, numa barra de tarefas escura e numa clara"><br><sub>O ícone da bandeja mostra o estado com um selo. O que cada selo significa: <a href="docs/usage.md#tray-icon-and-menu">Uso, ícone e menu da bandeja</a>.</sub></p>
+<p align="center"><img src="docs/assets/screenshots/pt-BR/settings-voice.png" width="770" alt="A aba Voz de Configurações do VoiceMate, com o motor de voz e os campos do provedor personalizado"><br><sub>"Configurações do VoiceMate", aba "Voz": o motor de voz que fala as respostas, inclusive "Provedor personalizado (HTTP)".</sub></p>
+
+<p align="center"><img src="docs/assets/screenshots/pt-BR/assistant.png" width="568" alt="A janela do assistente do VoiceMate com uma conversa de exemplo"><br><sub>A janela do assistente (**experimental**), aberta pelo item "Assistente" do menu da bandeja. Configurações: a aba <a href="docs/assets/screenshots/pt-BR/settings-assistant.png">"Assistente"</a>. A caixa "Transcrição", com a escolha entre CPU e GPU, fica na aba "Geral" acima.</sub></p>
+
+<p align="center"><img src="docs/assets/screenshots/pt-BR/assistant-inbox.png" width="568" alt="A janela do assistente com o grupo Respostas esperando e a lista Aguardando"><br><sub>A mesma janela com o grupo "Respostas esperando" e a lista "Aguardando".</sub></p>
+
+<p align="center"><img src="docs/assets/screenshots/pt-BR/settings-assistant-sections.png" width="770" alt="A aba Assistente de Configurações do VoiceMate, rolada até os grupos Personalidade, Skill e Perfil do Claude Desktop"><br><sub>A aba "Assistente" rolada: os grupos "Personalidade", "Skill" e "Perfil do Claude Desktop".</sub></p>
+
+<p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="O ícone da bandeja em cada estado, numa barra de tarefas escura e numa clara, e o selo mostrado quando há respostas esperando"><br><sub>O ícone da bandeja mostra o estado com um selo, e um selo azul quando há respostas esperando. O que cada selo significa: <a href="docs/usage.md#tray-icon-and-menu">Uso, ícone e menu da bandeja</a>.</sub></p>
 
 ## Início rápido
 
@@ -117,12 +133,60 @@ Para rodar o companion a partir do código-fonte no Windows, com o motor no WSL2
 |---|---|---|
 | `Ctrl+Alt+V` | "Ditar" | Fala vira texto, copiado para a área de transferência |
 | `Ctrl+Alt+A` | "Perguntar ao Claude" | Fala enviada ao Claude, resposta copiada e lida em voz alta (**experimental**) |
+| `Ctrl+Alt+S` | "Falar com o assistente" | Fala para o assistente em vez da área de transferência (**experimental**) |
+| `Ctrl+Alt+W` | "Abrir a janela do assistente" | Abre ou fecha a janela do assistente |
+| `Ctrl+Alt+R` | "Ouvir o que está pronto" | O assistente lê as respostas que estão esperando |
 
 Aperte `Ctrl+Alt+V`, fale depois do sinal de início, aperte `Ctrl+Alt+V` de novo e cole com `Ctrl+V` em qualquer lugar. O atalho que para a gravação decide para onde o texto vai. Um texto que não conseguiu chegar à área de transferência espera em **Não copiadas** (menu da bandeja e janela de status), onde um clique o copia. Para sair, escolha **Sair do VoiceMate** no menu da bandeja; um motor que o companion não iniciou continua rodando.
 
 **Idioma do ditado.** Em Configurações > **Geral**, "Idioma do ditado:" define o idioma que você fala. O padrão é "Igual ao da interface"; "Detectar automaticamente" deixa o Whisper detectar cada gravação (o Claude continua respondendo no idioma da interface; com o Kokoro, fixe um idioma); ou escolha um idioma. O companion repassa a escolha ao motor que ele inicia, usando `--transcription-language` e `--output-lang`, e mudar o idioma reinicia o motor. Um motor ao qual o companion só se conecta (uma unidade do systemd, ou um iniciado à mão) mantém as próprias opções.
 
 A conversa por voz com o Claude precisa da CLI do Claude Code instalada e com login feito, e do módulo `claude` escolhido no `make setup`. Veja [docs/usage.md](docs/usage.md#claude-flow-experimental).
+
+**Modo de transcrição.** Em Configurações > **Geral** > "Transcrição", "Rodar na:" oferece "CPU (deixa a GPU livre)", "GPU (mais rápida)" ou "Automático (configuração do motor)". O menu "Transcrição" da bandeja faz o mesmo. Cada modo tem o próprio modelo ("Modelo da CPU:", "Modelo da GPU:"). Trocar reinicia o motor, e se o modo ainda não estiver instalado o VoiceMate pergunta antes (dizendo o tamanho do download) e instala numa janela que mostra a saída. Pelo terminal: `make stt-check` e `make stt-install MODE=cpu` (ou `gpu`). Números de velocidade e precisão: [docs/configuration.md](docs/configuration.md#speech-to-text-modes).
+
+### Assistente de voz (experimental)
+
+O assistente é uma conversa do Claude, a central, que sabe o que as suas outras conversas estão fazendo e as conduz por você: lista, lê, manda mensagem, inicia novas em segundo plano e avisa quando elas respondem. Vem desligado. Em Configurações > **Assistente**, "Modo da assistente:" escolhe onde a conversa central mora.
+
+| | Conversa própria do VoiceMate | Uma conversa do Claude Desktop |
+|---|---|---|
+| O que é | Um processo do Claude Code que o VoiceMate inicia e mantém | Uma conversa que você já tem, escolhida pelo título exato em "Conversa do Desktop:" |
+| Como o VoiceMate escreve nela | Direto, pelo processo | Um "flash" rápido de UI Automation: a janela do Desktop vem para a frente, o rascunho é apagado, o texto é colado e enviado, e o foco volta (cerca de 2 segundos) |
+| Ferramentas | As ferramentas `voicemate`: listar, ler e enviar para conversas, iniciar uma, ajustar o modelo, parar | As ferramentas de sessão do próprio Desktop |
+| Precisa de | A CLI `claude` e um login do Claude | Claude Desktop aberto e tela desbloqueada; só no Windows |
+| Celular | O Remote Control fica ligado | Fora do controle do VoiceMate |
+
+1. **Requisitos:** a CLI do Claude Code (`claude` no `PATH` do Windows, ou o caminho dela em `VOICEMATE_CLAUDE_CLI`) e um login do Claude nesse computador (`claude auth login`, uma vez). Sem isso, a janela do assistente diz o que falta.
+2. **Ligar:** em Configurações > **Assistente**, escolha "Conversa própria do VoiceMate" ou "Uma conversa do Claude Desktop" em "Modo da assistente:" (e digite o título exato dela) e clique em OK. O menu da bandeja ganha o item "Assistente".
+3. **Usar:** aperte `Ctrl+Alt+S`, fale, aperte `Ctrl+Alt+S` de novo, e ele responde na voz do motor. Ou abra "Assistente" e escreva (Enter envia, Shift+Enter pula linha). A janela mostra as últimas 30 mensagens e um grupo "Respostas esperando" e uma lista "Aguardando" (o que o assistente espera de outras conversas).
+
+`Ctrl+Alt+S` fala, `Ctrl+Alt+W` abre a janela e `Ctrl+Alt+R` lê o que está pronto. "Trocar o modo do assistente" e "Voltar ao assistente" não têm tecla padrão; defina em Configurações > **Atalhos**.
+
+**Comandos de voz.** Algumas frases são detectadas sem nenhuma IA, em português, inglês e espanhol: ler a última resposta, parar de falar, ir para uma conversa, enviar para uma conversa, falar direto com uma conversa e voltar ao assistente. O modo direto manda o que você diz direto para essa conversa até você voltar. As frases estão em [uso](docs/usage.md#voice-commands).
+
+**Respostas de outras conversas.** "Respostas de outras conversas:" oferece "Me contar a resposta assim que chegar", "Dar um aviso curto e guardar a resposta para depois" (padrão), "Só tocar um som e guardar a resposta" ou "Só guardar". As respostas guardadas esperam na caixa de entrada (50 no máximo, mantidas entre reinícios), na janela em "Respostas esperando", com um selo azul no ícone da bandeja e o som "Resposta pronta". Nada é anunciado enquanto você grava, transcreve ou ouve uma resposta.
+
+**Conversas que o assistente inicia.** No máximo 4 ao mesmo tempo, com o Remote Control ligado e lembradas entre reinícios. "Novas conversas usam:" e "Com o esforço:" definem o modelo e o esforço delas, e "Permissões:" define o que elas podem fazer.
+
+> [!WARNING]
+> "Acesso total, nunca perguntar (arriscado)" (`bypassPermissions`) deixa essas conversas alterar qualquer arquivo e rodar qualquer comando sem perguntar. Mantenha o padrão, a menos que você confie no que pede a elas.
+
+**O flash do modo Desktop.** Ele toma o primeiro plano por cerca de 2 segundos, apaga qualquer rascunho nesse campo e não digita nada se a tela estiver bloqueada ou se outra janela tomar o foco. Deixe o teclado em paz durante esses 2 segundos.
+
+**Configurações por voz.** O assistente muda 23 configurações de uma lista fixa: o modo (entre os dois), modelo, esforço, permissões, entrega das respostas, modelo e esforço das conversas novas, a conversa do Desktop, voz, comandos de voz, tags de expressão, seu nome, a origem da personalidade, a atualização do perfil, o idioma da skill, os interruptores e volumes dos sons, o idioma do ditado, o modo de transcrição e as notificações.
+
+Atalhos, arquivos e pastas, o motor de voz e suas configurações, e desligar o assistente ficam de fora de propósito. A lista: [uso](docs/usage.md#change-voicemate-by-voice).
+
+**Personalidade e skill.** Em Personalidade, "Origem:" é nenhuma, um arquivo Markdown (por exemplo uma nota num cofre do Obsidian) ou um texto que você escreve; "Pasta do cofre:" diz onde estão suas notas, e o assistente só as lê quando você pede. "Idioma da skill:" é automático, inglês ou português do Brasil, e "Skill personalizada:" troca a skill por uma pasta sua com um `SKILL.md`.
+
+A skill é opcional e compartilhável: copie `app/companion/assistant/skill/pt-BR/voicemate-assistant` (ou `en`) para `~/.claude/skills` e peça "o assistente" em qualquer conversa do Claude Code. As configurações dela ficam em `~/.voicemate/assistant.json`.
+
+**Voz.** O assistente fala com a voz do motor: Kokoro ou o seu provedor (Configurações > **Voz**, `make tts-provider-check`, [protocolo](docs/tts-provider-protocol.md)). Se o motor não consegue falar, as respostas ficam em texto e os avisos curtos usam a voz do Windows.
+
+**Perfil do Claude Desktop.** Um arquivo JSON diz ao modo Desktop onde estão os controles, então uma atualização do Claude Desktop se resolve com um perfil novo e não com uma versão. O VoiceMate procura um mais novo quando o assistente inicia (dá para desligar); Configurações > **Assistente** tem **Verificar agora**, **Importar...**, **Exportar...** e **Usar o padrão**. Veja [desktop-profile.md](docs/desktop-profile.md).
+
+O desenho está em [docs/research/voice-assistant-design.md](docs/research/voice-assistant-design.md), os testes com Claude Desktop e celular por trás dele em [docs/research/claude-code-client.md](docs/research/claude-code-client.md), e cada passo em [docs/usage.md](docs/usage.md#voice-assistant-experimental).
 
 ## Configuração
 
@@ -133,6 +197,8 @@ A conversa por voz com o Claude precisa da CLI do Claude Code instalada e com lo
 | API HTTP do motor | `127.0.0.1:47821` |
 | Logs (`companion.log`, `engine.log`) | Windows `%LOCALAPPDATA%\VoiceMate\logs`, Linux `~/.local/state/voicemate/logs` |
 | Lista **Não copiadas** | `pending.json`, ao lado da pasta `logs` |
+| Configurações do assistente (a skill as lê) | `~/.voicemate/assistant.json`, na sua pasta de usuário |
+| Sessão do assistente, caixa de entrada, conversas que ele iniciou, texto da personalidade e cache do perfil do Desktop | `assistant-session.json`, `assistant-inbox.json`, `assistant-conversations\`, `assistant-personality.md`, `desktop-profile\` e `assistant\` ao lado de `pending.json` |
 
 Todas as opções do motor, todas as chaves de configurações e todas as variáveis de ambiente: [docs/configuration.md](docs/configuration.md).
 
@@ -163,6 +229,21 @@ flowchart TB
     vm -->|"Transcreve"| gpu
     vm -.->|"Baixa modelos"| hub
     vm -.->|"Experimental: pergunta"| claude
+
+    classDef person fill:#08427b,stroke:#052e56,color:#ffffff
+    classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
+    classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+    classDef component fill:#85bbf0,stroke:#5d82a8,color:#000000
+    classDef store fill:#00838f,stroke:#005f66,color:#ffffff
+    classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+    classDef optional fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff,stroke-dasharray:5 5
+    classDef ok fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+    classDef warn fill:#f9a825,stroke:#c17900,color:#000000
+    classDef bad fill:#c0392b,stroke:#922b21,color:#ffffff
+    class user person
+    class vm system
+    class desk,audio,gpu external
+    class hub,claude optional
 ```
 
 Visão geral. Diagrama completo: [docs/architecture.md, Contexto do sistema](docs/architecture.md#1-system-context).
@@ -194,6 +275,21 @@ flowchart LR
     core <-->|"HTTP, token, eventos"| api
     api --> stt --> gpu
     api -.-> tts
+
+    classDef person fill:#08427b,stroke:#052e56,color:#ffffff
+    classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
+    classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+    classDef component fill:#85bbf0,stroke:#5d82a8,color:#000000
+    classDef store fill:#00838f,stroke:#005f66,color:#ffffff
+    classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+    classDef optional fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff,stroke-dasharray:5 5
+    classDef ok fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+    classDef warn fill:#f9a825,stroke:#c17900,color:#000000
+    classDef bad fill:#c0392b,stroke:#922b21,color:#ffffff
+    class user person
+    class ui,core,api,stt container
+    class clip,gpu external
+    class tts optional
 ```
 
 Visão geral. Diagrama completo: [docs/architecture.md, Contêineres](docs/architecture.md#2-containers).
@@ -210,22 +306,28 @@ sequenceDiagram
     participant C as Companion
     participant E as Motor
     participant CB as Área de transferência
-    U->>C: Atalho
-    C->>E: Iniciar gravação
-    E-->>C: Microfone ativo
-    C->>U: Sinal de início
-    U->>C: Atalho de novo
-    C->>E: Parar gravação
-    E->>E: O Whisper transcreve
-    E-->>C: Texto para entregar
-    C->>CB: Escrever, ler de volta, comparar
-    alt Texto verificado
-        C->>E: ACK entregue
-        C->>U: Sinal de pronto
-    else Área de transferência bloqueada por outro aplicativo
-        C->>C: Guardar o texto em Não copiadas
-        C->>E: ACK falhou
-        C->>U: Sinal de erro e notificação
+    rect rgba(67,141,213,0.12)
+        U->>C: Atalho
+        C->>E: Iniciar gravação
+        E-->>C: Microfone ativo
+        C->>U: Sinal de início
+    end
+    rect rgba(106,61,154,0.12)
+        U->>C: Atalho de novo
+        C->>E: Parar gravação
+        E->>E: O Whisper transcreve
+        E-->>C: Texto para entregar
+    end
+    rect rgba(46,125,50,0.12)
+        C->>CB: Escrever, ler de volta, comparar
+        alt Texto verificado
+            C->>E: ACK entregue
+            C->>U: Sinal de pronto
+        else Área de transferência bloqueada por outro aplicativo
+            C->>C: Guardar o texto em Não copiadas
+            C->>E: ACK falhou
+            C->>U: Sinal de erro e notificação
+        end
     end
 ```
 
@@ -270,9 +372,69 @@ stateDiagram-v2
         Idle --> Warning : Sem microfone ou áudio parado
         Warning --> Idle : Áudio de volta
     }
+
+    classDef person fill:#08427b,stroke:#052e56,color:#ffffff
+    classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
+    classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+    classDef component fill:#85bbf0,stroke:#5d82a8,color:#000000
+    classDef store fill:#00838f,stroke:#005f66,color:#ffffff
+    classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+    classDef optional fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff,stroke-dasharray:5 5
+    classDef ok fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+    classDef warn fill:#f9a825,stroke:#c17900,color:#000000
+    classDef bad fill:#c0392b,stroke:#922b21,color:#ffffff
+    class Stopped external
+    class Starting,Restarting,Warning warn
+    class Running,Idle,Ready ok
+    class Error bad
+    class Recording,Transcribing,Answering container
 ```
 
 Visão geral. Diagrama completo: [docs/architecture.md, Estados da bandeja](docs/architecture.md#5-tray-states).
+
+</details>
+
+<details>
+<summary>Assistente de voz, experimental (visão geral)</summary>
+
+```mermaid
+flowchart LR
+    user(["Você"])
+    subgraph pc["Seu PC, Windows"]
+        win["Janela do assistente<br/>chat, respostas esperando"]
+        svc["Serviço do assistente<br/>dentro do companion"]
+        own["Conversa própria<br/>Claude Code, ferramentas voicemate"]
+        dsk["Conversa do Desktop<br/>escrita por um flash de teclado"]
+        other["Suas outras<br/>conversas"]
+        inbox[("Caixa de entrada<br/>respostas esperando")]
+        eng["Motor<br/>fala entra, voz sai"]
+    end
+    phone["Celular"]
+    user -->|"Atalho de falar"| eng
+    eng -->|"Transcrição"| svc
+    user --> win
+    win --> svc
+    svc -->|"Prompts"| own
+    svc -->|"Flash, depois lê"| dsk
+    own -->|"Listar, ler, enviar, iniciar"| other
+    dsk -->|"Ferramentas de sessão do Desktop"| other
+    other -->|"Respostas"| svc
+    svc -->|"Guarda ou avisa"| inbox
+    svc -->|"Bloco de voz"| eng
+    eng -->|"Fala, som de resposta"| user
+    own <-->|"Remote Control"| phone
+
+    classDef person fill:#08427b,stroke:#052e56,color:#ffffff
+    classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+    classDef store fill:#00838f,stroke:#005f66,color:#ffffff
+    classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+    class user person
+    class win,svc,own,dsk,eng container
+    class inbox store
+    class other,phone external
+```
+
+Os dois modos seguem o mesmo ciclo: o assistente alcança suas outras conversas, as respostas voltam pelo serviço, e o serviço as fala ou as guarda na caixa de entrada. Azul: VoiceMate; verde-azulado: dados guardados; cinza: fora do VoiceMate. Diagrama completo: [docs/architecture.md](docs/architecture.md#61-voice-assistant-experimental).
 
 </details>
 
@@ -301,6 +463,24 @@ flowchart TD
     q_others -- "Não" --> wslrestart["wsl --shutdown"]
     ask -- "Reiniciar o WSL" --> wslrestart
     wslrestart --> launch
+
+    classDef person fill:#08427b,stroke:#052e56,color:#ffffff
+    classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
+    classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+    classDef component fill:#85bbf0,stroke:#5d82a8,color:#000000
+    classDef store fill:#00838f,stroke:#005f66,color:#ffffff
+    classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+    classDef optional fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff,stroke-dasharray:5 5
+    classDef ok fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+    classDef warn fill:#f9a825,stroke:#c17900,color:#000000
+    classDef bad fill:#c0392b,stroke:#922b21,color:#ffffff
+    class launch system
+    class q_health,q_dir,q_ready,q_breaker,q_policy,q_others component
+    class attach,healthy ok
+    class failed bad
+    class spawn,backoff,wslrestart container
+    class ask warn
+    class nothing external
 ```
 
 Visão geral. Diagrama completo: [docs/architecture.md, Supervisor](docs/architecture.md#6-supervisor-on-windows-and-wsl2).
@@ -317,6 +497,9 @@ Visão geral. Diagrama completo: [docs/architecture.md, Supervisor](docs/archite
 | "O áudio do WSL parou" ou "Sem microfone" | Conecte um microfone. O VoiceMate reinicia o WSL conforme definido em "Reiniciar o WSL se o áudio falhar:"; para fazer isso à mão, use **Motor** > **Reiniciar o WSL...**. |
 | Um texto não chegou à área de transferência | Ele está em **Não copiadas** (menu da bandeja e janela de status). Clique nele para copiar de novo. |
 | A fala em inglês sai errada, ou as mensagens do motor estão em português | Um motor iniciado à mão usa português por padrão: acrescente `ARGS="--output-lang en"` ao `make run`. |
+| A GPU está ocupada com outro trabalho | Escolha o modo CPU: Configurações > **Geral** > "Transcrição", ou menu da bandeja > "Transcrição". O VoiceMate pergunta antes de instalar um modo que falta. |
+| O assistente diz "O Claude Code não foi encontrado" ou "O Claude Code não está com login feito" | Instale o Claude Code (ou defina `VOICEMATE_CLAUDE_CLI`), ou rode `claude auth login` num terminal, e clique em **Reiniciar** na janela do assistente. Mais em [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental). |
+| O modo Desktop diz "Nenhuma conversa do Claude Desktop foi escolhida" ou "Não foi possível preparar o assistente" | "Conversa do Desktop:" está vazia, ou nenhuma conversa do Claude Desktop tem esse título exato | Digite o título exatamente como na barra lateral do Claude Desktop, abra o Claude Desktop e clique em **Reiniciar**. Mais em [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental). |
 | Outro problema do lado do motor | Rode `make doctor` na pasta do motor. Ele mostra a correção para cada verificação que falhou. |
 
 Mais problemas e as mensagens exatas: [docs/troubleshooting.md](docs/troubleshooting.md).
@@ -324,11 +507,13 @@ Mais problemas e as mensagens exatas: [docs/troubleshooting.md](docs/troubleshoo
 ## Documentação
 
 - [Installation](docs/installation.md) (em inglês): todos os caminhos de instalação, atualização e desinstalação.
-- [Usage](docs/usage.md): fluxos, atalhos, ícone da bandeja, modelos e opções de voz.
-- [Configuration](docs/configuration.md): opções do motor, arquivos de configurações, variáveis de ambiente.
+- [Usage](docs/usage.md): fluxos, atalhos, ícone da bandeja, modos de transcrição, modelos, opções de voz e o assistente de voz.
+- [Configuration](docs/configuration.md): opções do motor, arquivos de configurações, variáveis de ambiente, modos de reconhecimento de fala e benchmark.
 - [Troubleshooting](docs/troubleshooting.md): `make doctor`, áudio do WSL, logs, mensagens conhecidas.
 - [Architecture](docs/architecture.md): diagramas e decisões de projeto.
 - [WSL2 and AMD](docs/wsl2.md) (experimental), [Companion design](docs/companion-app.md), [Brand](docs/brand.md), [Releasing](docs/releasing.md).
+- [Perfil do Claude Desktop](docs/desktop-profile.md) e [protocolo de provedor TTS](docs/tts-provider-protocol.md): o arquivo que diz ao modo Desktop onde estão os controles, e o contrato HTTP para a sua própria voz.
+- Pesquisa (trabalho experimental, em inglês): [Projeto do assistente de voz](docs/research/voice-assistant-design.md) e [VoiceMate como cliente do Claude Code](docs/research/claude-code-client.md).
 
 ## Como contribuir
 

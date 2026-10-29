@@ -209,6 +209,11 @@ def test_engine_owned_hotkeys_are_read_only(qapp: QApplication, process_events: 
     assert not page.rows[0].edit.capturing
     assert fake.called("suspend_hotkeys") == []
     assert page.collect(fake.settings().hotkeys) == fake.settings().hotkeys
+    # No assistant shortcut is registered in this mode: none of its rows is shown.
+    assert page._assistant_rows
+    assert not page.assistant_title.isVisibleTo(dialog)
+    for row in page._assistant_rows:
+        assert not row.edit.isVisibleTo(dialog) and not row.status.isVisibleTo(dialog)
     dialog.hide()
     companion.bridge.detach()
 
@@ -359,7 +364,7 @@ def test_a_cleared_shortcut_drops_its_binding(
     assert ui.settings().hotkeys == (HotkeyBinding("clipboard", "ctrl+alt+v"),)
     # The flow is still offered, so it can get a shortcut again.
     ui.show_settings()
-    assert [row.flow.name for row in dialog.hotkeys_page.rows] == ["clipboard", "claude_chat"]
+    assert [row.name for row in dialog.hotkeys_page.rows] == ["clipboard", "claude_chat"]
     assert dialog.hotkeys_page.rows[1].edit.chord == ""
 
 
@@ -374,7 +379,7 @@ def test_a_flow_without_a_saved_binding_is_not_sent_empty(
     fake.publish(flows=flows)  # the engine reports a flow the settings never bound
     process_events()
     dialog = _open(companion)
-    assert [row.flow.name for row in dialog.hotkeys_page.rows] == ["clipboard", "claude_chat", "notes"]
+    assert [row.name for row in dialog.hotkeys_page.rows] == ["clipboard", "claude_chat", "notes"]
     dialog.general_page.engine_dir.setText("elsewhere")
     dialog.ok_button.click()
     assert process_events(lambda: not dialog.isVisible())
@@ -504,6 +509,18 @@ def test_rebase_settings_merges_per_field_flow_and_cue() -> None:
     assert rebased.engine_dir == "detected"
     assert rebased.hotkeys == (HotkeyBinding("clipboard", "f9"), HotkeyBinding("notes", "ctrl+alt+n"))
     assert rebase_settings(baseline, baseline, current) == current
+
+
+def test_rebase_settings_keeps_an_assistant_change_made_while_the_dialog_was_open() -> None:
+    from app.companion.contract import AssistantSettings
+    from app.companion.ui.settings_window import rebase_settings
+
+    baseline = CompanionSettings()
+    edited = replace(baseline, assistant=replace(baseline.assistant, effort="high"))  # edited in the dialog
+    # Meanwhile the switch-mode hotkey (or a voice command) turned the assistant on.
+    current = replace(baseline, assistant=replace(baseline.assistant, mode="own_session"))
+    rebased = rebase_settings(edited, baseline, current)
+    assert rebased.assistant == replace(AssistantSettings(), mode="own_session", effort="high")
 
 
 def test_problem_statuses_are_drawn_at_full_opacity(
