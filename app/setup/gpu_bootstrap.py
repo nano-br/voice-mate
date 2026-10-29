@@ -302,7 +302,7 @@ def _compute_extras(
     extras: set[str] = set()
     if flow == "claude_chat":
         extras.add("claude")
-        if tts_enabled:
+        if tts_enabled and tts_engine != "external":  # an external provider needs no packages
             # Each engine has its own poetry extra (kokoro=light/CPU, tts=omnivoice,
             # voxcpm=alternative). "tts" is the default for engines without their own extra.
             extras.add({"kokoro": "kokoro", "voxcpm": "voxcpm"}.get(tts_engine, "tts"))

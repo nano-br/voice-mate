@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Any, Literal
 
 from app.platform.kinds import PlatformKind, TriggerKind
 from app.protocol.models import SttMode
@@ -12,8 +12,10 @@ FlowKind = Literal["clipboard", "claude_chat"]
 #     cloning), very low GPU usage and realtime — good for AMD/WSL2 without
 #     saturating the GPU.
 #   - voxcpm (OpenBMB, alternative): 2B, heavier.
+#   - external: any provider that speaks the HTTP protocol of docs/tts-provider-protocol.md
+#     (no extra packages: the audio is streamed from the provider).
 #   - none: disabled.
-TTSEngine = Literal["omnivoice", "kokoro", "voxcpm", "none"]
+TTSEngine = Literal["omnivoice", "kokoro", "voxcpm", "external", "none"]
 TTSDevice = Literal["auto", "cuda", "cpu", "mps"]
 ClaudeEffort = Literal["low", "medium", "high", "xhigh", "max"]
 VoiceSeedMode = Literal["auto", "fixed", "off"]
@@ -103,6 +105,14 @@ class TTSConfig:
     # Fixed Kokoro voice (only applies to engine="kokoro"; Kokoro does not clone voice).
     # pf_dora = female PT-BR; pm_alex/pm_santa = male PT-BR.
     kokoro_voice: str = "pf_dora"
+    # External provider (engine="external", docs/tts-provider-protocol.md). `voice` is a
+    # provider voice id ("" = the provider's default); `options` is passed through untouched.
+    # The token is never logged (repr=False): it comes from the saved config or from the
+    # VOICEMATE_TTS_TOKEN environment variable.
+    external_url: str = "http://127.0.0.1:8765"
+    external_voice: str = ""
+    external_token: str = field(default="", repr=False)
+    external_options: dict[str, Any] = field(default_factory=dict)
     device: TTSDevice = "auto"
     streaming: bool = True
     save_audio_dir: str | None = None

@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 from dataclasses import replace
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit
 
 from app.core.audio_feedback import AudioFeedback
 from app.core.config import ClaudeChatConfig, Config, FlowConfig, TTSConfig
@@ -213,11 +214,30 @@ def describe_transcriber(transcriber: TranscriptionBackend, config: Config) -> S
     }
 
 
+def _url_for_log(url: str) -> str:
+    """Scheme and host only: an invalid URL may carry a user and password that must not reach the log."""
+    parts = urlsplit(url.strip())
+    if parts.scheme in ("http", "https") and parts.hostname:
+        return f"{parts.scheme}://{parts.hostname}"
+    return "(hidden)" if "@" in url else url
+
+
 def build_speaker(config: TTSConfig) -> TextToSpeech:
     if not config.enabled or config.engine == "none":
         return NullSpeaker()
     # Poetry extra name per engine (for the install hint in the warning).
     extra = {"voxcpm": "voxcpm", "kokoro": "kokoro"}.get(config.engine, "tts")
+    if config.engine == "external":
+        from app.protocol.tts_provider import url_is_valid
+
+        if not url_is_valid(config.external_url):
+            print(
+                _("[VoiceMate] ⚠ TTS disabled: the external provider URL '{url}' is not valid.").format(
+                    url=_url_for_log(config.external_url)
+                ),
+                file=sys.stderr,
+            )
+            return NullSpeaker()
     if not tts_feature.is_available(config.engine):
         print(
             _("[VoiceMate] ⚠ TTS disabled: engine '{engine}' packages not installed.").format(engine=config.engine),

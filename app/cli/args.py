@@ -268,11 +268,30 @@ def _add_tts_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--tts-engine",
         default=None,  # None = use the engine saved during setup, or "omnivoice"
-        choices=["omnivoice", "kokoro", "voxcpm", "none"],
+        choices=["omnivoice", "kokoro", "voxcpm", "external", "none"],
         help=(
             "TTS engine. 'omnivoice' (default): diffusion-based, clones voices, but heavy. "
             "'kokoro': lightweight/realtime, low GPU, fixed voices (no cloning). "
-            "'voxcpm': alternative (heavier). 'none': disables it."
+            "'voxcpm': alternative (heavier). 'external': a provider over HTTP "
+            "(docs/tts-provider-protocol.md; see --tts-url). 'none': disables it."
+        ),
+    )
+    parser.add_argument(
+        "--tts-url",
+        default=None,  # None = the URL saved in the config, or the protocol default
+        help="Base URL of the external TTS provider (only with --tts-engine=external; default http://127.0.0.1:8765).",
+    )
+    parser.add_argument(
+        "--tts-external-voice",
+        default=None,
+        help="Provider voice id (only with --tts-engine=external; empty = the provider's default voice).",
+    )
+    parser.add_argument(
+        "--tts-options",
+        default=None,
+        help=(
+            "JSON object passed through to the external provider as `options` "
+            "(for example '{\"speed\": 1.1}'). The token is not a flag: set VOICEMATE_TTS_TOKEN."
         ),
     )
     parser.add_argument(

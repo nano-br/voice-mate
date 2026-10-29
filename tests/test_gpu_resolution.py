@@ -60,6 +60,17 @@ def test_persisted_tts_disabled_respected() -> None:
     assert config.tts.enabled is False
 
 
+def test_explicit_tts_engine_overrides_persisted_disabled() -> None:
+    args = parse_args(["--tts-engine", "external"])
+    config = build_config(args, PersistedConfig(gpu_vendor="cpu", tts_enabled=False))
+    assert config.tts.enabled is True
+
+
+def test_explicit_tts_engine_none_disables() -> None:
+    config = build_config(parse_args(["--tts-engine", "none"]), PersistedConfig(gpu_vendor="cpu", tts_enabled=True))
+    assert config.tts.enabled is False
+
+
 def test_persisted_clipboard_flow_disables_claude() -> None:
     config = build_config(parse_args([]), PersistedConfig(gpu_vendor="cpu", default_flow="clipboard"))
     assert config.claude_chat_enabled is False

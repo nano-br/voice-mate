@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import sys
 from pathlib import Path
-from typing import cast, get_args
+from typing import Any, cast, get_args
 
 from app.core.config import (
     ClaudeChatConfig,
@@ -24,6 +26,7 @@ from app.core.config import (
 from app.i18n import _
 from app.platform.kinds import PlatformKind, TriggerKind
 from app.protocol.models import SttMode
+from app.protocol.tts_provider import DEFAULT_URL, TOKEN_ENV
 from app.setup.gpu_detect import detect_gpu
 from app.setup.persisted_config import PersistedConfig
 
@@ -98,6 +101,10 @@ def _resolve_transcription_language(args: argparse.Namespace, output_lang: str) 
 def _resolve_tts_enabled(args: argparse.Namespace, persisted: PersistedConfig) -> bool:
     if args.no_tts:
         return False
+    # An engine named on the command line (the companion's Voice tab) is a choice made now:
+    # it wins over the "TTS off" remembered from setup.
+    if args.tts_engine is not None:
+        return args.tts_engine != "none"
     if persisted.tts_enabled is not None:
         return persisted.tts_enabled
     return True
@@ -110,6 +117,39 @@ def _resolve_tts_engine(args: argparse.Namespace, persisted: PersistedConfig) ->
     if persisted.tts_engine is not None:
         return persisted.tts_engine
     return "omnivoice"
+
+
+def _resolve_external_options(args: argparse.Namespace, persisted: PersistedConfig) -> dict[str, Any]:
+    """Precedence: --tts-options > saved config. Must be a JSON object; anything else is ignored
+    with a warning (a typo here must not stop the engine from starting)."""
+    raw = args.tts_options if args.tts_options is not None else persisted.tts_external_options
+    if not raw or not raw.strip():
+        return {}
+    try:
+        value = json.loads(raw)
+    except ValueError:
+        value = None
+    if not isinstance(value, dict):
+        print(_("[VoiceMate] ⚠ TTS options ignored: they must be a JSON object."), file=sys.stderr)
+        return {}
+    return value
+
+
+def _resolve_external_url(args: argparse.Namespace, persisted: PersistedConfig) -> str:
+    return args.tts_url or persisted.tts_external_url or DEFAULT_URL
+
+
+def _resolve_external_voice(args: argparse.Namespace, persisted: PersistedConfig) -> str:
+    if args.tts_external_voice is not None:
+        return str(args.tts_external_voice)
+    return persisted.tts_external_voice or ""
+
+
+def _resolve_external_token(persisted: PersistedConfig) -> str:
+    """Precedence: VOICEMATE_TTS_TOKEN > saved config. Never a flag (it would show in `ps`).
+    The variable is taken out of the environment once read, so the processes the engine starts
+    later (the Claude CLI, the whisper server) do not inherit the provider's token."""
+    return os.environ.pop(TOKEN_ENV, "").strip() or (persisted.tts_external_token or "").strip()
 
 
 def _resolve_claude_enabled(args: argparse.Namespace, persisted: PersistedConfig) -> bool:
@@ -223,6 +263,10 @@ def build_config(args: argparse.Namespace, persisted: PersistedConfig | None = N
             language=transcription_language,
             voice_description=args.tts_voice,
             kokoro_voice=args.tts_kokoro_voice,
+            external_url=_resolve_external_url(args, persisted),
+            external_voice=_resolve_external_voice(args, persisted),
+            external_token=_resolve_external_token(persisted),
+            external_options=_resolve_external_options(args, persisted),
             cfg_value=args.tts_cfg_value,
             inference_timesteps=args.tts_inference_timesteps,
             device=tts_device,

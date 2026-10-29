@@ -24,6 +24,10 @@ Routes (payloads in `app.protocol.models`, semantics in docs/companion-app.md):
     POST /results/ack AckRequest             -> AckResponse | 409 | 410
     GET  /results?state=unacked|recent&limit=&client_id=&instance=  -> ResultsResponse
     POST /shutdown  ShutdownRequest (optional body) -> {"ok": true}, then the daemon stops
+  voice (protocol voicemate-tts v1, docs/tts-provider-protocol.md; app.daemon.tts_endpoint)
+    GET  /tts/v1/info, /tts/v1/health; POST /tts/v1/speak (streamed PCM), /tts/v1/cancel,
+    /tts/v1/warmup. Same token and hardening; they answer while the engine loads, with the
+    protocol's own error bodies.
 
 Browser hardening: WSL2 forwards this port to Windows' loopback, where any web
 page can reach it. Requests carrying an `Origin` header (browsers always send
@@ -54,6 +58,7 @@ from urllib.parse import parse_qs, urlparse
 from app.daemon.auth import bearer_matches
 from app.daemon.hub import InstanceMismatch, UnknownClient
 from app.daemon.lifecycle import Lifecycle
+from app.daemon.tts_endpoint import AudioBody, TtsEndpoint, TtsReply, is_tts_path, tts_error
 from app.i18n import _, active_language
 from app.protocol.models import (
     API_VERSION,
@@ -135,6 +140,7 @@ class _Reply:
     body: Mapping[str, object]
     headers: tuple[tuple[str, str], ...] = ()
     after: Callable[[], None] | None = None  # runs once the response was sent
+    stream: AudioBody | None = None  # a PCM body sent as it is produced (`/tts/v1/speak`)
 
 
 def _error(status: int, message: str, **extra: object) -> _Reply:
@@ -187,8 +193,10 @@ class ApiServer:
         token: str | None = None,
         lifecycle: Lifecycle | None = None,
         on_shutdown: Callable[[ShutdownReason], None] | None = None,
+        tts: TtsEndpoint | None = None,
     ) -> None:
         self._status = status
+        self.tts = tts or TtsEndpoint()
         self._hub = status.hub
         self._info = info
         self._control = control
@@ -268,6 +276,7 @@ class ApiServer:
         if already:
             self._stopped.wait(grace + 5.0)
             return
+        self.tts.close()  # a voice stream in flight would hold its request open
         try:
             if server is not None:
                 if serving is not None:
@@ -286,6 +295,8 @@ class ApiServer:
             return _error(403, "unexpected Host header")
         parsed = urlparse(raw_path)
         path = parsed.path
+        if is_tts_path(path):
+            return self._tts(method, path, headers, body)
         routes, other, other_method = (
             (_GET_ROUTES, _POST_ROUTES, "POST") if method == "GET" else (_POST_ROUTES, _GET_ROUTES, "GET")
         )
@@ -311,6 +322,22 @@ class ApiServer:
         if isinstance(client_id, str) and client_id and path not in ("/events", "/unregister"):
             self._hub.touch(client_id)  # any request carrying a client_id renews its leases
         return self._route(path, query, payload)
+
+    def _tts(self, method: str, path: str, headers: Mapping[str, str], body: bytes) -> _Reply:
+        """The voice routes: the daemon's token, the protocol's error bodies, no readiness gate."""
+        reply: TtsReply
+        if self._token is not None and not bearer_matches(headers.get("authorization"), self._token):
+            reply = tts_error("unauthorized", "a bearer token is required")
+            return _Reply(reply.status, reply.body or {}, headers=(("WWW-Authenticate", "Bearer"),))
+        payload: dict[str, object] = {}
+        if method == "POST":
+            try:
+                payload = self._parse_body(body)
+            except ValueError:
+                reply = tts_error("bad_request", "the body must be a JSON object")
+                return _Reply(reply.status, reply.body or {})
+        reply = self.tts.handle(method, path, payload)
+        return _Reply(reply.status, reply.body or {}, headers=reply.headers, stream=reply.stream)
 
     @staticmethod
     def _parse_body(body: bytes) -> dict[str, object]:
@@ -601,6 +628,9 @@ class _Handler(BaseHTTPRequestHandler):
             reply.after()
 
     def _send(self, reply: _Reply) -> None:
+        if reply.stream is not None:
+            self._send_stream(reply, reply.stream)
+            return
         data = json.dumps(reply.body, ensure_ascii=False).encode("utf-8")
         try:
             self.send_response(reply.status)
@@ -613,6 +643,34 @@ class _Handler(BaseHTTPRequestHandler):
             self.wfile.write(data)
         except (BrokenPipeError, ConnectionResetError):
             pass  # the client gave up (e.g. a long poll past its own timeout)
+
+    def _send_stream(self, reply: _Reply, body: AudioBody) -> None:
+        """Raw PCM as it is produced, as an HTTP/1.1 chunked body. The terminating chunk is written
+        only when the synthesis ended normally: if it broke mid-stream the connection just drops,
+        which a client sees as a cut body (`IncompleteRead`), not as the end of the speech. A
+        client that hangs up mid-stream is how a cancel looks too."""
+        self.close_connection = True
+        self.protocol_version = "HTTP/1.1"  # chunked encoding needs it; the other replies stay 1.0
+        try:
+            self.send_response(reply.status)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Transfer-Encoding", "chunked")
+            self.send_header("Connection", "close")
+            for name, value in reply.headers:
+                self.send_header(name, value)
+            self.end_headers()
+            for data in body:
+                self.wfile.write(b"%x\r\n%b\r\n" % (len(data), data))
+                self.wfile.flush()
+            self.wfile.write(b"0\r\n\r\n")
+            self.wfile.flush()
+        except OSError:
+            pass  # the client closed the connection (a cancel) or stopped reading
+        except Exception:  # noqa: BLE001 (request boundary: the synthesis broke mid-stream)
+            traceback.print_exc()  # no terminating chunk: the client sees the body cut short
+        finally:
+            body.close()
 
     def log_message(self, *args: object) -> None:  # silence the default per-request log
         return

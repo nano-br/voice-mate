@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import sys
 import threading
-from typing import Any
+from collections.abc import Iterator
+from typing import Any, Final
 
 import numpy as np
 from numpy.typing import NDArray
@@ -26,6 +27,7 @@ from numpy.typing import NDArray
 from app.core.config import TTSConfig
 from app.core.rocm_env import configure_rocm_env
 from app.features.tts.audio_player import AudioSink, create_audio_player
+from app.features.tts.pcm import PcmInfo, PcmVoice, SynthesisError
 from app.i18n import _
 
 _SAMPLE_RATE = 24000
@@ -41,6 +43,56 @@ _KOKORO_LANG_CODES = {
     "ja": "j",
     "zh": "z",
 }
+
+# The Kokoro-82M voices (hexgrad/Kokoro-82M, VOICES.md). The first letter of an id is the
+# language of the pipeline that can speak it, the second its gender (f/m).
+KOKORO_VOICES: Final = (
+    *("af_heart", "af_alloy", "af_aoede", "af_bella", "af_jessica", "af_kore", "af_nicole"),
+    *("af_nova", "af_river", "af_sarah", "af_sky", "am_adam", "am_echo", "am_eric", "am_fenrir"),
+    *("am_liam", "am_michael", "am_onyx", "am_puck", "am_santa"),
+    *("ef_dora", "em_alex", "em_santa", "ff_siwis", "if_sara", "im_nicola"),
+    *("jf_alpha", "jf_gongitsune", "jf_nezumi", "jf_tebukuro", "jm_kumo"),
+    *("pf_dora", "pm_alex", "pm_santa"),
+    *("zf_xiaobei", "zf_xiaoni", "zf_xiaoxiao", "zf_xiaoyi", "zm_yunjian", "zm_yunxi", "zm_yunxia", "zm_yunyang"),
+)
+_LANGUAGE_TAGS = {"a": "en-US", "e": "es", "f": "fr", "i": "it", "j": "ja", "p": "pt-BR", "z": "zh-CN"}
+
+
+def kokoro_voices(lang_code: str, configured: str) -> tuple[PcmVoice, ...]:
+    """The voices a pipeline of `lang_code` speaks, the configured one first and marked default."""
+    ids = [voice for voice in KOKORO_VOICES if voice[0] == lang_code and voice != configured]
+    if configured:
+        ids.insert(0, configured)
+    language = _LANGUAGE_TAGS.get(lang_code)
+    return tuple(
+        PcmVoice(
+            id=voice,
+            name=f"{voice.partition('_')[2].capitalize() or voice} ({voice})",
+            languages=(language,) if language else (),
+            default=voice == configured,
+        )
+        for voice in ids
+    )
+
+
+class _KokoroStream:
+    """One synthesis handed over as chunks (`KokoroSpeaker.open_pcm`)."""
+
+    sample_rate = _SAMPLE_RATE
+
+    def __init__(self, chunks: Iterator[NDArray[np.float32]]) -> None:
+        self._chunks = chunks
+        self._closed = threading.Event()
+
+    def chunks(self) -> Iterator[NDArray[np.float32]]:
+        for chunk in self._chunks:
+            if self._closed.is_set():
+                return
+            if chunk.size > 0:
+                yield chunk
+
+    def close(self) -> None:
+        self._closed.set()
 
 
 class KokoroSpeaker:
@@ -110,6 +162,29 @@ class KokoroSpeaker:
         self._stop_event.set()
         self._player.abort()
 
+    # ── PCM for the engine's /tts endpoint (PcmSynthesizer) ──────────────────
+
+    def pcm_info(self) -> PcmInfo:
+        if self._closed or self._load_failed:
+            raise SynthesisError("not_ready", "Kokoro failed to load")
+        lang_code = _KOKORO_LANG_CODES.get(self._config.language, "a")
+        return PcmInfo("Kokoro", self._sample_rate, kokoro_voices(lang_code, self._config.kokoro_voice), ("streaming",))
+
+    def pcm_ready(self) -> bool:
+        return self._pipeline is not None
+
+    def pcm_warmup(self) -> None:
+        self._ensure_pipeline()
+
+    def open_pcm(self, text: str, *, voice: str | None) -> _KokoroStream:
+        """Synthesize without playing (the caller holds the speech gate, so the pipeline is free)."""
+        if self._closed or not self._ensure_pipeline():
+            raise SynthesisError("not_ready", "Kokoro failed to load")
+        chosen = voice or self._config.kokoro_voice
+        if chosen not in {item.id for item in self.pcm_info().voices}:
+            raise SynthesisError("unknown_voice", f"unknown Kokoro voice {chosen!r}")
+        return _KokoroStream(self._synthesize(text, chosen))
+
     def close(self) -> None:
         if self._closed:
             return
@@ -168,9 +243,9 @@ class KokoroSpeaker:
         # --tts-device cuda if you want the GPU.
         return "cpu"
 
-    def _synthesize(self, text: str) -> Any:  # noqa: ANN401 — generator of chunks
+    def _synthesize(self, text: str, voice: str | None = None) -> Any:  # noqa: ANN401 (generator of chunks)
         """Iterate Kokoro's generator, yielding each chunk as mono float32."""
-        for result in self._pipeline(text, voice=self._config.kokoro_voice):
+        for result in self._pipeline(text, voice=voice or self._config.kokoro_voice):
             audio = result[2] if isinstance(result, (list, tuple)) else getattr(result, "audio", result)
             yield self._coerce(audio)
 

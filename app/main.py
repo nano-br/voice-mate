@@ -25,7 +25,9 @@ from app.core.watchdog import Watchdog
 from app.daemon.auth import TOKEN_ENV, default_token_path, load_or_create_token
 from app.daemon.lifecycle import Lifecycle, hard_exit, watch_stdin_eof
 from app.daemon.server import ApiServer, EngineInfo
+from app.features.tts import PCM_ENGINES
 from app.features.tts.base import NullSpeaker, TextToSpeech
+from app.features.tts.pcm import GatedSpeaker, SpeechGate
 from app.features.whispercpp.server_backend import kill_live_servers
 from app.i18n import _, setup_locale
 from app.platform.audio_probe import AudioServerProbe
@@ -36,8 +38,11 @@ from app.protocol.models import FlowInfo, ShutdownReason, SttInfo
 from app.setup.persisted_config import load_persisted
 
 
-def _start_warmup_thread(transcriber: object, speaker: TextToSpeech) -> threading.Event:
+def _start_warmup_thread(transcriber: object, speaker: TextToSpeech, *, warm_speaker: bool = True) -> threading.Event:
     """Warm up STT and TTS in ONE thread, sequentially (avoids GPU contention).
+
+    `warm_speaker` is False when nothing in the engine speaks by itself (no chat flow): the
+    speaker then only serves the companion's `/tts`, which loads the model on demand.
 
     Returns an event set once the STT warmup is over (successful or not).
     """
@@ -50,7 +55,7 @@ def _start_warmup_thread(transcriber: object, speaker: TextToSpeech) -> threadin
                 stt_warmup()
         finally:
             stt_warm.set()
-        if speaker.is_active():
+        if warm_speaker and speaker.is_active():
             speaker.warmup()
 
     threading.Thread(target=_warmup_all, daemon=True, name="Warmup").start()
@@ -175,19 +180,29 @@ def _start_api(
     return api
 
 
-def _build_engine(args: Namespace, config: Config, flows: list[FlowConfig], status: SessionStatus) -> _Engine:
+def _build_engine(
+    args: Namespace, config: Config, flows: list[FlowConfig], status: SessionStatus, api: ApiServer | None = None
+) -> _Engine:
     recorder = Recorder(sample_rate=config.sample_rate)
     transcriber = build_transcriber(config)
     audio_feedback = AudioFeedback()
 
     if args.tts_reset_seed:
         delete_existing_auto_seed(config.tts)
-    speaker: TextToSpeech = build_speaker(config.tts) if _has_chat_flow(flows) else NullSpeaker()
+    # The speaker serves the claude_chat flow and, through the HTTP API, the companion's
+    # assistant voice (`/tts`); the gate keeps the two from talking at once. Without the chat
+    # flow it is only built for an engine that can serve that voice, and not warmed up: the
+    # model loads when the companion first asks for the voice (no model loaded for nothing).
+    has_chat_flow = _has_chat_flow(flows)
+    wanted = has_chat_flow or (api is not None and config.tts.engine in PCM_ENGINES)
+    speaker: TextToSpeech = NullSpeaker()
+    if wanted:
+        speaker = GatedSpeaker(build_speaker(config.tts), api.tts.gate if api is not None else SpeechGate())
     # SERIALIZED warmup in the background (STT then TTS, never concurrent): both
     # pay for ROCm kernel tuning at startup. Running them at the same time stalls
     # the GPU (the 1st transcription once took 45s vs ~3s in isolation) and the
     # thrash glitches WSLg audio. In sequence each one runs fast.
-    stt_warm = _start_warmup_thread(transcriber, speaker)
+    stt_warm = _start_warmup_thread(transcriber, speaker, warm_speaker=has_chat_flow)
 
     # The handlers publish every result to the session hub (`status`): on WSL2 the
     # Windows side reads it there and sets the native clipboard itself.
@@ -252,6 +267,10 @@ def _close_engine(engine: _Engine) -> None:
             handler.close()
         except Exception as exc:  # noqa: BLE001
             print(_("[VoiceMate] Failed to close handler: {exc}").format(exc=exc), file=sys.stderr)
+    try:
+        engine.speaker.close()  # idempotent: the claude_chat handler may have closed it already
+    except Exception as exc:  # noqa: BLE001
+        print(_("[VoiceMate] Failed to close the speaker: {exc}").format(exc=exc), file=sys.stderr)
     # Shut down transcriber resources (e.g. the whisper-server subprocess). close()
     # is optional in the Protocol: only some backends (server) implement it.
     transcriber_close = getattr(engine.transcriber, "close", None)
@@ -309,7 +328,7 @@ def main() -> None:
         audio_probe.start()
 
     try:
-        engine = _build_engine(args, config, configured_flows, status)
+        engine = _build_engine(args, config, configured_flows, status, api)
     except KeyboardInterrupt:  # Ctrl+C while the model loads: just leave
         kill_live_servers()
         print(_("\n[VoiceMate] Shutting down."))
@@ -327,6 +346,7 @@ def main() -> None:
     if api is not None:
         stt = describe_transcriber(engine.transcriber, config)
         api.attach(engine.session, _engine_info(platform, trigger, engine.flows, tts_active, stt))
+        api.tts.attach(engine.speaker)
     listener: InputListener = build_listener(config, engine.flows, engine.session, api)
     _print_ready(config, engine.flows, api, supervised=args.supervised)
 

@@ -27,7 +27,7 @@ _FLOWS: tuple[FlowKind, ...] = ("clipboard", "claude_chat")
 _PLATFORMS: tuple[PlatformKind, ...] = ("windows", "linux-x11", "linux-wayland", "wsl2")
 _TRIGGERS: tuple[TriggerKind, ...] = ("keyboard-hooks", "pynput", "evdev", "socket")
 _STT_STRATEGIES: tuple[SttStrategy, ...] = ("auto", "faster-whisper-rocm", "whispercpp", "openai-whisper")
-_TTS_ENGINES: tuple[TTSEngine, ...] = ("omnivoice", "kokoro", "voxcpm", "none")
+_TTS_ENGINES: tuple[TTSEngine, ...] = ("omnivoice", "kokoro", "voxcpm", "external", "none")
 _STT_MODES: tuple[SttMode, ...] = ("auto", "cpu", "gpu")
 
 
@@ -39,6 +39,12 @@ class PersistedConfig:
     whisper_backend: WhisperBackend | None = None
     tts_enabled: bool | None = None
     tts_engine: TTSEngine | None = None
+    # External TTS provider (docs/tts-provider-protocol.md). The options are a JSON object
+    # kept as text; the token is a secret, so it is only read from here or from the environment.
+    tts_external_url: str | None = None
+    tts_external_voice: str | None = None
+    tts_external_token: str | None = None
+    tts_external_options: str | None = None
     default_flow: FlowKind | None = None
     platform: PlatformKind | None = None
     trigger: TriggerKind | None = None
@@ -69,6 +75,10 @@ def load_persisted(path: Path = CONFIG_PATH) -> PersistedConfig:
         whisper_backend=_read_choice(data, "whisper_backend", _BACKENDS),
         tts_enabled=_read_bool(data, "tts_enabled"),
         tts_engine=_read_choice(data, "tts_engine", _TTS_ENGINES),
+        tts_external_url=_read_str(data, "tts_external_url"),
+        tts_external_voice=_read_str(data, "tts_external_voice"),
+        tts_external_token=_read_str(data, "tts_external_token"),
+        tts_external_options=_read_str(data, "tts_external_options"),
         default_flow=_read_choice(data, "default_flow", _FLOWS),
         platform=_read_choice(data, "platform", _PLATFORMS),
         trigger=_read_choice(data, "trigger", _TRIGGERS),
@@ -113,6 +123,11 @@ def _read_choice(data: dict[str, Any], key: str, allowed: tuple[str, ...]) -> An
     return None
 
 
+def _read_str(data: dict[str, Any], key: str) -> str | None:
+    value = data.get(key)
+    return value if isinstance(value, str) else None
+
+
 def _read_bool(data: dict[str, Any], key: str) -> bool | None:
     value = data.get(key)
     return value if isinstance(value, bool) else None
@@ -129,4 +144,5 @@ def _toml_value(value: str | bool | int) -> str:
         return "true" if value else "false"
     if isinstance(value, int):
         return str(value)
-    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r")
+    return f'"{escaped}"'
