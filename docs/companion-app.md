@@ -340,6 +340,8 @@ they belong to:
 
 ### Tray states, cues and reactions
 
+<p align="center"><img src="assets/screenshots/tray-states.png" width="584" alt="The tray icon in each state, on a dark and a light taskbar, and the badge shown when answers are waiting"></p>
+
 | `TrayState` | Badge | Tooltip | Cue on entering |
 |---|---|---|---|
 | `stopped` | grey octagon, dimmed glyph | "VoiceMate is stopped" | none |
@@ -416,9 +418,10 @@ since the daemon never beeps for them.
 | `restarting` / `backoff` | `restarting` |
 | `failed` | `error` |
 
-Menu: status line; "Dictate (Ctrl+Alt+V)" / "Ask Claude (Ctrl+Alt+A)", which become
+Menu: status line; "Open VoiceMate"; "Assistant" (only when the assistant is on); "Dictate (Ctrl+Alt+V)" / "Ask Claude (Ctrl+Alt+A)", which become
 "Stop and copy" / "Stop and ask Claude" while recording; Cancel; Recent (last 10,
-click copies) and Not copied (never delivered, click copies); Mute sounds; Engine >
+click copies) and Not copied (never delivered, click copies); Mute sounds; Transcription (CPU or GPU
+mode); Engine >
 Restart engine / Restart WSL... / Open logs; a "Restart WSL now..." item while
 `pending_wsl_restart`; Settings...; Quit VoiceMate. Left click opens the status
 window, which shows the same information and a "Quit VoiceMate" button.
@@ -569,6 +572,9 @@ stt_mode = "cpu"
 stt_cpu_model = "large-v3-turbo"
 stt_gpu_model = "large-v3-turbo"
 
+[assistant]                # see "Voice assistant"
+mode = "off"
+
 [[hotkeys]]
 flow = "clipboard"
 chord = "ctrl+alt+v"
@@ -610,6 +616,9 @@ so. More in [configuration.md](configuration.md#speech-to-text-modes).
 | Settings (`companion.toml`) | `%APPDATA%\VoiceMate\` | `${XDG_CONFIG_HOME:-~/.config}/voicemate/` |
 | Logs (`companion.log`, `engine.log`) | `%LOCALAPPDATA%\VoiceMate\logs\` | `${XDG_STATE_HOME:-~/.local/state}/voicemate/logs/` |
 | Not copied list (`pending.json`) | `%LOCALAPPDATA%\VoiceMate\` | `${XDG_STATE_HOME:-~/.local/state}/voicemate/` |
+| Assistant session (`assistant-session.json`, working folder `assistant\`) | `%LOCALAPPDATA%\VoiceMate\` | `${XDG_STATE_HOME:-~/.local/state}/voicemate/` |
+| Assistant inbox (`assistant-inbox.json`), started conversations (`assistant-conversations\`), written personality (`assistant-personality.md`) | `%LOCALAPPDATA%\VoiceMate\` | `${XDG_STATE_HOME:-~/.local/state}/voicemate/` |
+| Claude Desktop profiles (`desktop-profile\`: downloaded and imported) | `%LOCALAPPDATA%\VoiceMate\` | same base, unused (the Desktop driver is Windows only) |
 | Rendered cues | `%LOCALAPPDATA%\VoiceMate\cues\` | `${XDG_CACHE_HOME:-~/.cache}/voicemate/cues/` |
 
 The environment variable always wins, and the home directory is looked up only when
@@ -676,6 +685,89 @@ as "not found".
   holds what is waiting for a manual copy, goes away when the list is empty (also
   after "Clear list", with its `.tmp`), and the Windows uninstaller deletes it (with
   its `.tmp` and `.broken-*` copies). The text is never written to the logs.
+
+### Voice tab (external TTS provider)
+
+<p align="center"><img src="assets/screenshots/en/settings-voice.png" width="743" alt="The Voice tab of VoiceMate Settings, with the voice engine and the custom provider fields"></p>
+
+Settings > Voice edits `tts_engine` (`default` leaves the engine's own setup, `external` is a service that follows [tts-provider-protocol.md](tts-provider-protocol.md)), `tts_url`, `tts_voice` and `tts_token` (see [configuration.md](configuration.md#companion-file-companiontoml)).
+
+With `external`, the companion starts the engine with `--tts-engine external --tts-url=... --tts-external-voice=...` (with `=`, so a value that starts with `-` is not read as a flag) and gives the token to it in `VOICEMATE_TTS_TOKEN`; applying a change restarts the engine. **Load voices** and **Test voice** ask the provider directly. The engine also relays the provider to the companion under `/tts/v1`, which is how the assistant speaks with it (see below).
+
+### Voice assistant
+
+The companion can run a voice-first personal assistant: one Claude conversation, the central one, that conducts the person's other conversations. It is **experimental**. This section is the contract of what exists; how to use it is in [usage.md](usage.md#voice-assistant-experimental), the diagram in [architecture.md](architecture.md#61-voice-assistant-experimental), the design in [research/voice-assistant-design.md](research/voice-assistant-design.md), the lab results behind it in [research/claude-code-client.md](research/claude-code-client.md) and the Desktop driver's data in [desktop-profile.md](desktop-profile.md).
+
+It is off by default. Settings > Assistant edits the `[assistant]` table of `companion.toml` (every key, default and allowed value: [configuration.md](configuration.md#assistant-settings-experimental)):
+
+```toml
+[assistant]
+mode = "own_session"      # "off", "own_session" or "desktop"
+desktop_conversation = "" # mode "desktop": the exact sidebar title of the central conversation
+model = "haiku"           # "haiku", "sonnet" or "opus" (the CLI aliases)
+effort = "low"            # "low", "medium" or "high"
+permission_mode = "acceptEdits"   # "default", "acceptEdits" or "bypassPermissions"
+answer_delivery = "announce"      # "speak", "announce", "sound" or "silent"
+speak_replies = true      # the engine speaks the voice block
+voice_commands = true     # understand "go to the conversation X" and similar
+personality_source = "none"       # "none", "file" or "custom"
+skill_language = "auto"   # "auto", "en" or "pt-BR"
+talk_hotkey = "ctrl+alt+s"
+```
+
+An invalid value falls back to its default with a log line, as everywhere in this file, and a `personality_file` or `custom_skill_dir` that does not exist is refused when applied.
+
+#### Two ports for the central conversation
+
+The service owns one `ConversationPort`, chosen by `mode`; switching stops one and starts the other.
+
+| | `own_session` | `desktop` |
+|---|---|---|
+| Port | `OwnSessionPort`: a `claude -p --input-format stream-json` child named "VoiceMate" in `<state dir>/assistant`, with the model, effort and `--permission-mode` above and the Desktop's host variables removed from its environment | `DesktopConversationPort`: no process; it finds the transcript of the Desktop conversation whose custom title is exactly `desktop_conversation` and follows it |
+| Writing | The prompt on the child's stdin | A flash (below) |
+| First prompt | `/voicemate-assistant`, then the `remote_control` request (link in the window; the assistant keeps working locally if it fails) | `/voicemate-assistant`, once per VoiceMate start |
+| Tools of the central | The `voicemate` tools (below) | The Desktop's own session tools (the `voicemate` tools do not exist) |
+| Session id | Kept in `assistant-session.json`; resumed with `--resume` only when no live process owns it | The Desktop's |
+| Errors shown | `cli_missing`, `not_logged_in`, `start_failed`, `exited`, `setup_failed` | `no_conversation` (none chosen), `setup_failed` (no transcript with that title), `start_failed` (a flash failed) |
+
+**A flash** (`app/companion/win/claude_desktop.py`, Windows only, UI Automation) brings the Claude Desktop window forward, clears the prompt's draft, pastes the text through the clipboard (the previous content is saved, and restored only if nobody copied anything during the flash: the clipboard sequence number is checked before the paste and before Enter; the text stays out of the Win+V history), presses Enter and gives the foreground back, in about 2 seconds. Three guards are checked before every key (each key is its own press): the Claude window owns the foreground, the open conversation is exactly `<title> - Claude Code`, and the keyboard focus is in the prompt.
+
+A failed guard types nothing and raises a typed error (`window_missing`, `conversation_missing`, `ambiguous`, `focus_lost`, `locked`, `busy`, `unavailable`). A Desktop flash failure is always a typed error (`DesktopError`): a clipboard held by another program becomes `busy`, a UI Automation failure (the window reloading or closing) becomes `unavailable`, so the window shows "Not sent to ..." instead of losing the message. One flash at a time. Reading never needs one. Where the controls are comes from the [profile](desktop-profile.md), loaded when the assistant starts, checked for a newer one off the worker (if "Check for a newer profile when the assistant starts" is on) and shared by every Desktop write.
+
+**The `voicemate` tools** (own mode; an SDK MCP server answered over the child's stdio, `app/companion/assistant/mcp_tools.py`): `list_conversations`, `read_conversation`, `send_to_conversation`, `start_conversation`, `set_conversation_model` and `stop_conversation`.
+
+The last three apply only to conversations VoiceMate started (`conversations.py`): each is its own `stream-json` child with its name, working folder, model, effort, the configured permission mode and Remote Control on; at most 4 are alive at once (the limit counts the ones still starting, so two starts at the same moment cannot pass it, and a start that ends after Quit is stopped at once); the list is kept in `assistant-conversations\conversations.json`, the ones that were running come back at the next start, and Quit stops the central and every started conversation at the same time, under one deadline, instead of one after the other, without forgetting them. A start with no model or effort uses `new_conversation_model` and `new_conversation_effort`. The writing tools never wait for the answer.
+
+In the desktop mode a send returns at once and the flash runs in the background; when it fails, a "Hear what's ready" digest goes back to the inbox and an answer note waits for the next central start, so nothing is lost.
+
+#### Around the conversation
+
+<p align="center"><img src="assets/screenshots/en/assistant-inbox.png" width="568" alt="The assistant window with the Answers waiting group and the Waiting for list"></p>
+
+- **Skill.** On start the chosen skill (`skill_language`, or the folder in `custom_skill_dir` when it holds a `SKILL.md`; otherwise the packaged one with a notice) is copied to `<claude home>/skills/` (files you edited are kept; the new version goes beside them as `.new`). The packaged skills are `app/companion/assistant/skill/en/voicemate-assistant` and `.../pt-BR/voicemate-assistant`. `auto` picks the Portuguese one when the interface is Portuguese. The skill does not depend on VoiceMate being installed ([usage.md](usage.md#the-skill)).
+- **`assistant.json`.** Written at `~/.voicemate/assistant.json` on every start and settings change: `version`, `language` (with the Portuguese skill it says `"pt-BR"` and the voice speaks pt-BR, whatever the interface language; with the English skill or a custom one it follows the interface), `user_name`, `personality_file`, `notes_vault`, `expressions`, `mode`, `answer_delivery`, `inbox` (title, id and time of each held answer), `pending` (the requests the assistant is waiting on: session id, title, reason, since when) and `settings` (the catalog). VoiceMate never reads the personality file itself; with the source `custom` it hands the skill its own `assistant-personality.md`.
+- **Window** (tray menu > Assistant, only when the mode is not off). The last 30 messages read from the transcript on disk, so prompts typed on the phone or in the Desktop appear too; the **Answers waiting** group (the list, the selected answer, **Hear all**, **Clear**); the "Waiting for" list (what the assistant is waiting on in other conversations); **Back to the assistant**; the input box, disabled with a reason while off, starting, answering or broken.
+- **Replies.** The template (`<voice>`, `<display>`, `<actions>`) is parsed by `app/protocol/assistant_reply.py`. The voice block is spoken (below). Actions carried out: `set_setting`, `read_inbox`, `clear_inbox`, `follow_up`, `follow_up_done` and `focus`. `follow_up` adds (or updates) an entry of the "Waiting for" list (conversation, title, reason, since when); `follow_up_done` removes it; `focus` makes the text screen follow that conversation, and `focus` with no session id comes back to the central. `open_conversation` and `notify` are parsed and logged only.
+- **Voice.** `app/companion/voice.py` sends the voice block, sentence by sentence, to the engine's `/tts/v1` endpoint and plays the PCM on this computer; it uses `assistant.voice` ("" = the engine's default). When the engine cannot speak, replies stay text only with one notice per outage, and the short notices fall back to Windows speech. Any hotkey, a new prompt, "stop talking" and a mode change stop it at once.
+- **Talk hotkey.** `Ctrl+Alt+S` toggles the clipboard flow's recording; when it is the key that stops the recording, the final text goes to the assistant instead of the clipboard.
+
+#### Commands, direct mode and the inbox
+
+With `voice_commands` on, the detector (`commands.py`, no LLM, triggers in pt-BR, en and es as data) handles, when the text starts with the phrase: read the last answer (shown as a notice), stop talking, go to a conversation (the window follows it read-only until "Back to the assistant"), send to a conversation (turned into a prompt to the central, so VoiceMate is never a second writer), talk directly to a conversation and back to the assistant.
+
+Titles are matched fuzzily with a minimum score and a margin over the second best; otherwise a notice says "ambiguous" or "not found" and nothing is sent.
+
+**Direct mode** sends every prompt verbatim to one conversation (a VoiceMate-started one on its stdin, a Desktop one by a flash) until "back to the assistant" or the back hotkey; only those and another "talk directly" count as commands meanwhile. On return, the central gets one note with what was said and the last answer.
+
+**Answers.** The `AnswerWatcher` follows every conversation the central wrote to or started. When one finishes a turn, `answer_delivery` decides: `speak` sends it to the central as a note (marked `[voicemate:event]`, hidden from the window), except while you are dictating or while the text screen follows another conversation (direct mode or `focus`): then it waits in the inbox with an "answer" cue and a short spoken notice. The answer is quoted between `<<<` and `>>>` markers and the note says it is data, not instructions (the same in the "Hear what's ready" digest); the others keep it in the inbox (`assistant-inbox.json`, 50 items, survives restarts).
+
+`announce` and `sound` play the `answer` cue ("Answer ready" in Sounds), `announce` also says one line; none of it while a recording, transcription or spoken answer is in progress. The tray icon shows the **inbox** badge (a blue disc with an envelope flap) over a quiet state and the tooltip adds "Answers waiting: N". "Hear what's ready" (tray menu, `Ctrl+Alt+R`, **Hear all**, or the `read_inbox` action) sends the central one digest of every held answer and empties the inbox.
+
+**Hotkeys.** The assistant's five actions share the hotkey table, the conflict checks and the Hotkeys tab with the flows: `assistant_talk` (`ctrl+alt+s`), `assistant_window` (`ctrl+alt+w`), `assistant_digest` (`ctrl+alt+r`), `assistant_mode` (none; alternates `own_session` and `desktop`) and `assistant_back` (none). They are stored in the `[assistant]` table, so a file saved before they existed gets the defaults.
+
+**Settings by voice.** `settings_catalog.py` lists the keys the central may change, with type, allowed values or range and the current value. `set_setting` is checked against it and applied through the same path as the settings window; a refusal (`unknown_key`, `not_allowed`, `out_of_range`, `not_bool`, `bad_text`, `no_desktop_conversation`, `no_personality_file`) is shown and sent to the central. Hotkeys, files and folders, the voice engine and its token, and the engine settings are left out on purpose.
+
+Changing `mode`, `skill_language`, `custom_skill_dir` and, in the own mode, `effort` and `permission_mode` restarts the central conversation; the own `model` changes live; name, personality, vault, tags and delivery are written to `assistant.json`.
 
 ### Single instance, taskbar, autostart
 
@@ -758,13 +850,19 @@ as "not found".
 ## Repo layout
 
 ```
-app/protocol/          models.py (API_VERSION, Literals, TypedDicts)        # stdlib only
+app/protocol/          models.py (API_VERSION, Literals, TypedDicts),
+                       assistant_reply.py (voice/display/actions parser)  # stdlib only
 app/daemon/            events, leases, delivery, auth, readiness (engine side of API v2)
 app/companion/         contract.py, controller.py, client.py, model.py, settings_store.py,
                        cues.py, delivery.py (queue + reconciliation), relaunch.py
-                       (restart), supervisor/,
+                       (restart), stt.py (CPU/GPU modes), supervisor/,
+                       assistant/ (own Claude Code session, Desktop port, voicemate tools,
+                       conversations, notifier, inbox, session reader, commands, settings
+                       catalog, personality, skill install, packaged skills en/ and pt-BR/),
+                       voice.py (the assistant's voice through the engine's /tts/v1),
                        win/ (hotkeys, clipboard, audio devices, job object, jump list,
-                       autostart, single instance), linux/, ui/, main.py
+                       autostart, single instance, Claude Desktop driver and profile),
+                       linux/, ui/, main.py
 app/companion/assets/  voicemate.ico, voicemate-<size>.png (generated by tools/gen_icon.py)
 packaging/windows/     voicemate-companion.spec, voicemate_launcher.py, voicemate-companion.iss
 packaging/linux/       voicemate-companion.desktop (launcher template)

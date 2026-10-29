@@ -33,9 +33,11 @@ VoiceMate 能立刻把语音变成文字，随时交给任何 AI 工具：给编
 
 后来加入了第二个模块：与 Claude 的语音对话。你说话，Claude 回答，回答再由文字转语音（TTS）朗读出来。这个模块是可选的，也是**实验性**的。
 
+第三个模块刚刚起步：**语音助手**。它是一个 Claude 对话，知道我的其他对话在做什么，替我向它们提问，并在它们回答时用语音告诉我。它运行在 VoiceMate 启动的对话里，或我在 Claude Desktop 中已有的对话里。它是**实验性**功能，默认关闭。
+
 ## 目录
 
-[功能](#功能) · [截图](#截图) · [快速开始](#快速开始) · [使用](#使用) · [配置](#配置) · [架构](#架构) · [故障排查](#故障排查) · [文档](#文档) · [参与贡献](#参与贡献) · [许可证](#许可证)
+[功能](#功能) · [截图](#截图) · [快速开始](#快速开始) · [使用](#使用) · [语音助手](#语音助手-实验性) · [配置](#配置) · [架构](#架构) · [故障排查](#故障排查) · [文档](#文档) · [参与贡献](#参与贡献) · [许可证](#许可证)
 
 ## 功能
 
@@ -50,6 +52,7 @@ VoiceMate 能立刻把语音变成文字，随时交给任何 AI 工具：给编
 - 经过校验的剪贴板写入：应用写入文本，再读回来进行比对。无法进入剪贴板的文本会保留在“未复制”列表中，即使重启后也不会丢失。
 - 配套应用会负责监管引擎：在 WSL2 内启动引擎，引擎失败时重启它，WSL 的音频中断时重启 WSL。
 - 只为当前用户安装的安装程序（无需管理员权限），提供 5 种语言。
+- 两种语音识别模式，可在托盘菜单（“转写”）或设置中切换：**CPU**（把 GPU 留给其他工作）和 **GPU**（最快）。每种模式有自己的 Whisper 模型。尚未安装的模式会在询问并告知下载大小之后由应用安装，而且只装在引擎自己的环境里。
 
 <a id="languages"></a>**语言**：配套应用、引擎消息和安装程序支持英语、巴西葡萄牙语、西班牙语、俄语和简体中文。
 
@@ -60,7 +63,12 @@ VoiceMate 能立刻把语音变成文字，随时交给任何 AI 工具：给编
 
 **与 Claude 的语音对话（实验性）**
 - `Ctrl+Alt+A` 通过 Claude Code CLI 把你的语音发送给 Claude（使用你自己的登录账号：转写后的文本会发送给 Anthropic，音频不会）。回答会复制到剪贴板并朗读出来。
-- TTS 引擎：OmniVoice（没有保存任何选择时使用的引擎）、Kokoro（`make setup` 推荐的引擎）和 VoxCPM2。对话可以跨轮次继续；按下任何快捷键都会打断回答并开始新的录音。
+- TTS 引擎：OmniVoice（没有保存任何选择时使用的引擎）、Kokoro（`make setup` 推荐的引擎）和 VoxCPM2。也可以用你自己的：任何遵循 [TTS 提供方协议](docs/tts-provider-protocol.md) 的服务（设置 > 声音 > 自定义提供方）。对话可以跨轮次继续；按下任何快捷键都会打断回答并开始新的录音。
+
+**语音助手（实验性，默认关闭）**
+- 一个中央 Claude 对话，有两种模式：VoiceMate 自己的对话（VoiceMate 启动的 Claude Code 进程，也能在 Claude Desktop 和手机上看到），或你已有的一个 Claude Desktop 对话（通过短暂的键盘“闪现”写入，仅限 Windows）。它会列出、阅读并向你的其他对话发消息，还能在后台启动新对话。
+- 用 `Ctrl+Alt+S` 对它说话，并用引擎的声音（Kokoro 或你自己的提供方）听它回答。英语、葡萄牙语和西班牙语的语音指令可以朗读上一条回答、切换到某个对话、向它发送消息或直接与它交谈。窗口显示聊天和待听的回答；托盘上的蓝色角标和“回答已就绪”提示音会在回答到达时提醒你，`Ctrl+Alt+R` 朗读已就绪的内容。
+- 它能用语音修改一份固定清单中的 VoiceMate 设置，支持个性（文件、Obsidian 笔记库中的笔记或你自己写的文本），并使用英语或巴西葡萄牙语的技能，该技能也可以在任何 Claude Code 对话中单独使用。参见[语音助手](#语音助手-实验性)。
 
 ## 截图
 
@@ -70,7 +78,15 @@ VoiceMate 能立刻把语音变成文字，随时交给任何 AI 工具：给编
 
 <p align="center"><img src="docs/assets/screenshots/zh-CN/settings-general.png" width="724" alt="“VoiceMate 设置”的“常规”选项卡"><br><sub>“VoiceMate 设置”，“常规”选项卡。另见：<a href="docs/assets/screenshots/zh-CN/settings-hotkeys.png">“快捷键”</a>和<a href="docs/assets/screenshots/zh-CN/settings-sounds.png">“声音”</a>选项卡。</sub></p>
 
-<p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="托盘图标在各个状态下的样子，分别显示在深色和浅色任务栏上"><br><sub>托盘图标用角标显示状态。每个角标的含义：<a href="docs/usage.md#tray-icon-and-menu">Usage, tray icon and menu</a>（英文）。</sub></p>
+<p align="center"><img src="docs/assets/screenshots/zh-CN/settings-voice.png" width="724" alt="“VoiceMate 设置”的“声音”选项卡，含语音引擎和自定义提供方字段"><br><sub>“VoiceMate 设置”，“声音”选项卡：朗读回答的语音引擎，包括“自定义提供方（HTTP）”。</sub></p>
+
+<p align="center"><img src="docs/assets/screenshots/zh-CN/assistant.png" width="568" alt="VoiceMate 助手窗口和一段示例对话"><br><sub>助手窗口（**实验性**），从托盘菜单的“助手”打开。设置：<a href="docs/assets/screenshots/zh-CN/settings-assistant.png">“助手”</a>标签页。带有 CPU 或 GPU 选项的“转写”分组在上面的“常规”标签页里。</sub></p>
+
+<p align="center"><img src="docs/assets/screenshots/zh-CN/assistant-inbox.png" width="568" alt="助手窗口，含“待听的回答”分组和“等待中”列表"><br><sub>同一个窗口，含“待听的回答”分组和“等待中”列表。</sub></p>
+
+<p align="center"><img src="docs/assets/screenshots/zh-CN/settings-assistant-sections.png" width="724" alt="“VoiceMate 设置”的“助手”选项卡，滚动到“个性”“技能”和“Claude Desktop 配置文件”分组"><br><sub>向下滚动的“助手”选项卡：“个性”“技能”和“Claude Desktop 配置文件”分组。</sub></p>
+
+<p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="托盘图标在各个状态下的样子，分别显示在深色和浅色任务栏上，以及有待听的回答时显示的角标"><br><sub>托盘图标用角标显示状态，有待听的回答时显示蓝色角标。每个角标的含义：<a href="docs/usage.md#tray-icon-and-menu">Usage, tray icon and menu</a>（英文）。</sub></p>
 
 ## 快速开始
 
@@ -117,12 +133,56 @@ make run ARGS="--output-lang en"     # 用引擎自带的快捷键启动引擎�
 |---|---|---|
 | `Ctrl+Alt+V` | “听写” | 语音转为文本，复制到剪贴板 |
 | `Ctrl+Alt+A` | “询问 Claude” | 语音发送给 Claude，回答被复制并朗读出来（**实验性**） |
+| `Ctrl+Alt+S` | “与助手对话” | 语音发给助手，而不是剪贴板（**实验性**） |
+| `Ctrl+Alt+W` | “打开助手窗口” | 打开或关闭助手窗口 |
+| `Ctrl+Alt+R` | “收听已就绪的内容” | 助手朗读正在等待的回答 |
 
 按下 `Ctrl+Alt+V`，在开始提示音之后说话，再按一次 `Ctrl+Alt+V`，然后在任何地方用 `Ctrl+V` 粘贴。文本的去向由用来停止录音的那个快捷键决定。无法进入剪贴板的文本会留在 **未复制** 列表中（托盘菜单和状态窗口里都有），单击一下就能复制。要退出，请在托盘菜单中选择 **退出 VoiceMate**；不是由配套应用启动的引擎会继续运行。
 
 **听写语言。** 在设置 > **常规** 中，“听写语言：”决定你说话的语言。默认是“与界面相同”；选择“自动检测”则让 Whisper 检测每一段录音的语言（Claude 仍然用界面语言回答；使用 Kokoro 时，请改为固定一种语言）；也可以只选一种语言。配套应用会把它以 `--transcription-language` 和 `--output-lang` 的形式传给它启动的引擎，更改后会重启引擎。配套应用仅连接、而非由它启动的引擎（systemd 单元，或手动启动的引擎）会沿用它自己的参数。
 
 与 Claude 的语音对话需要安装并登录 Claude Code CLI，并且在 `make setup` 中选择了 `claude` 模块。参见 [docs/usage.md](docs/usage.md#claude-flow-experimental)。
+
+**转写模式。** 在设置 > **常规** > “转写”中，“运行于：”可选“CPU（不占用 GPU）”“GPU（最快）”或“自动（引擎设置）”。托盘菜单里的“转写”作用相同。每种模式有自己的模型（“CPU 模型：”“GPU 模型：”）。切换会重启引擎；如果该模式尚未安装，VoiceMate 会先询问（并告知下载大小），再在一个显示输出的窗口里安装。在终端里：`make stt-check` 和 `make stt-install MODE=cpu`（或 `gpu`）。速度和准确率数据见 [docs/configuration.md](docs/configuration.md#speech-to-text-modes)。
+
+### 语音助手（实验性）
+
+助手是一个 Claude 对话，即中央对话，它知道你的其他对话在做什么，并替你统筹它们：列出、阅读、发消息、在后台启动新对话，并在它们回答时告诉你。默认关闭。在 设置 > **助手** 中，“助手模式：”决定中央对话运行在哪里。
+
+| | VoiceMate 自己的对话 | 一个 Claude Desktop 对话 |
+|---|---|---|
+| 是什么 | VoiceMate 启动并持有的 Claude Code 进程 | 你已有的对话，在“Desktop 对话：”中按确切标题选择 |
+| VoiceMate 如何写入 | 直接通过进程 | 短暂的 UI Automation“闪现”：Desktop 窗口来到前台，草稿被清除，文本被粘贴并发送，焦点随后返回（约 2 秒） |
+| 工具 | `voicemate` 工具：列出、阅读并向对话发消息、启动对话、设置其模型、停止 | Desktop 自带的会话工具 |
+| 需要 | `claude` CLI 和 Claude 登录 | Claude Desktop 已打开且屏幕未锁定；仅限 Windows |
+| 手机 | Remote Control 已开启 | 不由 VoiceMate 管理 |
+
+1. **要求：**Claude Code CLI（Windows 的 `PATH` 中有 `claude`，或在 `VOICEMATE_CLAUDE_CLI` 中给出路径）以及这台电脑上的 Claude 登录（执行一次 `claude auth login`）。缺少时助手窗口会说明缺什么。
+2. **开启：**在 设置 > **助手** 中，把“助手模式：”设为“VoiceMate 自己的对话”或“一个 Claude Desktop 对话”（并输入它的确切标题），然后点 OK。托盘菜单会出现“助手”项。
+3. **使用：**按 `Ctrl+Alt+S`，说话，再按一次 `Ctrl+Alt+S`，它会用引擎的声音回答。或者打开“助手”输入文字（Enter 发送，Shift+Enter 换行）。窗口显示最近 30 条消息和“待听的回答”分组和“等待中”列表（助手在其他对话里等待的事项）。
+
+`Ctrl+Alt+S` 说话，`Ctrl+Alt+W` 打开窗口，`Ctrl+Alt+R` 朗读已就绪的内容。“切换助手模式”和“返回助手”没有默认快捷键，可在 设置 > **快捷键** 中设定。
+
+**语音指令。**部分短语无需任何 AI 即可识别，支持英语、葡萄牙语和西班牙语：朗读上一条回答、停止说话、转到某个对话、向某个对话发送消息、直接与某个对话交谈、返回助手。直接模式会把你说的话直接发给该对话，直到你返回。短语列表见[使用文档](docs/usage.md#voice-commands)。
+
+**其他对话的回答。**“其他对话的回答：”有“回答一到就告诉我”“简短提醒，并把回答留到稍后”（默认）“只播放提示音并保留回答”和“仅保留”。保留的回答在收件箱中等待（最多 50 条，重启后仍在），显示在窗口的“待听的回答”下，托盘图标上有蓝色角标，并有“回答已就绪”提示音。录音、转写或听回答期间不会播报任何内容。
+
+**助手启动的对话。**同时最多 4 个，Remote Control 开启，重启后仍会记住。“新对话使用：”和“推理强度：”设定它们的模型和推理强度，“权限：”设定它们可以做什么。
+
+> [!WARNING]
+> “完全访问，从不询问（有风险）”（`bypassPermissions`）会让这些对话不经询问就修改任何文件、运行任何命令。除非你信任要交给它们的事，否则请保持默认值。
+
+**Desktop 模式的闪现。**它会占用前台约 2 秒，清除该输入框中的任何草稿，并且在屏幕锁定或其他窗口夺走焦点时不输入任何内容。这 2 秒内请不要碰键盘。
+
+**用语音改设置。**助手可以修改固定清单中的 23 项设置：模式（在两者之间）、模型、力度、权限、回答递送方式、新对话的模型和力度、Desktop 对话、声音、语音指令、表情标签、你的名字、个性来源、配置文件更新、技能语言、提示音开关和音量、听写语言、转写模式和通知。快捷键、文件和文件夹、语音引擎及其设置，以及关闭助手，是有意排除的。清单见[使用文档](docs/usage.md#change-voicemate-by-voice)。
+
+**个性与技能。**在“个性”分组里，“来源：”可以是无、一个 Markdown 文件（例如 Obsidian 笔记库中的笔记）或你写的文本；“笔记库文件夹：”说明你的笔记在哪里，助手只在你要求时才读取。“技能语言：”可选自动、英语或巴西葡萄牙语，“自定义技能：”用你自己包含 `SKILL.md` 的文件夹替换该技能。技能是可选的，也可分享：把 `app/companion/assistant/skill/en/voicemate-assistant`（或 `pt-BR`）复制到 `~/.claude/skills`，然后在任何 Claude Code 对话中请求“助手”。它的设置在 `~/.voicemate/assistant.json`。
+
+**声音。**助手使用引擎的声音说话：Kokoro 或你自己的提供方（设置 > **声音**，`make tts-provider-check`，[协议](docs/tts-provider-protocol.md)）。如果引擎无法发声，回答保持为文字，简短提示改用 Windows 的声音。
+
+**Claude Desktop 配置文件。**一个 JSON 文件告诉 Desktop 模式各控件在哪里，所以 Claude Desktop 更新后只需换一个新配置文件，不必发新版本。VoiceMate 在助手启动时查找更新的配置文件（可关闭）；设置 > **助手** 中有 **立即检查**、**导入...**、**导出...** 和 **使用默认**。参见 [desktop-profile.md](docs/desktop-profile.md)。
+
+设计见 [docs/research/voice-assistant-design.md](docs/research/voice-assistant-design.md)，其背后的 Claude Desktop 和手机测试见 [docs/research/claude-code-client.md](docs/research/claude-code-client.md)，每一步见 [docs/usage.md](docs/usage.md#voice-assistant-experimental)。
 
 ## 配置
 
@@ -133,6 +193,8 @@ make run ARGS="--output-lang en"     # 用引擎自带的快捷键启动引擎�
 | 引擎 HTTP API | `127.0.0.1:47821` |
 | 日志（`companion.log`、`engine.log`） | Windows `%LOCALAPPDATA%\VoiceMate\logs`，Linux `~/.local/state/voicemate/logs` |
 | **未复制** 列表 | `logs` 文件夹旁边的 `pending.json` |
+| 助手设置（skill 会读取） | `~/.voicemate/assistant.json`，在你的用户文件夹中 |
+| 助手会话、收件箱、它启动的对话、个性文本和 Desktop 配置文件缓存 | `assistant-session.json`、`assistant-inbox.json`、`assistant-conversations\`、`assistant-personality.md`、`desktop-profile\`，以及 `pending.json` 旁的 `assistant\` |
 
 所有引擎参数、所有设置项和所有环境变量：[docs/configuration.md](docs/configuration.md)。
 
@@ -163,6 +225,21 @@ flowchart TB
     vm -->|"转写"| gpu
     vm -.->|"下载模型"| hub
     vm -.->|"实验性：提问"| claude
+
+    classDef person fill:#08427b,stroke:#052e56,color:#ffffff
+    classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
+    classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+    classDef component fill:#85bbf0,stroke:#5d82a8,color:#000000
+    classDef store fill:#00838f,stroke:#005f66,color:#ffffff
+    classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+    classDef optional fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff,stroke-dasharray:5 5
+    classDef ok fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+    classDef warn fill:#f9a825,stroke:#c17900,color:#000000
+    classDef bad fill:#c0392b,stroke:#922b21,color:#ffffff
+    class user person
+    class vm system
+    class desk,audio,gpu external
+    class hub,claude optional
 ```
 
 概览。完整的图：[docs/architecture.md, System context](docs/architecture.md#1-system-context)。
@@ -194,6 +271,21 @@ flowchart LR
     core <-->|"HTTP，令牌，事件"| api
     api --> stt --> gpu
     api -.-> tts
+
+    classDef person fill:#08427b,stroke:#052e56,color:#ffffff
+    classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
+    classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+    classDef component fill:#85bbf0,stroke:#5d82a8,color:#000000
+    classDef store fill:#00838f,stroke:#005f66,color:#ffffff
+    classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+    classDef optional fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff,stroke-dasharray:5 5
+    classDef ok fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+    classDef warn fill:#f9a825,stroke:#c17900,color:#000000
+    classDef bad fill:#c0392b,stroke:#922b21,color:#ffffff
+    class user person
+    class ui,core,api,stt container
+    class clip,gpu external
+    class tts optional
 ```
 
 概览。完整的图：[docs/architecture.md, Containers](docs/architecture.md#2-containers)。
@@ -210,22 +302,28 @@ sequenceDiagram
     participant C as 配套应用
     participant E as 引擎
     participant CB as 剪贴板
-    U->>C: 快捷键
-    C->>E: 开始录音
-    E-->>C: 麦克风已开启
-    C->>U: 开始提示音
-    U->>C: 再次按下快捷键
-    C->>E: 停止录音
-    E->>E: Whisper 转写
-    E-->>C: 待写入剪贴板的文本
-    C->>CB: 写入，读回，比对
-    alt 文本校验通过
-        C->>E: ACK delivered
-        C->>U: 完成提示音
-    else 剪贴板被其他应用锁定
-        C->>C: 把文本保留在“未复制”列表
-        C->>E: ACK failed
-        C->>U: 错误提示音和通知
+    rect rgba(67,141,213,0.12)
+        U->>C: 快捷键
+        C->>E: 开始录音
+        E-->>C: 麦克风已开启
+        C->>U: 开始提示音
+    end
+    rect rgba(106,61,154,0.12)
+        U->>C: 再次按下快捷键
+        C->>E: 停止录音
+        E->>E: Whisper 转写
+        E-->>C: 待写入剪贴板的文本
+    end
+    rect rgba(46,125,50,0.12)
+        C->>CB: 写入，读回，比对
+        alt 文本校验通过
+            C->>E: ACK delivered
+            C->>U: 完成提示音
+        else 剪贴板被其他应用锁定
+            C->>C: 把文本保留在“未复制”列表
+            C->>E: ACK failed
+            C->>U: 错误提示音和通知
+        end
     end
 ```
 
@@ -270,9 +368,69 @@ stateDiagram-v2
         Idle --> Warning : 麦克风或音频故障
         Warning --> Idle : 音频恢复
     }
+
+    classDef person fill:#08427b,stroke:#052e56,color:#ffffff
+    classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
+    classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+    classDef component fill:#85bbf0,stroke:#5d82a8,color:#000000
+    classDef store fill:#00838f,stroke:#005f66,color:#ffffff
+    classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+    classDef optional fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff,stroke-dasharray:5 5
+    classDef ok fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+    classDef warn fill:#f9a825,stroke:#c17900,color:#000000
+    classDef bad fill:#c0392b,stroke:#922b21,color:#ffffff
+    class Stopped external
+    class Starting,Restarting,Warning warn
+    class Running,Idle,Ready ok
+    class Error bad
+    class Recording,Transcribing,Answering container
 ```
 
 概览。完整的图：[docs/architecture.md, Tray states](docs/architecture.md#5-tray-states)。
+
+</details>
+
+<details>
+<summary>语音助手，实验性（概览）</summary>
+
+```mermaid
+flowchart LR
+    user(["你"])
+    subgraph pc["你的电脑，Windows"]
+        win["助手窗口<br/>聊天，待听的回答"]
+        svc["助手服务<br/>在 companion 内"]
+        own["自己的对话<br/>Claude Code，voicemate 工具"]
+        dsk["Desktop 对话<br/>由键盘闪现写入"]
+        other["你的其他<br/>对话"]
+        inbox[("收件箱<br/>待听的回答")]
+        eng["引擎<br/>语音输入，声音输出"]
+    end
+    phone["手机"]
+    user -->|"说话快捷键"| eng
+    eng -->|"转写"| svc
+    user --> win
+    win --> svc
+    svc -->|"提示"| own
+    svc -->|"闪现，然后读取"| dsk
+    own -->|"列出、读取、发送、启动"| other
+    dsk -->|"Desktop 会话工具"| other
+    other -->|"回答"| svc
+    svc -->|"保留或提醒"| inbox
+    svc -->|"语音块"| eng
+    eng -->|"朗读，回答提示音"| user
+    own <-->|"Remote Control"| phone
+
+    classDef person fill:#08427b,stroke:#052e56,color:#ffffff
+    classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+    classDef store fill:#00838f,stroke:#005f66,color:#ffffff
+    classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+    class user person
+    class win,svc,own,dsk,eng container
+    class inbox store
+    class other,phone external
+```
+
+两种模式走同一个循环：助手联系你的其他对话，回答经服务返回，服务把它们读出来或存入收件箱。蓝色：VoiceMate；青色：存储的数据；灰色：VoiceMate 之外。完整图表：[docs/architecture.md](docs/architecture.md#61-voice-assistant-experimental)。
 
 </details>
 
@@ -301,6 +459,24 @@ flowchart TD
     q_others -- "否" --> wslrestart["wsl --shutdown"]
     ask -- "重启 WSL" --> wslrestart
     wslrestart --> launch
+
+    classDef person fill:#08427b,stroke:#052e56,color:#ffffff
+    classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
+    classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+    classDef component fill:#85bbf0,stroke:#5d82a8,color:#000000
+    classDef store fill:#00838f,stroke:#005f66,color:#ffffff
+    classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+    classDef optional fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff,stroke-dasharray:5 5
+    classDef ok fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+    classDef warn fill:#f9a825,stroke:#c17900,color:#000000
+    classDef bad fill:#c0392b,stroke:#922b21,color:#ffffff
+    class launch system
+    class q_health,q_dir,q_ready,q_breaker,q_policy,q_others component
+    class attach,healthy ok
+    class failed bad
+    class spawn,backoff,wslrestart container
+    class ask warn
+    class nothing external
 ```
 
 概览。完整的图：[docs/architecture.md, Supervisor](docs/architecture.md#6-supervisor-on-windows-and-wsl2)。
@@ -317,6 +493,9 @@ flowchart TD
 | “WSL 音频已停止”或“没有麦克风” | 请连接麦克风。VoiceMate 会按“音频故障时重启 WSL：”的设置重启 WSL；想手动重启，请使用 **引擎** > **重启 WSL...**。 |
 | 文本没有进入剪贴板 | 它在 **未复制** 列表中（托盘菜单和状态窗口里都有）。单击它即可再次复制。 |
 | 英语语音识别结果不对，或者引擎消息是葡萄牙语 | 手动启动的引擎默认使用葡萄牙语：给 `make run` 加上 `ARGS="--output-lang en"`。 |
+| GPU 正忙于其他工作 | 选择 CPU 模式：设置 > **常规** > “转写”，或托盘菜单 > “转写”。尚未安装的模式会先询问你，再安装。 |
+| 助手提示“未找到 Claude Code”或“Claude Code 尚未登录” | 安装 Claude Code（或设置 `VOICEMATE_CLAUDE_CLI`），或在终端运行 `claude auth login`，然后在助手窗口点“重新启动”。更多见 [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental)。 |
+| Desktop 模式提示“未选择 Claude Desktop 对话”或“无法准备助手” | “Desktop 对话：”为空，或没有 Claude Desktop 对话有这个确切标题 | 按 Claude Desktop 侧边栏中的样子准确输入标题，打开 Claude Desktop，然后点 **重新启动**。更多见 [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental)。 |
 | 引擎一侧的其他问题 | 在引擎文件夹中运行 `make doctor`。每一项未通过的检查它都会给出修复方法。 |
 
 更多问题和确切的消息文本：[docs/troubleshooting.md](docs/troubleshooting.md)。
@@ -326,11 +505,13 @@ flowchart TD
 详细文档（英文）：
 
 - [安装](docs/installation.md)：所有安装方式、更新和卸载。
-- [使用](docs/usage.md)：流程、快捷键、托盘图标、模型和语音选项。
-- [配置](docs/configuration.md)：引擎参数、设置文件、环境变量。
+- [使用](docs/usage.md)：流程、快捷键、托盘图标、转写模式、模型、语音选项和语音助手。
+- [配置](docs/configuration.md)：引擎参数、设置文件、环境变量、语音识别模式和基准测试。
 - [故障排查](docs/troubleshooting.md)：`make doctor`、WSL 音频、日志、已知消息。
 - [架构](docs/architecture.md)：图表和设计取舍。
 - [WSL2 与 AMD](docs/wsl2.md)（实验性）、[配套应用设计](docs/companion-app.md)、[品牌](docs/brand.md)、[发布流程](docs/releasing.md)。
+- [Claude Desktop 配置文件](docs/desktop-profile.md)和 [TTS 提供方协议](docs/tts-provider-protocol.md)：告诉 Desktop 模式控件位置的文件，以及你自己的声音所用的 HTTP 约定。
+- 研究（实验性工作，英文）：[语音助手设计](docs/research/voice-assistant-design.md) 和 [VoiceMate 作为 Claude Code 客户端](docs/research/claude-code-client.md)。
 
 ## 参与贡献
 

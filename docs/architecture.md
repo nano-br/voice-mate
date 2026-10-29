@@ -162,6 +162,7 @@ Routes in `app/daemon/server.py`, payloads in `app/protocol/models.py`:
 | `POST /trigger` (`expect`: toggle, start, stop), `POST /cancel` | Drive the recording session |
 | `POST /results/ack`, `GET /results?state=unacked` or `recent` | Delivery ACK and reconciliation over the last 200 results |
 | `POST /shutdown` | Graceful stop, reason `user_quit`, `restart` or `supervisor` |
+| `/tts/v1/...` | The `voicemate-tts` protocol ([tts-provider-protocol.md](tts-provider-protocol.md#the-engine-speaks-the-same-protocol)), served for Kokoro and the custom provider only; the companion uses it to speak the assistant's replies |
 
 The v1 routes of the old Windows scripts (`/status`, `/result`, `/register` with an empty body, `POST /trigger`) still work against a daemon without a token. Guards on every request: `403` for any `Origin` header or a non-loopback `Host`, `401` without the bearer token (except `/health`), `503` until ready (except `/health`, `/shutdown`, `/unregister`).
 
@@ -303,59 +304,65 @@ sequenceDiagram
     participant CB as Windows clipboard
 
     Note over C,A: Registered with clipboard and cues leases, GET /events long poll open
-    U->>W: Presses Ctrl+Alt+V
-    W->>C: Hotkey for flow clipboard
-    C->>A: POST /trigger flow clipboard, expect toggle
-    A->>S: toggle
-    S-->>A: state recording, mic_live false
-    A-->>C: action started, op_seq
-    S->>S: Opens the mic in the background
-    S-->>A: state recording, mic_live true
-    A-->>C: event state, needs_cue true
-    C->>U: Cue start, tray recording
-    U->>W: Presses Ctrl+Alt+V again
-    W->>C: Hotkey for flow clipboard
-    C->>A: POST /trigger flow clipboard, expect toggle
-    A->>S: toggle
-    A-->>C: action stopped
-    S-->>A: state processing, phase transcribing
-    A-->>C: event state
-    C->>U: Cue transcribing, tray transcribing
-    S->>T: transcribe audio
-    T-->>S: text
-    S->>A: publish_result transcript, final
-    Note over A: Clipboard lease held, delivery pending, the daemon does not write the clipboard
-    A-->>C: event result, needs_delivery true
-    S-->>A: state idle
-    C->>W: Deliver text
-    loop Up to 5 attempts, 60 to 300 ms apart
-        W->>CB: Open if free, set, read back, compare
+    rect rgba(67,141,213,0.12)
+        U->>W: Presses Ctrl+Alt+V
+        W->>C: Hotkey for flow clipboard
+        C->>A: POST /trigger flow clipboard, expect toggle
+        A->>S: toggle
+        S-->>A: state recording, mic_live false
+        A-->>C: action started, op_seq
+        S->>S: Opens the mic in the background
+        S-->>A: state recording, mic_live true
+        A-->>C: event state, needs_cue true
+        C->>U: Cue start, tray recording
+        U->>W: Presses Ctrl+Alt+V again
+        W->>C: Hotkey for flow clipboard
+        C->>A: POST /trigger flow clipboard, expect toggle
+        A->>S: toggle
+        A-->>C: action stopped
+        S-->>A: state processing, phase transcribing
+        A-->>C: event state
+        C->>U: Cue transcribing, tray transcribing
     end
-    alt Text verified
-        W->>CB: Set again after 250 ms for Win+V history
-        W-->>C: Delivered
-        C->>A: POST /results/ack status delivered, verified true
-        C->>U: Cue ready, tray ready for 3 s
-    else Clipboard locked by another app
-        W-->>C: Not delivered
-        loop Queue retries, up to 3, 1 s apart
-            C->>W: Deliver text again
-            W-->>C: Not delivered
+    rect rgba(106,61,154,0.12)
+        S->>T: transcribe audio
+        T-->>S: text
+        S->>A: publish_result transcript, final
+        Note over A: Clipboard lease held, delivery pending, the daemon does not write the clipboard
+        A-->>C: event result, needs_delivery true
+        S-->>A: state idle
+    end
+    rect rgba(46,125,50,0.12)
+        C->>W: Deliver text
+        loop Up to 5 attempts, 60 to 300 ms apart
+            W->>CB: Open if free, set, read back, compare
         end
-        C->>C: Keep the text in Not copied, save pending.json
-        C->>A: POST /results/ack status failed
-        C->>U: Cue error, notification not copied, tray idle
-    end
-    opt Every 10 s and on reconnect
-        C->>A: GET /results state unacked
-        A-->>C: Results still pending
-        alt Younger than 30 s, its event was missed
-            C->>W: Deliver text, no cue
-        else Older than 30 s
-            C->>C: Add to Not copied, notify once
-            C->>A: POST /results/ack status dismissed
-        else Already acked here, listed twice in a row
-            C->>A: POST /results/ack same status again
+        alt Text verified
+            W->>CB: Set again after 250 ms for Win+V history
+            W-->>C: Delivered
+            C->>A: POST /results/ack status delivered, verified true
+            C->>U: Cue ready, tray ready for 3 s
+        else Clipboard locked by another app
+            W-->>C: Not delivered
+            loop Queue retries, up to 3, 1 s apart
+                C->>W: Deliver text again
+                W-->>C: Not delivered
+            end
+            C->>C: Keep the text in Not copied, save pending.json
+            C->>A: POST /results/ack status failed
+            C->>U: Cue error, notification not copied, tray idle
+        end
+        opt Every 10 s and on reconnect
+            C->>A: GET /results state unacked
+            A-->>C: Results still pending
+            alt Younger than 30 s, its event was missed
+                C->>W: Deliver text, no cue
+            else Older than 30 s
+                C->>C: Add to Not copied, notify once
+                C->>A: POST /results/ack status dismissed
+            else Already acked here, listed twice in a row
+                C->>A: POST /results/ack same status again
+            end
         end
     end
 ```
@@ -403,6 +410,22 @@ stateDiagram-v2
         Only the supervisor state failed
         shows error
     end note
+
+    classDef person fill:#08427b,stroke:#052e56,color:#ffffff
+    classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
+    classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+    classDef component fill:#85bbf0,stroke:#5d82a8,color:#000000
+    classDef store fill:#00838f,stroke:#005f66,color:#ffffff
+    classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+    classDef optional fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff,stroke-dasharray:5 5
+    classDef ok fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+    classDef warn fill:#f9a825,stroke:#c17900,color:#000000
+    classDef bad fill:#c0392b,stroke:#922b21,color:#ffffff
+    class stopped external
+    class starting,restarting,warning warn
+    class healthy,idle,ready ok
+    class error bad
+    class recording,transcribing,thinking,speaking container
 ```
 
 The tray state is not stored: the reducer derives it on every change from the supervisor state, the engine's operation and two timers (`app/companion/model.py`). Precedence: the supervisor first (`stopped`, `starting`, `restarting` for both `restarting` and `backoff`, `error` only for `failed`, `warning` for `degraded` or an outdated engine), then the operation (`recording`, `transcribing`, `thinking`, `speaking`), then `ready` for 3 seconds after a final result reached the clipboard, then a pending warning (no microphone, audio down, microphone unavailable), else `idle`. The composite box is the supervisor state `healthy`. The eleven names match `TrayState` (`app/companion/contract.py`).
@@ -498,6 +521,102 @@ Probes run every 5 seconds: a 500 ms TCP connect, then `/health` with a 2 second
 
 A WSL restart is wanted when `audio` is `down` twice in a row, or on `mic_unavailable` while Windows has a capture device and the audio is not `ok`; never without a capture device. The `wsl_restart_policy` setting is `auto`, `ask` or `never` (default `auto`); `auto` still asks when other distros run, since `wsl --shutdown` stops all of them. The restart waits up to 30 seconds for an idle engine, then sends `POST /shutdown`, runs `wsl --shutdown` and launches again. Quit stops only what the app started: `POST /shutdown`, wait 8 seconds, close stdin, wait 2 seconds, kill the job. An attached daemon only gets `/unregister`.
 
+### 6.1 Voice assistant (experimental)
+
+The assistant lives in the companion; the engine takes part only to transcribe the speech and to speak the replies. **Flow: how a request reaches the central conversation in either mode, how other conversations answer, and how the reply is spoken.**
+
+```mermaid
+flowchart LR
+    user(["User"])
+    subgraph comp["Companion, VoiceMate.exe"]
+        hk["Hotkeys<br/>talk, window, mode, back, hear"]
+        win["Assistant window<br/>messages, answers waiting"]
+        svc["Assistant service<br/>commands, direct mode,<br/>settings by voice"]
+        own["Own session port<br/>stream-json child"]
+        tools["voicemate tools<br/>list, read, send, start,<br/>model, stop"]
+        dport["Desktop port<br/>flash typing"]
+        watch["Answer watcher"]
+        inbox[("Inbox<br/>assistant-inbox.json")]
+        voice["Voice output<br/>sentence by sentence"]
+    end
+    engine["Engine<br/>speech to text,<br/>/tts/v1"]
+    provider["Custom TTS provider"]
+    cli["Claude Code CLI<br/>mode own_session"]
+    desk["Claude Desktop<br/>mode desktop"]
+    others["Other conversations<br/>Desktop, or started<br/>by VoiceMate"]
+    disk[("Transcripts<br/>.claude/projects")]
+    cfg[("assistant.json<br/>settings catalog, inbox, pending")]
+    phone["Phone"]
+
+    user -->|"types"| win
+    user -->|"speaks"| hk
+    hk --> engine
+    engine -->|"text"| svc
+    win --> svc
+    svc -->|"mode own_session"| own
+    own -->|"stdin"| cli
+    cli --> tools
+    tools -->|"send, start"| others
+    svc -->|"mode desktop"| dport
+    dport -.->|"types for about 2 s"| desk
+    desk -->|"Desktop session tools"| others
+    cli -->|"appends"| disk
+    desk -->|"appends"| disk
+    others -->|"append"| disk
+    svc -->|"reads replies"| disk
+    watch -->|"watches"| disk
+    watch -->|"answer ready"| svc
+    svc -->|"held answers"| inbox
+    svc -->|"writes"| cfg
+    cli -->|"reads"| cfg
+    svc -->|"voice block"| voice
+    voice -->|"sentences"| engine
+    engine -.->|"relays"| provider
+    voice -->|"audio"| user
+    cli <-->|"Remote Control"| phone
+
+    classDef person fill:#08427b,stroke:#052e56,color:#ffffff
+    classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+    classDef component fill:#85bbf0,stroke:#5d82a8,color:#000000
+    classDef agent fill:#6a3d9a,stroke:#4a2a6b,color:#ffffff
+    classDef store fill:#00838f,stroke:#005f66,color:#ffffff
+    classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+    classDef optional fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff,stroke-dasharray:5 5
+    class user person
+    class win,svc container
+    class hk,own,tools,dport,watch,voice component
+    class cli,desk,others agent
+    class disk,cfg,inbox store
+    class engine,phone external
+    class provider optional
+```
+
+**Modes.** The service starts one port for the central conversation, by `mode`:
+
+- **`own_session`**: `OwnSessionPort` runs a persistent `claude -p --input-format stream-json` child named "VoiceMate" with the `voicemate` tools (an SDK MCP server that the companion serves over the child's stdio, `mcp_tools.py`). VoiceMate is the only writer; Claude Desktop and the phone are Remote Control clients of it. The tools list and read conversations from the transcripts, send to a conversation (a VoiceMate-owned one gets the prompt on its stdin, a Desktop one gets a flash), and start, re-model and stop the conversations VoiceMate owns (`conversations.py`: at most 4 alive, counting the ones still starting; Remote Control on, remembered in `assistant-conversations\conversations.json` and resumed at the next start).
+- **`desktop`**: `DesktopConversationPort` finds the Desktop conversation by its exact title and writes to it by a **flash** (`app/companion/win/claude_desktop.py`): bring the Claude window forward, clear the draft, paste through the clipboard (saved, and restored only if nobody copied anything during the flash: the clipboard sequence number is checked before the paste and before Enter), press Enter and give the foreground back, in about 2 seconds. Three guards are checked before every key (each key is its own press). A Desktop flash failure is always a typed error (`DesktopError`): a clipboard held by another program becomes `busy`, a UI Automation failure (the window reloading or closing) becomes `unavailable`, so the window shows "Not sent to ..." instead of losing the message. Where the controls are comes from a [profile](desktop-profile.md). The central uses the Desktop's own session tools, so the `voicemate` tools do not exist here.
+
+Either way, replies are read from the transcript on disk, never from the process output, so a prompt typed on the phone or in Claude Desktop shows too.
+
+**Other conversations and answers.** The tools that write to a conversation never wait. They register it with the `AnswerWatcher` (`notifier.py`), which tails its transcript and, when a turn that started after the registration finishes, hands the answer to the service. Then `answer_delivery` decides:
+
+| Value | Path |
+|---|---|
+| `speak` | The answer goes to the central at once as a note (turns marked `[voicemate:event]` are hidden from the window) |
+| `announce`, `sound`, `silent` | The answer is kept in the `Inbox` (`inbox.py`, 50 items, persisted); `announce` and `sound` play the answer cue, and `announce` also says one line |
+
+Held answers never play a notice during a recording or a spoken answer. "Hear what's ready" sends the central one digest note with all of them. Direct mode bypasses the central: the service sends the person's text verbatim to one conversation until "back to the assistant", then tells the central what happened there.
+
+**Voice path.** A recording stopped by the talk hotkey is transcribed by the engine, and its text goes to the service instead of the clipboard. The `<voice>` block of each reply is cut into sentences and sent to the engine's `/tts/v1` endpoint (`voice.py`); the audio that streams back plays on this computer while the next sentence is made. The engine serves that endpoint only for Kokoro or for the custom provider it relays. If it cannot speak, the replies stay text and the short notices fall back to Windows speech.
+
+**Settings and actions.** `settings_catalog.py` is the list of settings the central may change. VoiceMate writes it, with the current values, to `assistant.json`; a `set_setting` action in a reply is checked against it and applied through the same path as the settings window. `read_inbox` and `clear_inbox` are carried out as well. `follow_up` adds (or updates) an entry of the "Waiting for" list (conversation, title, reason, since when); `follow_up_done` removes it; `focus` makes the text screen follow that conversation, and `focus` with no session id comes back to the central. `open_conversation` and `notify` are parsed and logged only.
+
+- **One writer.** VoiceMate's process is the only writer of its own conversation. A restart resumes the session by id (`--resume`) only when no live process owns it, otherwise it starts a new one.
+- **The child is started clean.** The environment drops the variables Claude Desktop sets on its own sessions, because a child that inherited them rewrote the credentials file in the lab ([research](research/claude-code-client.md#2-authentication-is-the-first-blocker)).
+- **Text from other conversations is data.** Quoted answers reach the central marked as data, and the skill never acts on instructions found in them.
+
+Design, risks and the stories still to come: [research/voice-assistant-design.md](research/voice-assistant-design.md).
+
 ## 7. Package tree
 
 ```text
@@ -515,14 +634,20 @@ app/
 │   └── whispercpp/      whisper.cpp CLI and server backends
 ├── platform/            Platform detection, clipboard writers, WSLg audio probe
 │   └── listeners/       evdev, pynput and HTTP socket triggers
-├── protocol/            Daemon and companion wire models (standard library only)
+├── protocol/            Daemon and companion wire models, assistant reply parser (standard library only)
 ├── setup/               make setup / configure (GPU bootstrap and detection), make doctor,
 │                        CTranslate2-ROCm build, ~/.config/voicemate/config.toml
 ├── i18n/                gettext wrapper and catalogs (en, pt_BR, es, ru, zh_CN)
 └── companion/           Tray app: controller, client, reducer, delivery, settings, paths
+    ├── assistant/       Voice assistant (experimental): service, own session, Desktop port,
+    │   │                voicemate tools, conversations, notifier, inbox, session reader, command
+    │   │                detector, settings catalog, personality, skill install
+    │   └── skill/       The packaged voicemate-assistant skill, in en/ and pt-BR/
     ├── supervisor/      Policy, WSL, local and external engine backends
-    ├── ui/              PySide6: tray, status window, settings, notifications
-    ├── win/             Windows: hotkeys and clipboard, Job Object, jump list, autostart
+    ├── ui/              PySide6: tray, status window, settings, assistant window, notifications
+    ├── win/             Windows: hotkeys and clipboard, Job Object, jump list, autostart,
+    │   │                Claude Desktop driver (UI Automation) and its profile
+    │   └── profiles/    The packaged Claude Desktop profile
     └── linux/           Linux: clipboard tools, sound, autostart, audio devices
 ```
 
