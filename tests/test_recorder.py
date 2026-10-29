@@ -311,3 +311,67 @@ def test_stop_with_no_chunks_returns_none(monkeypatch: pytest.MonkeyPatch) -> No
     assert recorder.start() is True
     assert _wait(lambda: recorder._stream is not None)
     assert recorder.stop() is None
+
+
+def test_a_refused_open_is_tried_again_and_recording_starts(monkeypatch: pytest.MonkeyPatch) -> None:
+    """WSLg sometimes refuses the first open (PortAudio paTimedOut) and accepts the next:
+    the recorder tries again by itself instead of costing the person a second key press."""
+    opens: list[int] = []
+
+    class _FlakyStream(_FakeInputStream):
+        def start(self) -> None:
+            opens.append(1)
+            if len(opens) == 1:
+                raise RuntimeError("Error starting stream: Wait timed out [PaErrorCode -9987]")
+            self.started = True
+
+    monkeypatch.setattr("app.core.recorder.sd.InputStream", _FlakyStream)
+    recorder = Recorder(sample_rate=16000, retry_delay=0.01)
+    reasons: list[str] = []
+    opened: list[bool] = []
+
+    assert recorder.start(on_failure=reasons.append, on_opened=lambda: opened.append(True)) is True
+    assert _wait(lambda: opened == [True])
+    assert reasons == []
+    assert len(opens) == 2
+    assert recorder.is_recording is True
+
+
+def test_an_open_refused_every_time_is_reported_once_after_all_attempts(monkeypatch: pytest.MonkeyPatch) -> None:
+    streams: list[_FakeInputStream] = []
+
+    class _FailingStream(_FakeInputStream):
+        def start(self) -> None:
+            streams.append(self)
+            raise RuntimeError("no device")
+
+    monkeypatch.setattr("app.core.recorder.sd.InputStream", _FailingStream)
+    recorder = Recorder(sample_rate=16000, open_attempts=3, retry_delay=0.01)
+    reasons: list[str] = []
+
+    assert recorder.start(on_failure=reasons.append) is True
+    assert _wait(lambda: bool(reasons))
+    time.sleep(0.05)
+    assert reasons == ["no device"]
+    assert len(streams) == 3
+    assert all(stream.closed for stream in streams)
+    assert recorder.is_recording is False
+
+
+def test_no_more_attempts_once_the_person_stops(monkeypatch: pytest.MonkeyPatch) -> None:
+    streams: list[_FakeInputStream] = []
+
+    class _FailingStream(_FakeInputStream):
+        def start(self) -> None:
+            streams.append(self)
+            raise RuntimeError("no device")
+
+    monkeypatch.setattr("app.core.recorder.sd.InputStream", _FailingStream)
+    recorder = Recorder(sample_rate=16000, open_attempts=5, retry_delay=0.2)
+    reasons: list[str] = []
+
+    assert recorder.start(on_failure=reasons.append) is True
+    assert _wait(lambda: len(streams) == 1)
+    assert recorder.stop() is None
+    time.sleep(0.4)
+    assert len(streams) == 1
