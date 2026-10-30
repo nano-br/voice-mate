@@ -521,9 +521,10 @@ class EngineVoice:
         while index < len(pieces):
             self._wait_while_held(item)
             replay = self._take_replay()
-            if replay is not None and self._current(replay):
-                self._say_again(replay)
-                continue  # a hold may have cut the replay too: look again before this piece
+            if replay is not None:
+                if self._current(replay):
+                    self._say_again(replay)
+                continue  # the replay list goes first, in order: look again before this piece
             if not self._current(item):
                 return
             outcome = self._speak_piece(client, info, pieces[index], item)
@@ -657,13 +658,12 @@ class EngineVoice:
                 self._cut_for_hold()
                 return "held"
             return "held" if cut else "done"
-        except BaseException:
-            with self._lock:  # not played: nothing to say again
-                if entry in self._in_device:
-                    self._in_device.remove(entry)
-            raise
         finally:
             with self._lock:
+                # Stopped or failed before its end (a stop() can land while the device opens):
+                # nothing to say again, and no later cut may find it.
+                if not entry.complete and entry in self._in_device:
+                    self._in_device.remove(entry)
                 if self._stream is stream:
                     self._stream = None
             stream.close()

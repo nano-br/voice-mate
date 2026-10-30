@@ -365,6 +365,43 @@ def test_a_second_recording_during_the_replay_keeps_the_lines_in_order(
     assert last_pass == list(range(last_pass[0], len(lines)))
 
 
+class GatedOutput(RealtimeOutput):
+    """A `RealtimeOutput` whose first `open()` waits for the test: a stop() lands while it opens."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.opening = threading.Event()
+        self.release = threading.Event()
+
+    def open(self, sample_rate: int, channels: int) -> None:
+        if not self.opening.is_set():
+            self.opening.set()
+            self.release.wait(5)
+        super().open(sample_rate, channels)
+
+
+def test_a_line_stopped_while_the_device_opens_is_not_said_again_after_a_recording(rigs: list[Rig]) -> None:
+    server = _serve(pace=1.0)  # real time: the next reply is still streaming when the recording starts
+    try:
+        rig = _rig(rigs, server)
+        rig.output = GatedOutput()
+        rig.voice.speak("old", "An old reply.", final=True)
+        assert rig.output.opening.wait(5)
+        rig.voice.stop()  # a new question while the device opens for the old reply
+        rig.output.release.set()
+        lines = [" ".join([word] * 12) + "." for word in ("alpha", "bravo")]
+        rig.voice.speak("new", " ".join(lines), final=True)
+        assert wait_until(lambda: _texts(server)[-1:] == lines[:1] and rig.output.writes > 0)
+        rig.holding = True  # "alpha" is cut while it streams
+        assert wait_until(lambda: not server.state.active)
+        rig.holding = False
+        assert wait_until(lambda: len(_texts(server)) == 4, timeout=20)
+        assert _texts(server) == ["An old reply.", lines[0], lines[0], lines[1]]  # "alpha" again first
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
 def test_pause_holds_before_the_recording_shows_and_stop_still_drops_everything(
     provider: ProviderServer, rigs: list[Rig]
 ) -> None:
