@@ -357,6 +357,28 @@ def test_a_dictation_stopped_by_the_talk_hotkey_goes_to_the_assistant(kit: Contr
     assert ("send", "plain dictation") not in assistant.calls
 
 
+def test_the_microphone_button_of_the_assistant_window_is_the_talk_hotkey(
+    kit: ControllerKit, daemon: FakeDaemon
+) -> None:
+    parts = FakeDesktopParts()
+    assistant = RecordingAssistant()
+    controller, _parts, _backend = kit(
+        daemon, parts=parts, settings=_assistant_settings(), assistant_factory=lambda _host: assistant
+    )
+    controller.start()
+    assert wait_until(lambda: controller.snapshot().supervisor == "healthy")
+    controller.talk()
+    assert wait_until(lambda: len(daemon.triggers) == 1)
+    daemon.go_live()
+    controller.talk()
+    assert wait_until(lambda: len(daemon.triggers) == 2)
+    threading.Event().wait(0.2)
+    daemon.publish_result("turn on the lights")
+    daemon.set_state("idle")
+    assert wait_until(lambda: ("send", "turn on the lights") in assistant.calls)
+    assert parts.clipboard.texts == []
+
+
 # --- wave 3 fields ---------------------------------------------------------------------------------
 
 

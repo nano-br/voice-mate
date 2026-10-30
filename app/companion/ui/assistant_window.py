@@ -12,6 +12,10 @@ requests the assistant is waiting on (its follow_up actions: title, reason and s
 
 The messages are rebuilt only when they changed, and the view stays where the person scrolled
 unless it was at the end; the box gets the focus back when it is enabled again.
+
+The microphone button does what the talk hotkey does (record, then stop and send the text to the
+assistant), and the line beside it follows VoiceMate's own state with the same badge and words as
+the status window, so a recording started with the hotkey shows here too.
 """
 
 from __future__ import annotations
@@ -20,7 +24,7 @@ import time
 from collections.abc import Callable
 from html import escape
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QKeyEvent, QPalette
 from PySide6.QtWidgets import (
     QGroupBox,
@@ -43,12 +47,16 @@ from app.companion.assistant.contract import (
     PendingEntry,
     Unsubscribe,
 )
+from app.companion.contract import CompanionSnapshot
 from app.companion.ui import texts
-from app.companion.ui.icons import app_icon
+from app.companion.ui.chords import display_chord
+from app.companion.ui.icons import app_icon, state_pixmap
 from app.companion.ui.shell import Shell
+from app.companion.ui.view_model import CANCELLABLE_STATES, RECORDING_STATES, can_trigger
 from app.i18n import _
 
 INPUT_ROWS = 3
+STATE_ICON_SIZE = 20
 
 
 class PromptEdit(QPlainTextEdit):
@@ -84,11 +92,13 @@ class AssistantWindow(QWidget):
         self._unsubscribe: Unsubscribe | None = None
         self._quitting = False
         self._shown_html = ""
+        self._companion: CompanionSnapshot = shell.controller.snapshot()
         self.setWindowTitle(_("{app} assistant").format(app=texts.APP_NAME))
         self.setWindowIcon(app_icon())
         self.resize(520, 560)
         self._build()
         self._render(self._snapshot)
+        self.show_companion(self._companion)
         self._unsubscribe = self._service.subscribe(self._on_snapshot)
 
     # ------------------------------------------------------------------ layout
@@ -167,10 +177,24 @@ class AssistantWindow(QWidget):
         self.reason_label.setWordWrap(True)
         self.reason_label.setForegroundRole(QPalette.ColorRole.PlaceholderText)
         footer.addWidget(self.reason_label, 1)
+        self.mic_button = QPushButton()
+        self.mic_button.clicked.connect(self._shell.controller.talk)
+        footer.addWidget(self.mic_button)
         self.send_button = QPushButton(_("Send"))
         self.send_button.clicked.connect(self._submit)
         footer.addWidget(self.send_button)
         root.addLayout(footer)
+
+        voice_row = QHBoxLayout()
+        voice_row.setSpacing(6)
+        self.mic_icon = QLabel()
+        self.mic_icon.setFixedSize(STATE_ICON_SIZE, STATE_ICON_SIZE)
+        voice_row.addWidget(self.mic_icon)
+        self.mic_status = QLabel()
+        self.mic_status.setWordWrap(True)
+        self.mic_status.setAccessibleName(_("Microphone"))
+        voice_row.addWidget(self.mic_status, 1)
+        root.addLayout(voice_row)
 
     # ------------------------------------------------------------------ rendering
 
@@ -215,6 +239,43 @@ class AssistantWindow(QWidget):
         self.send_button.setEnabled(enabled)
         self.reason_label.setText(reason)
         self.reason_label.setVisible(bool(reason))
+
+        self._render_mic()
+
+    def show_companion(self, snapshot: CompanionSnapshot) -> None:
+        """VoiceMate's own state (GUI thread): recording, transcribing and the rest."""
+        self._companion = snapshot
+        self._render_mic()
+
+    def refresh_time(self) -> None:
+        """Each second while recording: the elapsed time beside the microphone."""
+        self.mic_status.setText(texts.status_line(self._companion))
+
+    def _render_mic(self) -> None:
+        companion = self._companion
+        recording = companion.tray_state in RECORDING_STATES
+        self.mic_button.setText(_("Stop and send") if recording else _("Talk"))
+        # Stopping is always offered; starting needs the engine free (not still transcribing the
+        # last recording) and an assistant that takes prompts.
+        free = can_trigger(companion) and companion.tray_state not in CANCELLABLE_STATES
+        self.mic_button.setEnabled(recording or (free and self._snapshot.state == "ready"))
+        chord = self._shell.settings().assistant.talk_hotkey
+        title = _("Stop recording and send it to the assistant") if recording else _("Talk to the assistant")
+        self.mic_button.setToolTip(f"{title} ({display_chord(chord)})" if chord else title)
+        self.mic_button.setAccessibleName(title)
+        self.refresh_time()
+        self._render_mic_icon()
+
+    def _render_mic_icon(self) -> None:
+        glyph = self.palette().color(QPalette.ColorRole.WindowText)
+        self.mic_icon.setPixmap(
+            state_pixmap(self._companion.tray_state, glyph, STATE_ICON_SIZE, self.devicePixelRatioF())
+        )
+
+    def changeEvent(self, event: QEvent) -> None:
+        super().changeEvent(event)
+        if event.type() == QEvent.Type.PaletteChange and hasattr(self, "mic_icon"):
+            self._render_mic_icon()
 
     def _render_messages(self, snapshot: AssistantSnapshot) -> None:
         """Only when the messages changed: a rebuild loses the selection and the scroll."""
