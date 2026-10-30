@@ -44,6 +44,9 @@ from app.companion.choice_labels import (
 from app.companion.choice_labels import (
     stt_mode_labels as stt_mode_labels,
 )
+from app.companion.choice_labels import (
+    voice_source_labels as voice_source_labels,
+)
 from app.companion.contract import (
     AssistantHotkeyAction,
     CompanionSnapshot,

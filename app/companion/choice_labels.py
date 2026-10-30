@@ -12,6 +12,7 @@ from app.companion.contract import (
     AssistantMode,
     AssistantModel,
     AssistantPermission,
+    AssistantVoiceSource,
     DictationLanguage,
     ExpressionsMode,
     NotifyLevel,
@@ -65,6 +66,14 @@ def answer_delivery_labels() -> dict[AnswerDelivery, str]:
         "announce": _("Say a short notice and keep the answer for later"),
         "sound": _("Only play a sound and keep the answer"),
         "silent": _("Just keep it"),
+    }
+
+
+def voice_source_labels() -> dict[AssistantVoiceSource, str]:
+    return {
+        "auto": _("Automatic: the engine's voice, or the voices of Windows when the engine has none"),
+        "engine": _("The engine's voice"),
+        "windows": _("The voices of Windows"),
     }
 
 

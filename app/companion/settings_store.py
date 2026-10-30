@@ -33,6 +33,7 @@ from app.companion.contract import (
     AssistantModel,
     AssistantPermission,
     AssistantSettings,
+    AssistantVoiceSource,
     CompanionSettings,
     CueName,
     CuePreset,
@@ -138,6 +139,7 @@ def field_label(field_name: str) -> str:
         "assistant.new_conversation_effort": _("Effort of new conversations"),
         "assistant.personality_source": _("Personality"),
         "assistant.speak_replies": _("Speak the replies"),
+        "assistant.voice_source": _("Voice source"),
         "assistant.voice": _("Assistant voice"),
         "tts_engine": _("Voice engine"),
         "tts_url": _("Provider address"),
@@ -347,6 +349,7 @@ def _read_assistant(reader: _Reader) -> AssistantSettings:
         digest_hotkey=_assistant_chord(reader, raw, "digest_hotkey", defaults.digest_hotkey),
         answer_delivery=reader.literal("answer_delivery", get_args(AnswerDelivery), defaults.answer_delivery, raw),
         speak_replies=reader.boolean("speak_replies", defaults.speak_replies, raw),
+        voice_source=reader.literal("voice_source", get_args(AssistantVoiceSource), defaults.voice_source, raw),
         voice=_assistant_voice(reader, raw, defaults.voice),
         new_conversation_model=reader.literal(
             "new_conversation_model", get_args(AssistantModel), defaults.new_conversation_model, raw
@@ -543,6 +546,7 @@ def dump_settings(settings: CompanionSettings) -> str:
         f"custom_skill_dir = {_toml_value(assistant.custom_skill_dir)}",
         f"answer_delivery = {_toml_value(assistant.answer_delivery)}",
         f"speak_replies = {_toml_value(assistant.speak_replies)}",
+        f"voice_source = {_toml_value(assistant.voice_source)}",
         f"voice = {_toml_value(assistant.voice)}",
         f"new_conversation_model = {_toml_value(assistant.new_conversation_model)}",
         f"new_conversation_effort = {_toml_value(assistant.new_conversation_effort)}",

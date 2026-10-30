@@ -201,7 +201,7 @@ def test_the_assistant_voice_loads_from_the_engine_and_is_applied(
     assert process_events(lambda: bool(fake.called("assistant_voices")))
     assert process_events(lambda: page.voice.count() == 4)
     names = [page.voice.itemText(index) for index in range(page.voice.count())]
-    assert names == ["Engine default", "Dora (pf_dora)", "Alex (pm_alex)", "Santa (pm_santa)"]
+    assert names == ["Default voice", "Dora (pf_dora)", "Alex (pm_alex)", "Santa (pm_santa)"]
     assert "Voices found: 3" in page.voice_status.text()
     page.voice.setCurrentIndex(2)
     dialog.apply(close_after=False)
@@ -216,8 +216,24 @@ def test_the_test_button_speaks_with_the_chosen_voice(
     page.voice.setEditText("pm_santa")
     page.test_voice_button.click()
     assert process_events(lambda: bool(fake.called("test_assistant_voice")))
-    assert fake.called("test_assistant_voice")[-1] == ("pm_santa",)
+    assert fake.called("test_assistant_voice")[-1] == ("pm_santa", "auto")
     assert process_events(lambda: page.test_voice_button.isEnabled())
+
+
+def test_the_voice_source_is_saved_and_asks_for_the_voices_of_the_one_picked(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    dialog, page = _assistant(ui)
+    assert page.voice_source.currentData() == "auto"  # a fresh install speaks with Windows' voices
+    page.load_voices_button.click()
+    assert process_events(lambda: page.voice.count() == 4)
+    page.voice.setCurrentIndex(2)
+    page.voice_source.setCurrentIndex(page.voice_source.findData("windows"))
+    assert page.voice.count() == 1  # the engine's voices mean nothing to Windows
+    page.load_voices_button.click()
+    assert process_events(lambda: fake.called("assistant_voices")[-1:] == [("windows",)])
+    dialog.apply(close_after=False)
+    assert process_events(lambda: fake.settings().assistant.voice_source == "windows")
 
 
 def test_an_engine_without_a_voice_says_why_and_speak_replies_off_disables_the_picker(

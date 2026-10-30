@@ -113,6 +113,9 @@ SkillLanguage = Literal["auto", "en", "pt-BR"]
 # (it summarizes it aloud); the others hold it in the inbox for "Hear what's ready", after a
 # short spoken notice and the answer sound ("announce"), the sound only, or nothing.
 AnswerDelivery = Literal["speak", "announce", "sound", "silent"]
+# Who speaks the replies: the engine's voice, falling back to Windows' own voices while the engine
+# cannot speak ("auto"); only the engine; only Windows' voices (app.companion.win.system_voice).
+AssistantVoiceSource = Literal["auto", "engine", "windows"]
 # Where the assistant's personality comes from: nothing, a Markdown file of the person's (for
 # example an Obsidian note), or a text written in the Assistant tab and kept by VoiceMate.
 PersonalitySource = Literal["none", "file", "custom"]
@@ -167,9 +170,11 @@ class AssistantSettings:
     skill_language: SkillLanguage = "auto"
     custom_skill_dir: str = ""  # a folder with a SKILL.md that replaces the packaged skill
     answer_delivery: AnswerDelivery = "announce"
-    # The assistant's voice: replies are spoken by the engine's voice (its `/tts` endpoint) and
-    # `voice` is one of the voice ids the engine lists ("" = the engine's default voice).
+    # The assistant's voice: replies are spoken by the engine's voice (its `/tts` endpoint) or by
+    # Windows' own voices (`voice_source`); `voice` is one of the voice ids the source lists ("" =
+    # its default voice; Windows' ids start with "windows/").
     speak_replies: bool = True
+    voice_source: AssistantVoiceSource = "auto"
     voice: str = ""
     # What `start_conversation` gives a new conversation when the central names no model or effort.
     new_conversation_model: AssistantModel = "sonnet"
@@ -376,6 +381,10 @@ class CompanionController(Protocol):
 
     def cancel(self) -> None: ...
 
+    def talk(self) -> None:
+        """Same as pressing the assistant's talk hotkey: the first call records, the next one
+        stops and the text goes to the assistant."""
+
     def restart_engine(self) -> None:
         """Graceful: /shutdown, close stdin, then kill; resets the circuit breaker."""
 
@@ -435,12 +444,14 @@ class CompanionController(Protocol):
     def test_tts(self, settings: CompanionSettings) -> TtsProbe:
         """BLOCKING: have the provider of `settings` speak a short sentence and play it."""
 
-    def assistant_voices(self) -> TtsProbe:
-        """BLOCKING: the voices of the engine's voice (`<engine>/tts/v1/info`), for the Assistant tab."""
+    def assistant_voices(self, source: AssistantVoiceSource | None = None) -> TtsProbe:
+        """BLOCKING: the voices of `source` (None = the saved one) for the Assistant tab: the
+        engine's voice (`<engine>/tts/v1/info`) or Windows' own voices; "auto" lists the engine's
+        while it can speak, else Windows'."""
 
-    def test_assistant_voice(self, voice: str) -> TtsProbe:
-        """BLOCKING: say a short sentence with `voice` ("" = the engine's default) the way the
-        assistant speaks, through the engine."""
+    def test_assistant_voice(self, voice: str, source: AssistantVoiceSource | None = None) -> TtsProbe:
+        """BLOCKING: say a short sentence with `voice` ("" = the default voice) the way the
+        assistant speaks, through `source` (None = the saved one)."""
 
     def check_stt(self, settings: CompanionSettings) -> SttCheckReport | None:
         """BLOCKING (call it off the GUI thread): which transcription modes the engine of

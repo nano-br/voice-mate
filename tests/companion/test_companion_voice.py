@@ -12,14 +12,16 @@ from companion_core_fakes import use_english, wait_until
 
 from app.companion.voice import (
     LOADING_RETRY_S,
+    LOCAL_URL,
     PAUSE_GRACE_S,
     RETRY_AFTER_S,
     EngineVoice,
+    VoiceStream,
     complete_sentences,
     engine_tts_url,
     explain,
 )
-from app.protocol.tts_provider import ProviderClient, ProviderError, SpeechStream
+from app.protocol.tts_provider import ProviderClient, ProviderError, ProviderInfo, SpeechStream
 from tools.examples.tts_provider_reference import ProviderServer, make_server
 
 
@@ -61,6 +63,34 @@ class FakeOutput:
         self.closes += 1
 
 
+class RealtimeOutput(FakeOutput):
+    """A `FakeOutput` that plays in real time: `pending()` is true until what was written would
+    have finished playing, so audio can wait in the device behind the piece being heard."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.until = 0.0
+        self.bytes_per_second = 1
+
+    def open(self, sample_rate: int, channels: int) -> None:
+        super().open(sample_rate, channels)
+        self.bytes_per_second = sample_rate * 2 * channels
+
+    def write(self, data: bytes) -> None:
+        super().write(data)
+        with self.lock:
+            self.until = max(self.until, time.monotonic()) + len(data) / self.bytes_per_second
+
+    def pending(self) -> bool:
+        with self.lock:
+            return time.monotonic() < self.until
+
+    def flush(self) -> None:
+        super().flush()
+        with self.lock:
+            self.until = 0.0
+
+
 class Clock:
     def __init__(self) -> None:
         self.now = 1000.0
@@ -92,8 +122,45 @@ def _texts(server: ProviderServer) -> list[str]:
         return [str(body["text"]) for body in server.state.requests]
 
 
+class LocalVoice:
+    """A local voice (as Windows' own voices are to the companion), backed by a reference provider."""
+
+    url = LOCAL_URL
+
+    def __init__(self, server: ProviderServer) -> None:
+        self._client = _client(server)
+        self.voices: list[str | None] = []  # the voice asked for each line (the server knows none of ours)
+
+    def info(self) -> ProviderInfo:
+        return self._client.info()
+
+    def health(self) -> str:
+        return self._client.health()
+
+    def warmup(self) -> None:
+        self._client.warmup()
+
+    def cancel(self, request_id: str) -> None:
+        self._client.cancel(request_id)
+
+    def speak(
+        self, text: str, *, voice: str | None, audio_format: str, request_id: str, default_rate: int
+    ) -> VoiceStream:
+        self.voices.append(voice)
+        return self._client.speak(
+            text, voice=None, audio_format=audio_format, request_id=request_id, default_rate=default_rate
+        )
+
+
 class Rig:
-    def __init__(self, server: ProviderServer | None, *, voice: str = "", output: bool = True) -> None:
+    def __init__(
+        self,
+        server: ProviderServer | None,
+        *,
+        voice: str = "",
+        output: bool = True,
+        local: ProviderServer | None = None,
+    ) -> None:
         self.server = server
         self.output = FakeOutput()
         self.clock = Clock()
@@ -101,12 +168,14 @@ class Rig:
         self.fallback: list[str] = []
         self.reasons: list[str] = []
         self.holding = False  # VoiceMate is recording the microphone
+        self.local = LocalVoice(local) if local is not None else None
         self.voice = EngineVoice(
             lambda: _client(self.server) if self.server is not None else None,
             (lambda: self.output) if output else (lambda: None),
             voice=lambda: self.voice_name,
             fallback=lambda text, _language: self.fallback.append(text),
             hold=lambda: self.holding,
+            local=lambda: self.local,
             clock=self.clock,
         )
         self.voice.on_unavailable(self.reasons.append)
@@ -230,7 +299,7 @@ def test_a_recording_cuts_the_line_being_heard_and_says_it_again_afterwards(rigs
         rig.voice.speak("r", f"{long_line} Second sentence.", final=True)
         assert wait_until(lambda: rig.output.writes > 0)
         rig.holding = True
-        assert wait_until(lambda: rig.output.flushes == 1)  # quiet over the microphone
+        assert wait_until(lambda: rig.output.flushes >= 1)  # quiet over the microphone
         assert wait_until(lambda: not server.state.active)  # and the engine stopped producing
         written = len(rig.output.data)
         threading.Event().wait(0.3)
@@ -242,6 +311,28 @@ def test_a_recording_cuts_the_line_being_heard_and_says_it_again_afterwards(rigs
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_a_recording_says_again_every_line_still_waiting_in_the_device_in_order(
+    provider: ProviderServer, rigs: list[Rig]
+) -> None:
+    # The engine is much faster than playback: all three lines reach the device while the first
+    # one is still being heard, and none of them may be lost or said twice.
+    rig = _rig(rigs, provider)
+    rig.output = RealtimeOutput()
+    lines = [" ".join([word] * 30) + "." for word in ("alpha", "bravo", "charlie")]
+    rig.voice.speak("r", " ".join(lines), final=True)
+    assert wait_until(lambda: _texts(provider) == lines)
+    assert rig.output.pending()  # the person is hearing the first line
+    rig.voice.pause()
+    rig.holding = True
+    rig.clock.now += PAUSE_GRACE_S
+    threading.Event().wait(0.3)
+    assert _texts(provider) == lines
+    rig.holding = False
+    assert wait_until(lambda: len(_texts(provider)) == 6)
+    threading.Event().wait(0.3)
+    assert _texts(provider) == lines + lines
 
 
 def test_pause_holds_before_the_recording_shows_and_stop_still_drops_everything(
@@ -364,6 +455,44 @@ def test_without_an_engine_notices_fall_back_and_the_reason_is_reported_once(rig
     assert rig.fallback == ["An answer is ready.", "Another one."]  # the reply stays text only
     assert rig.reasons == ["the engine is not running"]
     assert rig.voice.reason == "the engine is not running"
+
+
+def test_without_an_engine_the_local_voice_says_everything_and_nothing_is_reported(rigs: list[Rig]) -> None:
+    # A fresh install: no voice set up in the engine, Windows' own voices speak instead.
+    windows = _serve(pace=0.0)
+    try:
+        rig = _rig(rigs, None, local=windows, voice="af_heart")
+        rig.voice.speak("r", "A reply. In two sentences.", final=True)
+        rig.voice.notice("An answer is ready.", "en")
+        assert wait_until(lambda: len(_texts(windows)) == 3)
+        assert _texts(windows) == ["A reply.", "In two sentences.", "An answer is ready."]
+        assert rig.local is not None
+        assert rig.local.voices == [None, None, None]  # an engine voice id means nothing to Windows
+        assert rig.fallback == []
+        assert rig.reasons == []  # the replies are spoken: nothing to warn about
+    finally:
+        windows.shutdown()
+        windows.server_close()
+
+
+def test_the_engine_speaks_when_it_can_and_each_side_gets_only_its_own_voice_ids(
+    provider: ProviderServer, rigs: list[Rig]
+) -> None:
+    windows = _serve(pace=0.0)
+    try:
+        rig = _rig(rigs, provider, local=windows, voice="windows/MSTTS_V110_ptBR_MariaM")
+        rig.voice.speak("r", "Said by the engine.", final=True)
+        assert wait_until(lambda: _texts(provider) == ["Said by the engine."])
+        with provider.state.lock:
+            assert provider.state.requests[0]["voice"] is None  # a Windows voice: the engine's default
+        assert _texts(windows) == []
+        assert rig.local is not None
+        rig.voice.test("Test line.", "windows/MSTTS_V110_ptBR_MariaM", client=rig.local)
+        assert wait_until(lambda: _texts(windows) == ["Test line."])  # the Test button picks the source
+        assert rig.local.voices == ["windows/MSTTS_V110_ptBR_MariaM"]
+    finally:
+        windows.shutdown()
+        windows.server_close()
 
 
 def test_the_engine_is_tried_again_after_the_retry_window(provider: ProviderServer, rigs: list[Rig]) -> None:

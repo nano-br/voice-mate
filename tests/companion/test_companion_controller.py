@@ -1134,7 +1134,7 @@ class VoiceCalls:
         monkeypatch.setattr(controller._voice, "pause", self._pause)
         monkeypatch.setattr(controller._voice, "close", self._close)
         monkeypatch.setattr(
-            controller._voice, "test", lambda text, voice, language="": self.tests.append((text, voice))
+            controller._voice, "test", lambda text, voice, language="", client=None: self.tests.append((text, voice))
         )
 
     def _stop(self) -> None:
@@ -1176,7 +1176,7 @@ def test_the_assistant_voices_come_from_the_engine(
     controller, _parts, _backend = make_controller(daemon)
     calls = VoiceCalls(controller, monkeypatch)
     info = ProviderInfo("Kokoro", (Voice("a", "Anna"), Voice("b", "Ben")), 24000, ("pcm_s16le",), 2000, ())
-    monkeypatch.setattr(controller._voice, "voices", lambda: info)
+    monkeypatch.setattr(controller, "_voice_info", lambda source: info)
     probe = controller.assistant_voices()
     assert probe.ok and probe.voices == info.voices
     assert probe.message == "The engine speaks with Kokoro. Voices found: 2."
@@ -1184,10 +1184,10 @@ def test_the_assistant_voices_come_from_the_engine(
     assert tested.message == "Playing a test sentence with the engine's voice."
     assert calls.tests == [("Hello! This is how the assistant sounds with this voice.", "b")]
 
-    def down() -> ProviderInfo:
+    def down(source: str) -> ProviderInfo:
         raise ProviderError("not_ready", "engine not supported for the assistant voice")
 
-    monkeypatch.setattr(controller._voice, "voices", down)
+    monkeypatch.setattr(controller, "_voice_info", down)
     failed = controller.test_assistant_voice("b")
     assert not failed.ok
     assert failed.message == (

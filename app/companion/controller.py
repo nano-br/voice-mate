@@ -43,6 +43,7 @@ from app.companion.contract import (
     ASSISTANT_HOTKEY_ACTIONS,
     AssistantHotkeyAction,
     AssistantMode,
+    AssistantVoiceSource,
     CompanionController,
     CompanionSettings,
     CompanionSnapshot,
@@ -112,8 +113,9 @@ from app.companion.supervisor.policy import (
     SupervisorPolicy,
 )
 from app.companion.tts import EngineTts, engine_tts, probe_voices, try_voice
-from app.companion.voice import EngineVoice, OutputFactory, default_output, engine_tts_url
+from app.companion.voice import EngineVoice, OutputFactory, VoiceClient, default_output, engine_tts_url
 from app.companion.voice import explain as explain_voice
+from app.companion.win import system_voice
 from app.companion.win.speech import say
 from app.i18n import _, catalog_for
 from app.protocol.models import (
@@ -130,7 +132,7 @@ from app.protocol.models import (
     SttDevice,
     TriggerRequest,
 )
-from app.protocol.tts_provider import ProviderClient, ProviderError
+from app.protocol.tts_provider import ProviderClient, ProviderError, ProviderInfo
 
 log = logging.getLogger(__name__)
 
@@ -141,6 +143,11 @@ QUIT_UNREGISTER_TIMEOUT_S: Final = 1.0
 PENDING_FLUSH_TIMEOUT_S: Final = 2.0
 HOTKEY_RETRY_S: Final = 10.0
 TRAY_PROMOTE_S: Final = (2.0, 10.0, 30.0)
+
+
+def _default_local_voice() -> VoiceClient | None:
+    """Windows' own voices (None elsewhere): the assistant speaks with nothing else set up."""
+    return system_voice.SystemVoice() if system_voice.available() else None
 
 
 @dataclass(frozen=True)
@@ -286,6 +293,7 @@ class CompanionControllerImpl:
         host: str = DEFAULT_HOST,
         pending_store: PendingStore | None = None,
         voice_output: OutputFactory = default_output,
+        local_voice: VoiceClient | None = None,
     ) -> None:
         """`pending_store`: where the Not copied list survives a restart (None = memory
         only; `create_controller` passes the per-user file)."""
@@ -298,14 +306,17 @@ class CompanionControllerImpl:
         self._desktop = desktop_factory()
         self._cues_dir = cues_dir or paths.cues_dir()
         self._cues = CuePlayer(CueBank(self._cues_dir), self._play_file)
-        # Replies and notices of the assistant, spoken by the engine (`/tts`) and played here;
-        # the short notices fall back to Windows speech when the engine cannot speak.
+        # Replies and notices of the assistant, spoken by the engine (`/tts`) or by Windows' own
+        # voices (`assistant.voice_source`) and played here; the short notices fall back to Windows
+        # speech when neither can speak.
+        self._local_voice = local_voice if local_voice is not None else _default_local_voice()
         self._voice = EngineVoice(
             self._voice_client,
             voice_output,
             voice=lambda: self._store.get().assistant.voice,
             fallback=say,
             hold=self._recording,  # never over the microphone: what comes meanwhile waits for it
+            local=self._fallback_voice,
         )
         self._assistant = assistant_factory(
             AssistantHost(store.get, self.apply_settings, self._person_busy, self._play_assistant_cue, self._voice)
@@ -611,6 +622,9 @@ class CompanionControllerImpl:
         self._voice.pause()  # quiet before the microphone opens; it goes on once the recording ends
         self._post(lambda: self._toggle(flow))
 
+    def talk(self) -> None:
+        self._on_hotkey("assistant_talk")  # the assistant window's microphone button
+
     def _on_hotkey(self, flow: str) -> None:
         # Runs on the Win32 thread: hand it over at once (quieting the assistant is quick).
         if flow == "assistant_talk":
@@ -628,7 +642,9 @@ class CompanionControllerImpl:
         return self._snapshot.tray_state in _BUSY_TRAY_STATES
 
     def _recording(self) -> bool:
-        return self._snapshot.tray_state == "recording"
+        # Transcribing too: a talk prompt only reaches the service (which silences the old reply)
+        # once the text is out, and the old line must not come back in between.
+        return self._snapshot.tray_state in ("recording", "transcribing")
 
     def _play_assistant_cue(self, cue: CueName) -> None:
         def play() -> None:
@@ -1040,31 +1056,68 @@ class CompanionControllerImpl:
     def test_tts(self, settings: CompanionSettings) -> TtsProbe:
         return try_voice(normalized(settings), self._cues_dir, self._play_file)
 
-    def _voice_client(self) -> ProviderClient | None:
+    def _voice_client(self) -> VoiceClient | None:
+        if self._store.get().assistant.voice_source == "windows":
+            return self._local_voice
+        return self._engine_voice_client()
+
+    def _engine_voice_client(self) -> ProviderClient | None:
         client = getattr(self, "_client", None)
         if client is None:
             return None
         return ProviderClient(engine_tts_url(self._host, client.port), client.token())
 
-    def assistant_voices(self) -> TtsProbe:
+    def _fallback_voice(self) -> VoiceClient | None:
+        """Windows' voices while the engine cannot speak, in the \"auto\" source only."""
+        return self._local_voice if self._store.get().assistant.voice_source == "auto" else None
+
+    def assistant_voices(self, source: AssistantVoiceSource | None = None) -> TtsProbe:
+        source = source or self._store.get().assistant.voice_source
         try:
-            info = self._voice.voices()
+            info = self._voice_info(source)
         except ProviderError as exc:
             log.info("assistant voices: %s", exc.detail)
             return TtsProbe(False, _("No voice available: {reason}").format(reason=explain_voice(exc)))
-        return TtsProbe(
-            True,
-            _("The engine speaks with {name}. Voices found: {count}.").format(name=info.name, count=len(info.voices)),
-            info.name,
-            info.voices,
+        found = (
+            _("VoiceMate speaks with the voices of Windows. Voices found: {count}.").format(count=len(info.voices))
+            if info.name == system_voice.NAME
+            else _("The engine speaks with {name}. Voices found: {count}.").format(
+                name=info.name, count=len(info.voices)
+            )
         )
+        return TtsProbe(True, found, info.name, info.voices)
 
-    def test_assistant_voice(self, voice: str) -> TtsProbe:
-        probe = self.assistant_voices()
-        if probe.ok:
-            self._voice.test(_("Hello! This is how the assistant sounds with this voice."), voice)
-            return replace(probe, message=_("Playing a test sentence with the engine's voice."))
-        return probe
+    def _voice_info(self, source: AssistantVoiceSource) -> ProviderInfo:
+        """BLOCKING: the voices `source` speaks with now. Raises ProviderError."""
+        engine = self._engine_voice_client()
+        if source != "windows" and engine is not None:
+            try:
+                info = engine.info()
+                if engine.health() == "ok":
+                    return info
+                raise ProviderError("not_ready", "the engine is loading")
+            except ProviderError:
+                if source == "engine" or self._local_voice is None:
+                    raise
+        elif source == "engine":
+            raise ProviderError("unreachable", "no engine")
+        if self._local_voice is None:
+            raise ProviderError("not_ready", "Windows speech is not available on this system")
+        return self._local_voice.info()
+
+    def test_assistant_voice(self, voice: str, source: AssistantVoiceSource | None = None) -> TtsProbe:
+        probe = self.assistant_voices(source)
+        if not probe.ok:
+            return probe
+        windows = probe.provider == system_voice.NAME
+        client = self._local_voice if windows else self._engine_voice_client()
+        self._voice.test(_("Hello! This is how the assistant sounds with this voice."), voice, client=client)
+        return replace(
+            probe,
+            message=_("Playing a test sentence with a voice of Windows.")
+            if windows
+            else _("Playing a test sentence with the engine's voice."),
+        )
 
     # --- supervisor -------------------------------------------------------------------------------------
 
