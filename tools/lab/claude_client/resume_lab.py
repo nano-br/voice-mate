@@ -75,7 +75,7 @@ def tree(path: str) -> None:
 async def main_async(args: argparse.Namespace) -> None:
     from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 
-    def opts(**kw: object) -> ClaudeAgentOptions:
+    def opts(**kw: Any) -> ClaudeAgentOptions:  # noqa: ANN401 - forwards any ClaudeAgentOptions field
         return ClaudeAgentOptions(model=args.model, cwd=args.cwd, tools=[], **kw)
 
     a = ClaudeSDKClient(options=opts())
