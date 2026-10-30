@@ -12,6 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [docs/voice-assistant.md](docs/voice-assistant.md): the whole voice assistant flow with Claude in one
   guide, with diagrams (the two modes, how it conducts other conversations, how answers come back,
   direct mode, the voice and safety). The README section is now a short summary that links to it.
+- The assistant speaks out of the box on Windows: with no voice set up in the engine, it uses the
+  voices Windows already has (every language installed under Settings, Time and language, Speech),
+  with nothing to download or configure. Settings > Assistant > Voice source picks "Automatic" (the
+  engine's voice when it can speak, Windows' voices otherwise; the default), "The engine's voice" or
+  "The voices of Windows", and Load voices and Test follow the source picked.
+- A microphone button in the assistant window does what the talk hotkey does: one click records, the
+  next stops and sends the text to the assistant. The line beside it shows VoiceMate's state with the
+  same badge and words as the status window (recording with the elapsed time, transcribing), also for
+  a recording started with the hotkey.
 
 ### Changed
 
@@ -19,7 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   records the microphone (a reply, an answer from another conversation, a short notice) waits and
   is said once the recording ends. A recording started while it speaks cuts the sentence being
   heard and says it again from its start afterwards, unless the recording is a new prompt to the
-  assistant, which still silences it.
+  assistant, which still silences it. Sentences already waiting in the audio device behind it are
+  said again too, in order, and the voice also waits while the recording is transcribed.
 
 ### Fixed
 
@@ -27,6 +37,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `claude` command was installed in `~/.local/bin` (or `%APPDATA%/npm`), which only a shell profile
   adds to PATH. VoiceMate now also looks in the installers' own folders. A start that failed this way
   now says "The assistant could not start" instead of asking to try again in a moment.
+- The CTranslate2-ROCm build (faster-whisper on AMD GPUs) failed on a fresh machine with ROCm 7:
+  CMake picked gcc for the HIP sources ("language hip not recognized"), the fork's sources predate
+  ROCm 7 (rocThrust headers, hipBLAS `_v2` names), its python wrapper needs pybind11 before pip
+  builds it, and the library did not find ROCm's `libomp.so`. The setup now builds with ROCm's clang,
+  adapts the sources to ROCm 7 (ROCm 6 builds as before), starts over from a build folder configured
+  with another compiler, embeds the path of `libomp.so` and installs the wrapper without upgrading
+  numpy past what openai-whisper's numba accepts. It also builds with MIOpen now: without it the
+  library installed, but every transcription on the GPU stopped at Whisper's first convolution
+  ("Conv1D on GPU currently requires the cuDNN library").
 
 ## [0.2.0] - 2026-10-29
 
