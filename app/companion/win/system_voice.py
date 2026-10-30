@@ -31,6 +31,7 @@ NAME: Final = "Windows"
 VOICE_PREFIX: Final = "windows/"
 SAMPLE_RATE: Final = 22050
 _SAFT_22KHZ_16BIT_MONO: Final = 22  # SpeechAudioFormatType
+_SVSF_IS_NOT_XML: Final = 16  # SpeechVoiceSpeakFlags: a reply starting with "<" is read, not parsed
 _ONECORE_VOICES: Final = r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech_OneCore\Voices"
 _CHUNK: Final = SAMPLE_RATE * 2 // 5  # 0.2 s: a hold or a stop is noticed between chunks
 _LOCALE_NAME_MAX: Final = 85
@@ -163,7 +164,7 @@ class SystemVoice:
             memory = client.Dispatch("SAPI.SpMemoryStream")
             memory.Format = audio_format_object
             speaker.AudioOutputStream = memory
-            speaker.Speak(text, 0)  # synchronous, into memory
+            speaker.Speak(text, _SVSF_IS_NOT_XML)  # synchronous, into memory
             pcm = bytes(memory.GetData())
         except ProviderError:
             raise
