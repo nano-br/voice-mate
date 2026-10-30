@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-29 21:34-0300\n"
+"POT-Creation-Date: 2026-10-29 21:45-0300\n"
 "PO-Revision-Date: 2026-10-01 16:49-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: es\n"
@@ -293,7 +293,7 @@ msgstr ""
 msgid "Same as the interface"
 msgstr "Igual que la interfaz"
 
-#: app/companion/choice_labels.py:30 app/companion/ui/settings_window.py:1281
+#: app/companion/choice_labels.py:30 app/companion/ui/settings_window.py:1282
 msgid "Detect automatically"
 msgstr "Detectar automáticamente"
 
@@ -350,12 +350,8 @@ msgid "Just keep it"
 msgstr "Solo guardarla"
 
 #: app/companion/choice_labels.py:74
-msgid ""
-"Automatic: the engine's voice, or the voices of Windows when the engine "
-"has none"
-msgstr ""
-"Automática: la voz del motor, o las voces de Windows cuando el motor no "
-"tiene ninguna"
+msgid "Automatic"
+msgstr "Automática"
 
 #: app/companion/choice_labels.py:75
 msgid "The engine's voice"
@@ -366,7 +362,7 @@ msgid "The voices of Windows"
 msgstr "Las voces de Windows"
 
 #: app/companion/choice_labels.py:82 app/companion/choice_labels.py:105
-#: app/companion/ui/settings_window.py:1475
+#: app/companion/ui/settings_window.py:1476
 msgid "None"
 msgstr "Ninguna"
 
@@ -1044,12 +1040,12 @@ msgstr ""
 "VoiceMate está en ejecución, ciérralo y quítalo de shell:startup, o elige"
 " otros atajos en Configuración."
 
-#: app/companion/settings_store.py:122 app/companion/ui/settings_window.py:1329
+#: app/companion/settings_store.py:122 app/companion/ui/settings_window.py:1330
 msgid "Language"
 msgstr "Idioma"
 
 #: app/companion/assistant/settings_catalog.py:298
-#: app/companion/settings_store.py:123 app/companion/ui/settings_window.py:1330
+#: app/companion/settings_store.py:123 app/companion/ui/settings_window.py:1331
 msgid "Dictation language"
 msgstr "Idioma de dictado"
 
@@ -1062,30 +1058,30 @@ msgid "WSL restart"
 msgstr "Reinicio de WSL"
 
 #: app/companion/assistant/settings_catalog.py:316
-#: app/companion/settings_store.py:126 app/companion/ui/settings_window.py:1331
+#: app/companion/settings_store.py:126 app/companion/ui/settings_window.py:1332
 msgid "Notifications"
 msgstr "Notificaciones"
 
-#: app/companion/settings_store.py:127 app/companion/ui/settings_window.py:1617
+#: app/companion/settings_store.py:127 app/companion/ui/settings_window.py:1618
 msgid "Hotkeys"
 msgstr "Atajos"
 
 #: app/companion/assistant/settings_catalog.py:307
-#: app/companion/settings_store.py:128 app/companion/ui/settings_window.py:1292
-#: app/companion/ui/settings_window.py:1336 app/companion/ui/tray.py:111
+#: app/companion/settings_store.py:128 app/companion/ui/settings_window.py:1293
+#: app/companion/ui/settings_window.py:1337 app/companion/ui/tray.py:111
 msgid "Transcription"
 msgstr "Transcripción"
 
-#: app/companion/settings_store.py:129 app/companion/ui/settings_window.py:1337
+#: app/companion/settings_store.py:129 app/companion/ui/settings_window.py:1338
 msgid "CPU model"
 msgstr "Modelo de la CPU"
 
-#: app/companion/settings_store.py:130 app/companion/ui/settings_window.py:1338
+#: app/companion/settings_store.py:130 app/companion/ui/settings_window.py:1339
 msgid "GPU model"
 msgstr "Modelo de la GPU"
 
 #: app/companion/assistant/settings_catalog.py:110
-#: app/companion/settings_store.py:131 app/companion/ui/settings_window.py:874
+#: app/companion/settings_store.py:131 app/companion/ui/settings_window.py:875
 msgid "Assistant mode"
 msgstr "Modo del asistente"
 
@@ -1100,38 +1096,38 @@ msgid "Assistant effort"
 msgstr "Esfuerzo del asistente"
 
 #: app/companion/assistant/settings_catalog.py:220
-#: app/companion/settings_store.py:134 app/companion/ui/settings_window.py:884
+#: app/companion/settings_store.py:134 app/companion/ui/settings_window.py:885
 msgid "Expression tags"
 msgstr "Etiquetas de expresión"
 
 #: app/companion/assistant/settings_catalog.py:140
-#: app/companion/settings_store.py:135 app/companion/ui/settings_window.py:880
+#: app/companion/settings_store.py:135 app/companion/ui/settings_window.py:881
 msgid "Permissions"
 msgstr "Permisos"
 
 #: app/companion/assistant/settings_catalog.py:255
-#: app/companion/settings_store.py:136 app/companion/ui/settings_window.py:889
+#: app/companion/settings_store.py:136 app/companion/ui/settings_window.py:890
 msgid "Skill language"
 msgstr "Idioma de la skill"
 
 #: app/companion/assistant/settings_catalog.py:150
-#: app/companion/settings_store.py:137 app/companion/ui/settings_window.py:881
+#: app/companion/settings_store.py:137 app/companion/ui/settings_window.py:882
 msgid "Answers from other conversations"
 msgstr "Respuestas de otras conversaciones"
 
 #: app/companion/assistant/settings_catalog.py:159
-#: app/companion/settings_store.py:138 app/companion/ui/settings_window.py:878
+#: app/companion/settings_store.py:138 app/companion/ui/settings_window.py:879
 msgid "Model of new conversations"
 msgstr "Modelo de las conversaciones nuevas"
 
 #: app/companion/assistant/settings_catalog.py:168
-#: app/companion/settings_store.py:139 app/companion/ui/settings_window.py:879
+#: app/companion/settings_store.py:139 app/companion/ui/settings_window.py:880
 msgid "Effort of new conversations"
 msgstr "Esfuerzo de las conversaciones nuevas"
 
 #: app/companion/assistant/settings_catalog.py:238
-#: app/companion/settings_store.py:140 app/companion/ui/settings_window.py:735
-#: app/companion/ui/settings_window.py:886
+#: app/companion/settings_store.py:140 app/companion/ui/settings_window.py:736
+#: app/companion/ui/settings_window.py:887
 msgid "Personality"
 msgstr "Personalidad"
 
@@ -1141,29 +1137,29 @@ msgid "Speak the replies"
 msgstr "Leer las respuestas en voz alta"
 
 #: app/companion/assistant/settings_catalog.py:194
-#: app/companion/settings_store.py:142 app/companion/ui/settings_window.py:882
+#: app/companion/settings_store.py:142 app/companion/ui/settings_window.py:883
 msgid "Voice source"
 msgstr "Origen de la voz"
 
 #: app/companion/assistant/settings_catalog.py:204
-#: app/companion/settings_store.py:143 app/companion/ui/settings_window.py:883
+#: app/companion/settings_store.py:143 app/companion/ui/settings_window.py:884
 msgid "Assistant voice"
 msgstr "Voz del asistente"
 
-#: app/companion/settings_store.py:144 app/companion/ui/settings_window.py:1505
+#: app/companion/settings_store.py:144 app/companion/ui/settings_window.py:1506
 msgid "Voice engine"
 msgstr "Motor de voz"
 
-#: app/companion/settings_store.py:145 app/companion/ui/settings_window.py:1506
+#: app/companion/settings_store.py:145 app/companion/ui/settings_window.py:1507
 msgid "Provider address"
 msgstr "Dirección del proveedor"
 
-#: app/companion/settings_store.py:146 app/companion/ui/settings_window.py:1507
-#: app/companion/ui/settings_window.py:1619
+#: app/companion/settings_store.py:146 app/companion/ui/settings_window.py:1508
+#: app/companion/ui/settings_window.py:1620
 msgid "Voice"
 msgstr "Voz"
 
-#: app/companion/settings_store.py:147 app/companion/ui/settings_window.py:1508
+#: app/companion/settings_store.py:147 app/companion/ui/settings_window.py:1509
 msgid "Token"
 msgstr "Token"
 
@@ -1550,7 +1546,7 @@ msgid "Not sent to \"{title}\": {reason}"
 msgstr "No enviado a \"{title}\": {reason}"
 
 #: app/companion/assistant/settings_catalog.py:177
-#: app/companion/ui/settings_window.py:875
+#: app/companion/ui/settings_window.py:876
 msgid "Desktop conversation"
 msgstr "Conversación de Desktop"
 
@@ -1559,7 +1555,7 @@ msgid "Voice commands"
 msgstr "Comandos de voz"
 
 #: app/companion/assistant/settings_catalog.py:229
-#: app/companion/ui/settings_window.py:885
+#: app/companion/ui/settings_window.py:886
 msgid "Your name"
 msgstr "Tu nombre"
 
@@ -1569,7 +1565,7 @@ msgstr "Actualizar el perfil de Claude Desktop automáticamente"
 
 #: app/companion/assistant/settings_catalog.py:264
 #: app/companion/ui/settings_window.py:511
-#: app/companion/ui/settings_window.py:1618
+#: app/companion/ui/settings_window.py:1619
 msgid "Sounds"
 msgstr "Sonidos"
 
@@ -1652,7 +1648,7 @@ msgstr ""
 "vuelve a iniciar el motor."
 
 #: app/companion/ui/app.py:213 app/companion/ui/app.py:312
-#: app/companion/ui/app.py:415 app/companion/ui/settings_window.py:1634
+#: app/companion/ui/app.py:415 app/companion/ui/settings_window.py:1635
 #: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:93
 msgid "Cancel"
 msgstr "Cancelar"
@@ -1749,7 +1745,7 @@ msgstr "Tú"
 
 #: app/companion/ui/assistant_window.py:82
 #: app/companion/ui/settings_window.py:242
-#: app/companion/ui/settings_window.py:1620
+#: app/companion/ui/settings_window.py:1621
 #: app/companion/ui/status_window.py:149 app/companion/ui/tray.py:88
 msgid "Assistant"
 msgstr "Asistente"
@@ -1789,8 +1785,8 @@ msgid "Hear all"
 msgstr "Escuchar todas"
 
 #: app/companion/ui/assistant_window.py:155
-#: app/companion/ui/settings_window.py:755
-#: app/companion/ui/settings_window.py:793
+#: app/companion/ui/settings_window.py:756
+#: app/companion/ui/settings_window.py:794
 #: app/companion/ui/status_window.py:172
 msgid "Clear"
 msgstr "Vaciar"
@@ -1978,9 +1974,9 @@ msgid "Sound file: {sound}"
 msgstr "Archivo de sonido: {sound}"
 
 #: app/companion/ui/settings_window.py:543
-#: app/companion/ui/settings_window.py:744
-#: app/companion/ui/settings_window.py:754
-#: app/companion/ui/settings_window.py:792
+#: app/companion/ui/settings_window.py:745
+#: app/companion/ui/settings_window.py:755
+#: app/companion/ui/settings_window.py:793
 msgid "Browse..."
 msgstr "Examinar..."
 
@@ -2062,77 +2058,80 @@ msgstr "VoiceMate lee en voz alta la parte hablada de cada respuesta."
 
 #: app/companion/ui/settings_window.py:706
 msgid ""
-"The voices of Windows need no setup and speak every language installed in"
-" Windows (Settings, Time and language, Speech)."
+"Automatic: the engine's voice, or the voices of Windows when the engine "
+"has none. The voices of Windows need no setup and speak every language "
+"installed in Windows (Settings, Time and language, Speech)."
 msgstr ""
-"Las voces de Windows no necesitan configuración y hablan todos los "
-"idiomas instalados en Windows (Configuración, Hora e idioma, Voz)."
+"Automática: la voz del motor, o las voces de Windows cuando el motor no "
+"tiene ninguna. Las voces de Windows no necesitan configuración y hablan "
+"todos los idiomas instalados en Windows (Configuración, Hora e idioma, "
+"Voz)."
 
-#: app/companion/ui/settings_window.py:710
+#: app/companion/ui/settings_window.py:711
 msgid "Voice source:"
 msgstr "Origen de la voz:"
 
-#: app/companion/ui/settings_window.py:711
-#: app/companion/ui/settings_window.py:912
-#: app/companion/ui/settings_window.py:1060
-#: app/companion/ui/settings_window.py:1073
+#: app/companion/ui/settings_window.py:712
+#: app/companion/ui/settings_window.py:913
+#: app/companion/ui/settings_window.py:1061
+#: app/companion/ui/settings_window.py:1074
 msgid "Default voice"
 msgstr "Voz predeterminada"
 
-#: app/companion/ui/settings_window.py:711
+#: app/companion/ui/settings_window.py:712
 msgid "Load the voices, then type part of a name to find one."
 msgstr "Carga las voces y escribe parte de un nombre para encontrar una."
 
-#: app/companion/ui/settings_window.py:712
-#: app/companion/ui/settings_window.py:1469
+#: app/companion/ui/settings_window.py:713
+#: app/companion/ui/settings_window.py:1470
 msgid "Load voices"
 msgstr "Cargar voces"
 
-#: app/companion/ui/settings_window.py:713
+#: app/companion/ui/settings_window.py:714
 msgid "Test"
 msgstr "Probar"
 
-#: app/companion/ui/settings_window.py:714
+#: app/companion/ui/settings_window.py:715
 msgid "Speaks a short sentence with the chosen voice."
 msgstr "Dice una frase corta con la voz elegida."
 
-#: app/companion/ui/settings_window.py:721
+#: app/companion/ui/settings_window.py:722
 msgid "Assistant voice:"
 msgstr "Voz del asistente:"
 
-#: app/companion/ui/settings_window.py:726
+#: app/companion/ui/settings_window.py:727
 msgid "Understand voice commands in typed text"
 msgstr "Entender comandos de voz en el texto escrito"
 
-#: app/companion/ui/settings_window.py:729
+#: app/companion/ui/settings_window.py:730
 msgid "Expression tags:"
 msgstr "Etiquetas de expresión:"
 
-#: app/companion/ui/settings_window.py:731
+#: app/companion/ui/settings_window.py:732
 msgid "Your name:"
 msgstr "Tu nombre:"
 
-#: app/companion/ui/settings_window.py:739
+#: app/companion/ui/settings_window.py:740
 msgid "Source:"
 msgstr "Origen:"
 
-#: app/companion/ui/settings_window.py:743
+#: app/companion/ui/settings_window.py:744
 msgid "The folder of your notes vault"
 msgstr "La carpeta de tu bóveda de notas"
 
-#: app/companion/ui/settings_window.py:748
+#: app/companion/ui/settings_window.py:749
 msgid "Vault folder:"
 msgstr "Carpeta de la bóveda:"
 
-#: app/companion/ui/settings_window.py:753
+#: app/companion/ui/settings_window.py:754
 msgid "Optional Markdown file"
 msgstr "Archivo Markdown opcional"
 
-#: app/companion/ui/settings_window.py:760
+#: app/companion/ui/settings_window.py:761
 msgid "Personality file:"
 msgstr "Archivo de personalidad:"
 
-#: app/companion/ui/settings_window.py:765
+#: app/companion/ui/settings_window.py:766
 msgid ""
 "Describe how the assistant should be: its tone, its humor, how formal it "
 "is and how it addresses you."
@@ -2140,60 +2139,60 @@ msgstr ""
 "Describe cómo debe ser el asistente: su tono, su humor, cuán formal es y "
 "cómo se dirige a ti."
 
-#: app/companion/ui/settings_window.py:772
+#: app/companion/ui/settings_window.py:773
 msgid "Your personality text"
 msgstr "Tu texto de personalidad"
 
-#: app/companion/ui/settings_window.py:775
+#: app/companion/ui/settings_window.py:776
 msgid "Save"
 msgstr "Guardar"
 
-#: app/companion/ui/settings_window.py:785
+#: app/companion/ui/settings_window.py:786
 msgid "Skill"
 msgstr "Skill"
 
-#: app/companion/ui/settings_window.py:789
+#: app/companion/ui/settings_window.py:790
 msgid "Skill language:"
 msgstr "Idioma de la skill:"
 
-#: app/companion/ui/settings_window.py:791
+#: app/companion/ui/settings_window.py:792
 msgid "Optional folder with a SKILL.md"
 msgstr "Carpeta opcional con un SKILL.md"
 
-#: app/companion/ui/settings_window.py:798
+#: app/companion/ui/settings_window.py:799
 msgid "Custom skill:"
 msgstr "Skill personalizada:"
 
-#: app/companion/ui/settings_window.py:802
+#: app/companion/ui/settings_window.py:803
 msgid "Claude Desktop profile"
 msgstr "Perfil de Claude Desktop"
 
-#: app/companion/ui/settings_window.py:804
-#: app/companion/ui/settings_window.py:1174
+#: app/companion/ui/settings_window.py:805
+#: app/companion/ui/settings_window.py:1175
 msgid "Loaded when the assistant starts."
 msgstr "Se carga cuando se inicia el asistente."
 
-#: app/companion/ui/settings_window.py:806
+#: app/companion/ui/settings_window.py:807
 msgid "Check for a newer profile when the assistant starts"
 msgstr "Buscar un perfil más reciente al iniciar el asistente"
 
-#: app/companion/ui/settings_window.py:809
+#: app/companion/ui/settings_window.py:810
 msgid "Check now"
 msgstr "Comprobar ahora"
 
-#: app/companion/ui/settings_window.py:810
+#: app/companion/ui/settings_window.py:811
 msgid "Import..."
 msgstr "Importar..."
 
-#: app/companion/ui/settings_window.py:811
+#: app/companion/ui/settings_window.py:812
 msgid "Export..."
 msgstr "Exportar..."
 
-#: app/companion/ui/settings_window.py:812
+#: app/companion/ui/settings_window.py:813
 msgid "Use default"
 msgstr "Usar el predeterminado"
 
-#: app/companion/ui/settings_window.py:823
+#: app/companion/ui/settings_window.py:824
 msgid ""
 "The assistant is a Claude Code conversation that VoiceMate starts, or a "
 "Claude Desktop conversation you choose. Changing the mode, the effort, "
@@ -2203,27 +2202,27 @@ msgstr ""
 "una conversación de Claude Desktop que eliges. Cambiar el modo, el "
 "esfuerzo, los permisos o la skill lo reinicia."
 
-#: app/companion/ui/settings_window.py:876
+#: app/companion/ui/settings_window.py:877
 msgid "Model"
 msgstr "Modelo"
 
-#: app/companion/ui/settings_window.py:877
+#: app/companion/ui/settings_window.py:878
 msgid "Effort"
 msgstr "Esfuerzo"
 
-#: app/companion/ui/settings_window.py:887
+#: app/companion/ui/settings_window.py:888
 msgid "Vault folder"
 msgstr "Carpeta de la bóveda"
 
-#: app/companion/ui/settings_window.py:888
+#: app/companion/ui/settings_window.py:889
 msgid "Personality file"
 msgstr "Archivo de personalidad"
 
-#: app/companion/ui/settings_window.py:890
+#: app/companion/ui/settings_window.py:891
 msgid "Custom skill"
 msgstr "Skill personalizada"
 
-#: app/companion/ui/settings_window.py:1007
+#: app/companion/ui/settings_window.py:1008
 msgid ""
 "VoiceMate cannot set the model of a Desktop conversation: it asks the "
 "conversation to switch its own model and effort."
@@ -2231,7 +2230,7 @@ msgstr ""
 "VoiceMate no puede fijar el modelo de una conversación de Desktop: le "
 "pide a la conversación que cambie su propio modelo y esfuerzo."
 
-#: app/companion/ui/settings_window.py:1011
+#: app/companion/ui/settings_window.py:1012
 msgid ""
 "A new model applies from the next answer; a new effort restarts the "
 "conversation."
@@ -2239,97 +2238,97 @@ msgstr ""
 "Un modelo nuevo se aplica desde la próxima respuesta; un esfuerzo nuevo "
 "reinicia la conversación."
 
-#: app/companion/ui/settings_window.py:1035
+#: app/companion/ui/settings_window.py:1036
 msgid "This folder does not exist."
 msgstr "Esta carpeta no existe."
 
-#: app/companion/ui/settings_window.py:1036
+#: app/companion/ui/settings_window.py:1037
 msgid "This folder has no .obsidian folder: it may not be an Obsidian vault."
 msgstr ""
 "Esta carpeta no tiene la carpeta .obsidian: puede que no sea una bóveda "
 "de Obsidian."
 
-#: app/companion/ui/settings_window.py:1052
+#: app/companion/ui/settings_window.py:1053
 msgid "Looking for the voices..."
 msgstr "Buscando las voces..."
 
-#: app/companion/ui/settings_window.py:1128
+#: app/companion/ui/settings_window.py:1129
 msgid "Choose a personality file"
 msgstr "Elegir un archivo de personalidad"
 
-#: app/companion/ui/settings_window.py:1128
+#: app/companion/ui/settings_window.py:1129
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/companion/ui/settings_window.py:1134
+#: app/companion/ui/settings_window.py:1135
 msgid "Choose your vault folder"
 msgstr "Elige la carpeta de tu bóveda"
 
-#: app/companion/ui/settings_window.py:1140
+#: app/companion/ui/settings_window.py:1141
 msgid "Choose a folder with a SKILL.md"
 msgstr "Elige una carpeta con un SKILL.md"
 
-#: app/companion/ui/settings_window.py:1161
+#: app/companion/ui/settings_window.py:1162
 #, python-brace-format
 msgid "Not saved: {reason}"
 msgstr "No guardado: {reason}"
 
-#: app/companion/ui/settings_window.py:1164
+#: app/companion/ui/settings_window.py:1165
 msgid "Saved."
 msgstr "Guardado."
 
-#: app/companion/ui/settings_window.py:1176
+#: app/companion/ui/settings_window.py:1177
 #, python-brace-format
 msgid "In use: version {version}, {source}."
 msgstr "En uso: versión {version}, {source}."
 
-#: app/companion/ui/settings_window.py:1180
+#: app/companion/ui/settings_window.py:1181
 msgid "Checking for a newer one..."
 msgstr "Buscando uno más reciente..."
 
-#: app/companion/ui/settings_window.py:1182
+#: app/companion/ui/settings_window.py:1183
 #, python-brace-format
 msgid "Problem: {error}"
 msgstr "Problema: {error}"
 
-#: app/companion/ui/settings_window.py:1198
+#: app/companion/ui/settings_window.py:1199
 msgid "Import a Claude Desktop profile"
 msgstr "Importar un perfil de Claude Desktop"
 
-#: app/companion/ui/settings_window.py:1198
-#: app/companion/ui/settings_window.py:1209
+#: app/companion/ui/settings_window.py:1199
+#: app/companion/ui/settings_window.py:1210
 msgid "Profile"
 msgstr "Perfil"
 
-#: app/companion/ui/settings_window.py:1209
+#: app/companion/ui/settings_window.py:1210
 msgid "Export the Claude Desktop profile"
 msgstr "Exportar el perfil de Claude Desktop"
 
-#: app/companion/ui/settings_window.py:1236
+#: app/companion/ui/settings_window.py:1237
 msgid "Language:"
 msgstr "Idioma:"
 
-#: app/companion/ui/settings_window.py:1238
+#: app/companion/ui/settings_window.py:1239
 msgid "Takes effect after VoiceMate restarts."
 msgstr "Se aplica cuando VoiceMate se reinicie."
 
-#: app/companion/ui/settings_window.py:1243
+#: app/companion/ui/settings_window.py:1244
 msgid "Dictation language:"
 msgstr "Idioma de dictado:"
 
-#: app/companion/ui/settings_window.py:1251
+#: app/companion/ui/settings_window.py:1252
 msgid "Notifications:"
 msgstr "Notificaciones:"
 
-#: app/companion/ui/settings_window.py:1252
+#: app/companion/ui/settings_window.py:1253
 msgid "Start VoiceMate when I sign in"
 msgstr "Iniciar VoiceMate al iniciar sesión"
 
-#: app/companion/ui/settings_window.py:1257
+#: app/companion/ui/settings_window.py:1258
 msgid "Always show the VoiceMate icon on the taskbar"
 msgstr "Mostrar siempre el icono de VoiceMate en la barra de tareas"
 
-#: app/companion/ui/settings_window.py:1260
+#: app/companion/ui/settings_window.py:1261
 msgid ""
 "Shows the icon with the recording and transcription state next to the "
 "clock, instead of hiding it behind the arrow. An icon hidden in the "
@@ -2341,31 +2340,31 @@ msgstr ""
 "la configuración de la barra de tareas de Windows sigue oculto hasta que "
 "desmarques esta opción, hagas clic en Aplicar y vuelvas a marcarla."
 
-#: app/companion/ui/settings_window.py:1269 app/companion/ui/tray.py:122
+#: app/companion/ui/settings_window.py:1270 app/companion/ui/tray.py:122
 msgid "Engine"
 msgstr "Motor"
 
-#: app/companion/ui/settings_window.py:1276
+#: app/companion/ui/settings_window.py:1277
 msgid "Mode:"
 msgstr "Modo:"
 
-#: app/companion/ui/settings_window.py:1278
+#: app/companion/ui/settings_window.py:1279
 msgid "Default distro"
 msgstr "Distro predeterminada"
 
-#: app/companion/ui/settings_window.py:1279
+#: app/companion/ui/settings_window.py:1280
 msgid "WSL distro:"
 msgstr "Distro de WSL:"
 
-#: app/companion/ui/settings_window.py:1282
+#: app/companion/ui/settings_window.py:1283
 msgid "The voice-mate folder: relative to your home folder, or absolute."
 msgstr "La carpeta de voice-mate: relativa a tu carpeta personal, o absoluta."
 
-#: app/companion/ui/settings_window.py:1283
+#: app/companion/ui/settings_window.py:1284
 msgid "Engine folder:"
 msgstr "Carpeta del motor:"
 
-#: app/companion/ui/settings_window.py:1286
+#: app/companion/ui/settings_window.py:1287
 msgid ""
 "Restarting WSL brings its audio back, but it stops every running distro, "
 "Docker included."
@@ -2373,11 +2372,11 @@ msgstr ""
 "Reiniciar WSL recupera el audio, pero detiene todas las distros en "
 "ejecución, Docker incluido."
 
-#: app/companion/ui/settings_window.py:1288
+#: app/companion/ui/settings_window.py:1289
 msgid "Restart WSL when audio fails:"
 msgstr "Reiniciar WSL si falla el audio:"
 
-#: app/companion/ui/settings_window.py:1298
+#: app/companion/ui/settings_window.py:1299
 msgid ""
 "CPU leaves the graphics card free for other programs. GPU is faster. A "
 "mode that is not installed yet is installed when you apply (VoiceMate "
@@ -2387,35 +2386,35 @@ msgstr ""
 "rápida. Un modo que aún no está instalado se instala al aplicar "
 "(VoiceMate pregunta antes). Cambiarlo reinicia el motor."
 
-#: app/companion/ui/settings_window.py:1303
+#: app/companion/ui/settings_window.py:1304
 msgid "Run on:"
 msgstr "Ejecutar en:"
 
-#: app/companion/ui/settings_window.py:1305
+#: app/companion/ui/settings_window.py:1306
 msgid "CPU model:"
 msgstr "Modelo de la CPU:"
 
-#: app/companion/ui/settings_window.py:1307
+#: app/companion/ui/settings_window.py:1308
 msgid "GPU model:"
 msgstr "Modelo de la GPU:"
 
-#: app/companion/ui/settings_window.py:1332
+#: app/companion/ui/settings_window.py:1333
 msgid "Mode"
 msgstr "Modo"
 
-#: app/companion/ui/settings_window.py:1333
+#: app/companion/ui/settings_window.py:1334
 msgid "WSL distro"
 msgstr "Distro de WSL"
 
-#: app/companion/ui/settings_window.py:1334
+#: app/companion/ui/settings_window.py:1335
 msgid "Engine folder"
 msgstr "Carpeta del motor"
 
-#: app/companion/ui/settings_window.py:1335
+#: app/companion/ui/settings_window.py:1336
 msgid "Restart WSL when audio fails"
 msgstr "Reiniciar WSL si falla el audio"
 
-#: app/companion/ui/settings_window.py:1410
+#: app/companion/ui/settings_window.py:1411
 msgid ""
 "Connect only: set by the engine's own\n"
 "--transcription-language and --output-lang flags."
@@ -2423,7 +2422,7 @@ msgstr ""
 "Solo conectar: lo definen las opciones del propio motor\n"
 "--transcription-language y --output-lang."
 
-#: app/companion/ui/settings_window.py:1413
+#: app/companion/ui/settings_window.py:1414
 msgid ""
 "Whisper detects the language of each recording. Claude still answers in "
 "the interface language. Changing it restarts the engine."
@@ -2431,11 +2430,11 @@ msgstr ""
 "Whisper detecta el idioma de cada grabación. Claude sigue respondiendo en"
 " el idioma de la interfaz. Cambiarlo reinicia el motor."
 
-#: app/companion/ui/settings_window.py:1416
+#: app/companion/ui/settings_window.py:1417
 msgid "Claude still answers in the interface language."
 msgstr "Claude sigue respondiendo en el idioma de la interfaz."
 
-#: app/companion/ui/settings_window.py:1419
+#: app/companion/ui/settings_window.py:1420
 msgid ""
 "The language you speak when dictating. It also sets the language of "
 "Claude's spoken answers. Changing it restarts the engine."
@@ -2443,15 +2442,15 @@ msgstr ""
 "El idioma en el que hablas al dictar. También define el idioma de las "
 "respuestas habladas de Claude. Cambiarlo reinicia el motor."
 
-#: app/companion/ui/settings_window.py:1422
+#: app/companion/ui/settings_window.py:1423
 msgid "Also sets the language of Claude's spoken answers."
 msgstr "También define el idioma de las respuestas habladas de Claude."
 
-#: app/companion/ui/settings_window.py:1448
+#: app/companion/ui/settings_window.py:1449
 msgid "Spoken answers"
 msgstr "Respuestas habladas"
 
-#: app/companion/ui/settings_window.py:1454
+#: app/companion/ui/settings_window.py:1455
 msgid ""
 "Where Claude's spoken answers come from. A custom provider is a service "
 "you run that follows the VoiceMate TTS provider protocol (docs/tts-"
@@ -2462,11 +2461,11 @@ msgstr ""
 "TTS de VoiceMate (docs/tts-provider-protocol.md). Cambiarlo reinicia el "
 "motor."
 
-#: app/companion/ui/settings_window.py:1458
+#: app/companion/ui/settings_window.py:1459
 msgid "Voice engine:"
 msgstr "Motor de voz:"
 
-#: app/companion/ui/settings_window.py:1462
+#: app/companion/ui/settings_window.py:1463
 msgid ""
 "The address the engine reaches the provider at. Inside WSL, 127.0.0.1 is "
 "the WSL side."
@@ -2474,26 +2473,26 @@ msgstr ""
 "La dirección con la que el motor llega al proveedor. Dentro de WSL, "
 "127.0.0.1 es el lado de WSL."
 
-#: app/companion/ui/settings_window.py:1464
+#: app/companion/ui/settings_window.py:1465
 msgid "Provider address:"
 msgstr "Dirección del proveedor:"
 
-#: app/companion/ui/settings_window.py:1467
-#: app/companion/ui/settings_window.py:1540
+#: app/companion/ui/settings_window.py:1468
+#: app/companion/ui/settings_window.py:1541
 msgid "Provider default"
 msgstr "Predeterminada del proveedor"
 
-#: app/companion/ui/settings_window.py:1467
+#: app/companion/ui/settings_window.py:1468
 msgid "Load the voices, then type part of a name to find one, or type a voice id."
 msgstr ""
 "Carga las voces y escribe parte de un nombre para encontrar una, o "
 "escribe el id de una voz."
 
-#: app/companion/ui/settings_window.py:1472
+#: app/companion/ui/settings_window.py:1473
 msgid "Voice:"
 msgstr "Voz:"
 
-#: app/companion/ui/settings_window.py:1477
+#: app/companion/ui/settings_window.py:1478
 msgid ""
 "Optional. Sent to the provider as a bearer token. It is kept in this "
 "computer's settings file."
@@ -2501,23 +2500,23 @@ msgstr ""
 "Opcional. Se envía al proveedor como token bearer. Se guarda en el "
 "archivo de configuración de este equipo."
 
-#: app/companion/ui/settings_window.py:1479
+#: app/companion/ui/settings_window.py:1480
 msgid "Token:"
 msgstr "Token:"
 
-#: app/companion/ui/settings_window.py:1480
+#: app/companion/ui/settings_window.py:1481
 msgid "Test voice"
 msgstr "Probar voz"
 
-#: app/companion/ui/settings_window.py:1481
+#: app/companion/ui/settings_window.py:1482
 msgid "Speaks a short sentence with the provider and voice above."
 msgstr "Dice una frase corta con el proveedor y la voz de arriba."
 
-#: app/companion/ui/settings_window.py:1596
+#: app/companion/ui/settings_window.py:1597
 msgid "VoiceMate Settings"
 msgstr "Configuración de VoiceMate"
 
-#: app/companion/ui/settings_window.py:1607
+#: app/companion/ui/settings_window.py:1608
 msgid ""
 "These settings were saved by a newer version of VoiceMate. They are shown"
 " read-only."
@@ -2525,27 +2524,27 @@ msgstr ""
 "Esta configuración la guardó una versión más nueva de VoiceMate y se "
 "muestra solo para lectura."
 
-#: app/companion/ui/settings_window.py:1621
+#: app/companion/ui/settings_window.py:1622
 msgid "General"
 msgstr "General"
 
-#: app/companion/ui/settings_window.py:1633
+#: app/companion/ui/settings_window.py:1634
 msgid "OK"
 msgstr "Aceptar"
 
-#: app/companion/ui/settings_window.py:1635
+#: app/companion/ui/settings_window.py:1636
 msgid "Apply"
 msgstr "Aplicar"
 
-#: app/companion/ui/settings_window.py:1680
+#: app/companion/ui/settings_window.py:1681
 msgid "Contacting the provider..."
 msgstr "Contactando con el proveedor..."
 
-#: app/companion/ui/settings_window.py:1756
+#: app/companion/ui/settings_window.py:1757
 msgid "Checking the transcription mode..."
 msgstr "Comprobando el modo de transcripción..."
 
-#: app/companion/ui/settings_window.py:1770
+#: app/companion/ui/settings_window.py:1771
 msgid ""
 "The transcription mode is not ready (not installed, or another change is "
 "under way), so nothing was changed."
@@ -2553,20 +2552,20 @@ msgstr ""
 "El modo de transcripción no está listo (no instalado, u otro cambio en "
 "curso), así que no se cambió nada."
 
-#: app/companion/ui/settings_window.py:1777
+#: app/companion/ui/settings_window.py:1778
 msgid "Saving..."
 msgstr "Guardando..."
 
-#: app/companion/ui/settings_window.py:1789
+#: app/companion/ui/settings_window.py:1790
 #, python-brace-format
 msgid "Unexpected error: {error}"
 msgstr "Error inesperado: {error}"
 
-#: app/companion/ui/settings_window.py:1796
+#: app/companion/ui/settings_window.py:1797
 msgid "The settings were not saved:"
 msgstr "La configuración no se guardó:"
 
-#: app/companion/ui/settings_window.py:1808
+#: app/companion/ui/settings_window.py:1809
 msgid "Settings saved."
 msgstr "Configuración guardada."
 
@@ -4952,4 +4951,13 @@ msgstr "[stt] ⚠ El modo {mode} todavía no está listo: {detail}"
 
 #~ msgid "Asking the engine..."
 #~ msgstr "Consultando al motor..."
+
+#~ msgid ""
+#~ "Automatic: the engine's voice, or the"
+#~ " voices of Windows when the engine"
+#~ " has none"
+#~ msgstr ""
+#~ "Automática: la voz del motor, o "
+#~ "las voces de Windows cuando el "
+#~ "motor no tiene ninguna"
 

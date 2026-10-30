@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-29 21:34-0300\n"
+"POT-Creation-Date: 2026-10-29 21:45-0300\n"
 "PO-Revision-Date: 2026-10-02 03:34-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: zh_CN\n"
@@ -273,7 +273,7 @@ msgstr ""
 msgid "Same as the interface"
 msgstr "与界面相同"
 
-#: app/companion/choice_labels.py:30 app/companion/ui/settings_window.py:1281
+#: app/companion/choice_labels.py:30 app/companion/ui/settings_window.py:1282
 msgid "Detect automatically"
 msgstr "自动检测"
 
@@ -330,10 +330,8 @@ msgid "Just keep it"
 msgstr "仅保留"
 
 #: app/companion/choice_labels.py:74
-msgid ""
-"Automatic: the engine's voice, or the voices of Windows when the engine "
-"has none"
-msgstr "自动：使用引擎的语音；引擎没有语音时使用 Windows 的语音"
+msgid "Automatic"
+msgstr "自动"
 
 #: app/companion/choice_labels.py:75
 msgid "The engine's voice"
@@ -344,7 +342,7 @@ msgid "The voices of Windows"
 msgstr "Windows 的语音"
 
 #: app/companion/choice_labels.py:82 app/companion/choice_labels.py:105
-#: app/companion/ui/settings_window.py:1475
+#: app/companion/ui/settings_window.py:1476
 msgid "None"
 msgstr "无"
 
@@ -964,12 +962,12 @@ msgstr ""
 "已被其他应用占用：{hotkeys}。如果旧的 VoiceMate 快捷键脚本仍在运行，请关闭它并将其从 shell:startup "
 "中移除，或在设置中选择其他快捷键。"
 
-#: app/companion/settings_store.py:122 app/companion/ui/settings_window.py:1329
+#: app/companion/settings_store.py:122 app/companion/ui/settings_window.py:1330
 msgid "Language"
 msgstr "语言"
 
 #: app/companion/assistant/settings_catalog.py:298
-#: app/companion/settings_store.py:123 app/companion/ui/settings_window.py:1330
+#: app/companion/settings_store.py:123 app/companion/ui/settings_window.py:1331
 msgid "Dictation language"
 msgstr "听写语言"
 
@@ -982,30 +980,30 @@ msgid "WSL restart"
 msgstr "WSL 重启"
 
 #: app/companion/assistant/settings_catalog.py:316
-#: app/companion/settings_store.py:126 app/companion/ui/settings_window.py:1331
+#: app/companion/settings_store.py:126 app/companion/ui/settings_window.py:1332
 msgid "Notifications"
 msgstr "通知"
 
-#: app/companion/settings_store.py:127 app/companion/ui/settings_window.py:1617
+#: app/companion/settings_store.py:127 app/companion/ui/settings_window.py:1618
 msgid "Hotkeys"
 msgstr "快捷键"
 
 #: app/companion/assistant/settings_catalog.py:307
-#: app/companion/settings_store.py:128 app/companion/ui/settings_window.py:1292
-#: app/companion/ui/settings_window.py:1336 app/companion/ui/tray.py:111
+#: app/companion/settings_store.py:128 app/companion/ui/settings_window.py:1293
+#: app/companion/ui/settings_window.py:1337 app/companion/ui/tray.py:111
 msgid "Transcription"
 msgstr "转写"
 
-#: app/companion/settings_store.py:129 app/companion/ui/settings_window.py:1337
+#: app/companion/settings_store.py:129 app/companion/ui/settings_window.py:1338
 msgid "CPU model"
 msgstr "CPU 模型"
 
-#: app/companion/settings_store.py:130 app/companion/ui/settings_window.py:1338
+#: app/companion/settings_store.py:130 app/companion/ui/settings_window.py:1339
 msgid "GPU model"
 msgstr "GPU 模型"
 
 #: app/companion/assistant/settings_catalog.py:110
-#: app/companion/settings_store.py:131 app/companion/ui/settings_window.py:874
+#: app/companion/settings_store.py:131 app/companion/ui/settings_window.py:875
 msgid "Assistant mode"
 msgstr "助手模式"
 
@@ -1020,38 +1018,38 @@ msgid "Assistant effort"
 msgstr "助手推理强度"
 
 #: app/companion/assistant/settings_catalog.py:220
-#: app/companion/settings_store.py:134 app/companion/ui/settings_window.py:884
+#: app/companion/settings_store.py:134 app/companion/ui/settings_window.py:885
 msgid "Expression tags"
 msgstr "语气标签"
 
 #: app/companion/assistant/settings_catalog.py:140
-#: app/companion/settings_store.py:135 app/companion/ui/settings_window.py:880
+#: app/companion/settings_store.py:135 app/companion/ui/settings_window.py:881
 msgid "Permissions"
 msgstr "权限"
 
 #: app/companion/assistant/settings_catalog.py:255
-#: app/companion/settings_store.py:136 app/companion/ui/settings_window.py:889
+#: app/companion/settings_store.py:136 app/companion/ui/settings_window.py:890
 msgid "Skill language"
 msgstr "技能语言"
 
 #: app/companion/assistant/settings_catalog.py:150
-#: app/companion/settings_store.py:137 app/companion/ui/settings_window.py:881
+#: app/companion/settings_store.py:137 app/companion/ui/settings_window.py:882
 msgid "Answers from other conversations"
 msgstr "其他对话的回答"
 
 #: app/companion/assistant/settings_catalog.py:159
-#: app/companion/settings_store.py:138 app/companion/ui/settings_window.py:878
+#: app/companion/settings_store.py:138 app/companion/ui/settings_window.py:879
 msgid "Model of new conversations"
 msgstr "新对话的模型"
 
 #: app/companion/assistant/settings_catalog.py:168
-#: app/companion/settings_store.py:139 app/companion/ui/settings_window.py:879
+#: app/companion/settings_store.py:139 app/companion/ui/settings_window.py:880
 msgid "Effort of new conversations"
 msgstr "新对话的推理强度"
 
 #: app/companion/assistant/settings_catalog.py:238
-#: app/companion/settings_store.py:140 app/companion/ui/settings_window.py:735
-#: app/companion/ui/settings_window.py:886
+#: app/companion/settings_store.py:140 app/companion/ui/settings_window.py:736
+#: app/companion/ui/settings_window.py:887
 msgid "Personality"
 msgstr "个性"
 
@@ -1061,29 +1059,29 @@ msgid "Speak the replies"
 msgstr "朗读回复"
 
 #: app/companion/assistant/settings_catalog.py:194
-#: app/companion/settings_store.py:142 app/companion/ui/settings_window.py:882
+#: app/companion/settings_store.py:142 app/companion/ui/settings_window.py:883
 msgid "Voice source"
 msgstr "语音来源"
 
 #: app/companion/assistant/settings_catalog.py:204
-#: app/companion/settings_store.py:143 app/companion/ui/settings_window.py:883
+#: app/companion/settings_store.py:143 app/companion/ui/settings_window.py:884
 msgid "Assistant voice"
 msgstr "助手声音"
 
-#: app/companion/settings_store.py:144 app/companion/ui/settings_window.py:1505
+#: app/companion/settings_store.py:144 app/companion/ui/settings_window.py:1506
 msgid "Voice engine"
 msgstr "语音引擎"
 
-#: app/companion/settings_store.py:145 app/companion/ui/settings_window.py:1506
+#: app/companion/settings_store.py:145 app/companion/ui/settings_window.py:1507
 msgid "Provider address"
 msgstr "提供方地址"
 
-#: app/companion/settings_store.py:146 app/companion/ui/settings_window.py:1507
-#: app/companion/ui/settings_window.py:1619
+#: app/companion/settings_store.py:146 app/companion/ui/settings_window.py:1508
+#: app/companion/ui/settings_window.py:1620
 msgid "Voice"
 msgstr "声音"
 
-#: app/companion/settings_store.py:147 app/companion/ui/settings_window.py:1508
+#: app/companion/settings_store.py:147 app/companion/ui/settings_window.py:1509
 msgid "Token"
 msgstr "令牌"
 
@@ -1452,7 +1450,7 @@ msgid "Not sent to \"{title}\": {reason}"
 msgstr "未发送到“{title}”：{reason}"
 
 #: app/companion/assistant/settings_catalog.py:177
-#: app/companion/ui/settings_window.py:875
+#: app/companion/ui/settings_window.py:876
 msgid "Desktop conversation"
 msgstr "Desktop 对话"
 
@@ -1461,7 +1459,7 @@ msgid "Voice commands"
 msgstr "语音命令"
 
 #: app/companion/assistant/settings_catalog.py:229
-#: app/companion/ui/settings_window.py:885
+#: app/companion/ui/settings_window.py:886
 msgid "Your name"
 msgstr "你的名字"
 
@@ -1471,7 +1469,7 @@ msgstr "自动更新 Claude Desktop 配置文件"
 
 #: app/companion/assistant/settings_catalog.py:264
 #: app/companion/ui/settings_window.py:511
-#: app/companion/ui/settings_window.py:1618
+#: app/companion/ui/settings_window.py:1619
 msgid "Sounds"
 msgstr "声音"
 
@@ -1550,7 +1548,7 @@ msgid ""
 msgstr "这会停止所有正在运行的 WSL 发行版（包括 Docker），然后重新启动引擎。"
 
 #: app/companion/ui/app.py:213 app/companion/ui/app.py:312
-#: app/companion/ui/app.py:415 app/companion/ui/settings_window.py:1634
+#: app/companion/ui/app.py:415 app/companion/ui/settings_window.py:1635
 #: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:93
 msgid "Cancel"
 msgstr "取消"
@@ -1642,7 +1640,7 @@ msgstr "你"
 
 #: app/companion/ui/assistant_window.py:82
 #: app/companion/ui/settings_window.py:242
-#: app/companion/ui/settings_window.py:1620
+#: app/companion/ui/settings_window.py:1621
 #: app/companion/ui/status_window.py:149 app/companion/ui/tray.py:88
 msgid "Assistant"
 msgstr "助手"
@@ -1682,8 +1680,8 @@ msgid "Hear all"
 msgstr "全部收听"
 
 #: app/companion/ui/assistant_window.py:155
-#: app/companion/ui/settings_window.py:755
-#: app/companion/ui/settings_window.py:793
+#: app/companion/ui/settings_window.py:756
+#: app/companion/ui/settings_window.py:794
 #: app/companion/ui/status_window.py:172
 msgid "Clear"
 msgstr "清空"
@@ -1867,9 +1865,9 @@ msgid "Sound file: {sound}"
 msgstr "声音文件：{sound}"
 
 #: app/companion/ui/settings_window.py:543
-#: app/companion/ui/settings_window.py:744
-#: app/companion/ui/settings_window.py:754
-#: app/companion/ui/settings_window.py:792
+#: app/companion/ui/settings_window.py:745
+#: app/companion/ui/settings_window.py:755
+#: app/companion/ui/settings_window.py:793
 msgid "Browse..."
 msgstr "浏览..."
 
@@ -1948,134 +1946,137 @@ msgstr "VoiceMate 会朗读每条回复中的语音部分。"
 
 #: app/companion/ui/settings_window.py:706
 msgid ""
-"The voices of Windows need no setup and speak every language installed in"
-" Windows (Settings, Time and language, Speech)."
-msgstr "Windows 的语音无需设置，支持 Windows 中已安装的所有语言（设置、时间和语言、语音）。"
+"Automatic: the engine's voice, or the voices of Windows when the engine "
+"has none. The voices of Windows need no setup and speak every language "
+"installed in Windows (Settings, Time and language, Speech)."
+msgstr ""
+"自动：使用引擎的语音；引擎没有语音时使用 Windows 的语音。Windows 的语音无需设置，支持 Windows "
+"中已安装的所有语言（设置、时间和语言、语音）。"
 
-#: app/companion/ui/settings_window.py:710
+#: app/companion/ui/settings_window.py:711
 msgid "Voice source:"
 msgstr "语音来源："
 
-#: app/companion/ui/settings_window.py:711
-#: app/companion/ui/settings_window.py:912
-#: app/companion/ui/settings_window.py:1060
-#: app/companion/ui/settings_window.py:1073
+#: app/companion/ui/settings_window.py:712
+#: app/companion/ui/settings_window.py:913
+#: app/companion/ui/settings_window.py:1061
+#: app/companion/ui/settings_window.py:1074
 msgid "Default voice"
 msgstr "默认语音"
 
-#: app/companion/ui/settings_window.py:711
+#: app/companion/ui/settings_window.py:712
 msgid "Load the voices, then type part of a name to find one."
 msgstr "先加载语音，然后输入名称的一部分来查找。"
 
-#: app/companion/ui/settings_window.py:712
-#: app/companion/ui/settings_window.py:1469
+#: app/companion/ui/settings_window.py:713
+#: app/companion/ui/settings_window.py:1470
 msgid "Load voices"
 msgstr "加载声音"
 
-#: app/companion/ui/settings_window.py:713
+#: app/companion/ui/settings_window.py:714
 msgid "Test"
 msgstr "试听"
 
-#: app/companion/ui/settings_window.py:714
+#: app/companion/ui/settings_window.py:715
 msgid "Speaks a short sentence with the chosen voice."
 msgstr "用所选声音朗读一句短语。"
 
-#: app/companion/ui/settings_window.py:721
+#: app/companion/ui/settings_window.py:722
 msgid "Assistant voice:"
 msgstr "助手声音："
 
-#: app/companion/ui/settings_window.py:726
+#: app/companion/ui/settings_window.py:727
 msgid "Understand voice commands in typed text"
 msgstr "识别输入文字中的语音指令"
 
-#: app/companion/ui/settings_window.py:729
+#: app/companion/ui/settings_window.py:730
 msgid "Expression tags:"
 msgstr "语气标签："
 
-#: app/companion/ui/settings_window.py:731
+#: app/companion/ui/settings_window.py:732
 msgid "Your name:"
 msgstr "你的名字："
 
-#: app/companion/ui/settings_window.py:739
+#: app/companion/ui/settings_window.py:740
 msgid "Source:"
 msgstr "来源："
 
-#: app/companion/ui/settings_window.py:743
+#: app/companion/ui/settings_window.py:744
 msgid "The folder of your notes vault"
 msgstr "你的笔记库文件夹"
 
-#: app/companion/ui/settings_window.py:748
+#: app/companion/ui/settings_window.py:749
 msgid "Vault folder:"
 msgstr "笔记库文件夹："
 
-#: app/companion/ui/settings_window.py:753
+#: app/companion/ui/settings_window.py:754
 msgid "Optional Markdown file"
 msgstr "可选的 Markdown 文件"
 
-#: app/companion/ui/settings_window.py:760
+#: app/companion/ui/settings_window.py:761
 msgid "Personality file:"
 msgstr "个性文件："
 
-#: app/companion/ui/settings_window.py:765
+#: app/companion/ui/settings_window.py:766
 msgid ""
 "Describe how the assistant should be: its tone, its humor, how formal it "
 "is and how it addresses you."
 msgstr "描述助手应有的样子：语气、幽默感、正式程度以及如何称呼你。"
 
-#: app/companion/ui/settings_window.py:772
+#: app/companion/ui/settings_window.py:773
 msgid "Your personality text"
 msgstr "你的个性文字"
 
-#: app/companion/ui/settings_window.py:775
+#: app/companion/ui/settings_window.py:776
 msgid "Save"
 msgstr "保存"
 
-#: app/companion/ui/settings_window.py:785
+#: app/companion/ui/settings_window.py:786
 msgid "Skill"
 msgstr "技能"
 
-#: app/companion/ui/settings_window.py:789
+#: app/companion/ui/settings_window.py:790
 msgid "Skill language:"
 msgstr "技能语言："
 
-#: app/companion/ui/settings_window.py:791
+#: app/companion/ui/settings_window.py:792
 msgid "Optional folder with a SKILL.md"
 msgstr "可选：包含 SKILL.md 的文件夹"
 
-#: app/companion/ui/settings_window.py:798
+#: app/companion/ui/settings_window.py:799
 msgid "Custom skill:"
 msgstr "自定义技能："
 
-#: app/companion/ui/settings_window.py:802
+#: app/companion/ui/settings_window.py:803
 msgid "Claude Desktop profile"
 msgstr "Claude Desktop 配置文件"
 
-#: app/companion/ui/settings_window.py:804
-#: app/companion/ui/settings_window.py:1174
+#: app/companion/ui/settings_window.py:805
+#: app/companion/ui/settings_window.py:1175
 msgid "Loaded when the assistant starts."
 msgstr "助手启动时加载。"
 
-#: app/companion/ui/settings_window.py:806
+#: app/companion/ui/settings_window.py:807
 msgid "Check for a newer profile when the assistant starts"
 msgstr "助手启动时检查更新的配置文件"
 
-#: app/companion/ui/settings_window.py:809
+#: app/companion/ui/settings_window.py:810
 msgid "Check now"
 msgstr "立即检查"
 
-#: app/companion/ui/settings_window.py:810
+#: app/companion/ui/settings_window.py:811
 msgid "Import..."
 msgstr "导入..."
 
-#: app/companion/ui/settings_window.py:811
+#: app/companion/ui/settings_window.py:812
 msgid "Export..."
 msgstr "导出..."
 
-#: app/companion/ui/settings_window.py:812
+#: app/companion/ui/settings_window.py:813
 msgid "Use default"
 msgstr "使用默认"
 
-#: app/companion/ui/settings_window.py:823
+#: app/companion/ui/settings_window.py:824
 msgid ""
 "The assistant is a Claude Code conversation that VoiceMate starts, or a "
 "Claude Desktop conversation you choose. Changing the mode, the effort, "
@@ -2084,127 +2085,127 @@ msgstr ""
 "助手是由 VoiceMate 启动的 Claude Code 对话，或你选择的 Claude Desktop "
 "对话。更改模式、推理强度、权限或技能会重新启动它。"
 
-#: app/companion/ui/settings_window.py:876
+#: app/companion/ui/settings_window.py:877
 msgid "Model"
 msgstr "模型"
 
-#: app/companion/ui/settings_window.py:877
+#: app/companion/ui/settings_window.py:878
 msgid "Effort"
 msgstr "推理强度"
 
-#: app/companion/ui/settings_window.py:887
+#: app/companion/ui/settings_window.py:888
 msgid "Vault folder"
 msgstr "笔记库文件夹"
 
-#: app/companion/ui/settings_window.py:888
+#: app/companion/ui/settings_window.py:889
 msgid "Personality file"
 msgstr "个性文件"
 
-#: app/companion/ui/settings_window.py:890
+#: app/companion/ui/settings_window.py:891
 msgid "Custom skill"
 msgstr "自定义技能"
 
-#: app/companion/ui/settings_window.py:1007
+#: app/companion/ui/settings_window.py:1008
 msgid ""
 "VoiceMate cannot set the model of a Desktop conversation: it asks the "
 "conversation to switch its own model and effort."
 msgstr "VoiceMate 无法设置 Desktop 对话的模型：它会请该对话自行切换模型和推理强度。"
 
-#: app/companion/ui/settings_window.py:1011
+#: app/companion/ui/settings_window.py:1012
 msgid ""
 "A new model applies from the next answer; a new effort restarts the "
 "conversation."
 msgstr "新模型从下一条回答开始生效；新的推理强度会重新启动对话。"
 
-#: app/companion/ui/settings_window.py:1035
+#: app/companion/ui/settings_window.py:1036
 msgid "This folder does not exist."
 msgstr "此文件夹不存在。"
 
-#: app/companion/ui/settings_window.py:1036
+#: app/companion/ui/settings_window.py:1037
 msgid "This folder has no .obsidian folder: it may not be an Obsidian vault."
 msgstr "此文件夹中没有 .obsidian 文件夹：它可能不是 Obsidian 笔记库。"
 
-#: app/companion/ui/settings_window.py:1052
+#: app/companion/ui/settings_window.py:1053
 msgid "Looking for the voices..."
 msgstr "正在查找语音..."
 
-#: app/companion/ui/settings_window.py:1128
+#: app/companion/ui/settings_window.py:1129
 msgid "Choose a personality file"
 msgstr "选择个性文件"
 
-#: app/companion/ui/settings_window.py:1128
+#: app/companion/ui/settings_window.py:1129
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/companion/ui/settings_window.py:1134
+#: app/companion/ui/settings_window.py:1135
 msgid "Choose your vault folder"
 msgstr "选择你的笔记库文件夹"
 
-#: app/companion/ui/settings_window.py:1140
+#: app/companion/ui/settings_window.py:1141
 msgid "Choose a folder with a SKILL.md"
 msgstr "选择包含 SKILL.md 的文件夹"
 
-#: app/companion/ui/settings_window.py:1161
+#: app/companion/ui/settings_window.py:1162
 #, python-brace-format
 msgid "Not saved: {reason}"
 msgstr "未保存：{reason}"
 
-#: app/companion/ui/settings_window.py:1164
+#: app/companion/ui/settings_window.py:1165
 msgid "Saved."
 msgstr "已保存。"
 
-#: app/companion/ui/settings_window.py:1176
+#: app/companion/ui/settings_window.py:1177
 #, python-brace-format
 msgid "In use: version {version}, {source}."
 msgstr "使用中：版本 {version}，{source}。"
 
-#: app/companion/ui/settings_window.py:1180
+#: app/companion/ui/settings_window.py:1181
 msgid "Checking for a newer one..."
 msgstr "正在检查是否有更新版本..."
 
-#: app/companion/ui/settings_window.py:1182
+#: app/companion/ui/settings_window.py:1183
 #, python-brace-format
 msgid "Problem: {error}"
 msgstr "问题：{error}"
 
-#: app/companion/ui/settings_window.py:1198
+#: app/companion/ui/settings_window.py:1199
 msgid "Import a Claude Desktop profile"
 msgstr "导入 Claude Desktop 配置文件"
 
-#: app/companion/ui/settings_window.py:1198
-#: app/companion/ui/settings_window.py:1209
+#: app/companion/ui/settings_window.py:1199
+#: app/companion/ui/settings_window.py:1210
 msgid "Profile"
 msgstr "配置文件"
 
-#: app/companion/ui/settings_window.py:1209
+#: app/companion/ui/settings_window.py:1210
 msgid "Export the Claude Desktop profile"
 msgstr "导出 Claude Desktop 配置文件"
 
-#: app/companion/ui/settings_window.py:1236
+#: app/companion/ui/settings_window.py:1237
 msgid "Language:"
 msgstr "语言："
 
-#: app/companion/ui/settings_window.py:1238
+#: app/companion/ui/settings_window.py:1239
 msgid "Takes effect after VoiceMate restarts."
 msgstr "重启 VoiceMate 后生效。"
 
-#: app/companion/ui/settings_window.py:1243
+#: app/companion/ui/settings_window.py:1244
 msgid "Dictation language:"
 msgstr "听写语言："
 
-#: app/companion/ui/settings_window.py:1251
+#: app/companion/ui/settings_window.py:1252
 msgid "Notifications:"
 msgstr "通知："
 
-#: app/companion/ui/settings_window.py:1252
+#: app/companion/ui/settings_window.py:1253
 msgid "Start VoiceMate when I sign in"
 msgstr "登录时启动 VoiceMate"
 
-#: app/companion/ui/settings_window.py:1257
+#: app/companion/ui/settings_window.py:1258
 msgid "Always show the VoiceMate icon on the taskbar"
 msgstr "始终在任务栏上显示 VoiceMate 图标"
 
-#: app/companion/ui/settings_window.py:1260
+#: app/companion/ui/settings_window.py:1261
 msgid ""
 "Shows the icon with the recording and transcription state next to the "
 "clock, instead of hiding it behind the arrow. An icon hidden in the "
@@ -2214,76 +2215,76 @@ msgstr ""
 "在时钟旁显示带有录音和转写状态的图标，而不是将其隐藏在箭头后面。在 Windows "
 "任务栏设置中隐藏的图标会保持隐藏，直到你关闭此选项、单击“应用”，然后再次开启。"
 
-#: app/companion/ui/settings_window.py:1269 app/companion/ui/tray.py:122
+#: app/companion/ui/settings_window.py:1270 app/companion/ui/tray.py:122
 msgid "Engine"
 msgstr "引擎"
 
-#: app/companion/ui/settings_window.py:1276
+#: app/companion/ui/settings_window.py:1277
 msgid "Mode:"
 msgstr "模式："
 
-#: app/companion/ui/settings_window.py:1278
+#: app/companion/ui/settings_window.py:1279
 msgid "Default distro"
 msgstr "默认发行版"
 
-#: app/companion/ui/settings_window.py:1279
+#: app/companion/ui/settings_window.py:1280
 msgid "WSL distro:"
 msgstr "WSL 发行版："
 
-#: app/companion/ui/settings_window.py:1282
+#: app/companion/ui/settings_window.py:1283
 msgid "The voice-mate folder: relative to your home folder, or absolute."
 msgstr "voice-mate 文件夹：相对于你的主文件夹的路径，或绝对路径。"
 
-#: app/companion/ui/settings_window.py:1283
+#: app/companion/ui/settings_window.py:1284
 msgid "Engine folder:"
 msgstr "引擎文件夹："
 
-#: app/companion/ui/settings_window.py:1286
+#: app/companion/ui/settings_window.py:1287
 msgid ""
 "Restarting WSL brings its audio back, but it stops every running distro, "
 "Docker included."
 msgstr "重启 WSL 可以恢复其音频，但会停止所有正在运行的发行版（包括 Docker）。"
 
-#: app/companion/ui/settings_window.py:1288
+#: app/companion/ui/settings_window.py:1289
 msgid "Restart WSL when audio fails:"
 msgstr "音频故障时重启 WSL："
 
-#: app/companion/ui/settings_window.py:1298
+#: app/companion/ui/settings_window.py:1299
 msgid ""
 "CPU leaves the graphics card free for other programs. GPU is faster. A "
 "mode that is not installed yet is installed when you apply (VoiceMate "
 "asks first). Changing it restarts the engine."
 msgstr "CPU 会让显卡空出来给其他程序使用。GPU 速度更快。尚未安装的模式会在应用时安装（VoiceMate 会先询问）。切换模式会重启引擎。"
 
-#: app/companion/ui/settings_window.py:1303
+#: app/companion/ui/settings_window.py:1304
 msgid "Run on:"
 msgstr "运行于："
 
-#: app/companion/ui/settings_window.py:1305
+#: app/companion/ui/settings_window.py:1306
 msgid "CPU model:"
 msgstr "CPU 模型："
 
-#: app/companion/ui/settings_window.py:1307
+#: app/companion/ui/settings_window.py:1308
 msgid "GPU model:"
 msgstr "GPU 模型："
 
-#: app/companion/ui/settings_window.py:1332
+#: app/companion/ui/settings_window.py:1333
 msgid "Mode"
 msgstr "模式"
 
-#: app/companion/ui/settings_window.py:1333
+#: app/companion/ui/settings_window.py:1334
 msgid "WSL distro"
 msgstr "WSL 发行版"
 
-#: app/companion/ui/settings_window.py:1334
+#: app/companion/ui/settings_window.py:1335
 msgid "Engine folder"
 msgstr "引擎文件夹"
 
-#: app/companion/ui/settings_window.py:1335
+#: app/companion/ui/settings_window.py:1336
 msgid "Restart WSL when audio fails"
 msgstr "音频故障时重启 WSL"
 
-#: app/companion/ui/settings_window.py:1410
+#: app/companion/ui/settings_window.py:1411
 msgid ""
 "Connect only: set by the engine's own\n"
 "--transcription-language and --output-lang flags."
@@ -2291,31 +2292,31 @@ msgstr ""
 "仅连接：由引擎自身的\n"
 "--transcription-language 和 --output-lang 选项决定。"
 
-#: app/companion/ui/settings_window.py:1413
+#: app/companion/ui/settings_window.py:1414
 msgid ""
 "Whisper detects the language of each recording. Claude still answers in "
 "the interface language. Changing it restarts the engine."
 msgstr "Whisper 会检测每段录音的语言。Claude 仍会使用界面语言回答。更改后会重启引擎。"
 
-#: app/companion/ui/settings_window.py:1416
+#: app/companion/ui/settings_window.py:1417
 msgid "Claude still answers in the interface language."
 msgstr "Claude 仍会使用界面语言回答。"
 
-#: app/companion/ui/settings_window.py:1419
+#: app/companion/ui/settings_window.py:1420
 msgid ""
 "The language you speak when dictating. It also sets the language of "
 "Claude's spoken answers. Changing it restarts the engine."
 msgstr "听写时所说的语言。它同时决定 Claude 语音回答所用的语言。更改后会重启引擎。"
 
-#: app/companion/ui/settings_window.py:1422
+#: app/companion/ui/settings_window.py:1423
 msgid "Also sets the language of Claude's spoken answers."
 msgstr "同时决定 Claude 语音回答所用的语言。"
 
-#: app/companion/ui/settings_window.py:1448
+#: app/companion/ui/settings_window.py:1449
 msgid "Spoken answers"
 msgstr "语音回答"
 
-#: app/companion/ui/settings_window.py:1454
+#: app/companion/ui/settings_window.py:1455
 msgid ""
 "Where Claude's spoken answers come from. A custom provider is a service "
 "you run that follows the VoiceMate TTS provider protocol (docs/tts-"
@@ -2324,101 +2325,101 @@ msgstr ""
 "Claude 语音回答的来源。自定义提供方是你自己运行、遵循 VoiceMate TTS 提供方协议（docs/tts-provider-"
 "protocol.md）的服务。更改后会重启引擎。"
 
-#: app/companion/ui/settings_window.py:1458
+#: app/companion/ui/settings_window.py:1459
 msgid "Voice engine:"
 msgstr "语音引擎："
 
-#: app/companion/ui/settings_window.py:1462
+#: app/companion/ui/settings_window.py:1463
 msgid ""
 "The address the engine reaches the provider at. Inside WSL, 127.0.0.1 is "
 "the WSL side."
 msgstr "引擎访问提供方所用的地址。在 WSL 内，127.0.0.1 指 WSL 一侧。"
 
-#: app/companion/ui/settings_window.py:1464
+#: app/companion/ui/settings_window.py:1465
 msgid "Provider address:"
 msgstr "提供方地址："
 
-#: app/companion/ui/settings_window.py:1467
-#: app/companion/ui/settings_window.py:1540
+#: app/companion/ui/settings_window.py:1468
+#: app/companion/ui/settings_window.py:1541
 msgid "Provider default"
 msgstr "提供方默认"
 
-#: app/companion/ui/settings_window.py:1467
+#: app/companion/ui/settings_window.py:1468
 msgid "Load the voices, then type part of a name to find one, or type a voice id."
 msgstr "加载声音列表后输入名称的一部分进行查找，或直接输入声音 ID。"
 
-#: app/companion/ui/settings_window.py:1472
+#: app/companion/ui/settings_window.py:1473
 msgid "Voice:"
 msgstr "声音："
 
-#: app/companion/ui/settings_window.py:1477
+#: app/companion/ui/settings_window.py:1478
 msgid ""
 "Optional. Sent to the provider as a bearer token. It is kept in this "
 "computer's settings file."
 msgstr "可选。作为 bearer 令牌发送给提供方。保存在这台电脑的设置文件中。"
 
-#: app/companion/ui/settings_window.py:1479
+#: app/companion/ui/settings_window.py:1480
 msgid "Token:"
 msgstr "令牌："
 
-#: app/companion/ui/settings_window.py:1480
+#: app/companion/ui/settings_window.py:1481
 msgid "Test voice"
 msgstr "试听声音"
 
-#: app/companion/ui/settings_window.py:1481
+#: app/companion/ui/settings_window.py:1482
 msgid "Speaks a short sentence with the provider and voice above."
 msgstr "使用上面的提供方和声音朗读一句短语。"
 
-#: app/companion/ui/settings_window.py:1596
+#: app/companion/ui/settings_window.py:1597
 msgid "VoiceMate Settings"
 msgstr "VoiceMate 设置"
 
-#: app/companion/ui/settings_window.py:1607
+#: app/companion/ui/settings_window.py:1608
 msgid ""
 "These settings were saved by a newer version of VoiceMate. They are shown"
 " read-only."
 msgstr "这些设置由更新版本的 VoiceMate 保存，仅以只读方式显示。"
 
-#: app/companion/ui/settings_window.py:1621
+#: app/companion/ui/settings_window.py:1622
 msgid "General"
 msgstr "常规"
 
-#: app/companion/ui/settings_window.py:1633
+#: app/companion/ui/settings_window.py:1634
 msgid "OK"
 msgstr "确定"
 
-#: app/companion/ui/settings_window.py:1635
+#: app/companion/ui/settings_window.py:1636
 msgid "Apply"
 msgstr "应用"
 
-#: app/companion/ui/settings_window.py:1680
+#: app/companion/ui/settings_window.py:1681
 msgid "Contacting the provider..."
 msgstr "正在联系提供方..."
 
-#: app/companion/ui/settings_window.py:1756
+#: app/companion/ui/settings_window.py:1757
 msgid "Checking the transcription mode..."
 msgstr "正在检查转写模式..."
 
-#: app/companion/ui/settings_window.py:1770
+#: app/companion/ui/settings_window.py:1771
 msgid ""
 "The transcription mode is not ready (not installed, or another change is "
 "under way), so nothing was changed."
 msgstr "转写模式尚未就绪（未安装，或另一项切换正在进行），因此没有做任何更改。"
 
-#: app/companion/ui/settings_window.py:1777
+#: app/companion/ui/settings_window.py:1778
 msgid "Saving..."
 msgstr "正在保存..."
 
-#: app/companion/ui/settings_window.py:1789
+#: app/companion/ui/settings_window.py:1790
 #, python-brace-format
 msgid "Unexpected error: {error}"
 msgstr "意外错误：{error}"
 
-#: app/companion/ui/settings_window.py:1796
+#: app/companion/ui/settings_window.py:1797
 msgid "The settings were not saved:"
 msgstr "设置未保存："
 
-#: app/companion/ui/settings_window.py:1808
+#: app/companion/ui/settings_window.py:1809
 msgid "Settings saved."
 msgstr "设置已保存。"
 
@@ -4633,4 +4634,10 @@ msgstr "[stt] ⚠ {mode} 模式仍未就绪：{detail}"
 
 #~ msgid "Asking the engine..."
 #~ msgstr "正在询问引擎..."
+
+#~ msgid ""
+#~ "Automatic: the engine's voice, or the"
+#~ " voices of Windows when the engine"
+#~ " has none"
+#~ msgstr "自动：使用引擎的语音；引擎没有语音时使用 Windows 的语音"
 

@@ -71,7 +71,7 @@ def answer_delivery_labels() -> dict[AnswerDelivery, str]:
 
 def voice_source_labels() -> dict[AssistantVoiceSource, str]:
     return {
-        "auto": _("Automatic: the engine's voice, or the voices of Windows when the engine has none"),
+        "auto": _("Automatic"),
         "engine": _("The engine's voice"),
         "windows": _("The voices of Windows"),
     }

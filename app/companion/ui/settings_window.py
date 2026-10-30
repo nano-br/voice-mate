@@ -703,6 +703,7 @@ class AssistantPage(QWidget):
         self.voice_source = _option_combo(texts.voice_source_labels())
         self.voice_source.setToolTip(
             _(
+                "Automatic: the engine's voice, or the voices of Windows when the engine has none. "
                 "The voices of Windows need no setup and speak every language installed in Windows "
                 "(Settings, Time and language, Speech)."
             )
