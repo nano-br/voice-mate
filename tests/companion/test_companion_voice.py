@@ -17,6 +17,8 @@ from app.companion.voice import (
     RETRY_AFTER_S,
     EngineVoice,
     VoiceStream,
+    _InDevice,
+    _Item,
     complete_sentences,
     engine_tts_url,
     explain,
@@ -363,6 +365,23 @@ def test_a_second_recording_during_the_replay_keeps_the_lines_in_order(
     said = [lines.index(text) for text in _texts(provider)]
     last_pass = said[max(i for i in range(1, len(said)) if said[i] <= said[i - 1]) :]
     assert last_pass == list(range(last_pass[0], len(lines)))
+
+
+def test_a_line_that_starts_playing_just_after_a_cut_goes_behind_the_lines_that_cut_moved(
+    rigs: list[Rig],
+) -> None:
+    # The third line opened its stream as the recording began: the cut moved the first two lines
+    # to the replay list before the third was listed as playing, and its own cut comes after.
+    rig = _rig(rigs, None)
+    alpha, bravo, charlie = (_Item(word, "reply", "en", 0, order=n) for n, word in enumerate(("a", "b", "c")))
+    rig.voice._replay = [alpha, bravo]
+    rig.voice._in_device = [_InDevice(charlie)]  # still streaming
+    rig.voice._cut_for_hold()
+    assert [piece.text for piece in rig.voice._replay] == ["a", "b", "c"]
+    rig.voice._in_device = [_InDevice(alpha)]  # said again, and cut again before its end
+    rig.voice._replay = [bravo, charlie]
+    rig.voice._cut_for_hold()
+    assert [piece.text for piece in rig.voice._replay] == ["a", "b", "c"]
 
 
 class GatedOutput(RealtimeOutput):

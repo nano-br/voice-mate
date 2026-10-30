@@ -28,6 +28,7 @@ Standard library only (no Qt, no numpy).
 
 from __future__ import annotations
 
+import itertools
 import logging
 import queue
 import re
@@ -208,6 +209,7 @@ class _Item:
     voice: str | None = None  # overrides the configured voice (the Test button)
     local: bool = False  # said by the local voice (a piece said again goes back to it)
     client: VoiceClient | None = field(default=None, compare=False)  # the Test button's source
+    order: int = field(default=-1, compare=False)  # a piece's place among all played (-1: not played yet)
 
 
 @dataclass(eq=False)  # identity: two plays of the same text are two entries
@@ -263,6 +265,7 @@ class EngineVoice:
         self._in_device: list[_InDevice] = []
         self._device_until = 0.0
         self._replay: list[_Item] = []  # pieces a hold cut before they were heard to their end
+        self._order = itertools.count()  # numbers each new piece as it starts playing
 
     def _put(self, item: _Item) -> None:
         with self._lock:
@@ -406,7 +409,9 @@ class EngineVoice:
         with self._lock:
             now = time.monotonic()
             unheard = [entry.piece for entry in self._in_device if not entry.complete or entry.ends > now]
-            self._replay[:0] = unheard
+            # In the order first played: a piece listed just after an earlier cut (it was opening
+            # its stream) goes behind the ones that cut moved, a piece said again keeps its place.
+            self._replay = sorted(self._replay + unheard, key=lambda piece: piece.order)
             self._in_device.clear()
             self._device_until = 0.0
             output = self._output  # decided before the flush: what plays after it was not cut
@@ -625,7 +630,8 @@ class EngineVoice:
         stream = self._open_stream(client, info, text, item)
         if stream is None:
             return "stop"
-        entry = _InDevice(replace(item, text=text))
+        piece = replace(item, text=text)
+        entry = _InDevice(piece if piece.order >= 0 else replace(piece, order=next(self._order)))
         try:
             output = self._ensure_output(stream.sample_rate, stream.channels)
             if output is None:
