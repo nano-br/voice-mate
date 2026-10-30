@@ -77,7 +77,10 @@ def install_locations(environ: Mapping[str, str]) -> list[Path]:
     found: list[Path] = []
     home = environ.get("USERPROFILE") or environ.get("HOME")
     if home:
-        found += [Path(home) / ".local" / "bin" / "claude.exe", Path(home) / ".local" / "bin" / "claude"]
+        local_bin = Path(home) / ".local" / "bin"
+        found.append(local_bin / "claude.exe")
+        if os.name != "nt":
+            found.append(local_bin / "claude")  # Windows cannot start it without an extension
     appdata = environ.get("APPDATA")
     if appdata:
         found.append(Path(appdata) / "npm" / "claude.cmd")
