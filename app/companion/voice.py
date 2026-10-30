@@ -79,7 +79,7 @@ _SENTENCE_END: Final = re.compile(r"[.!?…。！？]+[\"'”’)\]]*(?=\s)")
 
 Kind = Literal["reply", "notice"]
 # How one /v1/speak request ended: played, stopped (the line is over) or cut by a hold.
-Outcome = Literal["done", "stop", "held"]
+Outcome = Literal["done", "stop", "held"]  # "held": a hold cut it; it waits in the replay list
 
 
 class PcmOutput(Protocol):
@@ -210,12 +210,12 @@ class _Item:
     client: VoiceClient | None = field(default=None, compare=False)  # the Test button's source
 
 
-@dataclass
+@dataclass(eq=False)  # identity: two plays of the same text are two entries
 class _InDevice:
     """A piece handed to the audio device and when its last byte finishes playing."""
 
     piece: _Item
-    ends: float  # time.monotonic(): the device plays in real time, not on the injected clock
+    ends: float = 0.0  # time.monotonic(): the device plays in real time, not on the injected clock
     complete: bool = False  # its whole stream reached the device (the engine got to its end)
 
 
@@ -362,23 +362,6 @@ class EngineVoice:
             self._queue.put(None)
             thread.join(timeout=2.0)
 
-    def voices(self) -> ProviderInfo:
-        """BLOCKING: the info of the voice that speaks now (for the voice picker): the engine's,
-        or the local voice's when the engine cannot speak. Raises ProviderError."""
-        client = self._client_factory()
-        try:
-            if client is None:
-                raise ProviderError("unreachable", "no engine")
-            info = client.info()
-            if client.url == LOCAL_URL or client.health() == "ok":
-                return info
-            raise ProviderError("not_ready", "the engine is loading")
-        except ProviderError:
-            local = self._local()
-            if local is None:
-                raise
-            return local.info()
-
     @property
     def reason(self) -> str:
         """Why the engine could not speak the last time it was asked ("" = it could)."""
@@ -418,12 +401,11 @@ class EngineVoice:
             time.sleep(HOLD_POLL_S)
 
     def _cut_for_hold(self) -> None:
-        """A hold began: silence the device. Whole pieces it had not finished playing are said
-        again once the hold ends, in order; the piece still streaming is not among them, because
-        `_speak_piece` says that one again itself ("held")."""
+        """A hold began: silence the device. Every piece it had not finished playing, the one
+        still streaming included, is said again once the hold ends, in the order it was played."""
         with self._lock:
             now = time.monotonic()
-            unheard = [entry.piece for entry in self._in_device if entry.complete and entry.ends > now]
+            unheard = [entry.piece for entry in self._in_device if not entry.complete or entry.ends > now]
             self._replay[:0] = unheard
             self._in_device.clear()
             self._device_until = 0.0
@@ -434,19 +416,14 @@ class EngineVoice:
             except OSError:
                 log.info("voice: flushing the audio output failed", exc_info=True)
 
-    def _note_write(self, entry: _InDevice | None, piece: _Item, size: int, rate: int, channels: int) -> _InDevice:
-        """`size` bytes of `piece` went to the device: when they finish playing."""
+    def _note_write(self, entry: _InDevice, size: int, rate: int, channels: int) -> None:
+        """`size` bytes of `entry`'s piece went to the device: when they finish playing."""
         with self._lock:
             now = time.monotonic()
             self._device_until = max(self._device_until, now) + size / (rate * 2 * channels)
-            if entry is None:
-                entry = _InDevice(piece, self._device_until)
-                self._in_device.append(entry)
-            else:
-                entry.ends = self._device_until  # a cut meanwhile dropped it: harmless
+            entry.ends = self._device_until  # after a cut it is in the replay list: harmless
             # Pieces heard to their end are history.
-            self._in_device = [e for e in self._in_device if e.ends > now or e is entry]
-        return entry
+            self._in_device = [e for e in self._in_device if e.ends > now or not e.complete]
 
     def _take_replay(self) -> _Item | None:
         with self._lock:
@@ -552,8 +529,7 @@ class EngineVoice:
             outcome = self._speak_piece(client, info, pieces[index], item)
             if outcome == "stop":
                 return
-            if outcome == "done":
-                index += 1
+            index += 1  # "held" too: the cut put it in the replay list, said at the top of the loop
 
     def _client_for(self, piece: _Item) -> VoiceClient | None:
         """The client that said `piece` before (to say it again)."""
@@ -571,10 +547,9 @@ class EngineVoice:
         if client is None:
             return
         info = self._engine_info(client)
-        while self._current(piece):
-            self._wait_while_held(piece)
-            if self._speak_piece(client, info, piece.text, piece) != "held":
-                return
+        self._wait_while_held(piece)
+        if self._current(piece):
+            self._speak_piece(client, info, piece.text, piece)  # cut again: back in the replay list
 
     def _engine_info(self, client: VoiceClient) -> ProviderInfo:
         if self._info is None or self._info_url != client.url:
@@ -644,16 +619,19 @@ class EngineVoice:
         return None
 
     def _speak_piece(self, client: VoiceClient, info: ProviderInfo, text: str, item: _Item) -> Outcome:
-        """One /v1/speak request, played as it streams. "held": a hold cut it, say it again."""
+        """One /v1/speak request, played as it streams. "held": a hold cut it, and it waits in the
+        replay list with whatever else the device had not played."""
         stream = self._open_stream(client, info, text, item)
         if stream is None:
             return "stop"
-        piece = replace(item, text=text)
-        entry: _InDevice | None = None
+        entry = _InDevice(replace(item, text=text))
         try:
             output = self._ensure_output(stream.sample_rate, stream.channels)
             if output is None:
                 return "stop"
+            with self._lock:
+                # Listed before its first byte: a cut from here on (`pause()` included) keeps it.
+                self._in_device.append(entry)
             frame = 2 * stream.channels
             pending = b""
             for data in stream.chunks():
@@ -667,17 +645,23 @@ class EngineVoice:
                 usable = len(pending) - len(pending) % frame
                 if usable:
                     output.write(pending[:usable])
-                    entry = self._note_write(entry, piece, usable, stream.sample_rate, stream.channels)
+                    self._note_write(entry, usable, stream.sample_rate, stream.channels)
                     pending = pending[usable:]
             output.commit()
             if not self._current(item):
                 return "stop"
             with self._lock:
-                if entry is not None:
-                    entry.complete = True
-            if self._holding():  # began as the stream ended: the cut must see this piece whole
+                entry.complete = True
+                cut = entry not in self._in_device  # a cut while it streamed: in the replay list
+            if self._holding():  # began as the stream ended: the cut must see this piece
                 self._cut_for_hold()
-            return "done"
+                return "held"
+            return "held" if cut else "done"
+        except BaseException:
+            with self._lock:  # not played: nothing to say again
+                if entry in self._in_device:
+                    self._in_device.remove(entry)
+            raise
         finally:
             with self._lock:
                 if self._stream is stream:

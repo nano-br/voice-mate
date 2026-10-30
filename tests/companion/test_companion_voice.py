@@ -335,6 +335,36 @@ def test_a_recording_says_again_every_line_still_waiting_in_the_device_in_order(
     assert _texts(provider) == lines + lines
 
 
+def test_a_second_recording_during_the_replay_keeps_the_lines_in_order(
+    provider: ProviderServer, rigs: list[Rig]
+) -> None:
+    # Two recordings in a row: the second one cuts the lines said again after the first, while
+    # one of them may still be streaming. Whatever is said after it starts where the person
+    # stopped hearing and goes on in order, without skipping or swapping a line.
+    rig = _rig(rigs, provider)
+    rig.output = RealtimeOutput()
+    lines = [" ".join([word] * 30) + "." for word in ("alpha", "bravo", "charlie")]
+    rig.voice.speak("r", " ".join(lines), final=True)
+    assert wait_until(lambda: _texts(provider) == lines)
+
+    def record() -> None:
+        rig.voice.pause()
+        rig.holding = True
+        rig.clock.now += PAUSE_GRACE_S
+        threading.Event().wait(0.3)
+        rig.holding = False
+
+    record()  # all three lines were waiting in the device: they are said again
+    provider.state.pace = 0.5  # twice real time: "alpha" is still heard while "bravo" streams
+    assert wait_until(lambda: len(_texts(provider)) == 5, timeout=10)
+    record()  # "alpha" whole in the device, "bravo" half streamed
+    assert wait_until(lambda: _texts(provider)[-1] == lines[-1], timeout=20)
+    threading.Event().wait(0.5)
+    said = [lines.index(text) for text in _texts(provider)]
+    last_pass = said[max(i for i in range(1, len(said)) if said[i] <= said[i - 1]) :]
+    assert last_pass == list(range(last_pass[0], len(lines)))
+
+
 def test_pause_holds_before_the_recording_shows_and_stop_still_drops_everything(
     provider: ProviderServer, rigs: list[Rig]
 ) -> None:
@@ -523,13 +553,6 @@ def test_no_audio_output_is_reported(provider: ProviderServer, rigs: list[Rig]) 
     rig.voice.notice("Hello.", "en")
     assert wait_until(lambda: bool(rig.reasons))
     assert rig.reasons == ["no audio output is available on this computer"]
-
-
-def test_voices_reads_the_engine_info(provider: ProviderServer, rigs: list[Rig]) -> None:
-    info = _rig(rigs, provider).voice.voices()
-    assert [voice.id for voice in info.voices] == ["low", "mid", "high"]
-    with pytest.raises(ProviderError):
-        _rig(rigs, None).voice.voices()
 
 
 @pytest.mark.parametrize(

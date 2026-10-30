@@ -1170,6 +1170,40 @@ def test_a_recording_pauses_the_assistant_and_an_assistant_hotkey_or_quitting_si
     assert calls.closes == 1
 
 
+def test_each_voice_source_lists_its_own_voices(
+    make_controller: ControllerKit, daemon: FakeDaemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    controller, _parts, _backend = make_controller(daemon)
+    engine_info = ProviderInfo("Kokoro", (Voice("a", "Anna"),), 24000, ("pcm_s16le",), 2000, ())
+    windows_info = ProviderInfo("Windows", (Voice("windows/maria", "Maria"),), 22050, ("pcm_s16le",), None, ())
+    health = ["ok"]
+
+    class Engine:
+        def info(self) -> ProviderInfo:
+            return engine_info
+
+        def health(self) -> str:
+            return health[0]
+
+    class Local:
+        def info(self) -> ProviderInfo:
+            return windows_info
+
+    monkeypatch.setattr(controller, "_engine_voice_client", Engine)
+    monkeypatch.setattr(controller, "_local_voice", Local())
+    assert controller._voice_info("auto") is engine_info
+    assert controller._voice_info("engine") is engine_info
+    assert controller._voice_info("windows") is windows_info
+    health[0] = "loading"  # the engine cannot speak yet
+    assert controller._voice_info("auto") is windows_info
+    with pytest.raises(ProviderError):
+        controller._voice_info("engine")
+    monkeypatch.setattr(controller, "_engine_voice_client", lambda: None)  # no engine at all
+    assert controller._voice_info("auto") is windows_info
+    with pytest.raises(ProviderError):
+        controller._voice_info("engine")
+
+
 def test_the_assistant_voices_come_from_the_engine(
     make_controller: ControllerKit, daemon: FakeDaemon, monkeypatch: pytest.MonkeyPatch
 ) -> None:
