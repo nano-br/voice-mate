@@ -25,7 +25,6 @@
 
 ## Por que o VoiceMate
 
-<!-- POSITIONING: aguardando texto alinhado -->
 O VoiceMate é um assistente pessoal de voz que roda no seu computador e se integra ao Claude Desktop e ao Claude Code. Ele nasceu do ditado: você aperta um atalho, fala, e o texto fica pronto para colar em qualquer ferramenta de IA, com o Whisper rodando local, sem o áudio sair da sua máquina. Hoje ele vai além: um agente pessoal de IA, com nome e personalidade escolhidos por você, orquestra suas conversas do Claude Code por voz e altera as configurações do próprio VoiceMate em conversa natural. Para quem programa com o Claude Code, é falar na mesma conversa em que está trabalhando. Para quem precisa de acessibilidade, é usar o Claude Code sem depender do teclado.
 
 Criei o VoiceMate porque acredito numa coisa simples: quanto mais rápido e fácil é expressar uma ideia para uma IA, e quanto mais detalhes você dá, melhor o resultado. Falar é muito mais rápido do que digitar, e quando você pensa em voz alta dá muito mais contexto do que jamais digitaria.

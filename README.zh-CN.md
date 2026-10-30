@@ -25,7 +25,6 @@
 
 ## 为什么做 VoiceMate
 
-<!-- POSITIONING: aguardando texto alinhado -->
 VoiceMate 是一个运行在你电脑上的个人语音助手，并与 Claude Desktop 和 Claude Code 集成。它从听写起步：按下快捷键，说话，文本就可以粘贴到任何 AI 工具里，Whisper 在本地运行，音频不会离开你的电脑。如今它走得更远：一个有名字、有个性（由你来定）的个人 AI 智能体，用语音统筹你的 Claude Code 对话，还能在自然的交谈中修改 VoiceMate 自身的设置。对用 Claude Code 编程的人来说，就是在自己正在工作的那个对话里开口说话。对需要无障碍支持的人来说，就是不依赖键盘也能使用 Claude Code。
 
 我做它，是因为我相信一件很简单的事：向 AI 表达想法越快、越轻松，给出的细节越多，得到的结果就越好。说话比打字快得多，边想边说的时候，你给出的上下文远比你愿意敲出来的多。

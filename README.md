@@ -25,7 +25,6 @@
 
 ## Why VoiceMate
 
-<!-- POSITIONING: aguardando texto alinhado -->
 VoiceMate is a personal voice assistant that runs on your computer and integrates with Claude Desktop and Claude Code. It started as dictation: press a shortcut, speak, and the text is ready to paste into any AI tool, with Whisper running locally so your audio never leaves your machine. Today it goes further: a personal AI agent, with a name and personality you choose, orchestrates your Claude Code conversations by voice and changes VoiceMate's own settings in natural conversation. For developers working with Claude Code, it means talking in the same conversation you are working in. For people who need accessibility, it means using Claude Code without depending on the keyboard.
 
 I built it because I believe one simple thing: the faster and easier it is to express an idea to an AI, and the more detail you give it, the better the result. Speaking is much faster than typing, and when you think out loud you give far more context than you would ever type.
