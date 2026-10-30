@@ -71,7 +71,7 @@ Uma demonstração e teste ao vivo do agente pessoal de IA, por enquanto em port
 
 **Conversa por voz com o Claude**
 - `Ctrl+Alt+A` envia a sua fala ao Claude pela CLI do Claude Code (com o seu próprio login: o texto transcrito vai para a Anthropic, o áudio não). A resposta é copiada para a área de transferência e lida em voz alta.
-- Motores de TTS: OmniVoice (o usado quando nada foi salvo), Kokoro (o que o `make setup` propõe) e VoxCPM2. Ou o seu: qualquer serviço que siga o [protocolo de provedor de TTS](docs/tts-provider-protocol.md) (Configurações > Voz > Provedor personalizado). A conversa continua entre os turnos; qualquer atalho interrompe a resposta e inicia uma nova gravação.
+- Motores de TTS: o motor local padrão (o usado quando nada foi salvo), Kokoro (o que o `make setup` propõe) e VoxCPM2. Ou o seu: qualquer serviço que siga o [protocolo de provedor de TTS](docs/tts-provider-protocol.md) (Configurações > Voz > Provedor personalizado). A conversa continua entre os turnos; qualquer atalho interrompe a resposta e inicia uma nova gravação.
 
 **Assistente de voz (desligado por padrão)**
 - Uma conversa central do Claude em dois modos: a conversa própria do VoiceMate (um processo do Claude Code que o VoiceMate inicia, visível também no Claude Desktop e no celular) ou uma conversa do Claude Desktop que você já tem (escrita por um "flash" rápido de teclado, só no Windows). Ele lista, lê e envia mensagem às suas outras conversas e inicia novas em segundo plano.
@@ -168,7 +168,7 @@ O assistente é uma conversa do Claude, a central, que sabe o que as suas outras
 | Precisa de | A CLI `claude` e um login do Claude | Claude Desktop aberto e tela desbloqueada; só no Windows |
 
 1. **Requisitos:** a CLI do Claude Code (`claude` no `PATH` do Windows, em `~/.local/bin` ou em `%APPDATA%\npm`, ou o caminho dela em `VOICEMATE_CLAUDE_CLI`) e um login do Claude nesse computador (`claude auth login`, uma vez).
-2. **Ligar:** clique em **Assistente** na janela de status (ela explica como quando o assistente está desligado), ou vá em Configurações > **Assistente** e defina "Modo da assistente:".
+2. **Ligar:** clique em **Assistente** na janela de status (ela explica como quando o assistente está desligado), ou vá em Configurações > **Assistente** e defina "Modo do assistente:".
 3. **Usar:** aperte `Ctrl+Alt+S`, fale, aperte `Ctrl+Alt+S` de novo, e ele responde na voz do motor. Ou escreva na janela dele (`Ctrl+Alt+W`). `Ctrl+Alt+R` lê as respostas que estão esperando.
 
 > [!WARNING]
@@ -511,7 +511,7 @@ Issues e pull requests são bem-vindos. Todo comando de desenvolvimento passa pe
 
 ## Agradecimentos
 
-O VoiceMate se apoia no trabalho de muitos projetos: [Whisper](https://github.com/openai/whisper) da OpenAI, [faster-whisper](https://github.com/SYSTRAN/faster-whisper), [whisper.cpp](https://github.com/ggml-org/whisper.cpp), [CTranslate2-ROCm](https://github.com/arlo-phoenix/CTranslate2-rocm), [PySide6](https://doc.qt.io/qtforpython-6/), [OmniVoice](https://huggingface.co/k2-fsa/OmniVoice), [Kokoro](https://github.com/hexgrad/kokoro), [VoxCPM](https://github.com/OpenBMB/VoxCPM), o [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-python) com o [Claude Code](https://docs.claude.com/en/docs/claude-code), o [Inno Setup](https://jrsoftware.org/isinfo.php) e o [PyInstaller](https://pyinstaller.org/).
+O VoiceMate se apoia no trabalho de muitos projetos: [Whisper](https://github.com/openai/whisper) da OpenAI, [faster-whisper](https://github.com/SYSTRAN/faster-whisper), [whisper.cpp](https://github.com/ggml-org/whisper.cpp), [CTranslate2-ROCm](https://github.com/arlo-phoenix/CTranslate2-rocm), [PySide6](https://doc.qt.io/qtforpython-6/), [Kokoro](https://github.com/hexgrad/kokoro), [VoxCPM](https://github.com/OpenBMB/VoxCPM), o [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-python) com o [Claude Code](https://docs.claude.com/en/docs/claude-code), o [Inno Setup](https://jrsoftware.org/isinfo.php) e o [PyInstaller](https://pyinstaller.org/).
 
 ## Licença
 

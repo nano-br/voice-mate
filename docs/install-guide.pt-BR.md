@@ -158,7 +158,7 @@ Clique com o botão direito no ícone da bandeja para ver o menu, e abra Configu
 O assistente é uma conversa do Claude com a qual você fala por voz, no mesmo Claude Code e Claude Desktop que você já usa. Ele precisa do Claude Code no Windows e de um login do Claude neste computador:
 
 1. Instale o [Claude Code](https://docs.claude.com/en/docs/claude-code) e rode `claude auth login` uma vez num terminal. O login do Claude Desktop não conta.
-2. Na janela de status, clique em **Assistente**, ou abra Configurações > **Assistente** e escolha "Modo da assistente:".
+2. Na janela de status, clique em **Assistente**, ou abra Configurações > **Assistente** e escolha "Modo do assistente:".
 3. Aperte `Ctrl+Alt+S` e fale, depois aperte de novo. Ou clique em **Falar** na janela do assistente; o botão vira **Parar e enviar** enquanto grava.
 
 <p align="center"><img src="assets/screenshots/pt-BR/assistant.png" width="568" alt="A janela do assistente com o botão Falar e uma conversa de exemplo"></p>
