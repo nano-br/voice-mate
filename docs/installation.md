@@ -92,7 +92,7 @@ The engine defaults to Portuguese (`--output-lang pt-BR`): without a flag Whispe
 
 1. Detects the platform (`windows`, `linux-x11`, `linux-wayland` or `wsl2`) and the GPU (`nvidia-smi` first, then AMD tools, else CPU).
 2. Asks for the GPU vendor (NVIDIA, AMD or CPU), with the detected one as default.
-3. Asks for the main flow: `clipboard` (dictation only) or `claude_chat` (also the Claude flow). The default answer (Enter) is `claude_chat`: choose `clipboard` (answer `1`) if you only want dictation, otherwise `make doctor` later fails the "Claude CLI (claude_chat flow)" check. For `claude_chat` it asks whether to enable TTS and which engine: `kokoro` (light, CPU, fixed voices; the default proposed here) or `omnivoice` (voice cloning, heavy on the GPU).
+3. Asks for the main flow: `clipboard` (dictation only) or `claude_chat` (also the Claude flow). The default answer (Enter) is `claude_chat`: choose `clipboard` (answer `1`) if you only want dictation, otherwise `make doctor` later fails the "Claude CLI (claude_chat flow)" check. For `claude_chat` it asks whether to enable TTS and which engine: `kokoro` (light, CPU, fixed voices; the default proposed here) or the default engine (voice cloning, heavy on the GPU).
 4. Installs the matching Poetry extras, then the PyTorch build for your GPU (table below).
 5. AMD only: installs whisper.cpp with Vulkan, and on Linux or WSL2 offers to build CTranslate2-ROCm (slow build from source; optional).
 6. Saves your choices in `~/.config/voicemate/config.toml`.
@@ -117,7 +117,7 @@ PyTorch is not declared in `pyproject.toml` on purpose: `make setup` installs th
 | Extra | Installs | For |
 |---|---|---|
 | `claude` | `claude-agent-sdk` | The Claude flow |
-| `tts` | `omnivoice`, `soundfile` | TTS with OmniVoice (the engine used when nothing is saved) |
+| `tts` | the default engine's packages, `soundfile` | TTS with the default engine (the one used when nothing is saved) |
 | `kokoro` | `kokoro`, `soundfile` | TTS with Kokoro (needs `espeak-ng`) |
 | `voxcpm` | `voxcpm`, `soundfile` | TTS with VoxCPM2 |
 | `whisper-gpu` | `openai-whisper`, `silero-vad` | Speech-to-text on AMD through PyTorch ROCm |

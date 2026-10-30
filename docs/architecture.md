@@ -50,14 +50,14 @@ flowchart TB
 
 The user presses a global hotkey on Windows and pastes the text wherever the cursor is. VoiceMate is a local system split across the two halves of the same PC. The Windows desktop provides the hotkeys, the clipboard, the tray and the sound output for the cues. The engine runs inside the WSL2 Linux VM because there an AMD GPU is reachable through ROCm ([wsl2.md](wsl2.md)). Microphone and speakers reach the engine through the WSLg PulseAudio bridge, which the engine probes with `pactl info` every 20 seconds (`app/platform/audio_probe.py`).
 
-Everything optional sits behind dashed arrows. The Claude flow runs the local Claude Code CLI through `claude-agent-sdk` (`app/features/claude/runtime.py`), which calls the Anthropic API (default model `claude-haiku-5-5`). The TTS libraries speak the answer (`omnivoice` is the engine used when nothing is saved; `make setup` proposes `kokoro`). Model weights come from the internet on first use:
+Everything optional sits behind dashed arrows. The Claude flow runs the local Claude Code CLI through `claude-agent-sdk` (`app/features/claude/runtime.py`), which calls the Anthropic API (default model `claude-haiku-5-5`). The TTS libraries speak the answer (a default local engine is used when nothing is saved; `make setup` proposes `kokoro`). Model weights come from the internet on first use:
 
 | What | Source | When |
 |---|---|---|
 | whisper.cpp GGML model, its q8 variant, Silero VAD for whisper.cpp | Hugging Face (`ggerganov/whisper.cpp`, `ggml-org/whisper-vad`) | `make setup` or `make configure` |
 | faster-whisper model (`large-v3-turbo` by default) | Hugging Face, through the `faster-whisper` library | First model load |
 | openai-whisper model (the usual backend on WSL2 + AMD without CTranslate2-ROCm) | OpenAI's model CDN, through the `openai-whisper` library | First model load |
-| OmniVoice, VoxCPM2 and Kokoro weights | Hugging Face (`k2-fsa/OmniVoice`, `openbmb/VoxCPM2`, Kokoro through its library) | First TTS load |
+| TTS engine weights (the default engine, VoxCPM2 and Kokoro) | Hugging Face (`openbmb/VoxCPM2`, Kokoro through its library, the default engine's own repository) | First TTS load |
 | PyTorch ROCm wheels, whisper.cpp sources, the CTranslate2-ROCm fork | `repo.radeon.com`, GitHub | `make setup` |
 
 ## 2. Containers
@@ -89,7 +89,7 @@ flowchart LR
             api["HTTP API v2<br/>127.0.0.1:47821, Bearer token"]
             engine["Recording session<br/>recorder, handlers"]
             stt["STT backend<br/>faster-whisper or openai-whisper"]
-            tts["TTS speaker<br/>OmniVoice, Kokoro, VoxCPM2, optional"]
+            tts["TTS speaker<br/>default engine, Kokoro, VoxCPM2, optional"]
         end
         wserver["whisper-server<br/>whisper.cpp, optional"]
         claude["Claude Code CLI<br/>optional"]
@@ -632,7 +632,7 @@ app/
 ├── features/            Optional modules (Poetry extras)
 │   ├── claude/          Claude Agent SDK runtime, chat handler, sentence buffer
 │   ├── openai_whisper/  openai-whisper backend and Silero VAD
-│   ├── tts/             TTS protocol, audio players, OmniVoice, Kokoro, VoxCPM2 speakers
+│   ├── tts/             TTS protocol, audio players, the Kokoro, VoxCPM2 and default speakers
 │   └── whispercpp/      whisper.cpp CLI and server backends
 ├── platform/            Platform detection, clipboard writers, WSLg audio probe
 │   └── listeners/       evdev, pynput and HTTP socket triggers
@@ -661,7 +661,7 @@ app/
 
 **Why the listener keepalive.** On Windows, the low-level hooks (`WH_KEYBOARD_LL`, `WH_MOUSE_LL`) used by global hotkey libraries are silently removed by the OS when a callback exceeds `LowLevelHooksTimeout`, which happens under heavy CPU load ([Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelkeyboardproc)). The native engine reinstalls its hook every 60 seconds, so a dropped hook comes back at the next tick. The companion uses `RegisterHotKey` instead, which has no such timeout.
 
-**Why pluggable TTS.** The `TextToSpeech` protocol (`app/features/tts/base.py`) separates the Claude flow from each engine. OmniVoice, Kokoro and VoxCPM2 are separate speakers behind separate extras, `NullSpeaker` stands in when TTS is off, and a missing package or a failed start degrades to no TTS with a warning. Adding or removing an engine touches only its own module.
+**Why pluggable TTS.** The `TextToSpeech` protocol (`app/features/tts/base.py`) separates the Claude flow from each engine. The default engine, Kokoro and VoxCPM2 are separate speakers behind separate extras, `NullSpeaker` stands in when TTS is off, and a missing package or a failed start degrades to no TTS with a warning. Adding or removing an engine touches only its own module.
 
 **Other principles.**
 - Contract first, in code: `app/protocol/models.py` is shared by both sides and uses `Literal` types for every discrete option; `app/companion/contract.py` is the only seam between the companion core and its UI.

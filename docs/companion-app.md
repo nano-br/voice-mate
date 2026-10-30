@@ -86,7 +86,7 @@ the Windows side is a PowerShell script. Problems this design addresses:
   companion attaches to without starting it (one already answering `/health` on the
   port, or the systemd unit): it keeps its own flags, so changing the setting does not
   change it. With `auto`, only the transcription is detected, and the engine also gives
-  `auto` to the TTS: the default OmniVoice engine then detects the voice language from
+  `auto` to the TTS: the default engine then detects the voice language from
   the text, but a saved Kokoro engine has no mapping for `auto` and uses its American
   English voice, so it speaks Portuguese or Spanish answers with that voice. Pin a
   language if you use Kokoro.

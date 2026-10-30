@@ -68,7 +68,7 @@ Flags reach the engine through the Makefile with `ARGS`, for example `make run A
 | Flag | Default | Meaning |
 |---|---|---|
 | `--no-tts` | off | No spoken answer; the answer still goes to the clipboard |
-| `--tts-engine {omnivoice,kokoro,voxcpm,external,none}` | saved choice, else `omnivoice` | TTS engine. `external` is a service you run ([protocol](tts-provider-protocol.md)). `none` disables TTS |
+| `--tts-engine {<default>,kokoro,voxcpm,external,none}` | saved choice, else the default engine | TTS engine. `external` is a service you run ([protocol](tts-provider-protocol.md)). `none` disables TTS |
 | `--tts-url` | `http://127.0.0.1:8765` | `external` only: base URL of the provider |
 | `--tts-external-voice` | provider default | `external` only: voice id (the companion's voice picker fills it) |
 | `--tts-options` | none | `external` only: a JSON object passed to the provider as `options` (speed, style). Anything else is ignored with a warning |
@@ -79,7 +79,7 @@ Flags reach the engine through the Makefile with `ARGS`, for example `make run A
 | `--tts-device {auto,cuda,cpu,mps}` | `auto` | TTS device |
 | `--tts-save-dir` | none | Save every generated audio file to this folder |
 | `--tts-no-streaming` | off | Generate in one shot instead of streaming (debugging) |
-| `--tts-voice-seed-mode {auto,fixed,off}` | `off` | How OmniVoice and VoxCPM2 choose the voice (see [usage.md](usage.md#voice-seed-modes)) |
+| `--tts-voice-seed-mode {auto,fixed,off}` | `off` | How the default engine and VoxCPM2 choose the voice (see [usage.md](usage.md#voice-seed-modes)) |
 | `--tts-voice-seed-path`, `--tts-voice-seed-text` | none | Reference WAV and its exact text, required by `fixed` |
 | `--tts-voice-seed-cache-dir` | `~/.cache/voicemate` | Where `auto` saves its reference |
 | `--tts-reset-seed` | off | Delete the VoxCPM2 auto seed (`voice_seed.wav`) before starting |
@@ -102,7 +102,7 @@ A flat TOML file written by `make setup` and `make configure`. Invalid values ar
 | `gpu_vendor` | `nvidia`, `amd`, `cpu` | GPU vendor |
 | `whisper_backend` | `faster-whisper`, `whispercpp`, `openai-whisper` | Speech-to-text engine |
 | `tts_enabled` | `true`, `false` | TTS on or off |
-| `tts_engine` | `omnivoice`, `kokoro`, `voxcpm`, `external`, `none` | TTS engine |
+| `tts_engine` | the default engine, `kokoro`, `voxcpm`, `external`, `none` | TTS engine |
 | `tts_external_url`, `tts_external_voice`, `tts_external_options` | text | Settings of the `external` engine (address, voice id, JSON options) |
 | `tts_external_token` | text | Bearer token of the `external` engine. Plain text in this file; `VOICEMATE_TTS_TOKEN` wins |
 | `default_flow` | `clipboard`, `claude_chat` | `clipboard` turns the Claude flow off |

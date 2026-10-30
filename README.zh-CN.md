@@ -71,7 +71,7 @@ VoiceMate 是开源的，采用 MIT 许可证。如果你试用了，请告诉�
 
 **与 Claude 的语音对话**
 - `Ctrl+Alt+A` 通过 Claude Code CLI 把你的语音发送给 Claude（使用你自己的登录账号：转写后的文本会发送给 Anthropic，音频不会）。回答会复制到剪贴板并朗读出来。
-- TTS 引擎：OmniVoice（没有保存任何选择时使用的引擎）、Kokoro（`make setup` 推荐的引擎）和 VoxCPM2。也可以用你自己的：任何遵循 [TTS 提供方协议](docs/tts-provider-protocol.md) 的服务（设置 > 声音 > 自定义提供方）。对话可以跨轮次继续；按下任何快捷键都会打断回答并开始新的录音。
+- TTS 引擎：默认的本地引擎（没有保存任何选择时使用）、Kokoro（`make setup` 推荐的引擎）和 VoxCPM2。也可以用你自己的：任何遵循 [TTS 提供方协议](docs/tts-provider-protocol.md) 的服务（设置 > 声音 > 自定义提供方）。对话可以跨轮次继续；按下任何快捷键都会打断回答并开始新的录音。
 
 **语音助手（默认关闭）**
 - 一个中央 Claude 对话，有两种模式：VoiceMate 自己的对话（VoiceMate 启动的 Claude Code 进程，也能在 Claude Desktop 和手机上看到），或你已有的一个 Claude Desktop 对话（通过短暂的键盘“闪现”写入，仅限 Windows）。它会列出、阅读并向你的其他对话发消息，还能在后台启动新对话。
@@ -513,7 +513,7 @@ flowchart TD
 
 ## 致谢
 
-VoiceMate 建立在许多项目的成果之上：OpenAI 的 [Whisper](https://github.com/openai/whisper)、[faster-whisper](https://github.com/SYSTRAN/faster-whisper)、[whisper.cpp](https://github.com/ggml-org/whisper.cpp)、[CTranslate2-ROCm](https://github.com/arlo-phoenix/CTranslate2-rocm)、[PySide6](https://doc.qt.io/qtforpython-6/)、[OmniVoice](https://huggingface.co/k2-fsa/OmniVoice)、[Kokoro](https://github.com/hexgrad/kokoro)、[VoxCPM](https://github.com/OpenBMB/VoxCPM)、[Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-python) 与 [Claude Code](https://docs.claude.com/en/docs/claude-code)、[Inno Setup](https://jrsoftware.org/isinfo.php) 以及 [PyInstaller](https://pyinstaller.org/)。
+VoiceMate 建立在许多项目的成果之上：OpenAI 的 [Whisper](https://github.com/openai/whisper)、[faster-whisper](https://github.com/SYSTRAN/faster-whisper)、[whisper.cpp](https://github.com/ggml-org/whisper.cpp)、[CTranslate2-ROCm](https://github.com/arlo-phoenix/CTranslate2-rocm)、[PySide6](https://doc.qt.io/qtforpython-6/)、[Kokoro](https://github.com/hexgrad/kokoro)、[VoxCPM](https://github.com/OpenBMB/VoxCPM)、[Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-python) 与 [Claude Code](https://docs.claude.com/en/docs/claude-code)、[Inno Setup](https://jrsoftware.org/isinfo.php) 以及 [PyInstaller](https://pyinstaller.org/)。
 
 ## 许可证
 

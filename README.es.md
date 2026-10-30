@@ -71,7 +71,7 @@ Una demostración y prueba en vivo del agente personal de IA, por ahora en portu
 
 **Conversación por voz con Claude**
 - `Ctrl+Alt+A` envía tu voz a Claude mediante la CLI de Claude Code (con tu propio inicio de sesión: el texto transcrito va a Anthropic, el audio no). La respuesta se copia al portapapeles y se lee en voz alta.
-- Motores de TTS: OmniVoice (el que se usa cuando no hay nada guardado), Kokoro (el que propone `make setup`) y VoxCPM2. O el tuyo: cualquier servicio que siga el [protocolo de proveedor de TTS](docs/tts-provider-protocol.md) (Ajustes > Voz > Proveedor personalizado). La conversación continúa entre turnos; cualquier atajo interrumpe la respuesta e inicia una nueva grabación.
+- Motores de TTS: el motor local por defecto (el que se usa cuando no hay nada guardado), Kokoro (el que propone `make setup`) y VoxCPM2. O el tuyo: cualquier servicio que siga el [protocolo de proveedor de TTS](docs/tts-provider-protocol.md) (Ajustes > Voz > Proveedor personalizado). La conversación continúa entre turnos; cualquier atajo interrumpe la respuesta e inicia una nueva grabación.
 
 **Asistente de voz (desactivado por defecto)**
 - Una conversación central de Claude en dos modos: la conversación propia de VoiceMate (un proceso de Claude Code que VoiceMate inicia, visible también en Claude Desktop y en el móvil) o una conversación de Claude Desktop que ya tienes (escrita con un "flash" breve de teclado, solo en Windows). Lista, lee y envía mensajes a tus otras conversaciones, e inicia nuevas en segundo plano.
@@ -511,7 +511,7 @@ Las issues y los pull requests son bienvenidos. Todo comando de desarrollo pasa 
 
 ## Agradecimientos
 
-VoiceMate se apoya en el trabajo de muchos proyectos: [Whisper](https://github.com/openai/whisper) de OpenAI, [faster-whisper](https://github.com/SYSTRAN/faster-whisper), [whisper.cpp](https://github.com/ggml-org/whisper.cpp), [CTranslate2-ROCm](https://github.com/arlo-phoenix/CTranslate2-rocm), [PySide6](https://doc.qt.io/qtforpython-6/), [OmniVoice](https://huggingface.co/k2-fsa/OmniVoice), [Kokoro](https://github.com/hexgrad/kokoro), [VoxCPM](https://github.com/OpenBMB/VoxCPM), el [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-python) con [Claude Code](https://docs.claude.com/en/docs/claude-code), [Inno Setup](https://jrsoftware.org/isinfo.php) y [PyInstaller](https://pyinstaller.org/).
+VoiceMate se apoya en el trabajo de muchos proyectos: [Whisper](https://github.com/openai/whisper) de OpenAI, [faster-whisper](https://github.com/SYSTRAN/faster-whisper), [whisper.cpp](https://github.com/ggml-org/whisper.cpp), [CTranslate2-ROCm](https://github.com/arlo-phoenix/CTranslate2-rocm), [PySide6](https://doc.qt.io/qtforpython-6/), [Kokoro](https://github.com/hexgrad/kokoro), [VoxCPM](https://github.com/OpenBMB/VoxCPM), el [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-python) con [Claude Code](https://docs.claude.com/en/docs/claude-code), [Inno Setup](https://jrsoftware.org/isinfo.php) y [PyInstaller](https://pyinstaller.org/).
 
 ## Licencia
 

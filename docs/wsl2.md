@@ -13,7 +13,7 @@ The engine runs **entirely inside WSL** (Ubuntu): microphone capture, transcript
    |-- microphone through WSLg PulseAudio (RDPSource)
    |-- speech-to-text on the AMD GPU (openai-whisper on PyTorch ROCm; CTranslate2-ROCm optional)
    |-- publishes each result for the companion to deliver to the Windows clipboard
-   `-- Claude + TTS (OmniVoice on the GPU, or Kokoro on the CPU), optional
+   `-- Claude + TTS (the default engine on the GPU, or Kokoro on the CPU), optional
 ```
 
 ## Prerequisites
@@ -90,7 +90,7 @@ faster-whisper on CTranslate2-ROCm (if validated)  ->  openai-whisper (PyTorch R
 
 On native Linux the order is CTranslate2-ROCm, whisper.cpp with Vulkan, openai-whisper, CPU, because there Vulkan does reach the GPU.
 
-**openai-whisper** runs on the same PyTorch ROCm that already accelerates the TTS (OmniVoice); `make setup` installs it on AMD with Linux or WSL2 (extra `whisper-gpu`). A 5 second recording should transcribe in about 1 to 3 seconds.
+**openai-whisper** runs on the same PyTorch ROCm that already accelerates the TTS; `make setup` installs it on AMD with Linux or WSL2 (extra `whisper-gpu`). A 5 second recording should transcribe in about 1 to 3 seconds.
 
 To confirm the Vulkan device that whisper.cpp picked (when it is used): the server writes its log to `~/.cache/voicemate/whispercpp/server.log`, and the line `ggml_vulkan: found device:` shows `llvmpipe` on WSL2. `make doctor` flags it too.
 
@@ -132,7 +132,7 @@ The app already sets `PYTORCH_TUNABLEOP_*` and `MIOPEN_*` (cache in `~/.cache/vo
 
 | Engine | Voice | Runs on | Real-time factor measured on an RX 9070 XT |
 |---|---|---|---|
-| `omnivoice` (used when nothing is saved) | clones a voice (diffusion) | GPU | about 0.7 (saturates the GPU while it synthesizes) |
+| the default engine (used when nothing is saved) | clones a voice (diffusion) | GPU | about 0.7 (saturates the GPU while it synthesizes) |
 | `kokoro` | fixed (about 82M parameters) | **CPU** by default | **about 0.24 (real time, GPU left free)** |
 
 On WSL2 with AMD, **Kokoro runs on the CPU** on purpose: at a real-time factor of about 0.24 the synthesis **does not compete with transcription for the GPU**, which is what caused crackling. (On ROCm the Kokoro kernels are still slow, a real-time factor of about 1.8 on the GPU; the CPU is better in both respects.) To switch:
@@ -143,7 +143,7 @@ make run ARGS="--tts-engine kokoro --tts-kokoro-voice pf_dora"
 # --tts-device cuda forces the GPU (not recommended here: slower)
 ```
 
-Kokoro needs its extra (`poetry install --extras kokoro`). Portuguese `espeak-ng` data comes bundled through `espeakng-loader` (a dependency of misaki); the system `espeak-ng` package is a backup. Kokoro's Portuguese prosody sounds more robotic than OmniVoice's: that is the trade for real time without touching the GPU. Compare and keep the one you prefer.
+Kokoro needs its extra (`poetry install --extras kokoro`). Portuguese `espeak-ng` data comes bundled through `espeakng-loader` (a dependency of misaki); the system `espeak-ng` package is a backup. Kokoro's Portuguese prosody sounds more robotic than the default engine's: that is the trade for real time without touching the GPU. Compare and keep the one you prefer.
 
 ## Microphone on WSLg
 

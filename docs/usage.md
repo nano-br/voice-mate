@@ -51,13 +51,13 @@ Details:
 
 | Engine | Extra | Notes |
 |---|---|---|
-| `omnivoice` (used when nothing is saved) | `tts` | Can clone a voice (voice seed modes below). Heavy on the GPU; can crackle on WSL2 |
-| `kokoro` | `kokoro` | Light, runs on the CPU in real time, fixed voices (`--tts-kokoro-voice`). Needs `espeak-ng`. `make setup` proposes it (it offers Kokoro or OmniVoice) |
+| the default engine (used when nothing is saved) | `tts` | Can clone a voice (voice seed modes below). Heavy on the GPU; can crackle on WSL2 |
+| `kokoro` | `kokoro` | Light, runs on the CPU in real time, fixed voices (`--tts-kokoro-voice`). Needs `espeak-ng`. `make setup` proposes it (it offers Kokoro or the default engine) |
 | `voxcpm` | `voxcpm` | VoxCPM2, heavier. Designs a voice from a text description (`--tts-voice`) |
 | `external` | | A TTS service you run, over HTTP ([External TTS provider](#external-tts-provider)) |
 | `none` | | No spoken answer (same as `--no-tts`) |
 
-When no engine was saved by `make setup`, the engine uses `omnivoice`. Choose another one with `--tts-engine`, for example `make run ARGS="--tts-engine kokoro --tts-kokoro-voice pf_dora"`.
+When no engine was saved by `make setup`, the engine uses the default engine. Choose another one with `--tts-engine`, for example `make run ARGS="--tts-engine kokoro --tts-kokoro-voice pf_dora"`.
 
 ### External TTS provider
 
@@ -75,15 +75,15 @@ If the provider is down, VoiceMate logs why and keeps working without voice. To 
 
 ### Voice seed modes
 
-`--tts-voice-seed-mode` decides how OmniVoice and VoxCPM2 keep a voice. Kokoro has fixed voices and ignores it.
+`--tts-voice-seed-mode` decides how the default engine and VoxCPM2 keep a voice. Kokoro has fixed voices and ignores it.
 
 | Mode | How the voice is chosen | Related flags |
 |---|---|---|
-| `off` (default) | No reference audio. VoxCPM2 designs the voice from `--tts-voice`; OmniVoice uses its default voice | `--tts-voice` (VoxCPM2) |
+| `off` (default) | No reference audio. VoxCPM2 designs the voice from `--tts-voice`; the default engine uses its default voice | `--tts-voice` (VoxCPM2) |
 | `auto` | The first sentence becomes the reference audio, saved in the seed folder; later sentences clone it, also after a restart | `--tts-voice-seed-cache-dir`, `--tts-reset-seed` |
 | `fixed` | Every sentence clones a WAV file you provide | `--tts-voice-seed-path` and `--tts-voice-seed-text` (the exact text of the WAV), both required |
 
-The `auto` references live in `~/.cache/voicemate`: `voice_seed.wav` for VoxCPM2 and `voice_seed_omnivoice.wav` for OmniVoice. `--tts-reset-seed` deletes the VoxCPM2 one; delete the OmniVoice one by hand to get a new voice.
+The `auto` references live in `~/.cache/voicemate`: `voice_seed.wav` for VoxCPM2 and a second `voice_seed_*.wav` for the default engine. `--tts-reset-seed` deletes the VoxCPM2 one; delete the other by hand to get a new voice.
 
 ```bash
 make run ARGS="--tts-voice-seed-mode auto"
