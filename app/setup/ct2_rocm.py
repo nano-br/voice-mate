@@ -31,7 +31,10 @@ _BUILD_DIR = _SRC_DIR / "build"
 _PREFIX_DIR = _CACHE_DIR / "prefix"
 _MARKER_PATH = _CACHE_DIR / "installed.json"
 
-_APT_HINT = "sudo apt install -y git cmake build-essential rocm-hip-sdk  # rocm-hip-sdk = hipcc + hipBLAS"
+_APT_HINT = (
+    "sudo apt install -y git cmake build-essential rocm-hip-sdk miopen-hip-dev"
+    "  # rocm-hip-sdk = hipcc + hipBLAS; miopen-hip-dev = Whisper's convolutions on the GPU"
+)
 
 
 def is_installed() -> bool:
@@ -117,7 +120,10 @@ def _missing_tools() -> list[str]:
         "cmake": "cmake",
         "hipcc (ROCm)": "hipcc",
     }
-    return [label for label, exe in tools.items() if shutil.which(exe) is None]
+    missing = [label for label, exe in tools.items() if shutil.which(exe) is None]
+    if "hipcc (ROCm)" not in missing and not (_rocm_root() / "include" / "miopen" / "miopen.h").exists():
+        missing.append("MIOpen (miopen-hip-dev)")  # the build needs it since Conv1D runs on MIOpen
+    return missing
 
 
 def _clone() -> bool:
@@ -184,13 +190,18 @@ def _patch_for_rocm7(src_dir: Path) -> None:
             primitives.write_text(patched, encoding="utf-8")
 
 
-def _hipblas_major() -> int:
-    """hipBLAS's major version from its header (0 when unknown)."""
+def _rocm_root() -> Path:
+    """ROCm's install folder (`hipconfig -R`), /opt/rocm when hipconfig does not say."""
     try:
         rocm = subprocess.run(["hipconfig", "-R"], capture_output=True, text=True, timeout=30).stdout.strip()
     except (OSError, subprocess.SubprocessError):
-        return 0
-    header = Path(rocm or "/opt/rocm") / "include" / "hipblas" / "hipblas-version.h"
+        rocm = ""
+    return Path(rocm or "/opt/rocm")
+
+
+def _hipblas_major() -> int:
+    """hipBLAS's major version from its header (0 when unknown)."""
+    header = _rocm_root() / "include" / "hipblas" / "hipblas-version.h"
     try:
         for line in header.read_text(encoding="utf-8").splitlines():
             parts = line.split()

@@ -138,3 +138,13 @@ def test_the_lib_finds_the_rocm_openmp_runtime_and_the_wrapper_keeps_the_locked_
     assert requirements[-2:] == ["-r", str(src / "python" / "install_requirements.txt")]  # pybind11 first
     assert "--no-build-isolation" in wrapper
     assert "--no-deps" in wrapper  # a forced reinstall would upgrade numpy past numba's range
+
+
+def test_a_rocm_without_miopen_is_named_before_the_build(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(ct2_rocm.shutil, "which", lambda exe: f"/usr/bin/{exe}")
+    monkeypatch.setattr(ct2_rocm, "_rocm_root", lambda: tmp_path)
+    assert ct2_rocm._missing_tools() == ["MIOpen (miopen-hip-dev)"]
+    header = tmp_path / "include" / "miopen" / "miopen.h"
+    header.parent.mkdir(parents=True)
+    header.write_text("", encoding="utf-8")
+    assert ct2_rocm._missing_tools() == []
