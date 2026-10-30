@@ -114,7 +114,7 @@ make run
 
 <p align="center"><img src="assets/screenshots/zh-CN/install-language.png" width="460" alt="VoiceMate 安装程序的“选择安装语言”对话框"></p>
 
-“选择安装语言”：选择安装程序使用的语言（英语、巴西葡萄牙语、西班牙语、俄语或简体中文），然后点 **确定**。如果 Windows 本来就使用其中一种语言，安装程序可能会跳过这个对话框。
+“选择安装语言”：选择安装程序使用的语言（英语、巴西葡萄牙语、西班牙语、俄语或简体中文），然后点 **确定**。只有当 Windows 使用的语言不在安装程序的语言之列时，才会出现这个窗口：它以英文打开，并选中 English（所以截图是英文的）。如果 Windows 使用英语、葡萄牙语、西班牙语、俄语或简体中文，你不会看到它：安装程序直接以该语言打开，并跳到附加任务（第 2 页）。
 
 ### 第 2 页：附加任务
 
@@ -127,13 +127,13 @@ make run
 | “创建桌面快捷方式”（在“附加快捷方式：”下） | 在桌面放一个 VoiceMate 图标 |
 | “自动启动 VoiceMate”（在“启动：”下） | 登录 Windows 时启动 VoiceMate。只在第一次安装时提供；之后可在设置中使用“登录时启动 VoiceMate” |
 
-点 **下一步 >**。
+点 **下一步**。
 
 ### 第 3 页：准备安装
 
-<p align="center"><img src="assets/screenshots/zh-CN/install-ready.png" width="560" alt="“准备安装”页面，列出安装位置和所选任务"></p>
+<p align="center"><img src="assets/screenshots/zh-CN/install-ready.png" width="560" alt="“准备安装”页面：安装程序准备就绪，现在可以开始安装 VoiceMate 到您的电脑"></p>
 
-“准备安装”会重复显示安装位置和你选择的任务。点 **安装**。需要几秒钟（“正在安装”）。
+“准备安装”显示“安装程序准备就绪，现在可以开始安装 VoiceMate 到您的电脑。”这里没有要选的文件夹，因为 VoiceMate 总是安装到 `%LOCALAPPDATA%\Programs\VoiceMate`。点 **安装**（“点击“安装”继续此安装程序。”）。需要几秒钟（“正在安装”）。
 
 ### 第 4 页：完成
 
@@ -179,7 +179,7 @@ make run
 
 ## 🔄 更新
 
-- **配套应用：**运行更新的 `VoiceMate-Setup-x.y.z.exe`。如果 VoiceMate 正在运行，安装程序会询问，然后把它连同引擎一起关闭。你的设置会保留。
+- **配套应用：**运行更新的 `VoiceMate-Setup-x.y.z.exe`。如果 VoiceMate 正在运行，安装程序会先询问：“VoiceMate 正在运行。安装程序将在安装前关闭它及其启动的引擎。是否继续？”确认后，它会把 VoiceMate 连同引擎一起关闭，然后安装。你的设置会保留。“自动启动 VoiceMate”复选框不会再出现：它只在第一次安装时提供，你之前的选择保持不变。
 - **引擎：**在 Ubuntu 中运行 `cd ~/voice-mate`，然后 `git pull` 和 `make setup`（你之前的回答会作为默认值）。在托盘菜单中选择 **引擎** > **重启引擎**。
 
 ## 🗑️ 卸载

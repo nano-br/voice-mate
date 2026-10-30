@@ -114,7 +114,7 @@ Espera a que termine de cargar y detenlo con `Ctrl+C`. El siguiente inicio es r�
 
 <p align="center"><img src="assets/screenshots/es/install-language.png" width="460" alt="El diálogo Seleccione el Idioma de la Instalación del instalador de VoiceMate"></p>
 
-"Seleccione el Idioma de la Instalación": elige el idioma del instalador (inglés, portugués de Brasil, español, ruso o chino simplificado) y pulsa **Aceptar**. Si Windows ya habla uno de ellos, el instalador puede omitir este diálogo.
+"Seleccione el Idioma de la Instalación": elige el idioma del instalador (inglés, portugués de Brasil, español, ruso o chino simplificado) y pulsa **Aceptar**. Este diálogo solo aparece cuando Windows está en un idioma que el instalador no tiene: se abre en inglés, con English seleccionado (por eso la captura está en inglés). Si tu Windows está en inglés, portugués, español, ruso o chino simplificado, no lo ves: el instalador se abre en ese idioma y va directo a las tareas adicionales (página 2).
 
 ### Página 2. Las tareas adicionales
 
@@ -127,13 +127,13 @@ Espera a que termine de cargar y detenlo con `Ctrl+C`. El siguiente inicio es r�
 | "Crear un acceso directo en el escritorio" (bajo "Accesos directos adicionales:") | Pone un icono de VoiceMate en el escritorio |
 | "Iniciar automáticamente VoiceMate" (bajo "Inicio:") | Inicia VoiceMate cuando inicias sesión en Windows. Se ofrece solo en la primera instalación; después, Configuración tiene "Iniciar VoiceMate al iniciar sesión" |
 
-Pulsa **Siguiente >**.
+Pulsa **Siguiente**.
 
 ### Página 3. Listo para instalar
 
-<p align="center"><img src="assets/screenshots/es/install-ready.png" width="560" alt="La página Listo para Instalar, que enumera el destino y las tareas elegidas"></p>
+<p align="center"><img src="assets/screenshots/es/install-ready.png" width="560" alt="La página Listo para Instalar: ahora el programa está listo para iniciar la instalación de VoiceMate en su sistema"></p>
 
-"Listo para Instalar" repite dónde se va a instalar y qué tareas elegiste. Pulsa **Instalar**. Tarda unos segundos ("Instalando").
+"Listo para Instalar" dice "Ahora el programa está listo para iniciar la instalación de VoiceMate en su sistema." No hay carpeta que elegir, porque VoiceMate siempre se instala en `%LOCALAPPDATA%\Programs\VoiceMate`. Pulsa **Instalar** ("Haga clic en Instalar para continuar con el proceso."). Tarda unos segundos ("Instalando").
 
 ### Página 4. Finalizado
 
@@ -179,7 +179,7 @@ Todas las opciones del asistente: [voice-assistant.md](voice-assistant.md) (en i
 
 ## 🔄 Actualizar
 
-- **El companion:** ejecuta el nuevo `VoiceMate-Setup-x.y.z.exe`. Si VoiceMate está en ejecución, el instalador pregunta y luego lo cierra junto con su motor. Tu configuración se conserva.
+- **El companion:** ejecuta el nuevo `VoiceMate-Setup-x.y.z.exe`. Si VoiceMate está en ejecución, el instalador pregunta antes: "VoiceMate se está ejecutando. El instalador lo cerrará, junto con el motor que inició, antes de instalar. ¿Continuar?" Confirma y cierra VoiceMate junto con su motor, y luego instala. Tu configuración se conserva. La casilla "Iniciar automáticamente VoiceMate" no vuelve a aparecer: se ofrece solo en la primera instalación, y tu elección anterior se mantiene.
 - **El motor:** en Ubuntu, `cd ~/voice-mate`, y luego `git pull` y `make setup` (tus respuestas anteriores son los valores por defecto). En el menú de la bandeja, **Motor** > **Reiniciar el motor**.
 
 ## 🗑️ Desinstalar
