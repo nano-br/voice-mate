@@ -238,10 +238,11 @@ def test_test_voice_waits_for_nothing_when_the_provider_is_loading(tmp_path: Pat
 def test_old_test_files_are_removed(provider: ProviderServer, tmp_path: Path) -> None:
     old = tmp_path / "tts-test-old.wav"
     old.write_bytes(b"x")
-    stale = old.stat().st_mtime - tts.TEST_FILE_MAX_AGE_S - 5
-
+    # An hour past the limit: WSL2's clock can jump a few seconds when it resyncs with Windows.
+    stale = old.stat().st_mtime - tts.TEST_FILE_MAX_AGE_S - 3600
     os.utime(old, (stale, stale))
-    try_voice(replace(EXTERNAL, tts_url=_url(provider)), tmp_path, lambda _path: None)
+    result = try_voice(replace(EXTERNAL, tts_url=_url(provider)), tmp_path, lambda _path: None)
+    assert result.ok, result.message  # the cleanup runs when the new file is written
     assert not old.exists()
 
 
