@@ -454,7 +454,7 @@ msgstr "O motor fala com {name}. Vozes encontradas: {count}."
 
 #: app/companion/controller.py:1114
 msgid "Hello! This is how the assistant sounds with this voice."
-msgstr "Olá! É assim que a assistente soa com esta voz."
+msgstr "Olá! É assim que o assistente soa com esta voz."
 
 #: app/companion/controller.py:1117
 msgid "Playing a test sentence with a voice of Windows."
@@ -1075,17 +1075,17 @@ msgstr "Modelo da GPU"
 #: app/companion/assistant/settings_catalog.py:110
 #: app/companion/settings_store.py:131 app/companion/ui/settings_window.py:875
 msgid "Assistant mode"
-msgstr "Modo da assistente"
+msgstr "Modo do assistente"
 
 #: app/companion/assistant/settings_catalog.py:120
 #: app/companion/settings_store.py:132
 msgid "Assistant model"
-msgstr "Modelo da assistente"
+msgstr "Modelo do assistente"
 
 #: app/companion/assistant/settings_catalog.py:130
 #: app/companion/settings_store.py:133
 msgid "Assistant effort"
-msgstr "Esforço da assistente"
+msgstr "Esforço do assistente"
 
 #: app/companion/assistant/settings_catalog.py:220
 #: app/companion/settings_store.py:134 app/companion/ui/settings_window.py:885
@@ -1136,7 +1136,7 @@ msgstr "Origem da voz"
 #: app/companion/assistant/settings_catalog.py:204
 #: app/companion/settings_store.py:143 app/companion/ui/settings_window.py:884
 msgid "Assistant voice"
-msgstr "Voz da assistente"
+msgstr "Voz do assistente"
 
 #: app/companion/settings_store.py:144 app/companion/ui/settings_window.py:1506
 msgid "Voice engine"
@@ -1202,7 +1202,7 @@ msgid ""
 "The assistant voice cannot contain line breaks or other control "
 "characters."
 msgstr ""
-"A voz da assistente não pode ter quebras de linha nem outros caracteres "
+"A voz do assistente não pode ter quebras de linha nem outros caracteres "
 "de controle."
 
 #: app/companion/settings_store.py:602
@@ -1331,11 +1331,11 @@ msgstr "o motor recusou o token de acesso"
 
 #: app/companion/voice.py:190
 msgid "the engine is too old for the assistant voice"
-msgstr "o motor é antigo demais para a voz da assistente"
+msgstr "o motor é antigo demais para a voz do assistente"
 
 #: app/companion/voice.py:192
 msgid "the voice engine set up in the engine cannot speak for the assistant"
-msgstr "o motor de voz configurado no motor não consegue falar pela assistente"
+msgstr "o motor de voz configurado no motor não consegue falar pelo assistente"
 
 #: app/companion/voice.py:194
 msgid "text to speech is off in the engine"
@@ -1486,16 +1486,16 @@ msgstr "Nada novo ainda."
 #: app/companion/assistant/service.py:1187
 #: app/companion/assistant/service.py:1244
 msgid "The assistant is not running. Try again in a moment."
-msgstr "A assistente não está rodando. Tente de novo em instantes."
+msgstr "O assistente não está rodando. Tente de novo em instantes."
 
 #: app/companion/assistant/service.py:1173
 #, python-brace-format
 msgid "The assistant is going over {count} answer(s)."
-msgstr "A assistente está repassando {count} resposta(s)."
+msgstr "O assistente está repassando {count} resposta(s)."
 
 #: app/companion/assistant/service.py:1242 app/companion/ui/texts.py:266
 msgid "The assistant could not start"
-msgstr "A assistente não conseguiu iniciar"
+msgstr "O assistente não conseguiu iniciar"
 
 #: app/companion/assistant/service.py:1254
 msgid "There is no answer to show yet."
@@ -1515,7 +1515,7 @@ msgstr "Nenhuma conversa chamada \"{title}\" foi encontrada."
 #: app/companion/assistant/service.py:1273
 #, python-brace-format
 msgid "Asking the assistant to send to \"{title}\": {body}"
-msgstr "Pedindo à assistente para enviar para \"{title}\": {body}"
+msgstr "Pedindo ao assistente para enviar para \"{title}\": {body}"
 
 #: app/companion/assistant/service.py:1285
 #, python-brace-format
@@ -1529,7 +1529,7 @@ msgstr "Nenhuma conversa combina com \"{query}\"."
 
 #: app/companion/assistant/service.py:1299
 msgid "That is the assistant's own conversation."
-msgstr "Essa é a própria conversa da assistente."
+msgstr "Essa é a própria conversa do assistente."
 
 #: app/companion/assistant/service.py:1321
 #: app/companion/assistant/service.py:1333
@@ -1579,7 +1579,7 @@ msgstr "desligado"
 
 #: app/companion/assistant/settings_catalog.py:417
 msgid "the assistant cannot change this setting"
-msgstr "a assistente não pode mudar essa configuração"
+msgstr "o assistente não pode mudar essa configuração"
 
 #: app/companion/assistant/settings_catalog.py:419
 #, python-brace-format
@@ -1757,7 +1757,7 @@ msgstr "Reiniciar"
 
 #: app/companion/ui/assistant_window.py:123 app/companion/ui/texts.py:247
 msgid "Back to the assistant"
-msgstr "Voltar à assistente"
+msgstr "Voltar ao assistente"
 
 #: app/companion/ui/assistant_window.py:135
 msgid "Messages"
@@ -1790,11 +1790,11 @@ msgstr "Aguardando"
 
 #: app/companion/ui/assistant_window.py:170
 msgid "Message to the assistant"
-msgstr "Mensagem para a assistente"
+msgstr "Mensagem para o assistente"
 
 #: app/companion/ui/assistant_window.py:171
 msgid "Message to the assistant (Enter sends, Shift+Enter adds a line)"
-msgstr "Mensagem para a assistente (Enter envia, Shift+Enter pula linha)"
+msgstr "Mensagem para o assistente (Enter envia, Shift+Enter pula linha)"
 
 #: app/companion/ui/assistant_window.py:183
 msgid "Send"
@@ -1820,7 +1820,7 @@ msgid ""
 "\"back to the assistant\" or press the button to come back."
 msgstr ""
 "Falando direto com \"{title}\": o que você diz vai para lá do jeito que "
-"está. Diga \"volta para a assistente\" ou aperte o botão para voltar."
+"está. Diga \"volta para o assistente\" ou aperte o botão para voltar."
 
 #: app/companion/ui/assistant_window.py:257
 msgid "Stop and send"
@@ -1832,11 +1832,11 @@ msgstr "Falar"
 
 #: app/companion/ui/assistant_window.py:263
 msgid "Stop recording and send it to the assistant"
-msgstr "Parar a gravação e enviar para a assistente"
+msgstr "Parar a gravação e enviar para o assistente"
 
 #: app/companion/ui/assistant_window.py:263 app/companion/ui/texts.py:244
 msgid "Talk to the assistant"
-msgstr "Falar com a assistente"
+msgstr "Falar com o assistente"
 
 #: app/companion/ui/assistant_window.py:310
 #, python-brace-format
@@ -2001,7 +2001,7 @@ msgstr "Áudio WAV"
 
 #: app/companion/ui/settings_window.py:670
 msgid "Assistant mode:"
-msgstr "Modo da assistente:"
+msgstr "Modo do assistente:"
 
 #: app/companion/ui/settings_window.py:674
 msgid "Exact title in the Claude Desktop sidebar"
@@ -2087,7 +2087,7 @@ msgstr "Fala uma frase curta com a voz escolhida."
 
 #: app/companion/ui/settings_window.py:722
 msgid "Assistant voice:"
-msgstr "Voz da assistente:"
+msgstr "Voz do assistente:"
 
 #: app/companion/ui/settings_window.py:727
 msgid "Understand voice commands in typed text"
@@ -2126,7 +2126,7 @@ msgid ""
 "Describe how the assistant should be: its tone, its humor, how formal it "
 "is and how it addresses you."
 msgstr ""
-"Descreva como a assistente deve ser: o tom, o humor, o quanto é formal e "
+"Descreva como o assistente deve ser: o tom, o humor, o quanto é formal e "
 "como fala com você."
 
 #: app/companion/ui/settings_window.py:773
@@ -2160,11 +2160,11 @@ msgstr "Perfil do Claude Desktop"
 #: app/companion/ui/settings_window.py:805
 #: app/companion/ui/settings_window.py:1175
 msgid "Loaded when the assistant starts."
-msgstr "Carregado quando a assistente inicia."
+msgstr "Carregado quando o assistente inicia."
 
 #: app/companion/ui/settings_window.py:807
 msgid "Check for a newer profile when the assistant starts"
-msgstr "Procurar um perfil mais novo quando a assistente iniciar"
+msgstr "Procurar um perfil mais novo quando o assistente iniciar"
 
 #: app/companion/ui/settings_window.py:810
 msgid "Check now"
@@ -2188,9 +2188,9 @@ msgid ""
 "Claude Desktop conversation you choose. Changing the mode, the effort, "
 "the permissions or the skill restarts it."
 msgstr ""
-"A assistente é uma conversa do Claude Code que o VoiceMate inicia, ou uma"
+"O assistente é uma conversa do Claude Code que o VoiceMate inicia, ou uma"
 " conversa do Claude Desktop que você escolhe. Mudar o modo, o esforço, as"
-" permissões ou a skill reinicia a assistente."
+" permissões ou a skill reinicia o assistente."
 
 #: app/companion/ui/settings_window.py:877
 msgid "Model"
@@ -2820,11 +2820,11 @@ msgstr "incluído no VoiceMate"
 
 #: app/companion/ui/texts.py:245 app/companion/ui/texts.py:254
 msgid "Open the assistant window"
-msgstr "Abrir a janela da assistente"
+msgstr "Abrir a janela do assistente"
 
 #: app/companion/ui/texts.py:246
 msgid "Switch the assistant mode"
-msgstr "Trocar o modo da assistente"
+msgstr "Trocar o modo do assistente"
 
 #: app/companion/ui/texts.py:248 app/companion/ui/tray.py:90
 #: app/companion/ui/tray.py:198
@@ -2841,11 +2841,11 @@ msgstr "Você não está logado no Claude Code"
 
 #: app/companion/ui/texts.py:267
 msgid "The assistant stopped"
-msgstr "A assistente parou"
+msgstr "O assistente parou"
 
 #: app/companion/ui/texts.py:268
 msgid "The assistant could not be set up"
-msgstr "A assistente não pôde ser preparada"
+msgstr "O assistente não pôde ser preparado"
 
 #: app/companion/ui/texts.py:269
 msgid "No Claude Desktop conversation is chosen"
@@ -2853,11 +2853,11 @@ msgstr "Nenhuma conversa do Claude Desktop foi escolhida"
 
 #: app/companion/ui/texts.py:270
 msgid "The assistant has a problem"
-msgstr "A assistente tem um problema"
+msgstr "O assistente tem um problema"
 
 #: app/companion/ui/texts.py:272
 msgid "The assistant is off"
-msgstr "A assistente está desligada"
+msgstr "O assistente está desligado"
 
 #: app/companion/ui/texts.py:273
 msgid "Starting..."
@@ -2873,14 +2873,14 @@ msgid ""
 "restart the assistant."
 msgstr ""
 "Instale o Claude Code, ou aponte VOICEMATE_CLAUDE_CLI para ele, e "
-"reinicie a assistente."
+"reinicie o assistente."
 
 #: app/companion/ui/texts.py:289
 msgid ""
 "Sign in with \"claude auth login\" in a terminal, then restart the "
 "assistant."
 msgstr ""
-"Faça login com \"claude auth login\" em um terminal e reinicie a "
+"Faça login com \"claude auth login\" em um terminal e reinicie o "
 "assistente."
 
 #: app/companion/ui/texts.py:290
@@ -2890,24 +2890,24 @@ msgstr "Escolha a conversa do Claude Desktop em Configurações, Assistente."
 #: app/companion/ui/texts.py:291
 msgid "Restart the assistant to try again. The VoiceMate log has the details."
 msgstr ""
-"Reinicie a assistente para tentar de novo. O log do VoiceMate tem os "
+"Reinicie o assistente para tentar de novo. O log do VoiceMate tem os "
 "detalhes."
 
 #: app/companion/ui/texts.py:293
 msgid "The assistant is off. Turn it on in Settings, Assistant."
-msgstr "A assistente está desligada. Ligue em Configurações, Assistente."
+msgstr "O assistente está desligado. Ligue em Configurações, Assistente."
 
 #: app/companion/ui/texts.py:294
 msgid "The assistant is starting. Please wait."
-msgstr "A assistente está iniciando. Aguarde."
+msgstr "O assistente está iniciando. Aguarde."
 
 #: app/companion/ui/texts.py:295
 msgid "The assistant is answering. Please wait."
-msgstr "A assistente está respondendo. Aguarde."
+msgstr "O assistente está respondendo. Aguarde."
 
 #: app/companion/ui/texts.py:296
 msgid "The assistant is stopped."
-msgstr "A assistente está parada."
+msgstr "O assistente está parado."
 
 #: app/companion/ui/texts.py:302
 msgid "Available"
