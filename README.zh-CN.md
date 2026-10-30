@@ -14,7 +14,7 @@
 [![Release](https://img.shields.io/github/v/release/nano-br/voice-mate?include_prereleases&sort=semver&style=flat)](https://github.com/nano-br/voice-mate/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?style=flat&logo=python&logoColor=white)](pyproject.toml)
-[![Platforms](https://img.shields.io/badge/platforms-Windows%2010%2F11%20%7C%20Linux%20%26%20WSL2%20(experimental)-0078D6?style=flat)](#platforms-and-gpus)
+[![Platforms](https://img.shields.io/badge/platforms-Windows%2010%2F11%20%7C%20Linux%20%26%20WSL2-0078D6?style=flat)](#platforms-and-gpus)
 [![Languages](https://img.shields.io/badge/languages-en%20%7C%20pt--BR%20%7C%20es%20%7C%20ru%20%7C%20zh--CN-2EA44F?style=flat)](#languages)
 
 [下载](https://github.com/nano-br/voice-mate/releases/latest) · [快速开始](#快速开始) · [文档](#文档) · [更新日志](CHANGELOG.md)
@@ -25,19 +25,26 @@
 
 ## 为什么做 VoiceMate
 
-我做 VoiceMate，是因为我相信一件很简单的事：向 AI 表达想法越快、越轻松，给出的细节越多，得到的结果就越好。说话比打字快得多。边想边说的时候，你会像向另一个人解释那样把想法讲清楚，带出的上下文远比你愿意敲出来的多。
+<!-- POSITIONING: aguardando texto alinhado -->
+VoiceMate 是一个运行在你电脑上的个人语音助手，并与 Claude Desktop 和 Claude Code 集成。它从听写起步：按下快捷键，说话，文本就可以粘贴到任何 AI 工具里，Whisper 在本地运行，音频不会离开你的电脑。如今它走得更远：一个有名字、有个性（由你来定）的个人 AI 智能体，用语音统筹你的 Claude Code 对话，还能在自然的交谈中修改 VoiceMate 自身的设置。对用 Claude Code 编程的人来说，就是在自己正在工作的那个对话里开口说话。对需要无障碍支持的人来说，就是不依赖键盘也能使用 Claude Code。
 
-VoiceMate 能立刻把语音变成文字，随时交给任何 AI 工具：给编程助手的提示词、聊天工具里的一条消息，任何可以粘贴的地方都行。按下快捷键，自然地说话，再按一次，然后粘贴。Whisper 在本地运行，所以你的音频只留在自己的电脑上。听写不需要云服务，也不需要付费。
+我做它，是因为我相信一件很简单的事：向 AI 表达想法越快、越轻松，给出的细节越多，得到的结果就越好。说话比打字快得多，边想边说的时候，你给出的上下文远比你愿意敲出来的多。
 
-听写到剪贴板是 VoiceMate 的核心。从 2026 年 3 月起，我几乎每个工作日都在真实的工作中使用它。它最初在搭载 NVIDIA 显卡的 Windows 上开发，并经过了实战检验。后来我把显卡换成了 AMD，于是通过 WSL2 和 Linux 把 VoiceMate 适配到了 AMD，现在这条路径也经过了测试。这条路径目前仍是**实验性**的。
+**听写到剪贴板是核心。**从 2026 年 3 月起，我几乎每个工作日都在真实的工作中使用它，平台是搭载 NVIDIA 显卡的 Windows。后来我把显卡换成了 AMD，于是通过 WSL2 和 ROCm 7.2 把 VoiceMate 适配到了 AMD，这条路径也经过了测试（Radeon RX 9070 XT，`gfx1201`）。Whisper 在本地运行：听写不需要云服务，也不需要付费。
 
-后来加入了第二个模块：与 Claude 的语音对话。你说话，Claude 回答，回答再由文字转语音（TTS）朗读出来。这个模块是可选的，也是**实验性**的。
+**语音助手是一个中央对话**，负责统筹你的其他 Claude Code 对话：列出它们、阅读它们、向它们提问，并在它们回答时用语音告诉你。它有两种运行方式：自己的会话（Claude Desktop 关闭时），或在 Claude Desktop 里，使用其原生工具。名字、个性（一个 Markdown 文件，可以放在你的 Obsidian 笔记库里）以及它可以阅读的笔记库，都由你来选。与 Claude 的语音对话（`Ctrl+Alt+A`）是它更轻量的同伴：语音输入，回答朗读出来。
 
-第三个模块刚刚起步：**语音助手**。它是一个 Claude 对话，知道我的其他对话在做什么，替我向它们提问，并在它们回答时用语音告诉我。它运行在 VoiceMate 启动的对话里，或我在 Claude Desktop 中已有的对话里。它是**实验性**功能，默认关闭。
+VoiceMate 是开源的，采用 MIT 许可证。如果你试用了，请告诉我感觉如何。
+
+## 演示
+
+对个人 AI 智能体的演示和现场测试，目前使用巴西葡萄牙语。之后会陆续推出更精心制作、使用其他语言的视频。
+
+[VoiceMate e seu agente pessoal de IA: demonstração e teste ao vivo com o Claude Code](https://youtu.be/T9H30G-AbZo)，来自 Prompt Falado 频道。
 
 ## 目录
 
-[功能](#功能) · [截图](#截图) · [快速开始](#快速开始) · [使用](#使用) · [语音助手](#语音助手实验性) · [配置](#配置) · [架构](#架构) · [故障排查](#故障排查) · [文档](#文档) · [参与贡献](#参与贡献) · [许可证](#许可证)
+[演示](#演示) · [功能](#功能) · [截图](#截图) · [快速开始](#快速开始) · [使用](#使用) · [语音助手](#语音助手) · [配置](#配置) · [架构](#架构) · [故障排查](#故障排查) · [文档](#文档) · [参与贡献](#参与贡献) · [许可证](#许可证)
 
 ## 功能
 
@@ -58,17 +65,18 @@ VoiceMate 能立刻把语音变成文字，随时交给任何 AI 工具：给编
 
 <a id="platforms-and-gpus"></a>**平台与 GPU**
 - Windows 10/11 搭配 NVIDIA（CUDA）：最初的路径，经过实战检验。引擎可以在命令行中原生运行。
-- **实验性：** 引擎运行在 WSL2 内（配套应用采用的方式），WSL2、Linux 和 Windows 上的 AMD GPU（ROCm、Vulkan），以及搭配可选配套应用的 Linux（X11、Wayland）。
+- 引擎运行在 WSL2 内（配套应用采用的方式），以及通过 WSL2 使用 AMD GPU（ROCm 7.2）：已在 Radeon RX 9070 XT（RDNA4，`gfx1201`）上测试。
+- Windows 上的 AMD（Vulkan），以及搭配可选配套应用的 Linux（X11、Wayland），使用同样的设置。
 - 各平台都可以回退到 CPU。`make setup` 会检测平台和 GPU，并安装匹配的 PyTorch 版本和语音转文字后端。
 
-**与 Claude 的语音对话（实验性）**
+**与 Claude 的语音对话**
 - `Ctrl+Alt+A` 通过 Claude Code CLI 把你的语音发送给 Claude（使用你自己的登录账号：转写后的文本会发送给 Anthropic，音频不会）。回答会复制到剪贴板并朗读出来。
 - TTS 引擎：OmniVoice（没有保存任何选择时使用的引擎）、Kokoro（`make setup` 推荐的引擎）和 VoxCPM2。也可以用你自己的：任何遵循 [TTS 提供方协议](docs/tts-provider-protocol.md) 的服务（设置 > 声音 > 自定义提供方）。对话可以跨轮次继续；按下任何快捷键都会打断回答并开始新的录音。
 
-**语音助手（实验性，默认关闭）**
+**语音助手（默认关闭）**
 - 一个中央 Claude 对话，有两种模式：VoiceMate 自己的对话（VoiceMate 启动的 Claude Code 进程，也能在 Claude Desktop 和手机上看到），或你已有的一个 Claude Desktop 对话（通过短暂的键盘“闪现”写入，仅限 Windows）。它会列出、阅读并向你的其他对话发消息，还能在后台启动新对话。
-- 用 `Ctrl+Alt+S` 对它说话，并用引擎的声音（Kokoro 或你自己的提供方）听它回答。英语、葡萄牙语和西班牙语的语音指令可以朗读上一条回答、切换到某个对话、向它发送消息或直接与它交谈。窗口显示聊天和待听的回答；托盘上的蓝色角标和“回答已就绪”提示音会在回答到达时提醒你，`Ctrl+Alt+R` 朗读已就绪的内容。
-- 它能用语音修改一份固定清单中的 VoiceMate 设置，支持个性（文件、Obsidian 笔记库中的笔记或你自己写的文本），并使用英语或巴西葡萄牙语的技能，该技能也可以在任何 Claude Code 对话中单独使用。参见[语音助手](#语音助手实验性)和[完整指南](docs/voice-assistant.md)（英文）。
+- 用 `Ctrl+Alt+S` 对它说话，或在它的窗口里点 **说话**（录音时它会变成 **停止并发送**）。它用 Windows 自带的语音朗读，无需安装任何东西，也可以用引擎的声音（Kokoro 或你自己的提供方）：设置 > **助手** > “语音来源：”。英语、葡萄牙语和西班牙语的语音指令可以朗读上一条回答、切换到某个对话、向它发送消息或直接与它交谈。窗口显示聊天和待听的回答；它的声音会在你录音和录音转写期间等待，之后再重复被你打断的内容；托盘上的蓝色角标和“回答已就绪”提示音会在回答到达时提醒你，`Ctrl+Alt+R` 朗读已就绪的内容。
+- 它能用语音修改一份固定清单中的 VoiceMate 设置，支持个性（文件、Obsidian 笔记库中的笔记或你自己写的文本），并使用英语或巴西葡萄牙语的技能，该技能也可以在任何 Claude Code 对话中单独使用。参见[语音助手](#语音助手)和[完整指南](docs/voice-assistant.md)（英文）。
 
 ## 截图
 
@@ -80,7 +88,7 @@ VoiceMate 能立刻把语音变成文字，随时交给任何 AI 工具：给编
 
 <p align="center"><img src="docs/assets/screenshots/zh-CN/settings-voice.png" width="724" alt="“VoiceMate 设置”的“声音”选项卡，含语音引擎和自定义提供方字段"><br><sub>“VoiceMate 设置”，“声音”选项卡：朗读回答的语音引擎，包括“自定义提供方（HTTP）”。</sub></p>
 
-<p align="center"><img src="docs/assets/screenshots/zh-CN/assistant.png" width="568" alt="VoiceMate 助手窗口和一段示例对话"><br><sub>助手窗口（**实验性**），从托盘菜单的“助手”打开。设置：<a href="docs/assets/screenshots/zh-CN/settings-assistant.png">“助手”</a>标签页。带有 CPU 或 GPU 选项的“转写”分组在上面的“常规”标签页里。</sub></p>
+<p align="center"><img src="docs/assets/screenshots/zh-CN/assistant.png" width="568" alt="VoiceMate 助手窗口和一段示例对话"><br><sub>助手窗口，带有 **说话** 按钮，从托盘菜单的“助手”打开。设置：<a href="docs/assets/screenshots/zh-CN/settings-assistant.png">“助手”</a>标签页。带有 CPU 或 GPU 选项的“转写”分组在上面的“常规”标签页里。</sub></p>
 
 <p align="center"><img src="docs/assets/screenshots/zh-CN/assistant-inbox.png" width="568" alt="助手窗口，含“待听的回答”分组和“等待中”列表"><br><sub>同一个窗口，含“待听的回答”分组和“等待中”列表。</sub></p>
 
@@ -92,7 +100,9 @@ VoiceMate 能立刻把语音变成文字，随时交给任何 AI 工具：给编
 
 ### Windows，使用安装程序
 
-安装程序只包含配套应用。引擎运行在 WSL2 发行版内，所以请先把它准备好（**实验性**；完整指南见 [docs/installation.md](docs/installation.md)，英文）。
+**带安装程序截图的分步指南：[安装指南](docs/install-guide.zh-CN.md)**（[English](docs/install-guide.md)、[Português](docs/install-guide.pt-BR.md)、[Español](docs/install-guide.es.md)、[Русский](docs/install-guide.ru.md)、[简体中文](docs/install-guide.zh-CN.md)）。下面是简要版本；完整参考见 [docs/installation.md](docs/installation.md)（英文）。
+
+安装程序只包含配套应用。引擎运行在 WSL2 发行版内，所以请先把它准备好。
 
 1. 在 PowerShell 中安装带 Ubuntu 的 WSL2：`wsl --install -d Ubuntu-24.04`，然后打开 Ubuntu（如果你原来就有别的 WSL 发行版，还要运行 `wsl --set-default Ubuntu-24.04`，或者稍后在设置中指定“WSL 发行版：”）。在 Ubuntu 里安装音频相关的包；Python 3.12（Ubuntu 24.04 自带）和 [Poetry](https://python-poetry.org/docs/#installation) 也必须在登录 shell 的 `PATH` 中：
    ```bash
@@ -125,15 +135,15 @@ make run ARGS="--output-lang en"     # 用引擎自带的快捷键启动引擎�
 
 **引擎默认使用葡萄牙语**（`--output-lang pt-BR`），它决定 Whisper 听的语言、Claude 回答的语言和引擎消息的语言。请像上面那样传入 `--output-lang en`（或其他语言代码）；`--transcription-language` 和 `VOICEMATE_LANG` 只会改变其中一项（[配置](docs/configuration.md)）。配套应用会自己传入这些参数，参见[使用](#使用)。
 
-在 Windows 上从源码运行配套应用（引擎在 WSL2 中）：先运行一次 `make companion-venv`，然后运行 `make run-tray`。在 Linux 上，像上面那样运行 `make setup` 和 `make run`；如需可选的托盘和状态窗口，运行 `poetry install --extras ui`，然后运行 `make run-tray`（[详情](docs/installation.md#linux-experimental)）。
+在 Windows 上从源码运行配套应用（引擎在 WSL2 中）：先运行一次 `make companion-venv`，然后运行 `make run-tray`。在 Linux 上，像上面那样运行 `make setup` 和 `make run`；如需可选的托盘和状态窗口，运行 `poetry install --extras ui`，然后运行 `make run-tray`（[详情](docs/installation.md#linux)）。
 
 ## 使用
 
 | 快捷键 | 托盘菜单项 | 效果 |
 |---|---|---|
 | `Ctrl+Alt+V` | “听写” | 语音转为文本，复制到剪贴板 |
-| `Ctrl+Alt+A` | “询问 Claude” | 语音发送给 Claude，回答被复制并朗读出来（**实验性**） |
-| `Ctrl+Alt+S` | “与助手对话” | 语音发给助手，而不是剪贴板（**实验性**） |
+| `Ctrl+Alt+A` | “询问 Claude” | 语音发送给 Claude，回答被复制并朗读出来 |
+| `Ctrl+Alt+S` | “与助手对话” | 语音发给助手，而不是剪贴板 |
 | `Ctrl+Alt+W` | “打开助手窗口” | 打开或关闭助手窗口 |
 | `Ctrl+Alt+R` | “收听已就绪的内容” | 助手朗读正在等待的回答 |
 
@@ -141,11 +151,11 @@ make run ARGS="--output-lang en"     # 用引擎自带的快捷键启动引擎�
 
 **听写语言。** 在设置 > **常规** 中，“听写语言：”决定你说话的语言。默认是“与界面相同”；选择“自动检测”则让 Whisper 检测每一段录音的语言（Claude 仍然用界面语言回答；使用 Kokoro 时，请改为固定一种语言）；也可以只选一种语言。配套应用会把它以 `--transcription-language` 和 `--output-lang` 的形式传给它启动的引擎，更改后会重启引擎。配套应用仅连接、而非由它启动的引擎（systemd 单元，或手动启动的引擎）会沿用它自己的参数。
 
-与 Claude 的语音对话需要安装并登录 Claude Code CLI，并且在 `make setup` 中选择了 `claude` 模块。参见 [docs/usage.md](docs/usage.md#claude-flow-experimental)。
+与 Claude 的语音对话需要安装并登录 Claude Code CLI，并且在 `make setup` 中选择了 `claude` 模块。参见 [docs/usage.md](docs/usage.md#claude-flow)。
 
 **转写模式。** 在设置 > **常规** > “转写”中，“运行于：”可选“CPU（不占用 GPU）”“GPU（最快）”或“自动（引擎设置）”。托盘菜单里的“转写”作用相同。每种模式有自己的模型（“CPU 模型：”“GPU 模型：”）。切换会重启引擎；如果该模式尚未安装，VoiceMate 会先询问（并告知下载大小），再在一个显示输出的窗口里安装。在终端里：`make stt-check` 和 `make stt-install MODE=cpu`（或 `gpu`）。速度和准确率数据见 [docs/configuration.md](docs/configuration.md#speech-to-text-modes)。
 
-### 语音助手（实验性）
+### 语音助手
 
 助手是一个 Claude 对话，即中央对话，它知道你的其他对话在做什么，并替你统筹它们：列出、阅读、发消息、在后台启动新对话，并在它们回答时告诉你。默认关闭。
 
@@ -164,7 +174,7 @@ make run ARGS="--output-lang en"     # 用引擎自带的快捷键启动引擎�
 > [!WARNING]
 > “完全访问，从不询问（有风险）”（`bypassPermissions`）会让助手启动的对话不经询问就修改任何文件、运行任何命令。除非你信任要交给它们的事，否则请保持默认值。
 
-更多（英文）：[语音指令与直接模式](docs/voice-assistant.md#6-direct-mode-and-voice-commands)、[其他对话的回答](docs/voice-assistant.md#5-answers-coming-back)、[用语音改设置](docs/voice-assistant.md#8-settings-by-voice)、[每项设置的步骤](docs/usage.md#voice-assistant-experimental)、[Claude Desktop 配置文件](docs/desktop-profile.md)和 [TTS 提供方协议](docs/tts-provider-protocol.md)。
+更多（英文）：[语音指令与直接模式](docs/voice-assistant.md#6-direct-mode-and-voice-commands)、[其他对话的回答](docs/voice-assistant.md#5-answers-coming-back)、[用语音改设置](docs/voice-assistant.md#8-settings-by-voice)、[每项设置的步骤](docs/usage.md#voice-assistant)、[Claude Desktop 配置文件](docs/desktop-profile.md)和 [TTS 提供方协议](docs/tts-provider-protocol.md)。
 
 ## 配置
 
@@ -206,7 +216,7 @@ flowchart TB
     vm -->|"录音"| audio
     vm -->|"转写"| gpu
     vm -.->|"下载模型"| hub
-    vm -.->|"实验性：提问"| claude
+    vm -.->|"提问"| claude
 
     classDef person fill:#08427b,stroke:#052e56,color:#ffffff
     classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
@@ -373,7 +383,7 @@ stateDiagram-v2
 </details>
 
 <details>
-<summary>语音助手，实验性（概览）</summary>
+<summary>语音助手（概览）</summary>
 
 ```mermaid
 flowchart LR
@@ -412,7 +422,7 @@ flowchart LR
     class other,phone external
 ```
 
-两种模式走同一个循环：助手联系你的其他对话，回答经服务返回，服务把它们读出来或存入收件箱。蓝色：VoiceMate；青色：存储的数据；灰色：VoiceMate 之外。完整图表：[docs/architecture.md](docs/architecture.md#61-voice-assistant-experimental)。完整流程：[docs/voice-assistant.md](docs/voice-assistant.md)。
+两种模式走同一个循环：助手联系你的其他对话，回答经服务返回，服务把它们读出来或存入收件箱。蓝色：VoiceMate；青色：存储的数据；灰色：VoiceMate 之外。完整图表：[docs/architecture.md](docs/architecture.md#61-voice-assistant)。完整流程：[docs/voice-assistant.md](docs/voice-assistant.md)。
 
 </details>
 
@@ -476,8 +486,8 @@ flowchart TD
 | 文本没有进入剪贴板 | 它在 **未复制** 列表中（托盘菜单和状态窗口里都有）。单击它即可再次复制。 |
 | 英语语音识别结果不对，或者引擎消息是葡萄牙语 | 手动启动的引擎默认使用葡萄牙语：给 `make run` 加上 `ARGS="--output-lang en"`。 |
 | GPU 正忙于其他工作 | 选择 CPU 模式：设置 > **常规** > “转写”，或托盘菜单 > “转写”。尚未安装的模式会先询问你，再安装。 |
-| 助手提示“未找到 Claude Code”或“Claude Code 尚未登录” | 在终端运行 `where claude`。VoiceMate 还会在 `~/.local/bin` 和 `%APPDATA%\npm` 中查找；如果 `claude` 在其他位置，请把 `VOICEMATE_CLAUDE_CLI` 设为它的完整路径。如果尚未安装，请安装 Claude Code。遇到未登录的提示时，运行 `claude auth login`。然后在助手窗口点“重新启动”。更多见 [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental)。 |
-| Desktop 模式提示“未选择 Claude Desktop 对话”或“无法准备助手” | “Desktop 对话：”为空，或没有 Claude Desktop 对话有这个确切标题：按 Claude Desktop 侧边栏中的样子准确输入标题，打开 Claude Desktop，然后点 **重新启动**。更多见 [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant-experimental)。 |
+| 助手提示“未找到 Claude Code”或“Claude Code 尚未登录” | 在终端运行 `where claude`。VoiceMate 还会在 `~/.local/bin` 和 `%APPDATA%\npm` 中查找；如果 `claude` 在其他位置，请把 `VOICEMATE_CLAUDE_CLI` 设为它的完整路径。如果尚未安装，请安装 Claude Code。遇到未登录的提示时，运行 `claude auth login`。然后在助手窗口点“重新启动”。更多见 [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant)。 |
+| Desktop 模式提示“未选择 Claude Desktop 对话”或“无法准备助手” | “Desktop 对话：”为空，或没有 Claude Desktop 对话有这个确切标题：按 Claude Desktop 侧边栏中的样子准确输入标题，打开 Claude Desktop，然后点 **重新启动**。更多见 [docs/troubleshooting.md](docs/troubleshooting.md#voice-assistant)。 |
 | 引擎一侧的其他问题 | 在引擎文件夹中运行 `make doctor`。每一项未通过的检查它都会给出修复方法。 |
 
 更多问题和确切的消息文本：[docs/troubleshooting.md](docs/troubleshooting.md)。
@@ -486,15 +496,16 @@ flowchart TD
 
 详细文档（英文）：
 
+- [安装指南](docs/install-guide.zh-CN.md)：分步说明，附安装程序截图。
 - [安装](docs/installation.md)：所有安装方式、更新和卸载。
-- [语音助手与 Claude](docs/voice-assistant.md)：助手的完整流程（含图示）、两种模式，以及它如何统筹你的其他对话（实验性）。
+- [语音助手与 Claude](docs/voice-assistant.md)：助手的完整流程（含图示）、两种模式，以及它如何统筹你的其他对话。
 - [使用](docs/usage.md)：流程、快捷键、托盘图标、转写模式、模型、语音选项和语音助手。
 - [配置](docs/configuration.md)：引擎参数、设置文件、环境变量、语音识别模式和基准测试。
 - [故障排查](docs/troubleshooting.md)：`make doctor`、WSL 音频、日志、已知消息。
 - [架构](docs/architecture.md)：图表和设计取舍。
-- [WSL2 与 AMD](docs/wsl2.md)（实验性）、[配套应用设计](docs/companion-app.md)、[品牌](docs/brand.md)、[发布流程](docs/releasing.md)。
+- [WSL2 与 AMD](docs/wsl2.md)、[配套应用设计](docs/companion-app.md)、[品牌](docs/brand.md)、[发布流程](docs/releasing.md)。
 - [Claude Desktop 配置文件](docs/desktop-profile.md)和 [TTS 提供方协议](docs/tts-provider-protocol.md)：告诉 Desktop 模式控件位置的文件，以及你自己的声音所用的 HTTP 约定。
-- 研究（实验性工作，英文）：[语音助手设计](docs/research/voice-assistant-design.md) 和 [VoiceMate 作为 Claude Code 客户端](docs/research/claude-code-client.md)。
+- 研究笔记（英文）：[语音助手设计](docs/research/voice-assistant-design.md) 和 [VoiceMate 作为 Claude Code 客户端](docs/research/claude-code-client.md)。
 
 ## 参与贡献
 

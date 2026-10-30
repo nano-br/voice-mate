@@ -48,7 +48,7 @@ In this order: the detected platform; on WSL2 only, the WSLg PulseAudio socket, 
 | "Transcription mode change under way" | A check or an install is still running | Wait for it to finish, then try again |
 | "Could not change the transcription mode" | The engine could not restart with the new mode | Read `engine.log` |
 
-## Voice assistant (experimental)
+## Voice assistant
 
 | Symptom | Cause | What to do |
 |---|---|---|
@@ -69,7 +69,9 @@ In this order: the detected platform; on WSL2 only, the WSLg PulseAudio socket, 
 | After a Claude Desktop update the Desktop mode stops finding its controls | The update changed the window, so the profile no longer matches | Settings > **Assistant** > **Check now** for a newer profile; if there is none, see [desktop-profile.md](desktop-profile.md#writing-a-profile-for-a-new-desktop-version) |
 | "Problem: ..." under the Claude Desktop profile | The imported or downloaded profile was refused (the reason names the field) | Fix the file and **Import...** it again, or press **Use default** |
 | The assistant cannot browse, open pull requests or use other Desktop-only tools | In "VoiceMate's own conversation" it only has the `voicemate` tools | Ask it to hand the task to a Desktop conversation, or switch to the Desktop mode |
-| The assistant is silent, and the window says "No voice available" | The engine cannot speak: it is stopped, its voice engine is not Kokoro or a custom provider, or the provider is down | Check Settings > **Voice** and the engine's voice engine ([protocol](tts-provider-protocol.md#the-engine-speaks-the-same-protocol)); "Speak the replies" must be on. The replies stay readable in the window |
+| The assistant is silent, and the window says "No voice available" | Nothing can speak: the engine is stopped or has no voice (its voice engine is not Kokoro or a custom provider, or the provider is down) and Windows has no voice for the language, or "Voice source:" is "The engine's voice" | In Settings > **Assistant**, set "Voice source:" to "The voices of Windows" (or "Automatic") and press **Test**; add a voice under Windows Settings > Time and language > Speech. Or check Settings > **Voice** and the engine's voice engine ([protocol](tts-provider-protocol.md#the-engine-speaks-the-same-protocol)); "Speak the replies" must be on. The replies stay readable in the window |
+| The assistant's voice stops when I record and comes back later | By design: the voice never speaks over the microphone. It waits while you record and while the recording is transcribed, then says again the sentence that was cut and what was queued | Nothing to fix. A new prompt to the assistant, "stop talking" or an assistant hotkey silences it for good |
+| The **Talk** button in the assistant window is disabled | The assistant is not ready (off, starting, answering or broken), or the engine is still transcribing the last recording | Wait for "Ready" in the window. After an error, press **Restart** |
 | An answer from another conversation never arrived | Only conversations the assistant wrote to or started are watched, and a watch ends after one hour | Ask the assistant what is pending. With "Just keep it" or "Only play a sound" the answer waits in **Answers waiting**, not in the conversation |
 | The tray icon has a blue badge | Answers from other conversations are waiting | Use "Hear what's ready" (tray menu, `Ctrl+Alt+R`) or open the window |
 | A hotkey of the assistant says "Used by another app" | `Ctrl+Alt+S`, `Ctrl+Alt+W` or `Ctrl+Alt+R` is taken | Settings > **Hotkeys**: change it or clear it |
@@ -112,7 +114,8 @@ The engine messages quoted in this guide are English. The engine prints them in 
 | "TTS disabled: engine '{engine}' packages not installed." | The extra of the TTS engine is missing | Install the extra named in the next log line, or run with `--no-tts` |
 | English speech is transcribed wrongly (as if it were Portuguese) | An engine started by hand pins Whisper to Portuguese by default | `make run ARGS="--output-lang en"` or `--transcription-language en`. With the companion, set "Dictation language:" in Settings > **General** |
 | Transcription is 10 to 50 times slower than expected | The backend fell back to the CPU | `make doctor` (PyTorch with GPU); on AMD, `rocminfo` must list the GPU |
-| CTranslate2-ROCm failed to build | Incomplete ROCm development packages | `make doctor`; install the ROCm HIP SDK; `make configure` tries again |
+| CTranslate2-ROCm failed to build | Incomplete ROCm development packages, or (ROCm 7) a build that picked gcc: "language hip not recognized" | `make doctor`; install the ROCm HIP SDK; `git pull` and `make configure` try again, now with ROCm's clang. See [wsl2.md](wsl2.md#ctranslate2-rocm-faster-whisper-on-the-gpu-optional-best-quality) |
+| "Conv1D on GPU currently requires the cuDNN library" in the engine log, and the transcription on the AMD GPU fails | A CTranslate2-ROCm built without MIOpen (the AMD counterpart of cuDNN) on ROCm 7 | `git pull`, then `make configure` and accept the CTranslate2-ROCm build again: the build now includes MIOpen. Until then the engine falls back to openai-whisper (`ct2_rocm_ok = false`) |
 | The interface language is not the one you chose | The language changes after a restart | Answer "Restart now" in "Restart VoiceMate?" |
 
 ## Old hotkey scripts (without the companion)

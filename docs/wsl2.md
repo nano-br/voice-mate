@@ -1,6 +1,6 @@
 # VoiceMate on WSL2 (AMD GPU through ROCm)
 
-Purpose: how to run the VoiceMate engine inside WSL2, mainly with an AMD GPU through ROCm, and what to expect from that setup. This path is **experimental**: it was validated on one AMD card (Radeon RX 9070 XT, RDNA4, `gfx1201`). Back to the [README](../README.md).
+Purpose: how to run the VoiceMate engine inside WSL2, mainly with an AMD GPU through ROCm, and what to expect from that setup. This path is tested on an AMD Radeon RX 9070 XT (RDNA4, `gfx1201`) with WSL2 and ROCm 7.2; other AMD cards use the same stack but are not tested. Back to the [README](../README.md).
 
 The engine runs **entirely inside WSL** (Ubuntu): microphone capture, transcription on the GPU, TTS. Global Windows hotkeys do not reach background processes in WSL, so a Windows-side program owns the hotkeys and talks to the engine over a local HTTP API. That program is the **VoiceMate companion app** (recommended). The old PowerShell and AutoHotkey scripts still work as a legacy option.
 
@@ -47,7 +47,7 @@ Then install the companion on Windows: see [installation.md](installation.md#win
 
 ## Running
 
-With the companion, there is nothing to run by hand: start VoiceMate on Windows. Press `Ctrl+Alt+V` anywhere in Windows, wait for the start cue, speak, press `Ctrl+Alt+V` again: the transcription lands in the Windows clipboard. `Ctrl+Alt+A` runs the Claude flow (answer in the clipboard and read aloud), which is **experimental** too.
+With the companion, there is nothing to run by hand: start VoiceMate on Windows. Press `Ctrl+Alt+V` anywhere in Windows, wait for the start cue, speak, press `Ctrl+Alt+V` again: the transcription lands in the Windows clipboard. `Ctrl+Alt+A` runs the Claude flow (answer in the clipboard and read aloud).
 
 Without the companion, `make run` in WSL starts the engine and prints the port of the daemon; one of the legacy scripts below then provides the hotkeys.
 
@@ -97,6 +97,8 @@ To confirm the Vulkan device that whisper.cpp picked (when it is used): the serv
 ### CTranslate2-ROCm (faster-whisper on the GPU): optional, best quality
 
 It brings back the quality of faster-whisper on CUDA, on the AMD GPU. It is a heavy build (`make configure`, then accept CTranslate2-ROCm). Known risk on `gfx1201`: reports of a *memory access fault* (OpenNMT/CTranslate2#2021); the app already applies the workaround `CT2_CUDA_ALLOCATOR=cub_caching`. If the build or the validation fails, the chain falls back to openai-whisper by itself, and the decision is saved as `ct2_rocm_ok`. `hipcc` comes with the `rocm` use case of ROCm 7.2.
+
+On ROCm 7 the setup builds the fork with ROCm's own clang (CMake would otherwise pick gcc for the HIP sources and stop at "language hip not recognized"), adapts its sources to ROCm 7, and builds it with MIOpen, AMD's equivalent of cuDNN. A build without MIOpen installs, but every transcription on the GPU then stops at Whisper's first convolution with "Conv1D on GPU currently requires the cuDNN library" ([troubleshooting](troubleshooting.md#engine-problems)).
 
 > whisper.cpp with **HIP** (instead of Vulkan) would solve this natively, but the pull request that adds `gfx120X` support (ggml-org/whisper.cpp#3757) is not merged yet.
 
@@ -185,6 +187,7 @@ The scripts use the v1 routes of the daemon: `POST /register` (a `client_id`), `
 | No input device | WSLg microphone disabled | `wsl --update`; `make doctor` |
 | Transcription 10 to 50 times slower | Fell back to the CPU | `make doctor` (PyTorch with GPU); `rocminfo` |
 | CTranslate2-ROCm build failed | Incomplete ROCm development packages | `make doctor`; install the ROCm HIP SDK; `make configure` tries again |
+| "Conv1D on GPU currently requires the cuDNN library" | A CTranslate2-ROCm built without MIOpen (an older build) | `git pull`, then `make configure` and accept the CTranslate2-ROCm build again: it now builds with MIOpen. Meanwhile the chain uses openai-whisper |
 
 More in [troubleshooting.md](troubleshooting.md).
 

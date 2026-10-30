@@ -49,7 +49,7 @@ Flags reach the engine through the Makefile with `ARGS`, for example `make run A
 
 `make run-engine` runs `voice-mate --supervised --api --api-token`; it is what the companion starts.
 
-### Claude flow (experimental)
+### Claude flow
 
 | Flag | Default | Meaning |
 |---|---|---|
@@ -140,7 +140,7 @@ Location: Windows `%APPDATA%\VoiceMate\companion.toml`; Linux `${XDG_CONFIG_HOME
 | `tts_url` | `http://127.0.0.1:8765` | an `http://` or `https://` address without spaces, quotes or `$` | Voice > "Provider address:" |
 | `tts_voice` | `""` (the provider's default) | a voice id without spaces or shell characters | Voice > "Voice:" |
 | `tts_token` | `""` | text without line breaks. Plain text in this file | Voice > "Token:" |
-| `[assistant]` table | see [Assistant settings](#assistant-settings-experimental) | | Assistant tab |
+| `[assistant]` table | see [Assistant settings](#assistant-settings) | | Assistant tab |
 | `[[hotkeys]]` with `flow` and `chord` | `clipboard` = `ctrl+alt+v`, `claude_chat` = `ctrl+alt+a` | Ctrl, Alt, Shift or Win with a key, or a function key alone; F12 is reserved by Windows | Hotkeys tab |
 | `[cues.<name>]` for `start`, `transcribing`, `ready`, `ai_ready`, `warning`, `error`, `answer` (an answer of another conversation is waiting) | `enabled = true`, `source = "preset"`, `preset = "classic"`, `file = ""`, `volume = 1.0` | `source`: `preset`, `file`; `preset`: `classic`, `soft`, `click`; `file`: a PCM WAV (8 or 16 bit) | Sounds tab |
 
@@ -200,9 +200,9 @@ one point of WER, so the `gpu` mode decodes greedily. `medium` is less accurate 
 `large-v3-turbo` on both, and on the GPU it is also slower, so the turbo model is the
 default of both modes; `medium` and `small` are there for slower processors.
 
-## Assistant settings (experimental)
+## Assistant settings
 
-The voice assistant ([usage.md](usage.md#voice-assistant-experimental)) keeps its choices in the `[assistant]` table of `companion.toml`:
+The voice assistant ([usage.md](usage.md#voice-assistant)) keeps its choices in the `[assistant]` table of `companion.toml`:
 
 | Key | Default | Allowed values | In the UI |
 |---|---|---|---|
@@ -215,7 +215,8 @@ The voice assistant ([usage.md](usage.md#voice-assistant-experimental)) keeps it
 | `permission_mode` | `acceptEdits` | `default`, `acceptEdits`, `bypassPermissions` | Assistant > "Permissions:" ("Ask before every change", "Accept file edits, ask for the rest", "Full access, never ask (risky)") |
 | `answer_delivery` | `announce` | `speak`, `announce`, `sound`, `silent` | Assistant > "Answers from other conversations:" |
 | `speak_replies` | `true` | `true`, `false` | Assistant > "Speak the replies" |
-| `voice` | `""` (the engine's default voice) | a voice id of the engine's voice engine | Assistant > "Assistant voice:" |
+| `voice_source` | `auto` | `auto`, `engine`, `windows` | Assistant > "Voice source:" ("Automatic", "The engine's voice", "The voices of Windows") |
+| `voice` | `""` (the default voice of the source) | a voice id of the engine's voice engine, or a `windows/...` id of a voice of Windows | Assistant > "Assistant voice:" (**Load voices**, **Test**) |
 | `voice_commands` | `true` | `true`, `false` | Assistant > "Understand voice commands in typed text" |
 | `expressions` | `off` | `off`, `on` | Assistant > "Expression tags:" |
 | `user_name` | `""` | text | Assistant > "Your name:" |
@@ -252,7 +253,7 @@ The text you write for "Write my own" is not in `companion.toml`: VoiceMate keep
 
 The assistant's replies are spoken by the engine, using the voice configured in the engine (Voice tab, or the engine's `--tts-engine`): the companion sends the `<voice>` block of each reply, sentence by sentence, to the engine's `/tts` endpoint ([tts-provider-protocol.md](tts-provider-protocol.md#the-engine-speaks-the-same-protocol)) and plays the audio on this computer.
 
-The built-in Kokoro voice and a custom provider can speak for the assistant; with another voice engine, or with the engine stopped, the replies stay text only, the assistant window shows one "No voice available" notice with the reason, and VoiceMate's short notices use the Windows voice instead. "Stop talking", a new prompt and a mode change silence it at once. It never speaks over a recording: what comes while the microphone records waits for the recording to end, and a sentence a recording cut is said again from its start.
+The built-in Kokoro voice and a custom provider can speak for the assistant, and so can the voices Windows already has (every language installed under Settings, Time and language, Speech), with nothing to download. "Voice source:" decides: `auto` uses the engine's voice and the voices of Windows when the engine cannot speak (or has no voice), `engine` only the engine, `windows` only Windows. **Load voices** and **Test** follow the source picked, before it is saved; a voice id belongs to one source, and each source ignores the other's ids. When nothing can speak, the replies stay text only and the assistant window shows one "No voice available" notice with the reason. "Stop talking", a new prompt and a mode change silence it at once. It never speaks over a recording: what comes while the microphone records, or while the recording is transcribed, waits; a sentence a recording cut is said again from its start, followed by the sentences that were already queued behind it, in order.
 
 VoiceMate also writes `~/.voicemate/assistant.json` in your user folder, which is the file the `voicemate-assistant` skill reads (`version`, `language`, `user_name`, `personality_file`, `notes_vault`, `expressions`, `mode`, `answer_delivery`, `inbox` and the `settings` catalog). With the Portuguese skill, `language` is `"pt-BR"` and the voice speaks pt-BR, whatever the interface language. With the English skill (or a custom one), the language follows the interface. `pending` lists the requests the assistant is waiting on (session id, title, reason, since when). Its format is in [usage.md](usage.md#the-skill). The skill itself is installed in `<Claude home>/skills/voicemate-assistant`, where the Claude home is `~/.claude` or the folder in `CLAUDE_CONFIG_DIR`.
 

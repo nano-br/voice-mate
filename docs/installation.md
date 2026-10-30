@@ -1,15 +1,15 @@
 # Installation
 
-Purpose: every way to install, update and uninstall VoiceMate, in full detail. Back to the [README](../README.md).
+Purpose: every way to install, update and uninstall VoiceMate, in full detail. For a step-by-step walk through the installer, with screenshots, read the [installation guide](install-guide.md) first. Back to the [README](../README.md).
 
 ## Choose a path
 
 | Path | Engine runs on | UI | Status |
 |---|---|---|---|
-| [Windows installer + engine in WSL2](#windows-installer-with-the-engine-in-wsl2) | WSL2 distro | Companion app (tray) | Experimental |
+| [Windows installer + engine in WSL2](#windows-installer-with-the-engine-in-wsl2) | WSL2 distro | Companion app (tray) | Tested with NVIDIA and AMD |
 | [From source, Windows native](#from-source) | Windows | Command line, engine hotkeys | Battle-tested with NVIDIA |
-| [From source, companion on Windows](#companion-from-source-windows) | WSL2 distro | Companion app from the repository | Experimental |
-| [Linux](#linux-experimental) | Linux (X11 or Wayland) | Command line, optional companion | Experimental |
+| [From source, companion on Windows](#companion-from-source-windows) | WSL2 distro | Companion app from the repository | Tested with NVIDIA and AMD |
+| [Linux](#linux) | Linux (X11 or Wayland) | Command line, optional companion | Tested through WSL2 (Ubuntu); native Linux uses the same setup |
 
 The companion app on Windows always talks to an engine inside WSL2 (mode "Start it in WSL"), or attaches to one that already runs (mode "Connect only"). A companion that starts a native Windows engine does not exist yet.
 
@@ -20,8 +20,8 @@ The companion app on Windows always talks to an engine inside WSL2 (mode "Start 
 | Engine | Python 3.12 exactly (`>=3.12,<3.13`: the AMD ROCm wheels are built for 3.12 only), [Poetry](https://python-poetry.org/docs/#installation), GNU `make`, `git`. On Windows, install GNU `make` first, for example with Chocolatey (`choco install make`) or Scoop (`scoop install make`) |
 | Companion from source | Python 3.12 or 3.13. `make companion-venv` uses `py -3`, the newest Python installed: if that is another version, run `make companion-venv COMPANION_BOOTSTRAP="py -3.12"` |
 | Windows installer | Windows 10 version 1809 or newer, 64-bit |
-| GPU | Optional. NVIDIA (CUDA), AMD (ROCm or Vulkan, **experimental**) or CPU |
-| Claude flow (**experimental**) | The Claude Code CLI installed and signed in (see [Claude Code CLI](#claude-code-cli-for-the-claude-flow)) |
+| GPU | Optional. NVIDIA (CUDA), AMD (ROCm or Vulkan) or CPU |
+| Claude flow and voice assistant | The Claude Code CLI installed and signed in (see [Claude Code CLI](#claude-code-cli-for-the-claude-flow)) |
 
 ## Windows installer with the engine in WSL2
 
@@ -101,9 +101,9 @@ The engine defaults to Portuguese (`--output-lang pt-BR`): without a flag Whispe
 | Vendor and platform | PyTorch build installed | Speech-to-text backends, in order of preference |
 |---|---|---|
 | NVIDIA (Windows, Linux) | CUDA `cu128` from download.pytorch.org | faster-whisper on CUDA |
-| AMD, Windows (**experimental**) | ROCm 7.2.1 wheels from repo.radeon.com | whisper.cpp with Vulkan (prebuilt binary), openai-whisper (if the `whisper-gpu` extra is installed), faster-whisper on CPU |
-| AMD, native Linux (**experimental**) | ROCm 7.2 manylinux wheels from repo.radeon.com | CTranslate2-ROCm (only if setup validated it), whisper.cpp with Vulkan (built from source), openai-whisper, CPU |
-| AMD, WSL2 (**experimental**) | ROCm 7.2 manylinux wheels from repo.radeon.com | CTranslate2-ROCm (only if validated), openai-whisper, whisper.cpp, CPU |
+| AMD, Windows | ROCm 7.2.1 wheels from repo.radeon.com | whisper.cpp with Vulkan (prebuilt binary), openai-whisper (if the `whisper-gpu` extra is installed), faster-whisper on CPU |
+| AMD, native Linux | ROCm 7.2 manylinux wheels from repo.radeon.com | CTranslate2-ROCm (only if setup validated it), whisper.cpp with Vulkan (built from source), openai-whisper, CPU |
+| AMD, WSL2 (tested on a Radeon RX 9070 XT, `gfx1201`) | ROCm 7.2 manylinux wheels from repo.radeon.com | CTranslate2-ROCm (only if validated), openai-whisper, whisper.cpp, CPU |
 | CPU | CPU build | faster-whisper (int8) |
 
 On WSL2, openai-whisper comes before whisper.cpp because Vulkan inside WSL2 only sees `llvmpipe`, a software renderer. See [wsl2.md](wsl2.md#speech-to-text-performance-on-wsl2).
@@ -141,7 +141,7 @@ poetry run python -c "import torch; print('GPU:', torch.cuda.is_available())"
 
 ### Claude Code CLI (for the Claude flow)
 
-The Claude flow is **experimental**. It uses `claude-agent-sdk`, which reuses the local `claude` CLI and its credentials, so no separate API key is needed.
+The Claude flow uses `claude-agent-sdk`, which reuses the local `claude` CLI and its credentials, so no separate API key is needed.
 
 1. Install Node.js 18 or newer.
 2. Install the CLI: `npm install -g @anthropic-ai/claude-code`.
@@ -167,7 +167,7 @@ To build the installer yourself you need [Inno Setup](https://jrsoftware.org/isi
 make companion-installer   # dist\VoiceMate (PyInstaller), then dist\installer\VoiceMate-Setup-<version>.exe
 ```
 
-## Linux (experimental)
+## Linux
 
 1. Install Python 3.12, Poetry, `make`, `git`, `libportaudio2`, and a clipboard tool (`wl-clipboard` on Wayland, `xclip` on X11).
 2. Clone and run `make setup`, `make doctor` and `make run` as in [From source](#from-source). On native Linux `make setup` adds the `linux` extra (global hotkeys).

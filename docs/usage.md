@@ -7,7 +7,7 @@ Purpose: how to use VoiceMate day to day: the flows, the hotkeys, the companion 
 | Default hotkey | Flow | Tray menu action | Result |
 |---|---|---|---|
 | `Ctrl+Alt+V` | Clipboard (core) | "Dictate" | The transcription goes to the clipboard |
-| `Ctrl+Alt+A` | Claude (**experimental**) | "Ask Claude" | The transcription goes to Claude; the answer goes to the clipboard and is read aloud |
+| `Ctrl+Alt+A` | Claude | "Ask Claude" | The transcription goes to Claude; the answer goes to the clipboard and is read aloud |
 
 The voice assistant adds its own hotkeys (`Ctrl+Alt+S` to talk to it, `Ctrl+Alt+W` for its window, `Ctrl+Alt+R` to hear the answers waiting, plus two with no default): see [Talk to it](#talk-to-it).
 
@@ -31,9 +31,9 @@ With the companion, the text goes through verified delivery: the app writes the 
 
 A recording stops by itself after 10 minutes (`--max-recording-seconds`), with a warning at 80 % of the time; it is then transcribed as usual. **Cancel** in the tray menu or the status window drops the current recording.
 
-## Claude flow (experimental)
+## Claude flow
 
-This second module turns VoiceMate into a voice conversation with Claude. It is optional and **experimental**.
+This second module turns VoiceMate into a voice conversation with Claude. It is optional.
 
 1. Press `Ctrl+Alt+A`, speak your question, press `Ctrl+Alt+A` again.
 2. VoiceMate transcribes and copies the transcription to the clipboard, then sends it to Claude.
@@ -44,7 +44,7 @@ Details:
 - Because both the transcription and the answer pass through the clipboard, `Win+V` on Windows shows both.
 - Any hotkey pressed while Claude answers or while TTS speaks interrupts the answer and starts a new recording. The conversation is kept.
 - Claude answers in the language of `--output-lang` (default `pt-BR`), for example `make run ARGS="--output-lang en"`. The companion sets it from "Dictation language:" ([Dictation language](#dictation-language)).
-- The default model is `claude-haiku-5-5` with effort `low` and thinking off, for low latency. See [configuration.md](configuration.md#claude-flow-experimental) for the flags.
+- The default model is `claude-haiku-5-5` with effort `low` and thinking off, for low latency. See [configuration.md](configuration.md#claude-flow) for the flags.
 - Requirements: the Claude Code CLI installed and signed in, and the `claude` extra ([installation.md](installation.md#claude-code-cli-for-the-claude-flow)). Without them the Claude flow is disabled with a warning in the engine log, and the clipboard flow keeps working.
 
 ### TTS engines
@@ -158,9 +158,9 @@ $env:VOICEMATE_LANG="en"; make run  # PowerShell: engine run natively on Windows
 
 The companion ignores it.
 
-## Voice assistant (experimental)
+## Voice assistant
 
-The voice assistant is one Claude conversation, the "central conversation", that you talk to by voice or by typing. It knows what your other Claude conversations are doing: it can list them, read them, ask them things, start new ones in the background and tell you when they answer. It is **experimental** and off by default. The whole flow, explained with diagrams (the two modes, how it conducts your other conversations, how answers come back), is in [voice-assistant.md](voice-assistant.md); the component diagram is in [architecture.md](architecture.md#61-voice-assistant-experimental), and the design is in the [research notes](research/voice-assistant-design.md).
+The voice assistant is one Claude conversation, the "central conversation", that you talk to by voice or by typing. It knows what your other Claude conversations are doing: it can list them, read them, ask them things, start new ones in the background and tell you when they answer. It is off by default. The whole flow, explained with diagrams (the two modes, how it conducts your other conversations, how answers come back), is in [voice-assistant.md](voice-assistant.md); the component diagram is in [architecture.md](architecture.md#61-voice-assistant), and the design is in the [research notes](research/voice-assistant-design.md).
 
 ```mermaid
 sequenceDiagram
@@ -232,6 +232,8 @@ In the own mode, a new "Model:" applies from the next answer, and a new "Effort:
 
 The status line says "Starting...", "Ready", "Answering..." or what is wrong, with "Open on claude.ai" once Remote Control is on (own mode). The window shows the last 30 messages, read from the conversation on disk, so what you type on the phone or in Claude Desktop appears too. Enter sends, Shift+Enter adds a line. The box is disabled, with the reason under it, while the assistant is off, starting, answering or broken. After an error, **Restart** tries again.
 
+Next to the message box, **Talk** is the talk hotkey as a button: click it to record, click **Stop and send** to stop and send the text to the assistant. The line beside it shows the same state, with the same badge and words, as the status window (recording with the elapsed time, transcribing), also for a recording started with a hotkey. The button is disabled while the assistant is not ready or the engine is still transcribing the last recording.
+
 Below the messages, **Answers waiting** lists the answers held for you (see [Answers from other conversations](#answers-from-other-conversations)): select one to read it, **Hear all** has the assistant go over them, **Clear** drops them. **Waiting for** lists what the assistant is waiting on in other conversations (conversation, title, reason, since when); an entry leaves the list when the assistant marks it done. **Back to the assistant** appears while the window follows or talks to another conversation.
 
 <p align="center"><img src="assets/screenshots/en/assistant-inbox.png" width="568" alt="The assistant window with the Answers waiting group and the Waiting for list"></p>
@@ -250,11 +252,17 @@ The assistant has its own hotkeys, in Settings > **Hotkeys** (under "Assistant")
 | "Switch the assistant mode" | none | Alternates between the own mode and the Desktop mode (does nothing while the assistant is off) |
 | "Back to the assistant" | none | Leaves direct mode or the conversation the window is following |
 
-As with dictation, the key that stops the recording decides the destination: start with `Ctrl+Alt+V` and stop with `Ctrl+Alt+S` and the text goes to the assistant. A new prompt, "stop talking" and a mode change silence the assistant at once. A recording only pauses it: nothing is said over the microphone, and what came meanwhile (an answer, a notice) is said once the recording ends, starting again from the sentence the recording cut.
+As with dictation, the key that stops the recording decides the destination: start with `Ctrl+Alt+V` and stop with `Ctrl+Alt+S` and the text goes to the assistant. A new prompt, "stop talking" and a mode change silence the assistant at once. A recording only pauses it: nothing is said over the microphone, and what came meanwhile (an answer, a notice) waits until the recording has ended and been transcribed. Then the sentence the recording cut is said again from its start, followed by the sentences that were already queued behind it and what came meanwhile.
 
-The assistant speaks its replies with the engine's voice: the companion sends the `<voice>` block, sentence by sentence, to the engine's `/tts/v1` endpoint and plays the audio while the next sentence is made. The voice comes from Settings > **Voice** (the built-in Kokoro voice, or your [custom provider](#external-tts-provider)), and Settings > **Assistant** has "Speak the replies" and "Assistant voice:" (**Load voices**, **Test**).
+The assistant speaks its replies sentence by sentence: the companion takes the `<voice>` block of each reply and plays the audio while the next sentence is made. Settings > **Assistant** has "Speak the replies", "Voice source:" and "Assistant voice:" (**Load voices**, **Test**).
 
-With another voice engine, or with the engine stopped, the replies stay text only, one "No voice available" notice says why, and VoiceMate's short notices use the Windows voice.
+| "Voice source:" | Who speaks |
+|---|---|
+| "Automatic" (the default) | The engine's voice, and the voices of Windows when the engine has none or cannot speak |
+| "The engine's voice" | Only the engine: the built-in Kokoro voice (Settings > **Voice**), or your [custom provider](#external-tts-provider) |
+| "The voices of Windows" | Only the voices Windows already has, in every language installed under Windows Settings > Time and language > Speech. Nothing to download or set up |
+
+**Load voices** lists the voices of the source picked and **Test** speaks a short sentence with the one chosen, both before you save. When nothing can speak, the replies stay text only and one "No voice available" notice says why.
 
 ### Voice commands
 
