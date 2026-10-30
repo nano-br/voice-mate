@@ -1127,22 +1127,27 @@ class VoiceCalls:
 
     def __init__(self, controller: CompanionControllerImpl, monkeypatch: pytest.MonkeyPatch) -> None:
         self.stops = 0
+        self.pauses = 0
         self.closes = 0
         self.tests: list[tuple[str, str]] = []
         monkeypatch.setattr(controller._voice, "stop", self._stop)
+        monkeypatch.setattr(controller._voice, "pause", self._pause)
         monkeypatch.setattr(controller._voice, "close", self._close)
         monkeypatch.setattr(
-            controller._voice, "test", lambda text, voice, language="": self.tests.append((text, voice))
+            controller._voice, "test", lambda text, voice, language="", client=None: self.tests.append((text, voice))
         )
 
     def _stop(self) -> None:
         self.stops += 1
 
+    def _pause(self) -> None:
+        self.pauses += 1
+
     def _close(self) -> None:
         self.closes += 1
 
 
-def test_a_recording_a_hotkey_and_quitting_silence_the_assistant(
+def test_a_recording_pauses_the_assistant_and_an_assistant_hotkey_or_quitting_silences_it(
     make_controller: ControllerKit, daemon: FakeDaemon, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     controller, parts, _backend = make_controller(daemon)
@@ -1151,14 +1156,52 @@ def test_a_recording_a_hotkey_and_quitting_silence_the_assistant(
     assert wait_until(lambda: _connected(controller, daemon))
     assert wait_until(lambda: parts.hotkeys is not None and parts.hotkeys.held)
     controller.toggle("clipboard")
-    assert calls.stops == 1
+    assert (calls.pauses, calls.stops) == (1, 0)  # what was being said goes on after the recording
     assert parts.hotkeys is not None
     parts.hotkeys.press("clipboard")
-    assert wait_until(lambda: calls.stops == 2)
+    assert wait_until(lambda: calls.pauses == 2)
+    parts.hotkeys.press("assistant_talk")
+    assert wait_until(lambda: calls.pauses == 3)
+    parts.hotkeys.press("assistant_digest")
+    assert wait_until(lambda: calls.stops == 1)
     done = threading.Event()
     controller.quit(done.set)
     assert done.wait(6.0)
     assert calls.closes == 1
+
+
+def test_each_voice_source_lists_its_own_voices(
+    make_controller: ControllerKit, daemon: FakeDaemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    controller, _parts, _backend = make_controller(daemon)
+    engine_info = ProviderInfo("Kokoro", (Voice("a", "Anna"),), 24000, ("pcm_s16le",), 2000, ())
+    windows_info = ProviderInfo("Windows", (Voice("windows/maria", "Maria"),), 22050, ("pcm_s16le",), None, ())
+    health = ["ok"]
+
+    class Engine:
+        def info(self) -> ProviderInfo:
+            return engine_info
+
+        def health(self) -> str:
+            return health[0]
+
+    class Local:
+        def info(self) -> ProviderInfo:
+            return windows_info
+
+    monkeypatch.setattr(controller, "_engine_voice_client", Engine)
+    monkeypatch.setattr(controller, "_local_voice", Local())
+    assert controller._voice_info("auto") is engine_info
+    assert controller._voice_info("engine") is engine_info
+    assert controller._voice_info("windows") is windows_info
+    health[0] = "loading"  # the engine cannot speak yet
+    assert controller._voice_info("auto") is windows_info
+    with pytest.raises(ProviderError):
+        controller._voice_info("engine")
+    monkeypatch.setattr(controller, "_engine_voice_client", lambda: None)  # no engine at all
+    assert controller._voice_info("auto") is windows_info
+    with pytest.raises(ProviderError):
+        controller._voice_info("engine")
 
 
 def test_the_assistant_voices_come_from_the_engine(
@@ -1167,7 +1210,7 @@ def test_the_assistant_voices_come_from_the_engine(
     controller, _parts, _backend = make_controller(daemon)
     calls = VoiceCalls(controller, monkeypatch)
     info = ProviderInfo("Kokoro", (Voice("a", "Anna"), Voice("b", "Ben")), 24000, ("pcm_s16le",), 2000, ())
-    monkeypatch.setattr(controller._voice, "voices", lambda: info)
+    monkeypatch.setattr(controller, "_voice_info", lambda source: info)
     probe = controller.assistant_voices()
     assert probe.ok and probe.voices == info.voices
     assert probe.message == "The engine speaks with Kokoro. Voices found: 2."
@@ -1175,10 +1218,10 @@ def test_the_assistant_voices_come_from_the_engine(
     assert tested.message == "Playing a test sentence with the engine's voice."
     assert calls.tests == [("Hello! This is how the assistant sounds with this voice.", "b")]
 
-    def down() -> ProviderInfo:
+    def down(source: str) -> ProviderInfo:
         raise ProviderError("not_ready", "engine not supported for the assistant voice")
 
-    monkeypatch.setattr(controller._voice, "voices", down)
+    monkeypatch.setattr(controller, "_voice_info", down)
     failed = controller.test_assistant_voice("b")
     assert not failed.ok
     assert failed.message == (

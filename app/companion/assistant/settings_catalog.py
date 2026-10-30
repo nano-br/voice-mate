@@ -22,6 +22,7 @@ from app.companion.contract import (
     AssistantEffort,
     AssistantModel,
     AssistantPermission,
+    AssistantVoiceSource,
     CompanionSettings,
     CueSettings,
     DictationLanguage,
@@ -186,10 +187,20 @@ SPECS: Final[tuple[SettingSpec, ...]] = (
         _assistant("speak_replies"),
     ),
     SettingSpec(
+        "assistant.voice_source",
+        "choice",
+        "Who speaks the replies: auto (the engine's voice, Windows' own voices while the engine cannot speak), "
+        "engine (only the engine) or windows (only Windows' voices, no setup needed).",
+        lambda: _("Voice source"),
+        lambda s: s.assistant.voice_source,
+        _assistant("voice_source"),
+        values=get_args(AssistantVoiceSource),
+    ),
+    SettingSpec(
         "assistant.voice",
         "text",
-        "The engine voice id VoiceMate speaks with (empty: the engine's default voice). Only ids the person "
-        "picked or confirmed; an unknown id leaves the replies unspoken.",
+        "The voice id VoiceMate speaks with (empty: the default voice of the source; Windows' voices start "
+        "with windows/). Only ids the person picked or confirmed; an unknown id leaves the replies unspoken.",
         lambda: _("Assistant voice"),
         lambda s: s.assistant.voice,
         _assistant("voice"),
@@ -388,6 +399,7 @@ def _choice_labels() -> dict[str, Callable[[], Mapping[Any, str]]]:
         "assistant.effort": choice_labels.assistant_effort_labels,
         "assistant.permission_mode": choice_labels.assistant_permission_labels,
         "assistant.answer_delivery": choice_labels.answer_delivery_labels,
+        "assistant.voice_source": choice_labels.voice_source_labels,
         "assistant.new_conversation_model": choice_labels.assistant_model_labels,
         "assistant.new_conversation_effort": choice_labels.assistant_effort_labels,
         "assistant.expressions": choice_labels.expressions_labels,

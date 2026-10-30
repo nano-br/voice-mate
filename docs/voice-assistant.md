@@ -1,11 +1,11 @@
 # Voice assistant and Claude
 
 > [!NOTE]
-> The voice assistant is **experimental** and off by default. Dictation to the clipboard does not need any of this.
+> The voice assistant is off by default. Dictation to the clipboard does not need any of this.
 
 The voice assistant is one Claude conversation, the **central conversation**, that you talk to by voice or by typing. It knows what your other Claude conversations are doing: it lists them, reads them, asks them things, starts new ones in the background and tells you when they answer. You keep working; the assistant keeps track.
 
-This page explains the whole flow: how VoiceMate plugs into Claude, the two modes, how the assistant orchestrates your other conversations, how answers come back to you and how the voice works. The step-by-step settings are in [usage.md](usage.md#voice-assistant-experimental), and the component-level diagram is in [architecture.md](architecture.md#61-voice-assistant-experimental).
+This page explains the whole flow: how VoiceMate plugs into Claude, the two modes, how the assistant orchestrates your other conversations, how answers come back to you and how the voice works. The step-by-step settings are in [usage.md](usage.md#voice-assistant), and the component-level diagram is in [architecture.md](architecture.md#61-voice-assistant).
 
 <p align="center"><img src="assets/screenshots/en/assistant.png" width="568" alt="The assistant window with the conversation, the message box and the Send button"></p>
 
@@ -274,7 +274,48 @@ The full phrase list is in [usage.md](usage.md#voice-commands).
 
 You talk with the **talk hotkey** (`Ctrl+Alt+S` by default): press, speak, press again. The engine transcribes on your computer and the text goes to the assistant instead of the clipboard.
 
-Replies are spoken by the engine, sentence by sentence, so the first sentence plays while the next one is made. The voice comes from Kokoro or from your own provider, any service that follows the [TTS provider protocol](tts-provider-protocol.md) (Settings > **Voice**). If the engine cannot speak, the replies stay text and the short notices use the Windows voice.
+Or click **Talk** in the assistant window: it is the same hotkey. The button turns into **Stop and send** while VoiceMate records, and the line beside it shows what the status window shows (the recording with the elapsed time, then transcribing), also when the recording was started with a hotkey. It is disabled while the assistant is not ready or the engine is still transcribing the last recording.
+
+Replies are spoken sentence by sentence, so the first sentence plays while the next one is made. Who speaks is the **voice source** (Settings > **Assistant** > "Voice source:"):
+
+| "Voice source:" | Who speaks | When to pick it |
+|---|---|---|
+| "Automatic" (`auto`, the default) | The engine's voice (Kokoro, or your own provider that follows the [TTS provider protocol](tts-provider-protocol.md), set in Settings > **Voice**); the voices of Windows when the engine has none or cannot speak | Out of the box: nothing to set up |
+| "The engine's voice" (`engine`) | Only the engine; if it cannot speak, the replies stay text | You want one voice, always the same |
+| "The voices of Windows" (`windows`) | Only the voices Windows already has, for every language installed under Settings, Time and language, Speech | No voice engine installed, or you prefer the voices of Windows |
+
+**Load voices** and **Test** follow the source picked, before you save it. Someone with no voice engine set up hears the assistant right away, with the voices of Windows.
+
+### Never over a recording
+
+The assistant's voice never speaks over the microphone. While VoiceMate records, anything the assistant has to say waits: a reply, an answer from another conversation delivered by voice, a short notice. The wait goes on while the recording is transcribed, so the old reply does not come back before your new prompt lands. Then it is said.
+
+If you start a recording while it is speaking, the sentence you were hearing is cut and said again from its start afterwards, followed by the sentences that were already waiting in the audio device behind it, in order, and then whatever came meanwhile. The voice goes quiet at the moment you press the key, before the microphone opens.
+
+A recording that does not reach the assistant does not lose anything: the voice simply goes on. What does silence it for good is a new prompt to the assistant, "stop talking", and the other assistant hotkeys ("Hear what's ready", the window, the mode and "Back to the assistant").
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Speaking: a reply or a notice
+    Speaking --> Held: you start a recording,<br/>the sentence is cut
+    Held --> Held: more replies queue up
+    Held --> Resumed: the recording ends
+    Resumed --> Speaking: the cut sentence again,<br/>then the queue
+    Speaking --> Silenced: new prompt, "stop talking"<br/>or an assistant hotkey
+    Held --> Silenced: new prompt, "stop talking"<br/>or an assistant hotkey
+    Speaking --> [*]: nothing left to say
+    Silenced --> [*]
+
+    classDef ok fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+    classDef warn fill:#f9a825,stroke:#c17900,color:#000000
+    classDef bad fill:#c0392b,stroke:#922b21,color:#ffffff
+    classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
+    class Speaking ok
+    class Held warn
+    class Resumed system
+    class Silenced bad
+```
 
 ## 8. Settings by voice
 
@@ -293,7 +334,7 @@ The list covers 23 settings: the mode, model and effort, permissions, answer del
 1. Install [Claude Code](https://docs.claude.com/en/docs/claude-code) and run `claude auth login` once in a terminal.
 2. In the VoiceMate status window, press **Assistant**. While the assistant is off, its window says how to turn it on.
 3. Settings > **Assistant**: choose "Assistant mode:". For the Desktop mode, type the exact title of the conversation in "Desktop conversation:".
-4. Press `Ctrl+Alt+S`, say "what are my conversations doing?", and press `Ctrl+Alt+S` again.
+4. Press `Ctrl+Alt+S` (or **Talk** in the assistant window), say "what are my conversations doing?", and press it again (**Stop and send**). The assistant answers with the voices of Windows until you set up a voice of your own.
 
 <p align="center"><img src="assets/screenshots/en/settings-assistant.png" width="568" alt="The Assistant tab of the settings window"></p>
 

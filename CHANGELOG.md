@@ -7,11 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-29
+
 ### Added
 
 - [docs/voice-assistant.md](docs/voice-assistant.md): the whole voice assistant flow with Claude in one
   guide, with diagrams (the two modes, how it conducts other conversations, how answers come back,
   direct mode, the voice and safety). The README section is now a short summary that links to it.
+- The assistant speaks out of the box on Windows: with no voice set up in the engine, it uses the
+  voices Windows already has (every language installed under Settings, Time and language, Speech),
+  with nothing to download or configure. Settings > Assistant > Voice source picks "Automatic" (the
+  engine's voice when it can speak, Windows' voices otherwise; the default), "The engine's voice" or
+  "The voices of Windows", and Load voices and Test follow the source picked.
+- A microphone button in the assistant window does what the talk hotkey does: one click records, the
+  next stops and sends the text to the assistant. The line beside it shows VoiceMate's state with the
+  same badge and words as the status window (recording with the elapsed time, transcribing), also for
+  a recording started with the hotkey.
+- [docs/install-guide.md](docs/install-guide.md): a step-by-step guide from a clean Windows PC to the
+  first dictation (WSL2 and Ubuntu, the engine, the installer page by page with screenshots, the first
+  run, the voice assistant, updating and uninstalling), in English, Portuguese, Spanish, Russian and
+  Simplified Chinese.
+- A demonstration video of the personal assistant, in Brazilian Portuguese for now, linked from the
+  READMEs.
+
+### Changed
+
+- Nothing in VoiceMate is labeled experimental any more: the READMEs and the docs say what is tested
+  and on what (Windows with an NVIDIA card, and AMD through WSL2 and ROCm 7.2 on a Radeon RX 9070 XT),
+  and open with the personal voice assistant.
+
+- The assistant's voice never speaks over a recording: whatever it has to say while VoiceMate
+  records the microphone (a reply, an answer from another conversation, a short notice) waits and
+  is said once the recording ends. A recording started while it speaks cuts the sentence being
+  heard and says it again from its start afterwards, unless the recording is a new prompt to the
+  assistant, which still silences it. Sentences already waiting in the audio device behind it are
+  said again too, in order, and the voice also waits while the recording is transcribed.
+
+### Fixed
+
+- The voice assistant said "Claude Code was not found" when VoiceMate started at sign-in: the
+  `claude` command was installed in `~/.local/bin` (or `%APPDATA%/npm`), which only a shell profile
+  adds to PATH. VoiceMate now also looks in the installers' own folders. A start that failed this way
+  now says "The assistant could not start" instead of asking to try again in a moment.
+- The CTranslate2-ROCm build (faster-whisper on AMD GPUs) failed on a fresh machine with ROCm 7:
+  CMake picked gcc for the HIP sources ("language hip not recognized"), the fork's sources predate
+  ROCm 7 (rocThrust headers, hipBLAS `_v2` names), its python wrapper needs pybind11 before pip
+  builds it, and the library did not find ROCm's `libomp.so`. The setup now builds with ROCm's clang,
+  adapts the sources to ROCm 7 (ROCm 6 builds as before), starts over from a build folder configured
+  with another compiler, embeds the path of `libomp.so` and installs the wrapper without upgrading
+  numpy past what openai-whisper's numba accepts. It also builds with MIOpen now: without it the
+  library installed, but every transcription on the GPU stopped at Whisper's first convolution
+  ("Conv1D on GPU currently requires the cuDNN library").
+- The setup now names a missing MIOpen (`miopen-hip-dev`) before it builds CTranslate2-ROCm, in the
+  list of missing tools with the `apt` command that installs it, instead of failing deep inside CMake.
+- The assistant says again the lines a recording cut in the order they were first heard, also with two
+  recordings in a row during one reply (the third line could come back before the first two).
+- A line stopped while the audio device was opening (a new question, "stop talking" or Test) is
+  forgotten: it no longer comes back after the next recording.
+- The voice of Windows reads the reply as plain text: a reply that begins with `<` (a tag or a
+  comparison) is no longer parsed as XML, read wrong or not read at all.
 
 ## [0.2.0] - 2026-10-29
 
@@ -359,6 +413,7 @@ Development happened on `main` and in seven pull requests before this first rele
 - [#7](https://github.com/nano-br/voice-mate/pull/7): choose the dictation language in
   the companion.
 
-[Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/nano-br/voice-mate/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/nano-br/voice-mate/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/nano-br/voice-mate/releases/tag/v0.1.0

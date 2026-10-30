@@ -471,3 +471,35 @@ def test_a_written_personality_that_cannot_be_saved_keeps_the_dialog_open(ui: Co
     assert dialog.isVisible()
     assert dialog.tabs.currentWidget() is page
     assert page.custom_status.text().startswith("Not saved: ")
+
+
+def test_the_microphone_button_talks_and_follows_the_recording(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    # The same as the talk hotkey: one click records, the next stops and sends; a recording
+    # started with the hotkey shows here as well, with the elapsed time.
+    window = _window(ui)
+    fake.assistant_service.publish(state="ready")
+    assert process_events(lambda: window.mic_button.isEnabled())
+    assert window.mic_button.text() == "Talk"
+    assert "Ctrl+Alt+S" in window.mic_button.toolTip()
+    window.mic_button.click()
+    assert fake.called("talk") == [()]
+    assert process_events(lambda: window.mic_button.text() == "Stop and send")
+    assert window.mic_status.text().startswith("Recording")
+    window.mic_button.click()
+    assert process_events(lambda: fake.snapshot().tray_state == "transcribing")
+    assert process_events(lambda: window.mic_status.text() != "" and not window.mic_status.text().startswith("Rec"))
+    assert not window.mic_button.isEnabled()  # nothing to start while the text is on its way
+
+
+def test_the_microphone_waits_for_an_assistant_that_takes_prompts(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    window = _window(ui)
+    fake.assistant_service.publish(state="busy")
+    assert process_events(lambda: window.snapshot.state == "busy")
+    assert not window.mic_button.isEnabled()
+    fake.publish(tray_state="recording", recording_since=None)  # the hotkey recorded anyway
+    assert process_events(lambda: window.mic_button.isEnabled())  # stopping is always offered
+    assert window.mic_button.text() == "Stop and send"

@@ -1,6 +1,6 @@
 # VoiceMate on WSL2 (AMD GPU through ROCm)
 
-Purpose: how to run the VoiceMate engine inside WSL2, mainly with an AMD GPU through ROCm, and what to expect from that setup. This path is **experimental**: it was validated on one AMD card (Radeon RX 9070 XT, RDNA4, `gfx1201`). Back to the [README](../README.md).
+Purpose: how to run the VoiceMate engine inside WSL2, mainly with an AMD GPU through ROCm, and what to expect from that setup. This path is tested on an AMD Radeon RX 9070 XT (RDNA4, `gfx1201`) with WSL2 and ROCm 7.2; other AMD cards use the same stack but are not tested. Back to the [README](../README.md).
 
 The engine runs **entirely inside WSL** (Ubuntu): microphone capture, transcription on the GPU, TTS. Global Windows hotkeys do not reach background processes in WSL, so a Windows-side program owns the hotkeys and talks to the engine over a local HTTP API. That program is the **VoiceMate companion app** (recommended). The old PowerShell and AutoHotkey scripts still work as a legacy option.
 
@@ -13,7 +13,7 @@ The engine runs **entirely inside WSL** (Ubuntu): microphone capture, transcript
    |-- microphone through WSLg PulseAudio (RDPSource)
    |-- speech-to-text on the AMD GPU (openai-whisper on PyTorch ROCm; CTranslate2-ROCm optional)
    |-- publishes each result for the companion to deliver to the Windows clipboard
-   `-- Claude + TTS (OmniVoice on the GPU, or Kokoro on the CPU), optional
+   `-- Claude + TTS (the default engine on the GPU, or Kokoro on the CPU), optional
 ```
 
 ## Prerequisites
@@ -47,7 +47,7 @@ Then install the companion on Windows: see [installation.md](installation.md#win
 
 ## Running
 
-With the companion, there is nothing to run by hand: start VoiceMate on Windows. Press `Ctrl+Alt+V` anywhere in Windows, wait for the start cue, speak, press `Ctrl+Alt+V` again: the transcription lands in the Windows clipboard. `Ctrl+Alt+A` runs the Claude flow (answer in the clipboard and read aloud), which is **experimental** too.
+With the companion, there is nothing to run by hand: start VoiceMate on Windows. Press `Ctrl+Alt+V` anywhere in Windows, wait for the start cue, speak, press `Ctrl+Alt+V` again: the transcription lands in the Windows clipboard. `Ctrl+Alt+A` runs the Claude flow (answer in the clipboard and read aloud).
 
 Without the companion, `make run` in WSL starts the engine and prints the port of the daemon; one of the legacy scripts below then provides the hotkeys.
 
@@ -90,13 +90,15 @@ faster-whisper on CTranslate2-ROCm (if validated)  ->  openai-whisper (PyTorch R
 
 On native Linux the order is CTranslate2-ROCm, whisper.cpp with Vulkan, openai-whisper, CPU, because there Vulkan does reach the GPU.
 
-**openai-whisper** runs on the same PyTorch ROCm that already accelerates the TTS (OmniVoice); `make setup` installs it on AMD with Linux or WSL2 (extra `whisper-gpu`). A 5 second recording should transcribe in about 1 to 3 seconds.
+**openai-whisper** runs on the same PyTorch ROCm that already accelerates the TTS; `make setup` installs it on AMD with Linux or WSL2 (extra `whisper-gpu`). A 5 second recording should transcribe in about 1 to 3 seconds.
 
 To confirm the Vulkan device that whisper.cpp picked (when it is used): the server writes its log to `~/.cache/voicemate/whispercpp/server.log`, and the line `ggml_vulkan: found device:` shows `llvmpipe` on WSL2. `make doctor` flags it too.
 
 ### CTranslate2-ROCm (faster-whisper on the GPU): optional, best quality
 
 It brings back the quality of faster-whisper on CUDA, on the AMD GPU. It is a heavy build (`make configure`, then accept CTranslate2-ROCm). Known risk on `gfx1201`: reports of a *memory access fault* (OpenNMT/CTranslate2#2021); the app already applies the workaround `CT2_CUDA_ALLOCATOR=cub_caching`. If the build or the validation fails, the chain falls back to openai-whisper by itself, and the decision is saved as `ct2_rocm_ok`. `hipcc` comes with the `rocm` use case of ROCm 7.2.
+
+On ROCm 7 the setup builds the fork with ROCm's own clang (CMake would otherwise pick gcc for the HIP sources and stop at "language hip not recognized"), adapts its sources to ROCm 7, and builds it with MIOpen, AMD's equivalent of cuDNN. A build without MIOpen installs, but every transcription on the GPU then stops at Whisper's first convolution with "Conv1D on GPU currently requires the cuDNN library" ([troubleshooting](troubleshooting.md#engine-problems)).
 
 > whisper.cpp with **HIP** (instead of Vulkan) would solve this natively, but the pull request that adds `gfx120X` support (ggml-org/whisper.cpp#3757) is not merged yet.
 
@@ -130,7 +132,7 @@ The app already sets `PYTORCH_TUNABLEOP_*` and `MIOPEN_*` (cache in `~/.cache/vo
 
 | Engine | Voice | Runs on | Real-time factor measured on an RX 9070 XT |
 |---|---|---|---|
-| `omnivoice` (used when nothing is saved) | clones a voice (diffusion) | GPU | about 0.7 (saturates the GPU while it synthesizes) |
+| the default engine (used when nothing is saved) | clones a voice (diffusion) | GPU | about 0.7 (saturates the GPU while it synthesizes) |
 | `kokoro` | fixed (about 82M parameters) | **CPU** by default | **about 0.24 (real time, GPU left free)** |
 
 On WSL2 with AMD, **Kokoro runs on the CPU** on purpose: at a real-time factor of about 0.24 the synthesis **does not compete with transcription for the GPU**, which is what caused crackling. (On ROCm the Kokoro kernels are still slow, a real-time factor of about 1.8 on the GPU; the CPU is better in both respects.) To switch:
@@ -141,7 +143,7 @@ make run ARGS="--tts-engine kokoro --tts-kokoro-voice pf_dora"
 # --tts-device cuda forces the GPU (not recommended here: slower)
 ```
 
-Kokoro needs its extra (`poetry install --extras kokoro`). Portuguese `espeak-ng` data comes bundled through `espeakng-loader` (a dependency of misaki); the system `espeak-ng` package is a backup. Kokoro's Portuguese prosody sounds more robotic than OmniVoice's: that is the trade for real time without touching the GPU. Compare and keep the one you prefer.
+Kokoro needs its extra (`poetry install --extras kokoro`). Portuguese `espeak-ng` data comes bundled through `espeakng-loader` (a dependency of misaki); the system `espeak-ng` package is a backup. Kokoro's Portuguese prosody sounds more robotic than the default engine's: that is the trade for real time without touching the GPU. Compare and keep the one you prefer.
 
 ## Microphone on WSLg
 
@@ -185,6 +187,7 @@ The scripts use the v1 routes of the daemon: `POST /register` (a `client_id`), `
 | No input device | WSLg microphone disabled | `wsl --update`; `make doctor` |
 | Transcription 10 to 50 times slower | Fell back to the CPU | `make doctor` (PyTorch with GPU); `rocminfo` |
 | CTranslate2-ROCm build failed | Incomplete ROCm development packages | `make doctor`; install the ROCm HIP SDK; `make configure` tries again |
+| "Conv1D on GPU currently requires the cuDNN library" | A CTranslate2-ROCm built without MIOpen (an older build) | `git pull`, then `make configure` and accept the CTranslate2-ROCm build again: it now builds with MIOpen. Meanwhile the chain uses openai-whisper |
 
 More in [troubleshooting.md](troubleshooting.md).
 

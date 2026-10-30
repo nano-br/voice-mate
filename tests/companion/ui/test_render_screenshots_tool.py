@@ -17,6 +17,8 @@ from tools import render_screenshots  # noqa: E402
 REPO_ROOT = Path(__file__).resolve().parents[3]
 LOCALES = REPO_ROOT / "app" / "i18n" / "locales"
 SHOTS = REPO_ROOT / "docs" / "assets" / "screenshots"
+# Captured from the real installer by hand (the install guides show them), not rendered by the tool.
+INSTALLER_SHOTS = {"install-language", "install-tasks", "install-ready", "install-finish"}
 BRAND = REPO_ROOT / "docs" / "assets" / "brand"
 
 
@@ -53,7 +55,8 @@ def test_committed_images_match_the_tool() -> None:
     """A renamed, added or deleted image must come with a re-render (the READMEs link them)."""
     for language in render_screenshots.LANGUAGES:
         committed = {png.stem for png in (SHOTS / language).glob("*.png")}
-        assert committed == set(render_screenshots.SCREENSHOT_NAMES), language
+        assert committed - INSTALLER_SHOTS == set(render_screenshots.SCREENSHOT_NAMES), language
+        assert committed & INSTALLER_SHOTS == INSTALLER_SHOTS, language  # every page the guide shows
     assert (SHOTS / "tray-states.png").is_file()
     assert (BRAND / "banner-light.png").is_file()
     assert (BRAND / "banner-dark.png").is_file()

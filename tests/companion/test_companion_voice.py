@@ -12,13 +12,18 @@ from companion_core_fakes import use_english, wait_until
 
 from app.companion.voice import (
     LOADING_RETRY_S,
+    LOCAL_URL,
+    PAUSE_GRACE_S,
     RETRY_AFTER_S,
     EngineVoice,
+    VoiceStream,
+    _InDevice,
+    _Item,
     complete_sentences,
     engine_tts_url,
     explain,
 )
-from app.protocol.tts_provider import ProviderClient, ProviderError, SpeechStream
+from app.protocol.tts_provider import ProviderClient, ProviderError, ProviderInfo, SpeechStream
 from tools.examples.tts_provider_reference import ProviderServer, make_server
 
 
@@ -60,6 +65,34 @@ class FakeOutput:
         self.closes += 1
 
 
+class RealtimeOutput(FakeOutput):
+    """A `FakeOutput` that plays in real time: `pending()` is true until what was written would
+    have finished playing, so audio can wait in the device behind the piece being heard."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.until = 0.0
+        self.bytes_per_second = 1
+
+    def open(self, sample_rate: int, channels: int) -> None:
+        super().open(sample_rate, channels)
+        self.bytes_per_second = sample_rate * 2 * channels
+
+    def write(self, data: bytes) -> None:
+        super().write(data)
+        with self.lock:
+            self.until = max(self.until, time.monotonic()) + len(data) / self.bytes_per_second
+
+    def pending(self) -> bool:
+        with self.lock:
+            return time.monotonic() < self.until
+
+    def flush(self) -> None:
+        super().flush()
+        with self.lock:
+            self.until = 0.0
+
+
 class Clock:
     def __init__(self) -> None:
         self.now = 1000.0
@@ -91,19 +124,60 @@ def _texts(server: ProviderServer) -> list[str]:
         return [str(body["text"]) for body in server.state.requests]
 
 
+class LocalVoice:
+    """A local voice (as Windows' own voices are to the companion), backed by a reference provider."""
+
+    url = LOCAL_URL
+
+    def __init__(self, server: ProviderServer) -> None:
+        self._client = _client(server)
+        self.voices: list[str | None] = []  # the voice asked for each line (the server knows none of ours)
+
+    def info(self) -> ProviderInfo:
+        return self._client.info()
+
+    def health(self) -> str:
+        return self._client.health()
+
+    def warmup(self) -> None:
+        self._client.warmup()
+
+    def cancel(self, request_id: str) -> None:
+        self._client.cancel(request_id)
+
+    def speak(
+        self, text: str, *, voice: str | None, audio_format: str, request_id: str, default_rate: int
+    ) -> VoiceStream:
+        self.voices.append(voice)
+        return self._client.speak(
+            text, voice=None, audio_format=audio_format, request_id=request_id, default_rate=default_rate
+        )
+
+
 class Rig:
-    def __init__(self, server: ProviderServer | None, *, voice: str = "", output: bool = True) -> None:
+    def __init__(
+        self,
+        server: ProviderServer | None,
+        *,
+        voice: str = "",
+        output: bool = True,
+        local: ProviderServer | None = None,
+    ) -> None:
         self.server = server
         self.output = FakeOutput()
         self.clock = Clock()
         self.voice_name = voice
         self.fallback: list[str] = []
         self.reasons: list[str] = []
+        self.holding = False  # VoiceMate is recording the microphone
+        self.local = LocalVoice(local) if local is not None else None
         self.voice = EngineVoice(
             lambda: _client(self.server) if self.server is not None else None,
             (lambda: self.output) if output else (lambda: None),
             voice=lambda: self.voice_name,
             fallback=lambda text, _language: self.fallback.append(text),
+            hold=lambda: self.holding,
+            local=lambda: self.local,
             clock=self.clock,
         )
         self.voice.on_unavailable(self.reasons.append)
@@ -202,6 +276,167 @@ def test_stop_silences_at_once_and_drops_what_was_queued(rigs: list[Rig]) -> Non
     finally:
         server.shutdown()
         server.server_close()
+
+
+# --- the microphone ------------------------------------------------------------------------------------
+
+
+def test_nothing_is_said_while_recording_and_it_all_comes_after(provider: ProviderServer, rigs: list[Rig]) -> None:
+    rig = _rig(rigs, provider)
+    rig.holding = True
+    rig.voice.notice("An answer is ready.", "en")
+    rig.voice.speak("r", "First sentence. Second one.", final=True)
+    threading.Event().wait(0.3)
+    assert _texts(provider) == []  # an instant answer or an older one: both wait
+    rig.holding = False
+    assert wait_until(lambda: len(_texts(provider)) == 3)
+    assert _texts(provider) == ["An answer is ready.", "First sentence.", "Second one."]
+
+
+def test_a_recording_cuts_the_line_being_heard_and_says_it_again_afterwards(rigs: list[Rig]) -> None:
+    server = _serve(pace=1.0)  # real time: a long sentence plays for seconds
+    try:
+        rig = _rig(rigs, server)
+        long_line = " ".join(["speaking"] * 40) + "."
+        rig.voice.speak("r", f"{long_line} Second sentence.", final=True)
+        assert wait_until(lambda: rig.output.writes > 0)
+        rig.holding = True
+        assert wait_until(lambda: rig.output.flushes >= 1)  # quiet over the microphone
+        assert wait_until(lambda: not server.state.active)  # and the engine stopped producing
+        written = len(rig.output.data)
+        threading.Event().wait(0.3)
+        assert len(rig.output.data) == written
+        assert _texts(server) == [long_line]
+        rig.holding = False
+        assert wait_until(lambda: len(_texts(server)) == 2)
+        assert _texts(server) == [long_line, long_line]  # from its start, then the rest
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_a_recording_says_again_every_line_still_waiting_in_the_device_in_order(
+    provider: ProviderServer, rigs: list[Rig]
+) -> None:
+    # The engine is much faster than playback: all three lines reach the device while the first
+    # one is still being heard, and none of them may be lost or said twice.
+    rig = _rig(rigs, provider)
+    rig.output = RealtimeOutput()
+    lines = [" ".join([word] * 30) + "." for word in ("alpha", "bravo", "charlie")]
+    rig.voice.speak("r", " ".join(lines), final=True)
+    assert wait_until(lambda: _texts(provider) == lines)
+    assert rig.output.pending()  # the person is hearing the first line
+    rig.voice.pause()
+    rig.holding = True
+    rig.clock.now += PAUSE_GRACE_S
+    threading.Event().wait(0.3)
+    assert _texts(provider) == lines
+    rig.holding = False
+    assert wait_until(lambda: len(_texts(provider)) == 6)
+    threading.Event().wait(0.3)
+    assert _texts(provider) == lines + lines
+
+
+def test_a_second_recording_during_the_replay_keeps_the_lines_in_order(
+    provider: ProviderServer, rigs: list[Rig]
+) -> None:
+    # Two recordings in a row: the second one cuts the lines said again after the first, while
+    # one of them may still be streaming. Whatever is said after it starts where the person
+    # stopped hearing and goes on in order, without skipping or swapping a line.
+    rig = _rig(rigs, provider)
+    rig.output = RealtimeOutput()
+    lines = [" ".join([word] * 30) + "." for word in ("alpha", "bravo", "charlie")]
+    rig.voice.speak("r", " ".join(lines), final=True)
+    assert wait_until(lambda: _texts(provider) == lines)
+
+    def record() -> None:
+        rig.voice.pause()
+        rig.holding = True
+        rig.clock.now += PAUSE_GRACE_S
+        threading.Event().wait(0.3)
+        rig.holding = False
+
+    record()  # all three lines were waiting in the device: they are said again
+    provider.state.pace = 0.5  # twice real time: "alpha" is still heard while "bravo" streams
+    assert wait_until(lambda: len(_texts(provider)) == 5, timeout=10)
+    record()  # "alpha" whole in the device, "bravo" half streamed
+    assert wait_until(lambda: _texts(provider)[-1] == lines[-1], timeout=20)
+    threading.Event().wait(0.5)
+    said = [lines.index(text) for text in _texts(provider)]
+    last_pass = said[max(i for i in range(1, len(said)) if said[i] <= said[i - 1]) :]
+    assert last_pass == list(range(last_pass[0], len(lines)))
+
+
+def test_a_line_that_starts_playing_just_after_a_cut_goes_behind_the_lines_that_cut_moved(
+    rigs: list[Rig],
+) -> None:
+    # The third line opened its stream as the recording began: the cut moved the first two lines
+    # to the replay list before the third was listed as playing, and its own cut comes after.
+    rig = _rig(rigs, None)
+    alpha, bravo, charlie = (_Item(word, "reply", "en", 0, order=n) for n, word in enumerate(("a", "b", "c")))
+    rig.voice._replay = [alpha, bravo]
+    rig.voice._in_device = [_InDevice(charlie)]  # still streaming
+    rig.voice._cut_for_hold()
+    assert [piece.text for piece in rig.voice._replay] == ["a", "b", "c"]
+    rig.voice._in_device = [_InDevice(alpha)]  # said again, and cut again before its end
+    rig.voice._replay = [bravo, charlie]
+    rig.voice._cut_for_hold()
+    assert [piece.text for piece in rig.voice._replay] == ["a", "b", "c"]
+
+
+class GatedOutput(RealtimeOutput):
+    """A `RealtimeOutput` whose first `open()` waits for the test: a stop() lands while it opens."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.opening = threading.Event()
+        self.release = threading.Event()
+
+    def open(self, sample_rate: int, channels: int) -> None:
+        if not self.opening.is_set():
+            self.opening.set()
+            self.release.wait(5)
+        super().open(sample_rate, channels)
+
+
+def test_a_line_stopped_while_the_device_opens_is_not_said_again_after_a_recording(rigs: list[Rig]) -> None:
+    server = _serve(pace=1.0)  # real time: the next reply is still streaming when the recording starts
+    try:
+        rig = _rig(rigs, server)
+        rig.output = GatedOutput()
+        rig.voice.speak("old", "An old reply.", final=True)
+        assert rig.output.opening.wait(5)
+        rig.voice.stop()  # a new question while the device opens for the old reply
+        rig.output.release.set()
+        lines = [" ".join([word] * 12) + "." for word in ("alpha", "bravo")]
+        rig.voice.speak("new", " ".join(lines), final=True)
+        assert wait_until(lambda: _texts(server)[-1:] == lines[:1] and rig.output.writes > 0)
+        rig.holding = True  # "alpha" is cut while it streams
+        assert wait_until(lambda: not server.state.active)
+        rig.holding = False
+        assert wait_until(lambda: len(_texts(server)) == 4, timeout=20)
+        assert _texts(server) == ["An old reply.", lines[0], lines[0], lines[1]]  # "alpha" again first
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_pause_holds_before_the_recording_shows_and_stop_still_drops_everything(
+    provider: ProviderServer, rigs: list[Rig]
+) -> None:
+    rig = _rig(rigs, provider)
+    rig.voice.pause()  # the hotkey: the recording is not confirmed yet
+    rig.voice.speak("r", "Held for a moment.", final=True)
+    threading.Event().wait(0.3)
+    assert _texts(provider) == []
+    rig.clock.now += PAUSE_GRACE_S
+    assert wait_until(lambda: _texts(provider) == ["Held for a moment."])
+    rig.holding = True
+    rig.voice.speak("r2", "Never said.", final=True)
+    rig.voice.stop()  # a new prompt: what waited is dropped
+    rig.holding = False
+    threading.Event().wait(0.3)
+    assert _texts(provider) == ["Held for a moment."]
 
 
 def test_close_ends_the_worker_and_ignores_later_lines(provider: ProviderServer, rigs: list[Rig]) -> None:
@@ -308,6 +543,44 @@ def test_without_an_engine_notices_fall_back_and_the_reason_is_reported_once(rig
     assert rig.voice.reason == "the engine is not running"
 
 
+def test_without_an_engine_the_local_voice_says_everything_and_nothing_is_reported(rigs: list[Rig]) -> None:
+    # A fresh install: no voice set up in the engine, Windows' own voices speak instead.
+    windows = _serve(pace=0.0)
+    try:
+        rig = _rig(rigs, None, local=windows, voice="af_heart")
+        rig.voice.speak("r", "A reply. In two sentences.", final=True)
+        rig.voice.notice("An answer is ready.", "en")
+        assert wait_until(lambda: len(_texts(windows)) == 3)
+        assert _texts(windows) == ["A reply.", "In two sentences.", "An answer is ready."]
+        assert rig.local is not None
+        assert rig.local.voices == [None, None, None]  # an engine voice id means nothing to Windows
+        assert rig.fallback == []
+        assert rig.reasons == []  # the replies are spoken: nothing to warn about
+    finally:
+        windows.shutdown()
+        windows.server_close()
+
+
+def test_the_engine_speaks_when_it_can_and_each_side_gets_only_its_own_voice_ids(
+    provider: ProviderServer, rigs: list[Rig]
+) -> None:
+    windows = _serve(pace=0.0)
+    try:
+        rig = _rig(rigs, provider, local=windows, voice="windows/MSTTS_V110_ptBR_MariaM")
+        rig.voice.speak("r", "Said by the engine.", final=True)
+        assert wait_until(lambda: _texts(provider) == ["Said by the engine."])
+        with provider.state.lock:
+            assert provider.state.requests[0]["voice"] is None  # a Windows voice: the engine's default
+        assert _texts(windows) == []
+        assert rig.local is not None
+        rig.voice.test("Test line.", "windows/MSTTS_V110_ptBR_MariaM", client=rig.local)
+        assert wait_until(lambda: _texts(windows) == ["Test line."])  # the Test button picks the source
+        assert rig.local.voices == ["windows/MSTTS_V110_ptBR_MariaM"]
+    finally:
+        windows.shutdown()
+        windows.server_close()
+
+
 def test_the_engine_is_tried_again_after_the_retry_window(provider: ProviderServer, rigs: list[Rig]) -> None:
     rig = _rig(rigs, None)
     rig.voice.notice("First.", "en")
@@ -336,13 +609,6 @@ def test_no_audio_output_is_reported(provider: ProviderServer, rigs: list[Rig]) 
     rig.voice.notice("Hello.", "en")
     assert wait_until(lambda: bool(rig.reasons))
     assert rig.reasons == ["no audio output is available on this computer"]
-
-
-def test_voices_reads_the_engine_info(provider: ProviderServer, rigs: list[Rig]) -> None:
-    info = _rig(rigs, provider).voice.voices()
-    assert [voice.id for voice in info.voices] == ["low", "mid", "high"]
-    with pytest.raises(ProviderError):
-        _rig(rigs, None).voice.voices()
 
 
 @pytest.mark.parametrize(

@@ -21,6 +21,7 @@ from app.companion.assistant.contract import (
 )
 from app.companion.contract import (
     AssistantSettings,
+    AssistantVoiceSource,
     CompanionSettings,
     CompanionSnapshot,
     CueName,
@@ -333,6 +334,15 @@ class FakeController:
         elif state in ("idle", "ready", "warning"):
             self.publish(tray_state="recording", flow=flow, recording_since=time.time())
 
+    def talk(self) -> None:
+        self._call("talk")
+        state = self.snapshot().tray_state
+        if state == "recording":
+            self.publish(tray_state="transcribing", recording_since=None)
+            self._later(1.5, lambda: self._finish("clipboard"))
+        elif state in ("idle", "ready", "warning"):
+            self.publish(tray_state="recording", flow="clipboard", recording_since=time.time())
+
     def cancel(self) -> None:
         self._call("cancel")
         self.publish(tray_state="idle", flow=None, recording_since=None)
@@ -462,12 +472,12 @@ class FakeController:
         self._call("test_tts", settings.tts_voice)
         return self.tts_probe
 
-    def assistant_voices(self) -> TtsProbe:
-        self._call("assistant_voices")
+    def assistant_voices(self, source: AssistantVoiceSource | None = None) -> TtsProbe:
+        self._call("assistant_voices", source)
         return self.assistant_voice_probe
 
-    def test_assistant_voice(self, voice: str) -> TtsProbe:
-        self._call("test_assistant_voice", voice)
+    def test_assistant_voice(self, voice: str, source: AssistantVoiceSource | None = None) -> TtsProbe:
+        self._call("test_assistant_voice", voice, source)
         return self.assistant_voice_probe
 
     # ----------------------------------------------------------------- demo mode

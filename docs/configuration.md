@@ -49,7 +49,7 @@ Flags reach the engine through the Makefile with `ARGS`, for example `make run A
 
 `make run-engine` runs `voice-mate --supervised --api --api-token`; it is what the companion starts.
 
-### Claude flow (experimental)
+### Claude flow
 
 | Flag | Default | Meaning |
 |---|---|---|
@@ -68,7 +68,7 @@ Flags reach the engine through the Makefile with `ARGS`, for example `make run A
 | Flag | Default | Meaning |
 |---|---|---|
 | `--no-tts` | off | No spoken answer; the answer still goes to the clipboard |
-| `--tts-engine {omnivoice,kokoro,voxcpm,external,none}` | saved choice, else `omnivoice` | TTS engine. `external` is a service you run ([protocol](tts-provider-protocol.md)). `none` disables TTS |
+| `--tts-engine {<default>,kokoro,voxcpm,external,none}` | saved choice, else the default engine | TTS engine. `external` is a service you run ([protocol](tts-provider-protocol.md)). `none` disables TTS |
 | `--tts-url` | `http://127.0.0.1:8765` | `external` only: base URL of the provider |
 | `--tts-external-voice` | provider default | `external` only: voice id (the companion's voice picker fills it) |
 | `--tts-options` | none | `external` only: a JSON object passed to the provider as `options` (speed, style). Anything else is ignored with a warning |
@@ -79,7 +79,7 @@ Flags reach the engine through the Makefile with `ARGS`, for example `make run A
 | `--tts-device {auto,cuda,cpu,mps}` | `auto` | TTS device |
 | `--tts-save-dir` | none | Save every generated audio file to this folder |
 | `--tts-no-streaming` | off | Generate in one shot instead of streaming (debugging) |
-| `--tts-voice-seed-mode {auto,fixed,off}` | `off` | How OmniVoice and VoxCPM2 choose the voice (see [usage.md](usage.md#voice-seed-modes)) |
+| `--tts-voice-seed-mode {auto,fixed,off}` | `off` | How the default engine and VoxCPM2 choose the voice (see [usage.md](usage.md#voice-seed-modes)) |
 | `--tts-voice-seed-path`, `--tts-voice-seed-text` | none | Reference WAV and its exact text, required by `fixed` |
 | `--tts-voice-seed-cache-dir` | `~/.cache/voicemate` | Where `auto` saves its reference |
 | `--tts-reset-seed` | off | Delete the VoxCPM2 auto seed (`voice_seed.wav`) before starting |
@@ -102,7 +102,7 @@ A flat TOML file written by `make setup` and `make configure`. Invalid values ar
 | `gpu_vendor` | `nvidia`, `amd`, `cpu` | GPU vendor |
 | `whisper_backend` | `faster-whisper`, `whispercpp`, `openai-whisper` | Speech-to-text engine |
 | `tts_enabled` | `true`, `false` | TTS on or off |
-| `tts_engine` | `omnivoice`, `kokoro`, `voxcpm`, `external`, `none` | TTS engine |
+| `tts_engine` | the default engine, `kokoro`, `voxcpm`, `external`, `none` | TTS engine |
 | `tts_external_url`, `tts_external_voice`, `tts_external_options` | text | Settings of the `external` engine (address, voice id, JSON options) |
 | `tts_external_token` | text | Bearer token of the `external` engine. Plain text in this file; `VOICEMATE_TTS_TOKEN` wins |
 | `default_flow` | `clipboard`, `claude_chat` | `clipboard` turns the Claude flow off |
@@ -140,7 +140,7 @@ Location: Windows `%APPDATA%\VoiceMate\companion.toml`; Linux `${XDG_CONFIG_HOME
 | `tts_url` | `http://127.0.0.1:8765` | an `http://` or `https://` address without spaces, quotes or `$` | Voice > "Provider address:" |
 | `tts_voice` | `""` (the provider's default) | a voice id without spaces or shell characters | Voice > "Voice:" |
 | `tts_token` | `""` | text without line breaks. Plain text in this file | Voice > "Token:" |
-| `[assistant]` table | see [Assistant settings](#assistant-settings-experimental) | | Assistant tab |
+| `[assistant]` table | see [Assistant settings](#assistant-settings) | | Assistant tab |
 | `[[hotkeys]]` with `flow` and `chord` | `clipboard` = `ctrl+alt+v`, `claude_chat` = `ctrl+alt+a` | Ctrl, Alt, Shift or Win with a key, or a function key alone; F12 is reserved by Windows | Hotkeys tab |
 | `[cues.<name>]` for `start`, `transcribing`, `ready`, `ai_ready`, `warning`, `error`, `answer` (an answer of another conversation is waiting) | `enabled = true`, `source = "preset"`, `preset = "classic"`, `file = ""`, `volume = 1.0` | `source`: `preset`, `file`; `preset`: `classic`, `soft`, `click`; `file`: a PCM WAV (8 or 16 bit) | Sounds tab |
 
@@ -200,9 +200,9 @@ one point of WER, so the `gpu` mode decodes greedily. `medium` is less accurate 
 `large-v3-turbo` on both, and on the GPU it is also slower, so the turbo model is the
 default of both modes; `medium` and `small` are there for slower processors.
 
-## Assistant settings (experimental)
+## Assistant settings
 
-The voice assistant ([usage.md](usage.md#voice-assistant-experimental)) keeps its choices in the `[assistant]` table of `companion.toml`:
+The voice assistant ([usage.md](usage.md#voice-assistant)) keeps its choices in the `[assistant]` table of `companion.toml`:
 
 | Key | Default | Allowed values | In the UI |
 |---|---|---|---|
@@ -215,7 +215,8 @@ The voice assistant ([usage.md](usage.md#voice-assistant-experimental)) keeps it
 | `permission_mode` | `acceptEdits` | `default`, `acceptEdits`, `bypassPermissions` | Assistant > "Permissions:" ("Ask before every change", "Accept file edits, ask for the rest", "Full access, never ask (risky)") |
 | `answer_delivery` | `announce` | `speak`, `announce`, `sound`, `silent` | Assistant > "Answers from other conversations:" |
 | `speak_replies` | `true` | `true`, `false` | Assistant > "Speak the replies" |
-| `voice` | `""` (the engine's default voice) | a voice id of the engine's voice engine | Assistant > "Assistant voice:" |
+| `voice_source` | `auto` | `auto`, `engine`, `windows` | Assistant > "Voice source:" ("Automatic", "The engine's voice", "The voices of Windows") |
+| `voice` | `""` (the default voice of the source) | a voice id of the engine's voice engine, or a `windows/...` id of a voice of Windows | Assistant > "Assistant voice:" (**Load voices**, **Test**) |
 | `voice_commands` | `true` | `true`, `false` | Assistant > "Understand voice commands in typed text" |
 | `expressions` | `off` | `off`, `on` | Assistant > "Expression tags:" |
 | `user_name` | `""` | text | Assistant > "Your name:" |
@@ -252,7 +253,7 @@ The text you write for "Write my own" is not in `companion.toml`: VoiceMate keep
 
 The assistant's replies are spoken by the engine, using the voice configured in the engine (Voice tab, or the engine's `--tts-engine`): the companion sends the `<voice>` block of each reply, sentence by sentence, to the engine's `/tts` endpoint ([tts-provider-protocol.md](tts-provider-protocol.md#the-engine-speaks-the-same-protocol)) and plays the audio on this computer.
 
-The built-in Kokoro voice and a custom provider can speak for the assistant; with another voice engine, or with the engine stopped, the replies stay text only, the assistant window shows one "No voice available" notice with the reason, and VoiceMate's short notices use the Windows voice instead. "Stop talking", a new prompt, a dictation hotkey and a mode change silence it at once.
+The built-in Kokoro voice and a custom provider can speak for the assistant, and so can the voices Windows already has (every language installed under Settings, Time and language, Speech), with nothing to download. "Voice source:" decides: `auto` uses the engine's voice and the voices of Windows when the engine cannot speak (or has no voice), `engine` only the engine, `windows` only Windows. **Load voices** and **Test** follow the source picked, before it is saved; a voice id belongs to one source, and each source ignores the other's ids. When nothing can speak, the replies stay text only and the assistant window shows one "No voice available" notice with the reason. "Stop talking", a new prompt and a mode change silence it at once. It never speaks over a recording: what comes while the microphone records, or while the recording is transcribed, waits; a sentence a recording cut is said again from its start, followed by the sentences that were already queued behind it, in order.
 
 VoiceMate also writes `~/.voicemate/assistant.json` in your user folder, which is the file the `voicemate-assistant` skill reads (`version`, `language`, `user_name`, `personality_file`, `notes_vault`, `expressions`, `mode`, `answer_delivery`, `inbox` and the `settings` catalog). With the Portuguese skill, `language` is `"pt-BR"` and the voice speaks pt-BR, whatever the interface language. With the English skill (or a custom one), the language follows the interface. `pending` lists the requests the assistant is waiting on (session id, title, reason, since when). Its format is in [usage.md](usage.md#the-skill). The skill itself is installed in `<Claude home>/skills/voicemate-assistant`, where the Claude home is `~/.claude` or the folder in `CLAUDE_CONFIG_DIR`.
 
@@ -273,7 +274,7 @@ Left out on purpose: hotkeys; every file or folder (the personality file and tex
 | `VOICEMATE_LANG` | engine | Language of the engine messages only (`pt-BR`, `en`, `es`, `ru`, `zh-CN`); without it the messages follow `--output-lang`, whose default is Portuguese. Set it in the shell that runs `make run` (bash inside WSL or on Linux, `$env:VOICEMATE_LANG` in PowerShell on Windows). Wins over `--output-lang`. It does not change what Whisper hears or the language of Claude's answers. The companion ignores it |
 | `VOICEMATE_TTS_TOKEN` | engine | Bearer token for the external TTS provider. Wins over the saved one. The companion sets it when it starts the engine |
 | `VOICEMATE_API_TOKEN` | engine, companion | Replaces the token file. For tests only |
-| `VOICEMATE_CLAUDE_CLI` | companion (assistant) | Path or command name of the Claude Code CLI the assistant starts; without it, `claude` on the `PATH` |
+| `VOICEMATE_CLAUDE_CLI` | companion (assistant) | Path or command name of the Claude Code CLI the assistant starts. Without it, VoiceMate looks for `claude` on the `PATH`, then in `~/.local/bin` (`claude.exe`, the native installer) and `%APPDATA%\npm` (`claude.cmd`, npm). Set it with a full path when `claude` is somewhere else |
 | `CLAUDE_CONFIG_DIR` | companion (assistant) | Claude home, where the skill is installed and the conversations are read; default `~/.claude` |
 | `PULSE_LATENCY_MSEC` | engine (Linux, WSL2) | Audio buffer of PulseAudio; set to `200` when absent |
 | `CT2_CUDA_ALLOCATOR` | engine (CTranslate2-ROCm) | Set to `cub_caching` when absent (workaround for a memory fault on gfx1201) |

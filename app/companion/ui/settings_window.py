@@ -60,6 +60,7 @@ from app.companion.contract import (
     AssistantModel,
     AssistantPermission,
     AssistantSettings,
+    AssistantVoiceSource,
     CompanionSettings,
     CompanionSnapshot,
     CueName,
@@ -697,13 +698,18 @@ class AssistantPage(QWidget):
         self.answer_delivery = _option_combo(texts.answer_delivery_labels())
         form.addRow(_("Answers from other conversations:"), self.answer_delivery)
         self.speak_replies = QCheckBox(_("Speak the replies"))
-        self.speak_replies.setToolTip(
-            _("The engine reads the spoken part of each reply aloud, using the voice configured in the engine.")
-        )
+        self.speak_replies.setToolTip(_("VoiceMate reads the spoken part of each reply aloud."))
         form.addRow("", self.speak_replies)
-        self.voice = _voice_combo(
-            _("Engine default"), _("Load the engine's voices, then type part of a name to find one.")
+        self.voice_source = _option_combo(texts.voice_source_labels())
+        self.voice_source.setToolTip(
+            _(
+                "Automatic: the engine's voice, or the voices of Windows when the engine has none. "
+                "The voices of Windows need no setup and speak every language installed in Windows "
+                "(Settings, Time and language, Speech)."
+            )
         )
+        form.addRow(_("Voice source:"), self.voice_source)
+        self.voice = _voice_combo(_("Default voice"), _("Load the voices, then type part of a name to find one."))
         self.load_voices_button = QPushButton(_("Load voices"))
         self.test_voice_button = QPushButton(_("Test"))
         self.test_voice_button.setToolTip(_("Speaks a short sentence with the chosen voice."))
@@ -844,6 +850,8 @@ class AssistantPage(QWidget):
         self.voice_commands.toggled.connect(self.changed)
         self.speak_replies.toggled.connect(self.changed)
         self.speak_replies.toggled.connect(lambda _checked: self._sync())
+        self.voice_source.currentIndexChanged.connect(self.changed)
+        self.voice_source.currentIndexChanged.connect(lambda _index: self._source_changed())
         self.voice.currentTextChanged.connect(self.changed)
         self.load_voices_button.clicked.connect(lambda: self._ask_engine(test=False))
         self.test_voice_button.clicked.connect(lambda: self._ask_engine(test=True))
@@ -872,6 +880,7 @@ class AssistantPage(QWidget):
             (self.new_effort, _("Effort of new conversations")),
             (self.permission, _("Permissions")),
             (self.answer_delivery, _("Answers from other conversations")),
+            (self.voice_source, _("Voice source")),
             (self.voice, _("Assistant voice")),
             (self.expressions, _("Expression tags")),
             (self.user_name, _("Your name")),
@@ -900,7 +909,8 @@ class AssistantPage(QWidget):
             _select(self.answer_delivery, assistant.answer_delivery, texts.answer_delivery_labels())
             self.voice_commands.setChecked(assistant.voice_commands)
             self.speak_replies.setChecked(assistant.speak_replies)
-            _fill_voices(self.voice, (), assistant.voice, _("Engine default"))
+            _select(self.voice_source, assistant.voice_source, texts.voice_source_labels())
+            _fill_voices(self.voice, (), assistant.voice, _("Default voice"))
             _select(self.expressions, assistant.expressions, texts.expressions_labels())
             self.user_name.setText(assistant.user_name)
             _select(self.personality_source, assistant.personality_source, texts.personality_source_labels())
@@ -927,6 +937,7 @@ class AssistantPage(QWidget):
         new_effort: AssistantEffort = self.new_effort.currentData()
         permission: AssistantPermission = self.permission.currentData()
         delivery: AnswerDelivery = self.answer_delivery.currentData()
+        voice_source: AssistantVoiceSource = self.voice_source.currentData()
         expressions: ExpressionsMode = self.expressions.currentData()
         source: PersonalitySource = self.personality_source.currentData()
         skill_language: SkillLanguage = self.skill_language.currentData()
@@ -941,6 +952,7 @@ class AssistantPage(QWidget):
             permission_mode=permission,
             answer_delivery=delivery,
             speak_replies=self.speak_replies.isChecked(),
+            voice_source=voice_source,
             voice=_combo_voice_id(self.voice),
             voice_commands=self.voice_commands.isChecked(),
             expressions=expressions,
@@ -984,6 +996,7 @@ class AssistantPage(QWidget):
         ):
             widget.setEnabled(enabled)
         voiced = enabled and self.speak_replies.isChecked()
+        self.voice_source.setEnabled(voiced)
         self.voice.setEnabled(voiced)
         for button in (self.load_voices_button, self.test_voice_button):
             button.setEnabled(voiced and not self._voice_busy and self._shell is not None)
@@ -1034,17 +1047,18 @@ class AssistantPage(QWidget):
             return
         controller = self._shell.controller
         voice = _combo_voice_id(self.voice)
+        source: AssistantVoiceSource = self.voice_source.currentData()
         self._voice_busy = True
         self._sync()
-        self._show_voice_status(None, _("Asking the engine..."))
+        self._show_voice_status(None, _("Looking for the voices..."))
 
         def work() -> TtsProbe:
-            return controller.test_assistant_voice(voice) if test else controller.assistant_voices()
+            return controller.test_assistant_voice(voice, source) if test else controller.assistant_voices(source)
 
         def done(probe: TtsProbe) -> None:
             self._voice_busy = False
             if probe.voices:
-                _fill_voices(self.voice, probe.voices, _combo_voice_id(self.voice), _("Engine default"))
+                _fill_voices(self.voice, probe.voices, _combo_voice_id(self.voice), _("Default voice"))
             self._show_voice_status(probe)
             self._sync()
 
@@ -1054,6 +1068,11 @@ class AssistantPage(QWidget):
             self._sync()
 
         self._shell.bridge.run_async(work, done, failed)
+
+    def _source_changed(self) -> None:
+        """Another source lists other voices: the picked one belongs to the old source."""
+        _fill_voices(self.voice, (), "", _("Default voice"))
+        self._show_voice_status(None)
 
     def _show_voice_status(self, probe: TtsProbe | None, busy_text: str = "") -> None:
         if busy_text:

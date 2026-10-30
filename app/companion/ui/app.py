@@ -585,6 +585,8 @@ class CompanionUi(QObject):
         if self.tray is not None:
             self.tray.show_snapshot(snapshot)
         self.status_window.show_snapshot(snapshot)
+        if self.assistant_window is not None:
+            self.assistant_window.show_companion(snapshot)
         if snapshot.tray_state == "recording" and snapshot.recording_since is not None:
             if not self._clock.isActive():
                 self._clock.start()
@@ -599,6 +601,8 @@ class CompanionUi(QObject):
         if self.tray is not None:
             self.tray.refresh_time()
         self.status_window.refresh_time()
+        if self.assistant_window is not None:
+            self.assistant_window.refresh_time()
 
     def _refresh_jump_list(self) -> None:
         """The jump list offers Restart WSL only in WSL mode: rebuild it when the mode changes."""

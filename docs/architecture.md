@@ -50,14 +50,14 @@ flowchart TB
 
 The user presses a global hotkey on Windows and pastes the text wherever the cursor is. VoiceMate is a local system split across the two halves of the same PC. The Windows desktop provides the hotkeys, the clipboard, the tray and the sound output for the cues. The engine runs inside the WSL2 Linux VM because there an AMD GPU is reachable through ROCm ([wsl2.md](wsl2.md)). Microphone and speakers reach the engine through the WSLg PulseAudio bridge, which the engine probes with `pactl info` every 20 seconds (`app/platform/audio_probe.py`).
 
-Everything optional sits behind dashed arrows. The Claude flow runs the local Claude Code CLI through `claude-agent-sdk` (`app/features/claude/runtime.py`), which calls the Anthropic API (default model `claude-haiku-5-5`). The TTS libraries speak the answer (`omnivoice` is the engine used when nothing is saved; `make setup` proposes `kokoro`). Model weights come from the internet on first use:
+Everything optional sits behind dashed arrows. The Claude flow runs the local Claude Code CLI through `claude-agent-sdk` (`app/features/claude/runtime.py`), which calls the Anthropic API (default model `claude-haiku-5-5`). The TTS libraries speak the answer (a default local engine is used when nothing is saved; `make setup` proposes `kokoro`). Model weights come from the internet on first use:
 
 | What | Source | When |
 |---|---|---|
 | whisper.cpp GGML model, its q8 variant, Silero VAD for whisper.cpp | Hugging Face (`ggerganov/whisper.cpp`, `ggml-org/whisper-vad`) | `make setup` or `make configure` |
 | faster-whisper model (`large-v3-turbo` by default) | Hugging Face, through the `faster-whisper` library | First model load |
 | openai-whisper model (the usual backend on WSL2 + AMD without CTranslate2-ROCm) | OpenAI's model CDN, through the `openai-whisper` library | First model load |
-| OmniVoice, VoxCPM2 and Kokoro weights | Hugging Face (`k2-fsa/OmniVoice`, `openbmb/VoxCPM2`, Kokoro through its library) | First TTS load |
+| TTS engine weights (the default engine, VoxCPM2 and Kokoro) | Hugging Face (`openbmb/VoxCPM2`, Kokoro through its library, the default engine's own repository) | First TTS load |
 | PyTorch ROCm wheels, whisper.cpp sources, the CTranslate2-ROCm fork | `repo.radeon.com`, GitHub | `make setup` |
 
 ## 2. Containers
@@ -89,7 +89,7 @@ flowchart LR
             api["HTTP API v2<br/>127.0.0.1:47821, Bearer token"]
             engine["Recording session<br/>recorder, handlers"]
             stt["STT backend<br/>faster-whisper or openai-whisper"]
-            tts["TTS speaker<br/>OmniVoice, Kokoro, VoxCPM2, optional"]
+            tts["TTS speaker<br/>default engine, Kokoro, VoxCPM2, optional"]
         end
         wserver["whisper-server<br/>whisper.cpp, optional"]
         claude["Claude Code CLI<br/>optional"]
@@ -521,7 +521,7 @@ Probes run every 5 seconds: a 500 ms TCP connect, then `/health` with a 2 second
 
 A WSL restart is wanted when `audio` is `down` twice in a row, or on `mic_unavailable` while Windows has a capture device and the audio is not `ok`; never without a capture device. The `wsl_restart_policy` setting is `auto`, `ask` or `never` (default `auto`); `auto` still asks when other distros run, since `wsl --shutdown` stops all of them. The restart waits up to 30 seconds for an idle engine, then sends `POST /shutdown`, runs `wsl --shutdown` and launches again. Quit stops only what the app started: `POST /shutdown`, wait 8 seconds, close stdin, wait 2 seconds, kill the job. An attached daemon only gets `/unregister`.
 
-### 6.1 Voice assistant (experimental)
+### 6.1 Voice assistant
 
 The assistant lives in the companion; the engine takes part only to transcribe the speech and to speak the replies. **Flow: how a request reaches the central conversation in either mode, how other conversations answer, and how the reply is spoken.** The same flow from the user's side, step by step: [voice-assistant.md](voice-assistant.md).
 
@@ -607,7 +607,9 @@ Either way, replies are read from the transcript on disk, never from the process
 
 Held answers never play a notice during a recording or a spoken answer. "Hear what's ready" sends the central one digest note with all of them. Direct mode bypasses the central: the service sends the person's text verbatim to one conversation until "back to the assistant", then tells the central what happened there.
 
-**Voice path.** A recording stopped by the talk hotkey is transcribed by the engine, and its text goes to the service instead of the clipboard. The `<voice>` block of each reply is cut into sentences and sent to the engine's `/tts/v1` endpoint (`voice.py`); the audio that streams back plays on this computer while the next sentence is made. The engine serves that endpoint only for Kokoro or for the custom provider it relays. If it cannot speak, the replies stay text and the short notices fall back to Windows speech.
+**Voice path.** A recording stopped by the talk hotkey is transcribed by the engine, and its text goes to the service instead of the clipboard. The `<voice>` block of each reply is cut into sentences and sent to the engine's `/tts/v1` endpoint (`voice.py`); the audio that streams back plays on this computer while the next sentence is made. The engine serves that endpoint only for Kokoro or for the custom provider it relays. When it cannot speak, the voices Windows already has (`app/companion/win/system_voice.py`, through SAPI) speak the replies in the default "auto" voice source (`assistant.voice_source`); if neither can, the replies stay text and the short notices fall back to Windows speech.
+
+**The microphone button.** The assistant window has a **Talk** button that does what the talk hotkey does: it starts a recording, turns into **Stop and send** while recording, and shows the tray state of the status window (the same badge and line, including the elapsed time), so a recording started with the hotkey shows there too.
 
 **Settings and actions.** `settings_catalog.py` is the list of settings the central may change. VoiceMate writes it, with the current values, to `assistant.json`; a `set_setting` action in a reply is checked against it and applied through the same path as the settings window. `read_inbox` and `clear_inbox` are carried out as well. `follow_up` adds (or updates) an entry of the "Waiting for" list (conversation, title, reason, since when); `follow_up_done` removes it; `focus` makes the text screen follow that conversation, and `focus` with no session id comes back to the central. `open_conversation` and `notify` are parsed and logged only.
 
@@ -630,7 +632,7 @@ app/
 ├── features/            Optional modules (Poetry extras)
 │   ├── claude/          Claude Agent SDK runtime, chat handler, sentence buffer
 │   ├── openai_whisper/  openai-whisper backend and Silero VAD
-│   ├── tts/             TTS protocol, audio players, OmniVoice, Kokoro, VoxCPM2 speakers
+│   ├── tts/             TTS protocol, audio players, the Kokoro, VoxCPM2 and default speakers
 │   └── whispercpp/      whisper.cpp CLI and server backends
 ├── platform/            Platform detection, clipboard writers, WSLg audio probe
 │   └── listeners/       evdev, pynput and HTTP socket triggers
@@ -639,7 +641,7 @@ app/
 │                        CTranslate2-ROCm build, ~/.config/voicemate/config.toml
 ├── i18n/                gettext wrapper and catalogs (en, pt_BR, es, ru, zh_CN)
 └── companion/           Tray app: controller, client, reducer, delivery, settings, paths
-    ├── assistant/       Voice assistant (experimental): service, own session, Desktop port,
+    ├── assistant/       Voice assistant: service, own session, Desktop port,
     │   │                voicemate tools, conversations, notifier, inbox, session reader, command
     │   │                detector, settings catalog, personality, skill install
     │   └── skill/       The packaged voicemate-assistant skill, in en/ and pt-BR/
@@ -659,7 +661,7 @@ app/
 
 **Why the listener keepalive.** On Windows, the low-level hooks (`WH_KEYBOARD_LL`, `WH_MOUSE_LL`) used by global hotkey libraries are silently removed by the OS when a callback exceeds `LowLevelHooksTimeout`, which happens under heavy CPU load ([Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelkeyboardproc)). The native engine reinstalls its hook every 60 seconds, so a dropped hook comes back at the next tick. The companion uses `RegisterHotKey` instead, which has no such timeout.
 
-**Why pluggable TTS.** The `TextToSpeech` protocol (`app/features/tts/base.py`) separates the Claude flow from each engine. OmniVoice, Kokoro and VoxCPM2 are separate speakers behind separate extras, `NullSpeaker` stands in when TTS is off, and a missing package or a failed start degrades to no TTS with a warning. Adding or removing an engine touches only its own module.
+**Why pluggable TTS.** The `TextToSpeech` protocol (`app/features/tts/base.py`) separates the Claude flow from each engine. The default engine, Kokoro and VoxCPM2 are separate speakers behind separate extras, `NullSpeaker` stands in when TTS is off, and a missing package or a failed start degrades to no TTS with a warning. Adding or removing an engine touches only its own module.
 
 **Other principles.**
 - Contract first, in code: `app/protocol/models.py` is shared by both sides and uses `Literal` types for every discrete option; `app/companion/contract.py` is the only seam between the companion core and its UI.
