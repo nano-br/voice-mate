@@ -133,6 +133,20 @@ On the VoiceMate side, stopping the speech returns at once (under 200 ms), for c
 
 On the engine's own endpoint, the engine warms its text to speech once at its own start, and only when a chat flow is on (the built-in Kokoro voice is not warmed up otherwise). The companion calls `/tts/v1/warmup` on demand, when `health` says `loading`.
 
+### Starting the provider with VoiceMate
+
+VoiceMate never needs to start the provider: it only knows its URL. If you also give the command that starts it (Settings > **Voice** > "Start command:", `tts_start_command` in `companion.toml`), VoiceMate starts the provider for you, so it comes up with VoiceMate, which can itself open with Windows.
+
+```text
+bash ~/my-voice-provider/start.sh
+```
+
+- The companion hands the command to the engine in `VOICEMATE_TTS_START_COMMAND` (listed in `WSLENV`, so it reaches the WSL side, like the token).
+- The engine runs it through the shell, in its own environment (inside WSL when the engine runs there), whenever the provider does not answer (connection refused): when the engine starts, and again when the provider goes down later. A provider that answers, even with `503 not_ready` or an error, is not started again.
+- It runs at most once every 60 seconds, and never while the process it started last is still running, so a provider that takes a while to open its port is not started twice.
+- The process is detached from the engine. VoiceMate orchestrates the start, never the stop: the provider keeps its models loaded across engine restarts, and stopping it is up to you.
+- The command must be a single line. It is never written to the log, since it may hold a secret.
+
 ## What VoiceMate does with errors
 
 - Unreachable, `503 not_ready` and `5xx`: speech is off for about 10 seconds (`RETRY_AFTER_SECONDS`), then VoiceMate tries again. Only the first episode of an outage is logged, so a long outage does not flood the log. It never crashes.
