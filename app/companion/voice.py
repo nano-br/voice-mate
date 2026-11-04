@@ -488,9 +488,7 @@ class EngineVoice:
         if not self._say_locally(item):
             self._unspoken(item)
 
-    def _wait_for_engine(
-        self, item: _Item, error: tuple[ProviderError, float]
-    ) -> tuple[ProviderError, float] | None:
+    def _wait_for_engine(self, item: _Item, error: tuple[ProviderError, float]) -> tuple[ProviderError, float] | None:
         """Nothing else can say the line: while the engine is only loading its voice, ask it
         again every `LOADING_RETRY_S` (the line keeps its place), up to `LOADING_WAIT_S`. None
         when the line is over; else why the engine still cannot speak."""

@@ -206,6 +206,7 @@ def test_the_speaker_starts_the_provider_when_built_and_when_it_is_unreachable_a
     url = f"http://127.0.0.1:{_free_port()}"  # nothing listens there
     speaker = ExternalSpeaker(TTSConfig(engine="external", external_url=url), player=_NoPlayer())  # type: ignore[arg-type]
     clock = Clock()
+
     def spawn(command: str) -> subprocess.Popen[bytes]:
         started.append(command)
         return Done()  # type: ignore[return-value]
