@@ -64,6 +64,9 @@ LOADING_RETRY_S: Final = 5.0
 # (an external provider started with the engine has to load its models). Once per outage: the
 # engine also reports loading while its provider is down, and that may never end.
 LOADING_WAIT_S: Final = 90.0
+# The one `not_ready` that ends by itself: the others (text to speech off, a voice the engine
+# cannot serve) would keep a line waiting for nothing.
+_ENGINE_LOADING: Final = "the engine is loading"
 # A `busy` answer right after a stop is the engine still letting go of the previous stream:
 # ask again for about a second (BUSY_TRIES x BUSY_STEP_S) before giving the line up.
 BUSY_TRIES: Final = 10
@@ -474,7 +477,7 @@ class EngineVoice:
             return
         if self._clock() >= self._down_until:
             error = self._say_on_engine(item)
-            if error is not None and self._local() is None and not self._waited:
+            if error is not None and error[0].detail == _ENGINE_LOADING and self._local() is None and not self._waited:
                 error = self._wait_for_engine(item, error)
                 self._waited = error is not None
             if error is None:
@@ -490,7 +493,7 @@ class EngineVoice:
         again every `LOADING_RETRY_S` (the line keeps its place), up to `LOADING_WAIT_S`. None
         when the line is over; else why the engine still cannot speak."""
         deadline = self._clock() + LOADING_WAIT_S
-        while error[0].kind == "not_ready" and self._clock() < deadline:
+        while error[0].detail == _ENGINE_LOADING and self._clock() < deadline:
             for _step in range(round(LOADING_RETRY_S / HOLD_POLL_S)):
                 if not self._current(item):
                     return None  # a stop or a newer line does not sit through the wait
@@ -509,7 +512,7 @@ class EngineVoice:
             return ProviderError("unreachable", "no engine"), RETRY_AFTER_S
         try:
             if not self._loaded(client):
-                return ProviderError("not_ready", "the engine is loading"), LOADING_RETRY_S
+                return ProviderError("not_ready", _ENGINE_LOADING), LOADING_RETRY_S
             self._say_with(client, item)
         except ProviderError as exc:
             if not self._current(item):

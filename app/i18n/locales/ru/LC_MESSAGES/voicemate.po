@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-11-03 22:22-0300\n"
+"POT-Creation-Date: 2026-11-03 22:33-0300\n"
 "PO-Revision-Date: 2026-10-02 03:38-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: ru\n"
@@ -1318,48 +1318,48 @@ msgstr "Провайдер не прислал аудио."
 msgid "Playing a test sentence from {name}."
 msgstr "Воспроизводится тестовая фраза от {name}."
 
-#: app/companion/voice.py:194
+#: app/companion/voice.py:197
 msgid "the engine is not running"
 msgstr "движок не запущен"
 
-#: app/companion/voice.py:196
+#: app/companion/voice.py:199
 msgid "the engine refused the access token"
 msgstr "движок отклонил токен доступа"
 
-#: app/companion/voice.py:198
+#: app/companion/voice.py:201
 msgid "the engine is too old for the assistant voice"
 msgstr "движок слишком старый для голоса ассистента"
 
-#: app/companion/voice.py:200
+#: app/companion/voice.py:203
 msgid "the voice engine set up in the engine cannot speak for the assistant"
 msgstr "голосовой движок, настроенный в движке, не может говорить за ассистента"
 
-#: app/companion/voice.py:202
+#: app/companion/voice.py:205
 msgid "text to speech is off in the engine"
 msgstr "синтез речи выключен в движке"
 
-#: app/companion/voice.py:204
+#: app/companion/voice.py:207
 msgid "the engine is still loading"
 msgstr "движок ещё загружается"
 
-#: app/companion/voice.py:206
+#: app/companion/voice.py:209
 #, python-brace-format
 msgid "the engine's voice is not available ({detail})"
 msgstr "голос движка недоступен ({detail})"
 
-#: app/companion/voice.py:207
+#: app/companion/voice.py:210
 #, python-brace-format
 msgid "the engine's voice failed ({detail})"
 msgstr "сбой голоса движка ({detail})"
 
-#: app/companion/voice.py:525
+#: app/companion/voice.py:528
 #, python-brace-format
 msgid "the engine has no voice '{voice}'. Pick one in Settings, Assistant"
 msgstr ""
 "в движке нет голоса '{voice}'. Выберите другой в настройках, в разделе "
 "«Ассистент»"
 
-#: app/companion/voice.py:719
+#: app/companion/voice.py:722
 msgid "no audio output is available on this computer"
 msgstr "на этом компьютере нет доступного аудиовыхода"
 
@@ -2499,12 +2499,13 @@ msgstr "Нет (провайдер запускаете вы)"
 #: app/companion/ui/settings_window.py:1485
 msgid ""
 "Optional. The command that starts the provider, run by the engine (inside"
-" WSL when the engine runs there) whenever the provider does not answer: "
-"it then starts with VoiceMate."
+" WSL when the engine runs there) whenever nothing listens at its address:"
+" it then starts with VoiceMate."
 msgstr ""
 "Необязательно. Команда, которая запускает провайдера; движок выполняет её"
-" (внутри WSL, если движок работает там) каждый раз, когда провайдер не "
-"отвечает: так провайдер запускается вместе с VoiceMate."
+" (внутри WSL, если движок работает там) каждый раз, когда по адресу "
+"провайдера никто не слушает: так провайдер запускается вместе с "
+"VoiceMate."
 
 #: app/companion/ui/settings_window.py:1489
 msgid "Start command:"
@@ -3563,7 +3564,9 @@ msgstr ""
 msgid ""
 "[ExternalSpeaker] ⚠ The TTS provider start command exited with code "
 "{code}."
-msgstr "[ExternalSpeaker] ⚠ Команда запуска TTS-провайдера завершилась с кодом {code}."
+msgstr ""
+"[ExternalSpeaker] ⚠ Команда запуска TTS-провайдера завершилась с кодом "
+"{code}."
 
 #: app/features/tts/provider_launcher.py:133
 msgid ""

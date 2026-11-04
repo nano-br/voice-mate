@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-11-03 22:22-0300\n"
+"POT-Creation-Date: 2026-11-03 22:33-0300\n"
 "PO-Revision-Date: 2026-10-01 16:49-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: pt_BR\n"
@@ -1329,46 +1329,46 @@ msgstr "O provedor não enviou áudio."
 msgid "Playing a test sentence from {name}."
 msgstr "Tocando uma frase de teste de {name}."
 
-#: app/companion/voice.py:194
+#: app/companion/voice.py:197
 msgid "the engine is not running"
 msgstr "o motor não está rodando"
 
-#: app/companion/voice.py:196
+#: app/companion/voice.py:199
 msgid "the engine refused the access token"
 msgstr "o motor recusou o token de acesso"
 
-#: app/companion/voice.py:198
+#: app/companion/voice.py:201
 msgid "the engine is too old for the assistant voice"
 msgstr "o motor é antigo demais para a voz do assistente"
 
-#: app/companion/voice.py:200
+#: app/companion/voice.py:203
 msgid "the voice engine set up in the engine cannot speak for the assistant"
 msgstr "o motor de voz configurado no motor não consegue falar pelo assistente"
 
-#: app/companion/voice.py:202
+#: app/companion/voice.py:205
 msgid "text to speech is off in the engine"
 msgstr "a síntese de voz está desligada no motor"
 
-#: app/companion/voice.py:204
+#: app/companion/voice.py:207
 msgid "the engine is still loading"
 msgstr "o motor ainda está carregando"
 
-#: app/companion/voice.py:206
+#: app/companion/voice.py:209
 #, python-brace-format
 msgid "the engine's voice is not available ({detail})"
 msgstr "a voz do motor não está disponível ({detail})"
 
-#: app/companion/voice.py:207
+#: app/companion/voice.py:210
 #, python-brace-format
 msgid "the engine's voice failed ({detail})"
 msgstr "a voz do motor falhou ({detail})"
 
-#: app/companion/voice.py:525
+#: app/companion/voice.py:528
 #, python-brace-format
 msgid "the engine has no voice '{voice}'. Pick one in Settings, Assistant"
 msgstr "o motor não tem a voz '{voice}'. Escolha uma em Configurações, Assistente"
 
-#: app/companion/voice.py:719
+#: app/companion/voice.py:722
 msgid "no audio output is available on this computer"
 msgstr "nenhuma saída de áudio está disponível neste computador"
 
@@ -2506,12 +2506,12 @@ msgstr "Nenhum (você liga o provedor)"
 #: app/companion/ui/settings_window.py:1485
 msgid ""
 "Optional. The command that starts the provider, run by the engine (inside"
-" WSL when the engine runs there) whenever the provider does not answer: "
-"it then starts with VoiceMate."
+" WSL when the engine runs there) whenever nothing listens at its address:"
+" it then starts with VoiceMate."
 msgstr ""
 "Opcional. O comando que liga o provedor, rodado pelo motor (dentro do WSL"
-" quando o motor roda lá) sempre que o provedor não responde: assim ele "
-"liga junto com o VoiceMate."
+" quando o motor roda lá) sempre que nada responde no endereço dele: assim"
+" ele liga junto com o VoiceMate."
 
 #: app/companion/ui/settings_window.py:1489
 msgid "Start command:"
@@ -3577,7 +3577,9 @@ msgstr ""
 msgid ""
 "[ExternalSpeaker] ⚠ The TTS provider start command exited with code "
 "{code}."
-msgstr "[ExternalSpeaker] ⚠ O comando de início do provedor de voz terminou com o código {code}."
+msgstr ""
+"[ExternalSpeaker] ⚠ O comando de início do provedor de voz terminou com o"
+" código {code}."
 
 #: app/features/tts/provider_launcher.py:133
 msgid ""

@@ -66,7 +66,7 @@ Any text-to-speech service that follows the [VoiceMate TTS provider protocol](tt
 - "Provider address:" (default `http://127.0.0.1:8765`). Inside WSL, `127.0.0.1` is the WSL side.
 - "Voice:". **Load voices** asks the provider what it offers; you can also type a voice id.
 - "Token:" if the provider requires one (kept masked).
-- "Start command:" (optional), a single line that starts the provider, such as `bash ~/my-voice-provider/start.sh`. VoiceMate runs it when the provider does not answer, at startup and again if it goes down, so the provider comes up with VoiceMate (and with Windows, if VoiceMate opens with it). VoiceMate never stops the provider. See [Starting the provider](tts-provider-protocol.md#starting-the-provider-with-voicemate).
+- "Start command:" (optional), a single line that starts the provider, such as `bash ~/my-voice-provider/start.sh`. VoiceMate runs it when nothing listens at the provider's address, at startup and again if it goes down, so the provider comes up with VoiceMate (and with Windows, if VoiceMate opens with it). VoiceMate never stops the provider. See [Starting the provider](tts-provider-protocol.md#starting-the-provider-with-voicemate).
 
 <p align="center"><img src="assets/screenshots/en/settings-voice.png" width="743" alt="The Voice tab of VoiceMate Settings, with the voice engine and the custom provider fields"></p>
 

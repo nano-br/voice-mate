@@ -276,7 +276,7 @@ Left out on purpose: hotkeys; every file or folder (the personality file and tex
 |---|---|---|
 | `VOICEMATE_LANG` | engine | Language of the engine messages only (`pt-BR`, `en`, `es`, `ru`, `zh-CN`); without it the messages follow `--output-lang`, whose default is Portuguese. Set it in the shell that runs `make run` (bash inside WSL or on Linux, `$env:VOICEMATE_LANG` in PowerShell on Windows). Wins over `--output-lang`. It does not change what Whisper hears or the language of Claude's answers. The companion ignores it |
 | `VOICEMATE_TTS_TOKEN` | engine | Bearer token for the external TTS provider. Wins over the saved one. The companion sets it when it starts the engine |
-| `VOICEMATE_TTS_START_COMMAND` | engine | Command line that starts the external TTS provider when it does not answer. The companion sets it when it starts the engine and lists it in `WSLENV`, so it reaches the engine inside WSL. Never logged |
+| `VOICEMATE_TTS_START_COMMAND` | engine | Command line that starts the external TTS provider when nothing listens at its address. The companion sets it when it starts the engine and lists it in `WSLENV`, so it reaches the engine inside WSL. Never logged |
 | `VOICEMATE_API_TOKEN` | engine, companion | Replaces the token file. For tests only |
 | `VOICEMATE_CLAUDE_CLI` | companion (assistant) | Path or command name of the Claude Code CLI the assistant starts. Without it, VoiceMate looks for `claude` on the `PATH`, then in `~/.local/bin` (`claude.exe`, the native installer) and `%APPDATA%\npm` (`claude.cmd`, npm). Set it with a full path when `claude` is somewhere else |
 | `CLAUDE_CONFIG_DIR` | companion (assistant) | Claude home, where the skill is installed and the conversations are read; default `~/.claude` |

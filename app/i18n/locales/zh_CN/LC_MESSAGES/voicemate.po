@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-11-03 22:22-0300\n"
+"POT-Creation-Date: 2026-11-03 22:33-0300\n"
 "PO-Revision-Date: 2026-10-02 03:34-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: zh_CN\n"
@@ -1247,46 +1247,46 @@ msgstr "提供方没有发送音频。"
 msgid "Playing a test sentence from {name}."
 msgstr "正在播放来自 {name} 的测试语句。"
 
-#: app/companion/voice.py:194
+#: app/companion/voice.py:197
 msgid "the engine is not running"
 msgstr "引擎未运行"
 
-#: app/companion/voice.py:196
+#: app/companion/voice.py:199
 msgid "the engine refused the access token"
 msgstr "引擎拒绝了访问令牌"
 
-#: app/companion/voice.py:198
+#: app/companion/voice.py:201
 msgid "the engine is too old for the assistant voice"
 msgstr "引擎版本太旧，不支持助手声音"
 
-#: app/companion/voice.py:200
+#: app/companion/voice.py:203
 msgid "the voice engine set up in the engine cannot speak for the assistant"
 msgstr "引擎中设置的语音引擎无法为助手发声"
 
-#: app/companion/voice.py:202
+#: app/companion/voice.py:205
 msgid "text to speech is off in the engine"
 msgstr "引擎中的语音合成已关闭"
 
-#: app/companion/voice.py:204
+#: app/companion/voice.py:207
 msgid "the engine is still loading"
 msgstr "引擎仍在加载"
 
-#: app/companion/voice.py:206
+#: app/companion/voice.py:209
 #, python-brace-format
 msgid "the engine's voice is not available ({detail})"
 msgstr "引擎的声音不可用（{detail}）"
 
-#: app/companion/voice.py:207
+#: app/companion/voice.py:210
 #, python-brace-format
 msgid "the engine's voice failed ({detail})"
 msgstr "引擎的声音出错（{detail}）"
 
-#: app/companion/voice.py:525
+#: app/companion/voice.py:528
 #, python-brace-format
 msgid "the engine has no voice '{voice}'. Pick one in Settings, Assistant"
 msgstr "引擎中没有声音“{voice}”。请在 设置 > 助手 中选择一个"
 
-#: app/companion/voice.py:719
+#: app/companion/voice.py:722
 msgid "no audio output is available on this computer"
 msgstr "此电脑上没有可用的音频输出"
 
@@ -2377,11 +2377,11 @@ msgstr "无（由你自己启动提供方）"
 #: app/companion/ui/settings_window.py:1485
 msgid ""
 "Optional. The command that starts the provider, run by the engine (inside"
-" WSL when the engine runs there) whenever the provider does not answer: "
-"it then starts with VoiceMate."
+" WSL when the engine runs there) whenever nothing listens at its address:"
+" it then starts with VoiceMate."
 msgstr ""
-"可选。启动提供方的命令。每当提供方没有响应时，引擎就会运行它（引擎在 WSL 中运行时，就在 WSL 中运行），这样提供方会随 VoiceMate"
-" 一起启动。"
+"可选。启动提供方的命令。每当提供方的地址上没有服务监听时，引擎就会运行它（引擎在 WSL 中运行时则在 WSL 内运行）：这样它会与 "
+"VoiceMate 一起启动。"
 
 #: app/companion/ui/settings_window.py:1489
 msgid "Start command:"

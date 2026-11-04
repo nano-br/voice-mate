@@ -10,11 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Settings > Voice > "Start command:" (`tts_start_command`): the command line that starts your custom
-  voice provider. The engine runs it whenever the provider does not answer, at startup and again if it
-  goes down (at most once a minute, never while the last one it started is still running), so the
-  provider comes up with VoiceMate, and VoiceMate can open with Windows. The command runs through the
-  shell in the engine's own environment (inside WSL when the engine runs there), detached from it;
-  VoiceMate never stops the provider. It travels in `VOICEMATE_TTS_START_COMMAND`, is never logged and
+  voice provider. The engine runs it whenever nothing listens at the provider's address, at startup and
+  again if it goes down (at most once a minute, never while the last one it started is still running),
+  so the provider comes up with VoiceMate, and VoiceMate can open with Windows. A provider that is only
+  slow to answer is not started again. The command runs through the shell on the engine's side (inside
+  WSL when the engine runs there), without the engine's virtual environment, detached from it;
+  VoiceMate never stops the provider. It travels in `VOICEMATE_TTS_START_COMMAND`, is not logged and
   must be a single line. See [docs/tts-provider-protocol.md](docs/tts-provider-protocol.md#starting-the-provider-with-voicemate).
 
 ### Changed

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-03 22:22-0300\n"
+"POT-Creation-Date: 2026-11-03 22:33-0300\n"
 "PO-Revision-Date: 2026-05-21 14:42-0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -1228,46 +1228,46 @@ msgstr ""
 msgid "Playing a test sentence from {name}."
 msgstr ""
 
-#: app/companion/voice.py:194
+#: app/companion/voice.py:197
 msgid "the engine is not running"
 msgstr ""
 
-#: app/companion/voice.py:196
+#: app/companion/voice.py:199
 msgid "the engine refused the access token"
 msgstr ""
 
-#: app/companion/voice.py:198
+#: app/companion/voice.py:201
 msgid "the engine is too old for the assistant voice"
 msgstr ""
 
-#: app/companion/voice.py:200
+#: app/companion/voice.py:203
 msgid "the voice engine set up in the engine cannot speak for the assistant"
 msgstr ""
 
-#: app/companion/voice.py:202
+#: app/companion/voice.py:205
 msgid "text to speech is off in the engine"
 msgstr ""
 
-#: app/companion/voice.py:204
+#: app/companion/voice.py:207
 msgid "the engine is still loading"
 msgstr ""
 
-#: app/companion/voice.py:206
+#: app/companion/voice.py:209
 #, python-brace-format
 msgid "the engine's voice is not available ({detail})"
 msgstr ""
 
-#: app/companion/voice.py:207
+#: app/companion/voice.py:210
 #, python-brace-format
 msgid "the engine's voice failed ({detail})"
 msgstr ""
 
-#: app/companion/voice.py:525
+#: app/companion/voice.py:528
 #, python-brace-format
 msgid "the engine has no voice '{voice}'. Pick one in Settings, Assistant"
 msgstr ""
 
-#: app/companion/voice.py:719
+#: app/companion/voice.py:722
 msgid "no audio output is available on this computer"
 msgstr ""
 
@@ -2346,8 +2346,8 @@ msgstr ""
 #: app/companion/ui/settings_window.py:1485
 msgid ""
 "Optional. The command that starts the provider, run by the engine (inside"
-" WSL when the engine runs there) whenever the provider does not answer: "
-"it then starts with VoiceMate."
+" WSL when the engine runs there) whenever nothing listens at its address:"
+" it then starts with VoiceMate."
 msgstr ""
 
 #: app/companion/ui/settings_window.py:1489

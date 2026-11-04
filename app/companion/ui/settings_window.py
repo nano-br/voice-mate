@@ -1483,7 +1483,7 @@ class VoicePage(QWidget):
         self.tts_start_command.setToolTip(
             _(
                 "Optional. The command that starts the provider, run by the engine (inside WSL when the "
-                "engine runs there) whenever the provider does not answer: it then starts with VoiceMate."
+                "engine runs there) whenever nothing listens at its address: it then starts with VoiceMate."
             )
         )
         form.addRow(_("Start command:"), self.tts_start_command)

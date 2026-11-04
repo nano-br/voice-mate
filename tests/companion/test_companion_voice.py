@@ -6,6 +6,7 @@ from __future__ import annotations
 import threading
 import time
 from collections.abc import Iterator
+from functools import partial
 
 import pytest
 from companion_core_fakes import use_english, wait_until
@@ -580,6 +581,29 @@ def test_a_line_waits_for_the_engine_only_once_per_outage(rigs: list[Rig]) -> No
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_only_an_engine_loading_its_voice_is_worth_a_wait_and_others_do_not_use_it_up(
+    rigs: list[Rig], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rig = _rig(rigs, None)
+    slept: list[float] = []
+    rig.voice._sleep = slept.append
+    errors = (ProviderError("unreachable", "no engine"), ProviderError("not_ready", "text to speech is off"))
+    for said, error in enumerate(errors, start=1):
+        monkeypatch.setattr(rig.voice, "_say_on_engine", partial(_fails_with, error))
+        rig.clock.now += LOADING_WAIT_S
+        rig.voice.notice("A line.", "en")
+        assert wait_until(partial(_said, rig, said))  # at once, and the wait stays for a load
+        assert slept == [] and not rig.voice._waited
+
+
+def _fails_with(error: ProviderError, _item: object) -> tuple[ProviderError, float]:
+    return error, 5.0
+
+
+def _said(rig: Rig, count: int) -> bool:
+    return len(rig.fallback) == count
 
 
 def test_a_stop_drops_a_line_waiting_for_the_engine(rigs: list[Rig]) -> None:
