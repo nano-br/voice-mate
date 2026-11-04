@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-03
+
 ### Added
 
 - Settings > Voice > "Start command:" (`tts_start_command`): the command line that starts your custom
@@ -24,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   voice now waits for it (up to 90 seconds, trying every 5, once per outage) instead of being lost,
   and the short notices no longer fall to Windows speech: they stay on screen. "Automatic" is
   unchanged where a local voice exists; with none (outside Windows) it waits the same way.
+
+### Fixed
+
+- A custom voice provider that was down when the engine started no longer turned the engine's voice off
+  until the engine was restarted. The engine now treats an outage as a voice that is still loading, and
+  the assistant's voice waits for it.
 
 ## [0.3.0] - 2026-10-29
 
@@ -431,7 +439,8 @@ Development happened on `main` and in seven pull requests before this first rele
 - [#7](https://github.com/nano-br/voice-mate/pull/7): choose the dictation language in
   the companion.
 
-[Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/nano-br/voice-mate/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/nano-br/voice-mate/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/nano-br/voice-mate/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/nano-br/voice-mate/releases/tag/v0.1.0
