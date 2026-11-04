@@ -86,6 +86,11 @@ class ExternalSpeaker:
         with self._state_lock:
             return not self._closed and not self._failed and self._now() >= self._down_until
 
+    def is_enabled(self) -> bool:
+        """False only for good (closed, or a provider that cannot work with VoiceMate), not during an outage."""
+        with self._state_lock:
+            return not self._closed and not self._failed
+
     def speak(self, text: str) -> None:
         """Send the text to the provider and enqueue its audio as it arrives."""
         if self._closed or not text.strip():

@@ -22,7 +22,7 @@ from typing import Final, Literal, Protocol, runtime_checkable
 import numpy as np
 from numpy.typing import NDArray
 
-from app.features.tts.base import TextToSpeech
+from app.features.tts.base import TextToSpeech, is_enabled
 
 # How long the engine's own flow waits for a stream it interrupted to let go of the model.
 PREEMPT_WAIT_S: Final = 2.0
@@ -162,6 +162,9 @@ class GatedSpeaker:
 
     def is_active(self) -> bool:
         return self.inner.is_active()
+
+    def is_enabled(self) -> bool:
+        return is_enabled(self.inner)
 
     def speak(self, text: str) -> None:
         self._gate.begin_local()

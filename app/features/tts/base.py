@@ -3,6 +3,16 @@ from __future__ import annotations
 from typing import Protocol
 
 
+def is_enabled(speaker: object) -> bool:
+    """Whether the speaker can ever speak in this run. `is_active` also goes false for a moment
+    while an external provider is down, and a provider may well be down at the engine's startup:
+    it is starting with the engine. A speaker with such moments says so with its own `is_enabled`."""
+    enabled = getattr(speaker, "is_enabled", None)
+    if callable(enabled):
+        return bool(enabled())
+    return bool(speaker.is_active())  # type: ignore[attr-defined]
+
+
 class TextToSpeech(Protocol):
     """Text-to-Speech orchestrator.
 

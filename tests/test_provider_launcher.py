@@ -16,7 +16,9 @@ import pytest
 from app.cli.args import parse_args
 from app.cli.config_builder import build_config
 from app.core.config import TTSConfig
+from app.daemon.tts_endpoint import TtsEndpoint
 from app.features.tts.external_speaker import ExternalSpeaker
+from app.features.tts.pcm import GatedSpeaker
 from app.features.tts.provider_launcher import (
     RELAUNCH_AFTER_SECONDS,
     ProviderLauncher,
@@ -199,6 +201,20 @@ def test_the_speaker_starts_the_provider_when_built_and_when_it_is_unreachable_a
     clock.now += RELAUNCH_AFTER_SECONDS + 1
     assert not speaker.pcm_ready()
     assert wait_until(lambda: started == ["start-it", "start-it"])
+    speaker.close()
+
+
+def test_a_provider_down_when_the_engine_attaches_its_speaker_does_not_turn_the_voice_off() -> None:
+    url = f"http://127.0.0.1:{_free_port()}"  # nothing listens there yet: it is starting with the engine
+    speaker = ExternalSpeaker(TTSConfig(engine="external", external_url=url), player=_NoPlayer())  # type: ignore[arg-type]
+    speaker.warmup()
+    assert not speaker.is_active()  # within the outage
+    endpoint = TtsEndpoint()
+    endpoint.attach(GatedSpeaker(speaker, endpoint.gate))
+    assert endpoint.state == "ready"
+    speaker._failed = True  # a provider that can never work is off for good
+    endpoint.attach(speaker)
+    assert endpoint.state == "off"
     speaker.close()
 
 

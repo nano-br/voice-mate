@@ -19,7 +19,7 @@ from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from typing import Final, Literal
 
-from app.features.tts.base import NullSpeaker, TextToSpeech
+from app.features.tts.base import NullSpeaker, TextToSpeech, is_enabled
 from app.features.tts.pcm import (
     GatedSpeaker,
     PcmStream,
@@ -125,7 +125,7 @@ class TtsEndpoint:
         with self._lock:
             if self._state == "closed":
                 return
-            if inner is None or isinstance(inner, NullSpeaker) or not inner.is_active():
+            if inner is None or isinstance(inner, NullSpeaker) or not is_enabled(inner):
                 self._state, self._reason, self._synth = "off", "text to speech is off in the engine", None
             elif isinstance(inner, PcmSynthesizer):
                 self._state, self._reason, self._synth = "ready", "", inner
