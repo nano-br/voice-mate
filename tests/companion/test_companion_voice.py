@@ -12,6 +12,7 @@ from companion_core_fakes import use_english, wait_until
 
 from app.companion.voice import (
     LOADING_RETRY_S,
+    LOADING_WAIT_S,
     LOCAL_URL,
     PAUSE_GRACE_S,
     RETRY_AFTER_S,
@@ -179,6 +180,7 @@ class Rig:
             hold=lambda: self.holding,
             local=lambda: self.local,
             clock=self.clock,
+            sleep=lambda _seconds: time.sleep(0.01),  # the fake clock stands still unless a test moves it
         )
         self.voice.on_unavailable(self.reasons.append)
 
@@ -512,11 +514,11 @@ def test_audio_in_another_format_than_asked_is_refused(provider: ProviderServer,
 
 def test_an_engine_still_loading_its_voice_is_asked_to_load_and_tried_again_soon(rigs: list[Rig]) -> None:
     server = _serve(pace=0.0, loading_seconds=60.0)
+    local = _serve(pace=0.0)
     try:
-        rig = _rig(rigs, server)
+        rig = _rig(rigs, server, local=local)
         rig.voice.notice("First.", "en")
-        assert wait_until(lambda: rig.fallback == ["First."])
-        assert rig.reasons == ["the engine is still loading"]
+        assert wait_until(lambda: _texts(local) == ["First."])  # the local voice takes over
         assert wait_until(lambda: server.state.warmups == 1)  # on-demand load, no warmup was done at start
         assert _texts(server) == []
         server.state.loading_until = 0.0
@@ -524,6 +526,50 @@ def test_an_engine_still_loading_its_voice_is_asked_to_load_and_tried_again_soon
         rig.voice.notice("Second.", "en")
         assert wait_until(lambda: _texts(server) == ["Second."])
         assert wait_until(lambda: rig.voice.reason == "")
+    finally:
+        for running in (server, local):
+            running.shutdown()
+            running.server_close()
+
+
+def test_with_no_local_voice_a_line_waits_for_the_engine_to_load_its_voice(rigs: list[Rig]) -> None:
+    server = _serve(pace=0.0, loading_seconds=60.0)
+    try:
+        rig = _rig(rigs, server)
+        rig.voice.notice("First.", "en")
+        rig.voice.speak("r", "A reply.", final=True)
+        assert wait_until(lambda: server.state.warmups >= 1)  # asked to load (again at each retry)
+        time.sleep(0.1)
+        assert (_texts(server), rig.fallback, rig.reasons) == ([], [], [])  # waiting, not lost
+        server.state.loading_until = 0.0
+        assert wait_until(lambda: _texts(server) == ["First.", "A reply."])  # in order, once loaded
+        assert rig.fallback == []
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_a_line_waiting_for_the_engine_gives_up_after_the_wait_and_a_stop_drops_it(rigs: list[Rig]) -> None:
+    server = _serve(pace=0.0, loading_seconds=600.0)
+    try:
+        rig = _rig(rigs, server)
+
+        def sleep(seconds: float) -> None:
+            rig.clock.now += seconds
+            time.sleep(0.005)
+
+        rig.voice._sleep = sleep
+        rig.voice.notice("First.", "en")
+        assert wait_until(lambda: rig.fallback == ["First."])  # LOADING_WAIT_S of the fake clock went by
+        assert rig.reasons == ["the engine is still loading"]
+        rig.clock.now += LOADING_WAIT_S  # the next attempt, after the outage window
+        rig.voice._sleep = lambda _seconds: time.sleep(0.01)
+        rig.voice.notice("Second.", "en")
+        time.sleep(0.1)
+        rig.voice.stop()
+        server.state.loading_until = 0.0
+        time.sleep(0.3)
+        assert _texts(server) == [] and rig.fallback == ["First."]
     finally:
         server.shutdown()
         server.server_close()

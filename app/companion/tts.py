@@ -24,7 +24,14 @@ from typing import Final
 
 from app.companion.contract import CompanionSettings, TtsChoice, TtsProbe
 from app.i18n import _
-from app.protocol.tts_provider import FORMAT_S16, TOKEN_ENV, ProviderClient, ProviderError, SpeechStream
+from app.protocol.tts_provider import (
+    FORMAT_S16,
+    START_COMMAND_ENV,
+    TOKEN_ENV,
+    ProviderClient,
+    ProviderError,
+    SpeechStream,
+)
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +49,7 @@ class EngineTts:
     url: str = ""
     voice: str = ""
     token: str = field(default="", repr=False)
+    start_command: str = field(default="", repr=False)
 
     def cli_args(self) -> str:
         # "default" leaves the engine's own choice (its saved setup).
@@ -52,7 +60,12 @@ class EngineTts:
         return f"{args} --tts-external-voice={self.voice}" if self.voice else args
 
     def env(self) -> dict[str, str]:
-        return {TOKEN_ENV: self.token} if self.engine == "external" and self.token else {}
+        if self.engine != "external":
+            return {}
+        extra = {TOKEN_ENV: self.token} if self.token else {}
+        if self.start_command:
+            extra[START_COMMAND_ENV] = self.start_command
+        return extra
 
 
 def engine_tts(settings: CompanionSettings) -> EngineTts:
@@ -60,7 +73,7 @@ def engine_tts(settings: CompanionSettings) -> EngineTts:
     count (changing them must not restart the engine)."""
     if settings.tts_engine == "default":
         return EngineTts("default")
-    return EngineTts("external", settings.tts_url, settings.tts_voice, settings.tts_token)
+    return EngineTts("external", settings.tts_url, settings.tts_voice, settings.tts_token, settings.tts_start_command)
 
 
 def spawn_env(tts: EngineTts | None, *, wsl: bool, base: Mapping[str, str] | None = None) -> dict[str, str] | None:

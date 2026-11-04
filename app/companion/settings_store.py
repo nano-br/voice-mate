@@ -97,6 +97,11 @@ def tts_token_is_valid(value: str) -> bool:
     return value.isprintable()
 
 
+def tts_start_command_is_valid(value: str) -> bool:
+    """One line: it travels in an environment variable and runs through the shell as typed."""
+    return value.isprintable()
+
+
 def wsl_distro_is_valid(value: str) -> bool:
     return value == "" or _DISTRO_RE.match(value) is not None
 
@@ -145,6 +150,7 @@ def field_label(field_name: str) -> str:
         "tts_url": _("Provider address"),
         "tts_voice": _("Voice"),
         "tts_token": _("Token"),
+        "tts_start_command": _("Start command"),
     }
     return labels.get(field_name, field_name)
 
@@ -405,6 +411,10 @@ def parse_settings(text: str, platform: str = sys.platform) -> LoadResult:
     if not tts_token_is_valid(tts_token):
         reader.problem("tts_token: forbidden characters, ignoring it")
         tts_token = defaults.tts_token
+    tts_start_command = reader.text("tts_start_command", defaults.tts_start_command)
+    if not tts_start_command_is_valid(tts_start_command):
+        reader.problem("tts_start_command: line breaks or control characters, ignoring it")
+        tts_start_command = defaults.tts_start_command
     port = data.get("daemon_port", defaults.daemon_port)
     if not isinstance(port, int) or isinstance(port, bool) or not PORT_MIN <= port <= PORT_MAX:
         reader.problem(f"daemon_port: invalid value {port!r}")
@@ -443,6 +453,7 @@ def parse_settings(text: str, platform: str = sys.platform) -> LoadResult:
         tts_url=tts_url,
         tts_voice=tts_voice,
         tts_token=tts_token,
+        tts_start_command=tts_start_command,
     )
     known = {field.name for field in fields(CompanionSettings)}
     for key in data:
@@ -511,6 +522,7 @@ def dump_settings(settings: CompanionSettings) -> str:
         f"tts_url = {_toml_value(settings.tts_url)}",
         f"tts_voice = {_toml_value(settings.tts_voice)}",
         f"tts_token = {_toml_value(settings.tts_token)}",
+        f"tts_start_command = {_toml_value(settings.tts_start_command)}",
     ]
     if not settings.hotkeys:
         lines.append("hotkeys = []")  # explicit: no hotkeys at all (absent = defaults)
@@ -596,6 +608,8 @@ def validate_settings(
         errors.append(_("The voice id cannot contain spaces, quotes, $, backticks, backslashes or line breaks."))
     if not tts_token_is_valid(settings.tts_token):
         errors.append(_("The token cannot contain line breaks or other control characters."))
+    if not tts_start_command_is_valid(settings.tts_start_command):
+        errors.append(_("The start command must be a single line."))
     if not tts_token_is_valid(settings.assistant.voice):
         errors.append(_("The assistant voice cannot contain line breaks or other control characters."))
     if not PORT_MIN <= settings.daemon_port <= PORT_MAX:
@@ -703,6 +717,7 @@ def normalized(settings: CompanionSettings) -> CompanionSettings:
         tts_url=settings.tts_url.strip() or DEFAULT_TTS_URL,
         tts_voice=settings.tts_voice.strip(),
         tts_token=settings.tts_token.strip(),
+        tts_start_command=settings.tts_start_command.strip(),
     )
 
 

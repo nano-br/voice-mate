@@ -113,6 +113,9 @@ class TTSConfig:
     external_voice: str = ""
     external_token: str = field(default="", repr=False)
     external_options: dict[str, Any] = field(default_factory=dict)
+    # Shell command that starts the provider when it does not answer ("" = VoiceMate never starts
+    # it). From the VOICEMATE_TTS_START_COMMAND environment variable; never logged (repr=False).
+    external_start_command: str = field(default="", repr=False)
     device: TTSDevice = "auto"
     streaming: bool = True
     save_audio_dir: str | None = None

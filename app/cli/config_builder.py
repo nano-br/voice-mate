@@ -26,7 +26,7 @@ from app.core.config import (
 from app.i18n import _
 from app.platform.kinds import PlatformKind, TriggerKind
 from app.protocol.models import SttMode
-from app.protocol.tts_provider import DEFAULT_URL, TOKEN_ENV
+from app.protocol.tts_provider import DEFAULT_URL, START_COMMAND_ENV, TOKEN_ENV
 from app.setup.gpu_detect import detect_gpu
 from app.setup.persisted_config import PersistedConfig
 
@@ -152,6 +152,12 @@ def _resolve_external_token(persisted: PersistedConfig) -> str:
     return os.environ.pop(TOKEN_ENV, "").strip() or (persisted.tts_external_token or "").strip()
 
 
+def _resolve_external_start_command() -> str:
+    """VOICEMATE_TTS_START_COMMAND (the companion sets it), taken out of the environment like the
+    token: the processes the engine starts, the provider included, do not inherit it."""
+    return os.environ.pop(START_COMMAND_ENV, "").strip()
+
+
 def _resolve_claude_enabled(args: argparse.Namespace, persisted: PersistedConfig) -> bool:
     """CLI --no-claude-chat > saved flow > default (on); requires keyboard."""
     if args.no_claude_chat:
@@ -266,6 +272,7 @@ def build_config(args: argparse.Namespace, persisted: PersistedConfig | None = N
             external_url=_resolve_external_url(args, persisted),
             external_voice=_resolve_external_voice(args, persisted),
             external_token=_resolve_external_token(persisted),
+            external_start_command=_resolve_external_start_command(),
             external_options=_resolve_external_options(args, persisted),
             cfg_value=args.tts_cfg_value,
             inference_timesteps=args.tts_inference_timesteps,

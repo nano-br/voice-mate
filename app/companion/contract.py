@@ -282,12 +282,15 @@ class CompanionSettings:
     stt_cpu_model: SttModel = DEFAULT_STT_MODEL
     stt_gpu_model: SttModel = DEFAULT_STT_MODEL
     # Spoken answers (`--tts-engine external --tts-url ... --tts-external-voice ...`; the token
-    # travels in the VOICEMATE_TTS_TOKEN environment variable, never on the command line).
-    # With "default" the other three are kept but unused; a change restarts the engine.
+    # travels in the VOICEMATE_TTS_TOKEN environment variable, never on the command line, and the
+    # start command in VOICEMATE_TTS_START_COMMAND: the engine runs it when the provider does not
+    # answer, so the provider starts with VoiceMate). With "default" the others are kept but
+    # unused; a change restarts the engine.
     tts_engine: TtsChoice = "default"
     tts_url: str = DEFAULT_TTS_URL
     tts_voice: str = ""  # a provider voice id; "" = the provider's default
     tts_token: str = field(default="", repr=False)
+    tts_start_command: str = field(default="", repr=False)  # "" = VoiceMate never starts the provider
     assistant: AssistantSettings = field(default_factory=AssistantSettings)
 
 

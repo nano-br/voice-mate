@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-10-29 21:45-0300\n"
+"POT-Creation-Date: 2026-11-03 16:38-0300\n"
 "PO-Revision-Date: 2026-10-01 16:49-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: es\n"
@@ -141,13 +141,13 @@ msgstr "[VoiceMate] No se pudo detener el listener: {exc}"
 msgid "[VoiceMate] ⚠ TTS options ignored: they must be a JSON object."
 msgstr "[VoiceMate] ⚠ Opciones de TTS ignoradas: deben ser un objeto JSON."
 
-#: app/cli/config_builder.py:165
+#: app/cli/config_builder.py:171
 msgid "[VoiceMate] ⚠ Claude flow requires input-method=keyboard. Disabling."
 msgstr ""
 "[VoiceMate] ⚠ El flujo de Claude requiere input-method=keyboard. "
 "Desactivándolo."
 
-#: app/cli/config_builder.py:184
+#: app/cli/config_builder.py:190
 msgid ""
 "[VoiceMate] ⚠ --claude-no-system-prompt and --claude-system-prompt were "
 "passed together; using --claude-no-system-prompt."
@@ -155,12 +155,12 @@ msgstr ""
 "[VoiceMate] ⚠ Se pasaron --claude-no-system-prompt y --claude-system-"
 "prompt juntos; usando --claude-no-system-prompt."
 
-#: app/cli/config_builder.py:301
+#: app/cli/config_builder.py:308
 #, python-brace-format
 msgid "[VoiceMate] Auto-seed removed: {path}"
 msgstr "[VoiceMate] Auto-seed eliminado: {path}"
 
-#: app/cli/config_builder.py:304
+#: app/cli/config_builder.py:311
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Failed to remove {path}: {exc}"
 msgstr "[VoiceMate] ⚠ No se pudo eliminar {path}: {exc}"
@@ -447,30 +447,30 @@ msgstr "Otra aplicación ya usa {hotkey}."
 msgid "Could not change the start at login setting."
 msgstr "No se pudo cambiar la opción de iniciar al entrar en la sesión."
 
-#: app/companion/assistant/service.py:350 app/companion/controller.py:1080
+#: app/companion/assistant/service.py:350 app/companion/controller.py:1086
 #, python-brace-format
 msgid "No voice available: {reason}"
 msgstr "No hay voz disponible: {reason}"
 
-#: app/companion/controller.py:1082
+#: app/companion/controller.py:1088
 #, python-brace-format
 msgid "VoiceMate speaks with the voices of Windows. Voices found: {count}."
 msgstr "VoiceMate habla con las voces de Windows. Voces encontradas: {count}."
 
-#: app/companion/controller.py:1084
+#: app/companion/controller.py:1090
 #, python-brace-format
 msgid "The engine speaks with {name}. Voices found: {count}."
 msgstr "El motor habla con {name}. Voces encontradas: {count}."
 
-#: app/companion/controller.py:1114
+#: app/companion/controller.py:1120
 msgid "Hello! This is how the assistant sounds with this voice."
 msgstr "¡Hola! Así suena el asistente con esta voz."
 
-#: app/companion/controller.py:1117
+#: app/companion/controller.py:1123
 msgid "Playing a test sentence with a voice of Windows."
 msgstr "Reproduciendo una frase de prueba con una voz de Windows."
 
-#: app/companion/controller.py:1119
+#: app/companion/controller.py:1125
 msgid "Playing a test sentence with the engine's voice."
 msgstr "Reproduciendo una frase de prueba con la voz del motor."
 
@@ -1040,140 +1040,144 @@ msgstr ""
 "VoiceMate está en ejecución, ciérralo y quítalo de shell:startup, o elige"
 " otros atajos en Configuración."
 
-#: app/companion/settings_store.py:122 app/companion/ui/settings_window.py:1330
+#: app/companion/settings_store.py:127 app/companion/ui/settings_window.py:1330
 msgid "Language"
 msgstr "Idioma"
 
 #: app/companion/assistant/settings_catalog.py:298
-#: app/companion/settings_store.py:123 app/companion/ui/settings_window.py:1331
+#: app/companion/settings_store.py:128 app/companion/ui/settings_window.py:1331
 msgid "Dictation language"
 msgstr "Idioma de dictado"
 
-#: app/companion/settings_store.py:124
+#: app/companion/settings_store.py:129
 msgid "Engine mode"
 msgstr "Modo del motor"
 
-#: app/companion/settings_store.py:125
+#: app/companion/settings_store.py:130
 msgid "WSL restart"
 msgstr "Reinicio de WSL"
 
 #: app/companion/assistant/settings_catalog.py:316
-#: app/companion/settings_store.py:126 app/companion/ui/settings_window.py:1332
+#: app/companion/settings_store.py:131 app/companion/ui/settings_window.py:1332
 msgid "Notifications"
 msgstr "Notificaciones"
 
-#: app/companion/settings_store.py:127 app/companion/ui/settings_window.py:1618
+#: app/companion/settings_store.py:132 app/companion/ui/settings_window.py:1631
 msgid "Hotkeys"
 msgstr "Atajos"
 
 #: app/companion/assistant/settings_catalog.py:307
-#: app/companion/settings_store.py:128 app/companion/ui/settings_window.py:1293
+#: app/companion/settings_store.py:133 app/companion/ui/settings_window.py:1293
 #: app/companion/ui/settings_window.py:1337 app/companion/ui/tray.py:111
 msgid "Transcription"
 msgstr "Transcripción"
 
-#: app/companion/settings_store.py:129 app/companion/ui/settings_window.py:1338
+#: app/companion/settings_store.py:134 app/companion/ui/settings_window.py:1338
 msgid "CPU model"
 msgstr "Modelo de la CPU"
 
-#: app/companion/settings_store.py:130 app/companion/ui/settings_window.py:1339
+#: app/companion/settings_store.py:135 app/companion/ui/settings_window.py:1339
 msgid "GPU model"
 msgstr "Modelo de la GPU"
 
 #: app/companion/assistant/settings_catalog.py:110
-#: app/companion/settings_store.py:131 app/companion/ui/settings_window.py:875
+#: app/companion/settings_store.py:136 app/companion/ui/settings_window.py:875
 msgid "Assistant mode"
 msgstr "Modo del asistente"
 
 #: app/companion/assistant/settings_catalog.py:120
-#: app/companion/settings_store.py:132
+#: app/companion/settings_store.py:137
 msgid "Assistant model"
 msgstr "Modelo del asistente"
 
 #: app/companion/assistant/settings_catalog.py:130
-#: app/companion/settings_store.py:133
+#: app/companion/settings_store.py:138
 msgid "Assistant effort"
 msgstr "Esfuerzo del asistente"
 
 #: app/companion/assistant/settings_catalog.py:220
-#: app/companion/settings_store.py:134 app/companion/ui/settings_window.py:885
+#: app/companion/settings_store.py:139 app/companion/ui/settings_window.py:885
 msgid "Expression tags"
 msgstr "Etiquetas de expresión"
 
 #: app/companion/assistant/settings_catalog.py:140
-#: app/companion/settings_store.py:135 app/companion/ui/settings_window.py:881
+#: app/companion/settings_store.py:140 app/companion/ui/settings_window.py:881
 msgid "Permissions"
 msgstr "Permisos"
 
 #: app/companion/assistant/settings_catalog.py:255
-#: app/companion/settings_store.py:136 app/companion/ui/settings_window.py:890
+#: app/companion/settings_store.py:141 app/companion/ui/settings_window.py:890
 msgid "Skill language"
 msgstr "Idioma de la skill"
 
 #: app/companion/assistant/settings_catalog.py:150
-#: app/companion/settings_store.py:137 app/companion/ui/settings_window.py:882
+#: app/companion/settings_store.py:142 app/companion/ui/settings_window.py:882
 msgid "Answers from other conversations"
 msgstr "Respuestas de otras conversaciones"
 
 #: app/companion/assistant/settings_catalog.py:159
-#: app/companion/settings_store.py:138 app/companion/ui/settings_window.py:879
+#: app/companion/settings_store.py:143 app/companion/ui/settings_window.py:879
 msgid "Model of new conversations"
 msgstr "Modelo de las conversaciones nuevas"
 
 #: app/companion/assistant/settings_catalog.py:168
-#: app/companion/settings_store.py:139 app/companion/ui/settings_window.py:880
+#: app/companion/settings_store.py:144 app/companion/ui/settings_window.py:880
 msgid "Effort of new conversations"
 msgstr "Esfuerzo de las conversaciones nuevas"
 
 #: app/companion/assistant/settings_catalog.py:238
-#: app/companion/settings_store.py:140 app/companion/ui/settings_window.py:736
+#: app/companion/settings_store.py:145 app/companion/ui/settings_window.py:736
 #: app/companion/ui/settings_window.py:887
 msgid "Personality"
 msgstr "Personalidad"
 
 #: app/companion/assistant/settings_catalog.py:185
-#: app/companion/settings_store.py:141 app/companion/ui/settings_window.py:700
+#: app/companion/settings_store.py:146 app/companion/ui/settings_window.py:700
 msgid "Speak the replies"
 msgstr "Leer las respuestas en voz alta"
 
 #: app/companion/assistant/settings_catalog.py:194
-#: app/companion/settings_store.py:142 app/companion/ui/settings_window.py:883
+#: app/companion/settings_store.py:147 app/companion/ui/settings_window.py:883
 msgid "Voice source"
 msgstr "Origen de la voz"
 
 #: app/companion/assistant/settings_catalog.py:204
-#: app/companion/settings_store.py:143 app/companion/ui/settings_window.py:884
+#: app/companion/settings_store.py:148 app/companion/ui/settings_window.py:884
 msgid "Assistant voice"
 msgstr "Voz del asistente"
 
-#: app/companion/settings_store.py:144 app/companion/ui/settings_window.py:1506
+#: app/companion/settings_store.py:149 app/companion/ui/settings_window.py:1516
 msgid "Voice engine"
 msgstr "Motor de voz"
 
-#: app/companion/settings_store.py:145 app/companion/ui/settings_window.py:1507
+#: app/companion/settings_store.py:150 app/companion/ui/settings_window.py:1517
 msgid "Provider address"
 msgstr "Dirección del proveedor"
 
-#: app/companion/settings_store.py:146 app/companion/ui/settings_window.py:1508
-#: app/companion/ui/settings_window.py:1620
+#: app/companion/settings_store.py:151 app/companion/ui/settings_window.py:1518
+#: app/companion/ui/settings_window.py:1633
 msgid "Voice"
 msgstr "Voz"
 
-#: app/companion/settings_store.py:147 app/companion/ui/settings_window.py:1509
+#: app/companion/settings_store.py:152 app/companion/ui/settings_window.py:1519
 msgid "Token"
 msgstr "Token"
 
-#: app/companion/settings_store.py:584 app/companion/settings_store.py:614
-#: app/companion/settings_store.py:630 app/companion/settings_store.py:660
+#: app/companion/settings_store.py:153 app/companion/ui/settings_window.py:1520
+msgid "Start command"
+msgstr "Comando de inicio"
+
+#: app/companion/settings_store.py:596 app/companion/settings_store.py:628
+#: app/companion/settings_store.py:644 app/companion/settings_store.py:674
 #, python-brace-format
 msgid "Invalid value for {setting}."
 msgstr "Valor no válido para {setting}."
 
-#: app/companion/settings_store.py:588
+#: app/companion/settings_store.py:600
 msgid "This engine mode is not available on this system."
 msgstr "Este modo del motor no está disponible en este sistema."
 
-#: app/companion/settings_store.py:590
+#: app/companion/settings_store.py:602
 msgid ""
 "The engine folder cannot contain quotes, $, backticks, backslashes or "
 "line breaks."
@@ -1181,11 +1185,11 @@ msgstr ""
 "La carpeta del motor no puede contener comillas, $, acentos graves, "
 "barras invertidas ni saltos de línea."
 
-#: app/companion/settings_store.py:592
+#: app/companion/settings_store.py:604
 msgid "The WSL distribution name is not valid."
 msgstr "El nombre de la distribución de WSL no es válido."
 
-#: app/companion/settings_store.py:594
+#: app/companion/settings_store.py:606
 msgid ""
 "The provider address must look like http://127.0.0.1:8765 (no spaces, "
 "quotes or $)."
@@ -1193,7 +1197,7 @@ msgstr ""
 "La dirección del proveedor debe parecerse a http://127.0.0.1:8765 (sin "
 "espacios, comillas ni $)."
 
-#: app/companion/settings_store.py:596
+#: app/companion/settings_store.py:608
 msgid ""
 "The voice id cannot contain spaces, quotes, $, backticks, backslashes or "
 "line breaks."
@@ -1201,11 +1205,15 @@ msgstr ""
 "El id de la voz no puede contener espacios, comillas, $, acentos graves, "
 "barras invertidas ni saltos de línea."
 
-#: app/companion/settings_store.py:598
+#: app/companion/settings_store.py:610
 msgid "The token cannot contain line breaks or other control characters."
 msgstr "El token no puede contener saltos de línea ni otros caracteres de control."
 
-#: app/companion/settings_store.py:600
+#: app/companion/settings_store.py:612
+msgid "The start command must be a single line."
+msgstr "El comando de inicio debe ocupar una sola línea."
+
+#: app/companion/settings_store.py:614
 msgid ""
 "The assistant voice cannot contain line breaks or other control "
 "characters."
@@ -1213,160 +1221,160 @@ msgstr ""
 "La voz del asistente no puede contener saltos de línea ni otros "
 "caracteres de control."
 
-#: app/companion/settings_store.py:602
+#: app/companion/settings_store.py:616
 #, python-brace-format
 msgid "The port must be between {low} and {high}."
 msgstr "El puerto debe estar entre {low} y {high}."
 
-#: app/companion/settings_store.py:604 app/companion/settings_store.py:626
+#: app/companion/settings_store.py:618 app/companion/settings_store.py:640
 msgid "The volume must be between 0 and 1."
 msgstr "El volumen debe estar entre 0 y 1."
 
-#: app/companion/settings_store.py:611 app/companion/ui/demo_controller.py:391
+#: app/companion/settings_store.py:625 app/companion/ui/demo_controller.py:391
 #, python-brace-format
 msgid "{hotkey} is not a valid hotkey."
 msgstr "{hotkey} no es un atajo válido."
 
-#: app/companion/settings_store.py:617
+#: app/companion/settings_store.py:631
 #, python-brace-format
 msgid "The action {flow} has more than one hotkey."
 msgstr "La acción {flow} tiene más de un atajo."
 
-#: app/companion/settings_store.py:619
+#: app/companion/settings_store.py:633
 #, python-brace-format
 msgid "{hotkey} is assigned to more than one action."
 msgstr "{hotkey} está asignado a más de una acción."
 
-#: app/companion/settings_store.py:637
+#: app/companion/settings_store.py:651
 #, python-brace-format
 msgid "The sound file for the {cue} cue was not found."
 msgstr "No se encontró el archivo de sonido de la señal {cue}."
 
-#: app/companion/settings_store.py:639
+#: app/companion/settings_store.py:653
 #, python-brace-format
 msgid "The sound file for the {cue} cue must be a PCM 8 or 16-bit WAV file."
 msgstr "El archivo de sonido de la señal {cue} debe ser un WAV PCM de 8 o 16 bits."
 
-#: app/companion/settings_store.py:642
+#: app/companion/settings_store.py:656
 #, python-brace-format
 msgid "The sound file for the {cue} cue is longer than {seconds} seconds."
 msgstr "El archivo de sonido de la señal {cue} dura más de {seconds} segundos."
 
-#: app/companion/settings_store.py:662
+#: app/companion/settings_store.py:676
 msgid "Choose the personality file, or another personality option."
 msgstr "Elige el archivo de personalidad, u otra opción de personalidad."
 
-#: app/companion/settings_store.py:668
+#: app/companion/settings_store.py:682
 msgid "The personality file must be an existing Markdown (.md) file."
 msgstr "El archivo de personalidad debe ser un archivo Markdown (.md) existente."
 
-#: app/companion/settings_store.py:670
+#: app/companion/settings_store.py:684
 msgid "The custom skill folder must contain a SKILL.md file."
 msgstr "La carpeta de la skill personalizada debe contener un archivo SKILL.md."
 
-#: app/companion/tts.py:89
+#: app/companion/tts.py:102
 #, python-brace-format
 msgid "Could not reach the provider at {url}. Is it running?"
 msgstr "No se pudo contactar con el proveedor en {url}. ¿Está en ejecución?"
 
-#: app/companion/tts.py:91
+#: app/companion/tts.py:104
 msgid "The provider refused the token. Check the Token field."
 msgstr "El proveedor rechazó el token. Revisa el campo Token."
 
-#: app/companion/tts.py:93
+#: app/companion/tts.py:106
 #, python-brace-format
 msgid "That address is not a compatible VoiceMate TTS provider: {detail}"
 msgstr "Esa dirección no es un proveedor de TTS compatible con VoiceMate: {detail}"
 
-#: app/companion/tts.py:95
+#: app/companion/tts.py:108
 msgid "The provider is busy. Try again in a moment."
 msgstr "El proveedor está ocupado. Inténtalo de nuevo en un momento."
 
-#: app/companion/tts.py:97
+#: app/companion/tts.py:110
 msgid "The provider is still loading its models. Try again in a moment."
 msgstr ""
 "El proveedor todavía está cargando sus modelos. Inténtalo de nuevo en un "
 "momento."
 
-#: app/companion/tts.py:99
+#: app/companion/tts.py:112
 #, python-brace-format
 msgid ""
 "The provider does not know the voice '{voice}'. Load the voices and pick "
 "one."
 msgstr "El proveedor no conoce la voz '{voice}'. Carga las voces y elige una."
 
-#: app/companion/tts.py:101
+#: app/companion/tts.py:114
 #, python-brace-format
 msgid "The provider refused the request: {detail}"
 msgstr "El proveedor rechazó la solicitud: {detail}"
 
-#: app/companion/tts.py:102
+#: app/companion/tts.py:115
 #, python-brace-format
 msgid "The provider failed: {detail}"
 msgstr "El proveedor falló: {detail}"
 
-#: app/companion/tts.py:114 app/companion/tts.py:135
+#: app/companion/tts.py:127 app/companion/tts.py:148
 msgid "The provider address must look like http://127.0.0.1:8765."
 msgstr "La dirección del proveedor debe parecerse a http://127.0.0.1:8765."
 
-#: app/companion/tts.py:120
+#: app/companion/tts.py:133
 #, python-brace-format
 msgid "Connected to {name}. Voices found: {count}."
 msgstr "Conectado a {name}. Voces encontradas: {count}."
 
-#: app/companion/tts.py:143
+#: app/companion/tts.py:156
 msgid "Hello! This is how VoiceMate sounds with this voice."
 msgstr "¡Hola! Así suena VoiceMate con esta voz."
 
-#: app/companion/tts.py:163
+#: app/companion/tts.py:176
 msgid "The provider sent no audio."
 msgstr "El proveedor no envió audio."
 
-#: app/companion/tts.py:167
+#: app/companion/tts.py:180
 #, python-brace-format
 msgid "Playing a test sentence from {name}."
 msgstr "Reproduciendo una frase de prueba de {name}."
 
-#: app/companion/voice.py:186
+#: app/companion/voice.py:192
 msgid "the engine is not running"
 msgstr "el motor no está en ejecución"
 
-#: app/companion/voice.py:188
+#: app/companion/voice.py:194
 msgid "the engine refused the access token"
 msgstr "el motor rechazó el token de acceso"
 
-#: app/companion/voice.py:190
+#: app/companion/voice.py:196
 msgid "the engine is too old for the assistant voice"
 msgstr "el motor es demasiado antiguo para la voz del asistente"
 
-#: app/companion/voice.py:192
+#: app/companion/voice.py:198
 msgid "the voice engine set up in the engine cannot speak for the assistant"
 msgstr "el motor de voz configurado en el motor no puede hablar por el asistente"
 
-#: app/companion/voice.py:194
+#: app/companion/voice.py:200
 msgid "text to speech is off in the engine"
 msgstr "la síntesis de voz está desactivada en el motor"
 
-#: app/companion/voice.py:196
+#: app/companion/voice.py:202
 msgid "the engine is still loading"
 msgstr "el motor todavía está cargando"
 
-#: app/companion/voice.py:198
+#: app/companion/voice.py:204
 #, python-brace-format
 msgid "the engine's voice is not available ({detail})"
 msgstr "la voz del motor no está disponible ({detail})"
 
-#: app/companion/voice.py:199
+#: app/companion/voice.py:205
 #, python-brace-format
 msgid "the engine's voice failed ({detail})"
 msgstr "la voz del motor falló ({detail})"
 
-#: app/companion/voice.py:512
+#: app/companion/voice.py:519
 #, python-brace-format
 msgid "the engine has no voice '{voice}'. Pick one in Settings, Assistant"
 msgstr "el motor no tiene la voz '{voice}'. Elige una en Configuración, Asistente"
 
-#: app/companion/voice.py:698
+#: app/companion/voice.py:713
 msgid "no audio output is available on this computer"
 msgstr "no hay ninguna salida de audio disponible en este equipo"
 
@@ -1565,7 +1573,7 @@ msgstr "Actualizar el perfil de Claude Desktop automáticamente"
 
 #: app/companion/assistant/settings_catalog.py:264
 #: app/companion/ui/settings_window.py:511
-#: app/companion/ui/settings_window.py:1619
+#: app/companion/ui/settings_window.py:1632
 msgid "Sounds"
 msgstr "Sonidos"
 
@@ -1648,7 +1656,7 @@ msgstr ""
 "vuelve a iniciar el motor."
 
 #: app/companion/ui/app.py:213 app/companion/ui/app.py:312
-#: app/companion/ui/app.py:415 app/companion/ui/settings_window.py:1635
+#: app/companion/ui/app.py:415 app/companion/ui/settings_window.py:1648
 #: app/companion/ui/status_window.py:144 app/companion/ui/tray.py:93
 msgid "Cancel"
 msgstr "Cancelar"
@@ -1745,7 +1753,7 @@ msgstr "Tú"
 
 #: app/companion/ui/assistant_window.py:82
 #: app/companion/ui/settings_window.py:242
-#: app/companion/ui/settings_window.py:1621
+#: app/companion/ui/settings_window.py:1634
 #: app/companion/ui/status_window.py:149 app/companion/ui/tray.py:88
 msgid "Assistant"
 msgstr "Asistente"
@@ -2478,7 +2486,7 @@ msgid "Provider address:"
 msgstr "Dirección del proveedor:"
 
 #: app/companion/ui/settings_window.py:1468
-#: app/companion/ui/settings_window.py:1541
+#: app/companion/ui/settings_window.py:1554
 msgid "Provider default"
 msgstr "Predeterminada del proveedor"
 
@@ -2504,19 +2512,37 @@ msgstr ""
 msgid "Token:"
 msgstr "Token:"
 
-#: app/companion/ui/settings_window.py:1481
+#: app/companion/ui/settings_window.py:1482
+msgid "None (start the provider yourself)"
+msgstr "Ninguno (inicias tú el proveedor)"
+
+#: app/companion/ui/settings_window.py:1485
+msgid ""
+"Optional. The command that starts the provider, run by the engine (inside"
+" WSL when the engine runs there) whenever the provider does not answer: "
+"it then starts with VoiceMate."
+msgstr ""
+"Opcional. El comando que inicia el proveedor, ejecutado por el motor "
+"(dentro de WSL cuando el motor se ejecuta allí) cada vez que el proveedor"
+" no responde: así se inicia junto con VoiceMate."
+
+#: app/companion/ui/settings_window.py:1489
+msgid "Start command:"
+msgstr "Comando de inicio:"
+
+#: app/companion/ui/settings_window.py:1490
 msgid "Test voice"
 msgstr "Probar voz"
 
-#: app/companion/ui/settings_window.py:1482
+#: app/companion/ui/settings_window.py:1491
 msgid "Speaks a short sentence with the provider and voice above."
 msgstr "Dice una frase corta con el proveedor y la voz de arriba."
 
-#: app/companion/ui/settings_window.py:1597
+#: app/companion/ui/settings_window.py:1610
 msgid "VoiceMate Settings"
 msgstr "Configuración de VoiceMate"
 
-#: app/companion/ui/settings_window.py:1608
+#: app/companion/ui/settings_window.py:1621
 msgid ""
 "These settings were saved by a newer version of VoiceMate. They are shown"
 " read-only."
@@ -2524,27 +2550,27 @@ msgstr ""
 "Esta configuración la guardó una versión más nueva de VoiceMate y se "
 "muestra solo para lectura."
 
-#: app/companion/ui/settings_window.py:1622
+#: app/companion/ui/settings_window.py:1635
 msgid "General"
 msgstr "General"
 
-#: app/companion/ui/settings_window.py:1634
+#: app/companion/ui/settings_window.py:1647
 msgid "OK"
 msgstr "Aceptar"
 
-#: app/companion/ui/settings_window.py:1636
+#: app/companion/ui/settings_window.py:1649
 msgid "Apply"
 msgstr "Aplicar"
 
-#: app/companion/ui/settings_window.py:1681
+#: app/companion/ui/settings_window.py:1694
 msgid "Contacting the provider..."
 msgstr "Contactando con el proveedor..."
 
-#: app/companion/ui/settings_window.py:1757
+#: app/companion/ui/settings_window.py:1770
 msgid "Checking the transcription mode..."
 msgstr "Comprobando el modo de transcripción..."
 
-#: app/companion/ui/settings_window.py:1771
+#: app/companion/ui/settings_window.py:1784
 msgid ""
 "The transcription mode is not ready (not installed, or another change is "
 "under way), so nothing was changed."
@@ -2552,20 +2578,20 @@ msgstr ""
 "El modo de transcripción no está listo (no instalado, u otro cambio en "
 "curso), así que no se cambió nada."
 
-#: app/companion/ui/settings_window.py:1778
+#: app/companion/ui/settings_window.py:1791
 msgid "Saving..."
 msgstr "Guardando..."
 
-#: app/companion/ui/settings_window.py:1790
+#: app/companion/ui/settings_window.py:1803
 #, python-brace-format
 msgid "Unexpected error: {error}"
 msgstr "Error inesperado: {error}"
 
-#: app/companion/ui/settings_window.py:1797
+#: app/companion/ui/settings_window.py:1810
 msgid "The settings were not saved:"
 msgstr "La configuración no se guardó:"
 
-#: app/companion/ui/settings_window.py:1809
+#: app/companion/ui/settings_window.py:1822
 msgid "Settings saved."
 msgstr "Configuración guardada."
 
@@ -3334,13 +3360,13 @@ msgstr ""
 msgid "[VoiceMate] ⚠ VAD failed (using full audio): {exc}"
 msgstr "[VoiceMate] ⚠ Falló el VAD (usando el audio completo): {exc}"
 
-#: app/features/tts/external_speaker.py:111
-#: app/features/tts/external_speaker.py:168
+#: app/features/tts/external_speaker.py:118
+#: app/features/tts/external_speaker.py:177
 #, python-brace-format
 msgid "[ExternalSpeaker] warmup skipped: {detail}"
 msgstr "[ExternalSpeaker] calentamiento omitido: {detail}"
 
-#: app/features/tts/external_speaker.py:119
+#: app/features/tts/external_speaker.py:126
 msgid ""
 "[ExternalSpeaker] ⚠ AudioPlayer drain timed out, audio may have been left"
 " incomplete."
@@ -3348,27 +3374,27 @@ msgstr ""
 "[ExternalSpeaker] ⚠ AudioPlayer agotó el tiempo al vaciar; el audio puede"
 " haber quedado incompleto."
 
-#: app/features/tts/external_speaker.py:219
+#: app/features/tts/external_speaker.py:230
 #, python-brace-format
 msgid "[ExternalSpeaker] Connected to '{name}' ({count} voices, {rate} Hz)."
 msgstr "[ExternalSpeaker] Conectado a '{name}' ({count} voces, {rate} Hz)."
 
-#: app/features/tts/external_speaker.py:234
+#: app/features/tts/external_speaker.py:245
 msgid "[ExternalSpeaker] The provider is loading, waiting for it..."
 msgstr "[ExternalSpeaker] El proveedor está cargando, esperando..."
 
-#: app/features/tts/external_speaker.py:272
-#: app/features/tts/external_speaker.py:323
+#: app/features/tts/external_speaker.py:283
+#: app/features/tts/external_speaker.py:336
 #, python-brace-format
 msgid "[ExternalSpeaker] error while speaking: {exc}"
 msgstr "[ExternalSpeaker] error al hablar: {exc}"
 
-#: app/features/tts/external_speaker.py:298
+#: app/features/tts/external_speaker.py:311
 #, python-brace-format
 msgid "[ExternalSpeaker] ⚠ {message}"
 msgstr "[ExternalSpeaker] ⚠ {message}"
 
-#: app/features/tts/external_speaker.py:362
+#: app/features/tts/external_speaker.py:375
 #, python-brace-format
 msgid ""
 "The TTS provider at {url} is not reachable ({detail}). Speech is off "
@@ -3377,7 +3403,7 @@ msgstr ""
 "El proveedor de TTS en {url} no está accesible ({detail}). La voz queda "
 "desactivada hasta que vuelva."
 
-#: app/features/tts/external_speaker.py:366
+#: app/features/tts/external_speaker.py:379
 msgid ""
 "The TTS provider rejected the token. Set it in the settings or in "
 "VOICEMATE_TTS_TOKEN."
@@ -3385,17 +3411,17 @@ msgstr ""
 "El proveedor de TTS rechazó el token. Defínelo en Configuración o en "
 "VOICEMATE_TTS_TOKEN."
 
-#: app/features/tts/external_speaker.py:368
+#: app/features/tts/external_speaker.py:381
 #, python-brace-format
 msgid "The service at {url} is not a compatible TTS provider: {detail}"
 msgstr "El servicio en {url} no es un proveedor de TTS compatible: {detail}"
 
-#: app/features/tts/external_speaker.py:370
+#: app/features/tts/external_speaker.py:383
 #, python-brace-format
 msgid "The TTS provider at {url} is not ready yet ({detail})."
 msgstr "El proveedor de TTS en {url} aún no está listo ({detail})."
 
-#: app/features/tts/external_speaker.py:371
+#: app/features/tts/external_speaker.py:384
 #, python-brace-format
 msgid "The TTS provider at {url} failed: {detail}"
 msgstr "El proveedor de TTS en {url} falló: {detail}"
@@ -3561,6 +3587,21 @@ msgid ""
 msgstr ""
 "[OmniVoiceSpeaker] VRAM ({label}): alloc={allocated:.2f}GB, "
 "reserved={reserved:.2f}GB"
+
+#: app/features/tts/provider_launcher.py:103
+msgid ""
+"[ExternalSpeaker] The TTS provider is not running: starting it with the "
+"configured command."
+msgstr ""
+"[ExternalSpeaker] El proveedor de voz no está en marcha: iniciándolo con "
+"el comando configurado."
+
+#: app/features/tts/provider_launcher.py:108
+#, python-brace-format
+msgid "[ExternalSpeaker] ⚠ The TTS provider start command failed: {detail}"
+msgstr ""
+"[ExternalSpeaker] ⚠ Falló el comando de inicio del proveedor de voz: "
+"{detail}"
 
 #: app/features/tts/voxcpm_speaker.py:75
 #, python-brace-format
@@ -4063,33 +4104,33 @@ msgstr ""
 "[VoiceMate] ⚠ Falló el portapapeles '{writer_name}' ({exc}); probando los"
 " demás mecanismos..."
 
-#: app/setup/ct2_rocm.py:45
+#: app/setup/ct2_rocm.py:48
 #, python-brace-format
 msgid "⚠ Missing tools for the CT2-ROCm build: {tools}"
 msgstr "⚠ Faltan herramientas para compilar CT2-ROCm: {tools}"
 
-#: app/setup/ct2_rocm.py:46
+#: app/setup/ct2_rocm.py:49
 #, python-brace-format
 msgid "  Install with: {hint}"
 msgstr "  Instala con: {hint}"
 
-#: app/setup/ct2_rocm.py:47
+#: app/setup/ct2_rocm.py:50
 msgid "  (on WSL2, also install ROCm: https://rocm.docs.amd.com)"
 msgstr "  (en WSL2, instala también ROCm: https://rocm.docs.amd.com)"
 
-#: app/setup/ct2_rocm.py:50
+#: app/setup/ct2_rocm.py:53
 msgid "⚠ GPU gfx target not detected (rocminfo); using the fork's default list."
 msgstr ""
 "⚠ No se detectó el target gfx de la GPU (rocminfo); usando la lista "
 "predeterminada del fork."
 
-#: app/setup/ct2_rocm.py:60
+#: app/setup/ct2_rocm.py:63
 msgid "⚠ Build completed but validation failed (import/GPU). See messages above."
 msgstr ""
 "⚠ La compilación terminó, pero la validación falló (import/GPU). Revisa "
 "los mensajes anteriores."
 
-#: app/setup/ct2_rocm.py:67
+#: app/setup/ct2_rocm.py:70
 msgid ""
 "✓ CTranslate2-ROCm installed and validated (faster-whisper accelerates on"
 " the AMD GPU)."
@@ -4097,50 +4138,50 @@ msgstr ""
 "✓ CTranslate2-ROCm instalado y validado (faster-whisper acelera en la GPU"
 " AMD)."
 
-#: app/setup/ct2_rocm.py:88
+#: app/setup/ct2_rocm.py:91
 #, python-brace-format
 msgid "⚠ CT2-ROCm validation did not run: {exc}"
 msgstr "⚠ La validación de CT2-ROCm no se ejecutó: {exc}"
 
-#: app/setup/ct2_rocm.py:125
+#: app/setup/ct2_rocm.py:131
 #, python-brace-format
 msgid "Source already cloned at {path} (reusing)."
 msgstr "Código fuente ya clonado en {path} (reutilizando)."
 
-#: app/setup/ct2_rocm.py:129
+#: app/setup/ct2_rocm.py:135
 msgid "Cloning CTranslate2-rocm (with submodules)..."
 msgstr "Clonando CTranslate2-rocm (con submódulos)..."
 
-#: app/setup/ct2_rocm.py:227 app/setup/ct2_rocm.py:304
+#: app/setup/ct2_rocm.py:238 app/setup/ct2_rocm.py:315
 #, python-brace-format
 msgid "⚠ Failed to execute: {exc}"
 msgstr "⚠ No se pudo ejecutar: {exc}"
 
-#: app/setup/ct2_rocm.py:251
+#: app/setup/ct2_rocm.py:262
 msgid "Configuring build (cmake)..."
 msgstr "Configurando la compilación (cmake)..."
 
-#: app/setup/ct2_rocm.py:256
+#: app/setup/ct2_rocm.py:267
 #, python-brace-format
 msgid ""
 "Compiling (parallel={jobs}; this can take a LONG time — grab a coffee "
 "☕)..."
 msgstr "Compilando (parallel={jobs}; esto puede tardar MUCHO, tómate un café ☕)..."
 
-#: app/setup/ct2_rocm.py:262
+#: app/setup/ct2_rocm.py:273
 #, python-brace-format
 msgid "Installing into {path}..."
 msgstr "Instalando en {path}..."
 
-#: app/setup/ct2_rocm.py:276
+#: app/setup/ct2_rocm.py:287
 msgid "Installing the build requirements of the python wrapper..."
 msgstr "Instalando los requisitos de compilación del wrapper de python..."
 
-#: app/setup/ct2_rocm.py:293
+#: app/setup/ct2_rocm.py:304
 msgid "Installing the CTranslate2-ROCm python wrapper into the venv..."
 msgstr "Instalando el wrapper de Python de CTranslate2-ROCm en el venv..."
 
-#: app/setup/ct2_rocm.py:307
+#: app/setup/ct2_rocm.py:318
 #, python-brace-format
 msgid "⚠ Command returned code {code}."
 msgstr "⚠ El comando devolvió el código {code}."

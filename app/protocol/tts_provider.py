@@ -22,6 +22,8 @@ PROTOCOL_NAME: Final = "voicemate-tts"
 PROTOCOL_VERSION: Final = 1
 DEFAULT_URL: Final = "http://127.0.0.1:8765"
 TOKEN_ENV: Final = "VOICEMATE_TTS_TOKEN"
+# The command that starts the provider when it does not answer (`app.features.tts.provider_launcher`).
+START_COMMAND_ENV: Final = "VOICEMATE_TTS_START_COMMAND"
 
 FORMAT_S16: Final = "pcm_s16le"
 FORMAT_F32: Final = "pcm_f32le"

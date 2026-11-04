@@ -14,6 +14,9 @@ is not an error that crashes the turn: the speaker reports itself inactive for a
 As a `PcmSynthesizer` it is also the engine's `/tts` voice for the companion: `open_pcm` relays
 the provider's stream as chunks instead of playing it, so the companion never needs to reach
 the provider itself (inside or outside WSL).
+
+With `external_start_command` set, a provider that does not answer is started by the engine
+(`ProviderLauncher`): once when the speaker is built, and again whenever it is found unreachable.
 """
 
 from __future__ import annotations
@@ -29,6 +32,7 @@ from numpy.typing import NDArray
 from app.core.config import TTSConfig
 from app.features.tts.audio_player import AudioSink, create_audio_player
 from app.features.tts.pcm import PcmInfo, PcmVoice, SynthesisError
+from app.features.tts.provider_launcher import ProviderLauncher
 from app.i18n import _
 from app.protocol.tts_provider import (
     FEATURE_EXPRESSION_TAGS,
@@ -59,9 +63,12 @@ class ExternalSpeaker:
         *,
         client: ProviderClient | None = None,
         player: AudioSink | None = None,
+        launcher: ProviderLauncher | None = None,
     ) -> None:
         self._config = config
         self._client = client or ProviderClient(config.external_url, config.external_token or None)
+        self._launcher = launcher or ProviderLauncher(config.external_start_command, self._client.health)
+        self._launcher.start_soon()  # with the engine: the provider is loading by the first sentence
         self._player: AudioSink = player or create_audio_player()
         self._stop_event = threading.Event()
         self._speak_lock = threading.Lock()  # one request at a time, in order
@@ -158,7 +165,9 @@ class ExternalSpeaker:
     def pcm_ready(self) -> bool:
         try:
             return self._client.health() == "ok"
-        except ProviderError:
+        except ProviderError as exc:
+            if exc.kind == "unreachable":
+                self._launcher.start_soon()
             return False
 
     def pcm_warmup(self) -> None:
@@ -194,6 +203,8 @@ class ExternalSpeaker:
         try:
             return self._client.info()
         except ProviderError as exc:
+            if exc.kind == "unreachable":
+                self._launcher.start_soon()
             raise _synthesis_error(exc, self._config.external_url) from exc
 
     # --- provider ----------------------------------------------------------------------------------------
@@ -281,6 +292,8 @@ class ExternalSpeaker:
         """Say once what is wrong and take the speaker out of play: for good when VoiceMate and
         the provider cannot work together, for a few seconds when it just did not answer."""
         permanent = exc.kind in ("protocol", "unauthorized") or exc.code in ("unknown_voice", "unsupported_format")
+        if exc.kind == "unreachable":
+            self._launcher.start_soon()
         with self._state_lock:
             if permanent:
                 self._failed = True
