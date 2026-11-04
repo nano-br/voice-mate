@@ -25,7 +25,7 @@ from app.features.tts.provider_launcher import (
     provider_env,
     spawn_detached,
 )
-from app.protocol.tts_provider import ProviderError
+from app.protocol.tts_provider import ErrorKind, ProviderError
 
 
 def wait_until(condition: object, timeout: float = 5.0) -> bool:
@@ -215,6 +215,24 @@ def test_a_provider_down_when_the_engine_attaches_its_speaker_does_not_turn_the_
     speaker._failed = True  # a provider that can never work is off for good
     endpoint.attach(speaker)
     assert endpoint.state == "off"
+    speaker.close()
+
+
+@pytest.mark.parametrize(
+    ("kind", "ready"),
+    [("unauthorized", True), ("protocol", True), ("rejected", True), ("server", False), ("unreachable", False)],
+)
+def test_only_what_can_pass_by_itself_reads_as_loading(
+    kind: ErrorKind, ready: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    url = f"http://127.0.0.1:{_free_port()}"
+    speaker = ExternalSpeaker(TTSConfig(engine="external", external_url=url), player=_NoPlayer())  # type: ignore[arg-type]
+
+    def health() -> str:
+        raise ProviderError(kind, "x")
+
+    monkeypatch.setattr(speaker._client, "health", health)
+    assert speaker.pcm_ready() is ready
     speaker.close()
 
 

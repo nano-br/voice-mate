@@ -479,7 +479,7 @@ class EngineVoice:
             error = self._say_on_engine(item)
             if error is not None and error[0].detail == _ENGINE_LOADING and self._local() is None and not self._waited:
                 error = self._wait_for_engine(item, error)
-                self._waited = error is not None
+                self._waited = error is not None and error[0].detail == _ENGINE_LOADING
             if error is None:
                 return
             self._down(error)
