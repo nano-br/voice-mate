@@ -603,6 +603,12 @@ def test_only_an_engine_loading_its_voice_is_worth_a_wait_and_others_do_not_use_
     rig.voice.notice("Cut short.", "en")
     assert wait_until(partial(_said, rig, 3))  # the engine went away during the wait: not spent
     assert slept and not rig.voice._waited
+    rig.voice._waited = True  # a wait ran out, and then the engine goes away (Apply restarts it)
+    monkeypatch.setattr(rig.voice, "_say_on_engine", partial(_fails_with, ProviderError("unreachable", "restarting")))
+    rig.clock.now += LOADING_WAIT_S
+    rig.voice.notice("Restarting.", "en")
+    assert wait_until(partial(_said, rig, 4))
+    assert not rig.voice._waited
 
 
 def _fails_with(error: ProviderError, _item: object) -> tuple[ProviderError, float]:

@@ -218,9 +218,13 @@ def test_a_provider_down_when_the_engine_attaches_its_speaker_does_not_turn_the_
     speaker.close()
 
 
+def _never_spawn(_command: str) -> subprocess.Popen[bytes]:
+    raise OSError(1, "not in this test")
+
+
 @pytest.mark.parametrize(
     ("kind", "ready"),
-    [("unauthorized", True), ("protocol", True), ("rejected", True), ("server", False), ("unreachable", False)],
+    [("unauthorized", True), ("protocol", True), ("rejected", True), ("unreachable", True), ("server", False)],
 )
 def test_only_what_can_pass_by_itself_reads_as_loading(
     kind: ErrorKind, ready: bool, monkeypatch: pytest.MonkeyPatch
@@ -233,6 +237,9 @@ def test_only_what_can_pass_by_itself_reads_as_loading(
 
     monkeypatch.setattr(speaker._client, "health", health)
     assert speaker.pcm_ready() is ready
+    if kind == "unreachable":  # with nothing to start it, it does not pass by itself; with a command it does
+        speaker._launcher = ProviderLauncher("start-it", health, spawn=_never_spawn)
+        assert speaker.pcm_ready() is False
     speaker.close()
 
 

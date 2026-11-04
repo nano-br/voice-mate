@@ -477,6 +477,8 @@ class EngineVoice:
             return
         if self._clock() >= self._down_until:
             error = self._say_on_engine(item)
+            if error is not None and error[0].detail != _ENGINE_LOADING:
+                self._waited = False  # not the same outage: the engine went away, or it is another problem
             if error is not None and error[0].detail == _ENGINE_LOADING and self._local() is None and not self._waited:
                 error = self._wait_for_engine(item, error)
                 self._waited = error is not None and error[0].detail == _ENGINE_LOADING

@@ -171,10 +171,11 @@ class ExternalSpeaker:
         try:
             return self._client.health() == "ok"
         except ProviderError as exc:
-            if exc.kind == "unreachable":
-                self._launcher.start_soon()
+            if exc.kind == "unreachable" and self._launcher.enabled:
+                self._launcher.start_soon()  # it is on its way: this one does pass by itself
+                return False
             # Only what can pass by itself reads as loading: the rest is said by the first sentence.
-            return exc.kind in ("unauthorized", "protocol", "rejected")
+            return exc.kind in ("unreachable", "unauthorized", "protocol", "rejected")
 
     def pcm_warmup(self) -> None:
         try:
