@@ -172,8 +172,11 @@ class ExternalSpeaker:
             return self._client.health() == "ok"
         except ProviderError as exc:
             if exc.kind == "unreachable" and self._launcher.enabled:
-                self._launcher.start_soon()  # it is on its way: this one does pass by itself
-                return False
+                self._launcher.start_soon()
+                # On its way, so this one does pass by itself. A bad address or a command that
+                # failed does not: like the rest, that is said by the first sentence.
+                if isinstance(exc.__cause__, (ConnectionRefusedError, TimeoutError)) and not self._launcher.failed:
+                    return False
             # Only what can pass by itself reads as loading: the rest is said by the first sentence.
             return exc.kind in ("unreachable", "unauthorized", "protocol", "rejected")
 

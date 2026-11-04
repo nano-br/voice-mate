@@ -166,6 +166,25 @@ def test_the_provider_does_not_inherit_the_engine_virtual_environment(monkeypatc
     assert not {"VIRTUAL_ENV", "POETRY_ACTIVE", "MAKEFLAGS"} & set(env)
 
 
+def test_the_provider_does_not_inherit_the_engine_gpu_tuning(monkeypatch: pytest.MonkeyPatch) -> None:
+    tuning = (
+        "MIOPEN_FIND_MODE",
+        "MIOPEN_USER_DB_PATH",
+        "PYTORCH_TUNABLEOP_ENABLED",
+        "PYTORCH_TUNABLEOP_FILENAME",
+        "PYTORCH_TUNABLEOP_MAX_TUNING_DURATION_MS",
+        "PYTORCH_TUNABLEOP_MAX_TUNING_ITERATIONS",
+        "PULSE_LATENCY_MSEC",
+        "CT2_CUDA_ALLOCATOR",
+    )
+    for name in tuning:
+        monkeypatch.setenv(name, "1")
+    monkeypatch.setenv("VOICEMATE_TEST_KEPT", "1")
+    env = provider_env()
+    assert not set(tuning) & set(env)
+    assert env["VOICEMATE_TEST_KEPT"] == "1"  # the rest of the environment goes along
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="the engine's shell on Linux and WSL")
 def test_the_command_runs_through_the_shell_detached_from_the_engine(tmp_path: Path) -> None:
     marker = tmp_path / "started"
@@ -222,6 +241,74 @@ def _never_spawn(_command: str) -> subprocess.Popen[bytes]:
     raise OSError(1, "not in this test")
 
 
+def _spawn_done(_command: str) -> subprocess.Popen[bytes]:
+    return Done()  # type: ignore[return-value]
+
+
+def _down() -> str:
+    raise _refused()
+
+
+def test_the_launcher_knows_when_the_last_run_of_the_command_failed() -> None:
+    clock = Clock()
+    processes: list[object] = [Failed(), Done()]
+
+    def spawn(_command: str) -> subprocess.Popen[bytes]:
+        return processes.pop(0)  # type: ignore[return-value]
+
+    launcher = ProviderLauncher("start-it", _down, spawn=spawn, clock=clock)
+    assert launcher.start_if_down()
+    assert wait_until(lambda: launcher.failed)
+    clock.now += RELAUNCH_AFTER_SECONDS + 1
+    assert launcher.start_if_down()
+    assert wait_until(lambda: not launcher.failed)
+
+    refused_to_run = ProviderLauncher("start-it", _down, spawn=_never_spawn)
+    assert not refused_to_run.start_if_down()
+    assert refused_to_run.failed
+
+
+def test_a_provider_that_ran_for_a_while_and_crashed_is_on_its_way_again() -> None:
+    clock = Clock()
+
+    def spawn(_command: str) -> subprocess.Popen[bytes]:
+        return Failed()  # type: ignore[return-value]
+
+    launcher = ProviderLauncher("start-it", _down, spawn=spawn, clock=clock)
+    assert launcher.start_if_down()
+    assert wait_until(lambda: launcher.failed)
+    clock.now += RELAUNCH_AFTER_SECONDS + 1  # the command can run again: a sentence waits for that run
+    assert not launcher.failed
+
+
+@pytest.mark.parametrize(
+    ("cause", "command_failed", "ready"),
+    [
+        (ConnectionRefusedError(), False, False),
+        (TimeoutError(), False, False),
+        (ConnectionRefusedError(), True, True),
+        (socket.gaierror(), False, True),
+    ],
+)
+def test_with_a_command_only_a_provider_on_its_way_reads_as_loading(
+    cause: OSError, command_failed: bool, ready: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    url = f"http://127.0.0.1:{_free_port()}"
+    speaker = ExternalSpeaker(TTSConfig(engine="external", external_url=url), player=_NoPlayer())  # type: ignore[arg-type]
+
+    def health() -> str:
+        error = ProviderError("unreachable", "x")
+        error.__cause__ = cause
+        raise error
+
+    monkeypatch.setattr(speaker._client, "health", health)
+    speaker._launcher = ProviderLauncher("start-it", health, spawn=_spawn_done, clock=Clock())
+    speaker._launcher._last_run = 100.0  # just run: the check below runs nothing new
+    speaker._launcher._failed = command_failed
+    assert speaker.pcm_ready() is ready
+    speaker.close()
+
+
 @pytest.mark.parametrize(
     ("kind", "ready"),
     [("unauthorized", True), ("protocol", True), ("rejected", True), ("unreachable", True), ("server", False)],
@@ -237,9 +324,6 @@ def test_only_what_can_pass_by_itself_reads_as_loading(
 
     monkeypatch.setattr(speaker._client, "health", health)
     assert speaker.pcm_ready() is ready
-    if kind == "unreachable":  # with nothing to start it, it does not pass by itself; with a command it does
-        speaker._launcher = ProviderLauncher("start-it", health, spawn=_never_spawn)
-        assert speaker.pcm_ready() is False
     speaker.close()
 
 

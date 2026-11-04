@@ -201,7 +201,7 @@ def explain(error: ProviderError) -> str:
         return _("the engine is too old for the assistant voice")
     if error.kind == "not_ready" and "not supported" in detail:
         return _("the voice engine set up in the engine cannot speak for the assistant")
-    if error.kind == "not_ready" and "off" in detail:
+    if error.kind == "not_ready" and detail.endswith("text to speech is off in the engine"):
         return _("text to speech is off in the engine")
     if error.kind == "not_ready" and "loading" in detail:
         return _("the engine is still loading")

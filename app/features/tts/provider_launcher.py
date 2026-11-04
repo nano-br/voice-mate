@@ -7,7 +7,7 @@ a provider set up this way starts with VoiceMate, and VoiceMate starts with Wind
 that is only slow to answer (a timeout) may well be running, so it is not started again.
 
 The command runs on the engine's side (inside WSL when the engine runs there), through the
-shell, without the engine's virtual environment, detached from the engine: it is never stopped
+shell, without the engine's virtual environment and GPU tuning, detached from the engine: it is never stopped
 by VoiceMate, so the provider keeps its models loaded across engine restarts. It is run at most
 once every `RELAUNCH_AFTER_SECONDS`, and not while the process it started last is still running
 (a provider that takes a while to open its port is not started twice, as long as the command
@@ -30,15 +30,28 @@ from app.protocol.tts_provider import ProviderError
 # The shortest time between two runs of the start command (a provider opens its port in seconds).
 RELAUNCH_AFTER_SECONDS: Final = 60.0
 
-# What running under `poetry run` and `make` adds to the engine's environment.
-_ENGINE_ONLY_ENV: Final = ("POETRY_ACTIVE", "MAKEFLAGS", "MFLAGS", "MAKELEVEL")
+# What the engine's environment has for the engine alone: `poetry run` and `make` add the first
+# ones, the engine adds the rest for its own GPU work (app/core/rocm_env.py, app/cli/wiring.py,
+# app/main.py). Measured: a provider on the same GPU with this tuning takes about 20 s on each
+# sentence length it has not seen yet, against 1 to 2 s without it.
+_ENGINE_ONLY_ENV: Final = (
+    "POETRY_ACTIVE",
+    "MAKEFLAGS",
+    "MFLAGS",
+    "MAKELEVEL",
+    "MAKEOVERRIDES",
+    "ARGS",
+    "PULSE_LATENCY_MSEC",
+    "CT2_CUDA_ALLOCATOR",
+)
+_ENGINE_ONLY_ENV_PREFIXES: Final = ("MIOPEN_", "PYTORCH_TUNABLEOP_")
 
 Spawn = Callable[[str], "subprocess.Popen[bytes]"]
 
 
 def provider_env() -> dict[str, str]:
-    """The engine's environment without its virtual environment: a provider has its own Python."""
-    env = dict(os.environ)
+    """The engine's environment without what is its own: a provider has its own Python and tuning."""
+    env = {name: value for name, value in os.environ.items() if not name.startswith(_ENGINE_ONLY_ENV_PREFIXES)}
     for name in _ENGINE_ONLY_ENV:
         env.pop(name, None)
     venv = env.pop("VIRTUAL_ENV", None)
@@ -94,10 +107,21 @@ class ProviderLauncher:
         self._lock = threading.Lock()
         self._process: subprocess.Popen[bytes] | None = None
         self._last_run: float | None = None
+        self._failed = False
 
     @property
     def enabled(self) -> bool:
         return bool(self._command)
+
+    @property
+    def failed(self) -> bool:
+        """The last run of the command failed and the next one is not due: no provider is on its way.
+        A run that failed long ago says nothing: asking now runs the command again."""
+        last = self._last_run
+        return self._failed and last is not None and self._clock() - last < RELAUNCH_AFTER_SECONDS
+
+    def _reap(self, process: subprocess.Popen[bytes]) -> None:
+        self._failed = bool(process.wait())
 
     def start_soon(self) -> None:
         """`start_if_down` on its own thread: the caller (a request, the engine's startup) never waits."""
@@ -129,11 +153,13 @@ class ProviderLauncher:
             except ProviderError as exc:
                 if not isinstance(exc.__cause__, ConnectionRefusedError):
                     return False  # it may be there, only unhappy or busy: starting another would not help
+            self._failed = False
             self._last_run = self._clock()
             print(_("[ExternalSpeaker] The TTS provider is not running: starting it with the configured command."))
             try:
                 self._process = self._spawn(self._command)
             except OSError as exc:
+                self._failed = True
                 print(
                     _("[ExternalSpeaker] ⚠ The TTS provider start command failed: {detail}").format(
                         detail=exc.strerror or type(exc).__name__
@@ -141,5 +167,5 @@ class ProviderLauncher:
                     file=sys.stderr,
                 )
                 return False
-            threading.Thread(target=self._process.wait, name="tts-provider-reap", daemon=True).start()
+            threading.Thread(target=self._reap, args=(self._process,), name="tts-provider-reap", daemon=True).start()
             return True

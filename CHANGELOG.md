@@ -16,7 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   again if it goes down (at most once a minute, never while the last one it started is still running),
   so the provider comes up with VoiceMate, and VoiceMate can open with Windows. A provider that is only
   slow to answer is not started again. The command runs through the shell on the engine's side (inside
-  WSL when the engine runs there), without the engine's virtual environment, detached from it;
+  WSL when the engine runs there), without the engine's virtual environment and GPU tuning, detached
+  from it;
   VoiceMate never stops the provider. It travels in `VOICEMATE_TTS_START_COMMAND`, is not logged and
   must be a single line. See [docs/tts-provider-protocol.md](docs/tts-provider-protocol.md#starting-the-provider-with-voicemate).
 
@@ -30,8 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - A custom voice provider that was down when the engine started no longer turned the engine's voice off
-  until the engine was restarted. The engine now treats an outage as a voice that is still loading, and
-  the assistant's voice waits for it.
+  until the engine was restarted. The voice now comes back on its own when the provider does: with a
+  start command the assistant's voice waits for it, and without one it says the provider is down.
 
 ## [0.3.0] - 2026-10-29
 

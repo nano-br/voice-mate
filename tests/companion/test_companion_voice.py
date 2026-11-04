@@ -728,6 +728,10 @@ def test_no_audio_output_is_reported(provider: ProviderServer, rigs: list[Rig]) 
         ),
         (ProviderError("not_ready", "text to speech is off in the engine"), "text to speech is off in the engine"),
         (ProviderError("not_ready", "the engine is loading"), "the engine is still loading"),
+        (
+            ProviderError("not_ready", "the TTS provider at http://official.lan is not available"),
+            "the engine's voice is not available (the TTS provider at http://official.lan is not available)",
+        ),
     ],
 )
 def test_explain_names_the_reason(error: ProviderError, reason: str) -> None:
