@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-03 16:38-0300\n"
+"POT-Creation-Date: 2026-11-03 22:22-0300\n"
 "PO-Revision-Date: 2026-05-21 14:42-0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -1228,46 +1228,46 @@ msgstr ""
 msgid "Playing a test sentence from {name}."
 msgstr ""
 
-#: app/companion/voice.py:192
+#: app/companion/voice.py:194
 msgid "the engine is not running"
 msgstr ""
 
-#: app/companion/voice.py:194
+#: app/companion/voice.py:196
 msgid "the engine refused the access token"
 msgstr ""
 
-#: app/companion/voice.py:196
+#: app/companion/voice.py:198
 msgid "the engine is too old for the assistant voice"
 msgstr ""
 
-#: app/companion/voice.py:198
+#: app/companion/voice.py:200
 msgid "the voice engine set up in the engine cannot speak for the assistant"
 msgstr ""
 
-#: app/companion/voice.py:200
+#: app/companion/voice.py:202
 msgid "text to speech is off in the engine"
 msgstr ""
 
-#: app/companion/voice.py:202
+#: app/companion/voice.py:204
 msgid "the engine is still loading"
 msgstr ""
 
-#: app/companion/voice.py:204
+#: app/companion/voice.py:206
 #, python-brace-format
 msgid "the engine's voice is not available ({detail})"
 msgstr ""
 
-#: app/companion/voice.py:205
+#: app/companion/voice.py:207
 #, python-brace-format
 msgid "the engine's voice failed ({detail})"
 msgstr ""
 
-#: app/companion/voice.py:519
+#: app/companion/voice.py:525
 #, python-brace-format
 msgid "the engine has no voice '{voice}'. Pick one in Settings, Assistant"
 msgstr ""
 
-#: app/companion/voice.py:713
+#: app/companion/voice.py:719
 msgid "no audio output is available on this computer"
 msgstr ""
 
@@ -3339,13 +3339,20 @@ msgid ""
 "reserved={reserved:.2f}GB"
 msgstr ""
 
-#: app/features/tts/provider_launcher.py:103
+#: app/features/tts/provider_launcher.py:119
+#, python-brace-format
+msgid ""
+"[ExternalSpeaker] ⚠ The TTS provider start command exited with code "
+"{code}."
+msgstr ""
+
+#: app/features/tts/provider_launcher.py:133
 msgid ""
 "[ExternalSpeaker] The TTS provider is not running: starting it with the "
 "configured command."
 msgstr ""
 
-#: app/features/tts/provider_launcher.py:108
+#: app/features/tts/provider_launcher.py:138
 #, python-brace-format
 msgid "[ExternalSpeaker] ⚠ The TTS provider start command failed: {detail}"
 msgstr ""

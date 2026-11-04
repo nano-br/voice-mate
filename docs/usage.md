@@ -260,7 +260,7 @@ The assistant speaks its replies sentence by sentence: the companion takes the `
 | "Voice source:" | Who speaks |
 |---|---|
 | "Automatic" (the default) | The engine's voice, and the voices of Windows when the engine has none or cannot speak |
-| "The engine's voice" | Only the engine: the built-in Kokoro voice (Settings > **Voice**), or your [custom provider](#external-tts-provider). A sentence that finds the engine still loading its voice waits for it (up to 90 seconds) instead of being lost, and the short notices stay on screen, with no Windows speech |
+| "The engine's voice" | Only the engine: the built-in Kokoro voice (Settings > **Voice**), or your [custom provider](#external-tts-provider). A sentence that finds the engine still loading its voice waits for it (up to 90 seconds, once per outage) instead of being lost, and the short notices stay on screen, with no Windows speech |
 | "The voices of Windows" | Only the voices Windows already has, in every language installed under Windows Settings > Time and language > Speech. Nothing to download or set up |
 
 **Load voices** lists the voices of the source picked and **Test** speaks a short sentence with the one chosen, both before you save. When nothing can speak, the replies stay text only and one "No voice available" notice says why.

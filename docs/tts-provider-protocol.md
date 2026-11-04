@@ -142,10 +142,10 @@ bash ~/my-voice-provider/start.sh
 ```
 
 - The companion hands the command to the engine in `VOICEMATE_TTS_START_COMMAND` (listed in `WSLENV`, so it reaches the WSL side, like the token).
-- The engine runs it through the shell, in its own environment (inside WSL when the engine runs there), whenever the provider does not answer (connection refused): when the engine starts, and again when the provider goes down later. A provider that answers, even with `503 not_ready` or an error, is not started again.
-- It runs at most once every 60 seconds, and never while the process it started last is still running, so a provider that takes a while to open its port is not started twice.
+- The engine runs it through the shell, in its own environment (inside WSL when the engine runs there), whenever nothing listens at the provider's address (connection refused): when the engine starts, and again when the provider goes down later. A provider that answers, even with `503 not_ready` or an error, or that is only slow to answer, is not started again. The command does not inherit the engine's virtual environment.
+- It runs at most once every 60 seconds, and never while the process it started last is still running. Keep the command in the foreground, or have your script wait for the port: a command that starts the provider in the background and returns is protected only by the 60 seconds. If the command fails, the log shows its exit code; its own output is not kept, so write it to a file if you need it.
 - The process is detached from the engine. VoiceMate orchestrates the start, never the stop: the provider keeps its models loaded across engine restarts, and stopping it is up to you.
-- The command must be a single line. It is never written to the log, since it may hold a secret.
+- The command must be a single line. It is not written to the log, but it shows in the process list and in the settings window, so keep secrets in a file your script reads, not on this line.
 
 ## What VoiceMate does with errors
 

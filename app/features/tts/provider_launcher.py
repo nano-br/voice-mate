@@ -2,15 +2,16 @@
 
 The provider is a service of its own (docs/tts-provider-protocol.md): VoiceMate only knows its
 URL. When the person also gives the command that starts it, the engine runs that command itself
-whenever the provider does not answer: at startup, and again when it stops answering later. So
-a provider set up this way starts with VoiceMate, and VoiceMate starts with Windows.
+whenever nothing listens at that URL: at startup, and again if the provider goes away later. So
+a provider set up this way starts with VoiceMate, and VoiceMate starts with Windows. A provider
+that is only slow to answer (a timeout) may well be running, so it is not started again.
 
-The command runs in the engine's own environment (inside WSL when the engine runs there),
-through the shell, detached from the engine: it is never stopped by VoiceMate, so the provider
-keeps its models loaded across engine restarts. It is run at most once every
-`RELAUNCH_AFTER_SECONDS`, and not while the process it started last is still running (a
-provider that takes a while to open its port is not started twice). The command itself is never
-logged: it may hold a password or a token.
+The command runs on the engine's side (inside WSL when the engine runs there), through the
+shell, without the engine's virtual environment, detached from the engine: it is never stopped
+by VoiceMate, so the provider keeps its models loaded across engine restarts. It is run at most
+once every `RELAUNCH_AFTER_SECONDS`, and not while the process it started last is still running
+(a provider that takes a while to open its port is not started twice, as long as the command
+stays in the foreground). The command itself is never logged, only how it failed.
 """
 
 from __future__ import annotations
@@ -29,14 +30,30 @@ from app.protocol.tts_provider import ProviderError
 # The shortest time between two runs of the start command (a provider opens its port in seconds).
 RELAUNCH_AFTER_SECONDS: Final = 60.0
 
+# What running under `poetry run` and `make` adds to the engine's environment.
+_ENGINE_ONLY_ENV: Final = ("POETRY_ACTIVE", "MAKEFLAGS", "MFLAGS", "MAKELEVEL")
+
 Spawn = Callable[[str], "subprocess.Popen[bytes]"]
+
+
+def provider_env() -> dict[str, str]:
+    """The engine's environment without its virtual environment: a provider has its own Python."""
+    env = dict(os.environ)
+    for name in _ENGINE_ONLY_ENV:
+        env.pop(name, None)
+    venv = env.pop("VIRTUAL_ENV", None)
+    if venv:
+        scripts = os.path.join(venv, "Scripts" if sys.platform == "win32" else "bin")
+        env["PATH"] = os.pathsep.join(p for p in env.get("PATH", "").split(os.pathsep) if p != scripts)
+    return env
 
 
 def spawn_detached(command: str) -> subprocess.Popen[bytes]:
     """`command` through the shell, with no console, no inherited input or output, and out of
     the engine's process group (closing the engine does not stop it)."""
     if sys.platform == "win32":
-        flags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS | subprocess.CREATE_NO_WINDOW
+        # Not DETACHED_PROCESS: with it Windows ignores CREATE_NO_WINDOW and a console program opens a window.
+        flags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
         return subprocess.Popen(  # noqa: S602 - the person's own command, run as the person typed it
             command,
             shell=True,
@@ -44,6 +61,8 @@ def spawn_detached(command: str) -> subprocess.Popen[bytes]:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             creationflags=flags,
+            cwd=os.path.expanduser("~"),
+            env=provider_env(),
         )
     return subprocess.Popen(  # noqa: S603 - the person's own command, run as the person typed it
         ["/bin/sh", "-c", command],
@@ -53,6 +72,7 @@ def spawn_detached(command: str) -> subprocess.Popen[bytes]:
         start_new_session=True,
         close_fds=True,
         cwd=os.path.expanduser("~"),
+        env=provider_env(),
     )
 
 
@@ -89,16 +109,26 @@ class ProviderLauncher:
         if not self.enabled:
             return False
         with self._lock:
-            if self._process is not None and self._process.poll() is None:
-                return False  # what was started last is still running (still opening its port)
+            if self._process is not None:
+                code = self._process.poll()
+                if code is None:
+                    return False  # what was started last is still running (still opening its port)
+                self._process = None
+                if code != 0:
+                    print(
+                        _("[ExternalSpeaker] ⚠ The TTS provider start command exited with code {code}.").format(
+                            code=code
+                        ),
+                        file=sys.stderr,
+                    )
             if self._last_run is not None and self._clock() - self._last_run < RELAUNCH_AFTER_SECONDS:
                 return False
             try:
                 self._health()
                 return False  # it answers (ready or loading): nothing to start
             except ProviderError as exc:
-                if exc.kind != "unreachable":
-                    return False  # it is there, only unhappy: starting another would not help
+                if not isinstance(exc.__cause__, ConnectionRefusedError):
+                    return False  # it may be there, only unhappy or busy: starting another would not help
             self._last_run = self._clock()
             print(_("[ExternalSpeaker] The TTS provider is not running: starting it with the configured command."))
             try:
@@ -111,4 +141,5 @@ class ProviderLauncher:
                     file=sys.stderr,
                 )
                 return False
+            threading.Thread(target=self._process.wait, name="tts-provider-reap", daemon=True).start()
             return True

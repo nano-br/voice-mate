@@ -218,7 +218,7 @@ The voice assistant ([usage.md](usage.md#voice-assistant)) keeps its choices in 
 | `permission_mode` | `acceptEdits` | `default`, `acceptEdits`, `bypassPermissions` | Assistant > "Permissions:" ("Ask before every change", "Accept file edits, ask for the rest", "Full access, never ask (risky)") |
 | `answer_delivery` | `announce` | `speak`, `announce`, `sound`, `silent` | Assistant > "Answers from other conversations:" |
 | `speak_replies` | `true` | `true`, `false` | Assistant > "Speak the replies" |
-| `voice_source` | `auto` | `auto`, `engine`, `windows` | Assistant > "Voice source:" ("Automatic", "The engine's voice", "The voices of Windows"). With `engine`, a sentence that finds the engine still loading its voice waits for it (up to 90 seconds), and the short notices stay on screen instead of falling to Windows speech |
+| `voice_source` | `auto` | `auto`, `engine`, `windows` | Assistant > "Voice source:" ("Automatic", "The engine's voice", "The voices of Windows"). With `engine`, a sentence that finds the engine still loading its voice waits for it (up to 90 seconds, once per outage), and the short notices stay on screen instead of falling to Windows speech |
 | `voice` | `""` (the default voice of the source) | a voice id of the engine's voice engine, or a `windows/...` id of a voice of Windows | Assistant > "Assistant voice:" (**Load voices**, **Test**) |
 | `voice_commands` | `true` | `true`, `false` | Assistant > "Understand voice commands in typed text" |
 | `expressions` | `off` | `off`, `on` | Assistant > "Expression tags:" |

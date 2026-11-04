@@ -20,8 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - With "Voice source:" set to "The engine's voice", a sentence that finds the engine still loading its
-  voice now waits for it (up to 90 seconds, trying every 5) instead of being lost, and the short
-  notices no longer fall to Windows speech: they stay on screen. "Automatic" is unchanged.
+  voice now waits for it (up to 90 seconds, trying every 5, once per outage) instead of being lost,
+  and the short notices no longer fall to Windows speech: they stay on screen. "Automatic" is
+  unchanged where a local voice exists; with none (outside Windows) it waits the same way.
 
 ## [0.3.0] - 2026-10-29
 

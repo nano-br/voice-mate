@@ -17,7 +17,12 @@ from app.cli.args import parse_args
 from app.cli.config_builder import build_config
 from app.core.config import TTSConfig
 from app.features.tts.external_speaker import ExternalSpeaker
-from app.features.tts.provider_launcher import RELAUNCH_AFTER_SECONDS, ProviderLauncher, spawn_detached
+from app.features.tts.provider_launcher import (
+    RELAUNCH_AFTER_SECONDS,
+    ProviderLauncher,
+    provider_env,
+    spawn_detached,
+)
 from app.protocol.tts_provider import ProviderError
 
 
@@ -41,13 +46,32 @@ class Clock:
 class Done:
     """A started process that already ended (the command forked the provider and returned)."""
 
+    code = 0
+
     def poll(self) -> int:
-        return 0
+        return self.code
+
+    def wait(self) -> int:
+        return self.code
+
+
+class Failed(Done):
+    code = 127
 
 
 class Running:
     def poll(self) -> None:
         return None
+
+    def wait(self) -> None:
+        return None
+
+
+def _refused() -> ProviderError:
+    """What the client raises when nothing listens at the provider's address."""
+    error = ProviderError("unreachable", "nothing is listening")
+    error.__cause__ = ConnectionRefusedError()
+    return error
 
 
 def _launcher(
@@ -67,7 +91,7 @@ def _launcher(
     return ProviderLauncher(" start-it ", health, spawn=spawn, clock=clock or Clock()), ran
 
 
-def test_the_command_runs_only_when_the_provider_is_unreachable() -> None:
+def test_the_command_runs_only_when_nothing_listens_at_the_provider_address() -> None:
     answer: list[object] = ["ok"]
     launcher, ran = _launcher(answer)
     assert not launcher.start_if_down()
@@ -75,14 +99,18 @@ def test_the_command_runs_only_when_the_provider_is_unreachable() -> None:
     assert not launcher.start_if_down()
     answer[0] = ProviderError("server", "500")
     assert not launcher.start_if_down()
-    answer[0] = ProviderError("unreachable", "connection refused")
+    slow = ProviderError("unreachable", "did not answer in time")
+    slow.__cause__ = TimeoutError()
+    answer[0] = slow  # alive but busy, maybe loading its models: a second one would fill the memory
+    assert not launcher.start_if_down()
+    answer[0] = _refused()
     assert launcher.start_if_down()
     assert ran == ["start-it"]
 
 
 def test_the_command_runs_at_most_once_a_minute_and_never_while_it_still_runs() -> None:
     clock = Clock()
-    answer: list[object] = [ProviderError("unreachable", "refused")]
+    answer: list[object] = [_refused()]
     launcher, ran = _launcher(answer, clock=clock)
     assert launcher.start_if_down()
     clock.now += RELAUNCH_AFTER_SECONDS - 1
@@ -101,7 +129,7 @@ def test_without_a_command_nothing_runs_and_a_failed_command_is_reported_without
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     def health() -> str:
-        raise ProviderError("unreachable", "refused")
+        raise _refused()
 
     assert not ProviderLauncher("  ", health).start_if_down()
 
@@ -112,6 +140,28 @@ def test_without_a_command_nothing_runs_and_a_failed_command_is_reported_without
     out = capsys.readouterr()
     assert "start command failed" in out.err and "No such file" in out.err
     assert "secret-start" not in out.out + out.err and "abc" not in out.out + out.err
+
+
+def test_a_command_that_failed_is_reported_with_its_exit_code(capsys: pytest.CaptureFixture[str]) -> None:
+    clock = Clock()
+    launcher, ran = _launcher([_refused()], clock=clock, process=Failed())
+    assert launcher.start_if_down()
+    clock.now += RELAUNCH_AFTER_SECONDS + 1
+    assert launcher.start_if_down()
+    assert len(ran) == 2
+    assert "exited with code 127" in capsys.readouterr().err
+
+
+def test_the_provider_does_not_inherit_the_engine_virtual_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    venv = os.path.join(os.sep, "engine", "venv")
+    scripts = os.path.join(venv, "Scripts" if sys.platform == "win32" else "bin")
+    monkeypatch.setenv("VIRTUAL_ENV", venv)
+    monkeypatch.setenv("POETRY_ACTIVE", "1")
+    monkeypatch.setenv("MAKEFLAGS", "-j")
+    monkeypatch.setenv("PATH", os.pathsep.join([scripts, "/usr/bin"]))
+    env = provider_env()
+    assert env["PATH"] == "/usr/bin"
+    assert not {"VIRTUAL_ENV", "POETRY_ACTIVE", "MAKEFLAGS"} & set(env)
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="the engine's shell on Linux and WSL")

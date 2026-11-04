@@ -180,7 +180,7 @@ class Rig:
             hold=lambda: self.holding,
             local=lambda: self.local,
             clock=self.clock,
-            sleep=lambda _seconds: time.sleep(0.01),  # the fake clock stands still unless a test moves it
+            sleep=lambda _seconds: time.sleep(0.0001),  # the fake clock stands still unless a test moves it
         )
         self.voice.on_unavailable(self.reasons.append)
 
@@ -549,27 +549,49 @@ def test_with_no_local_voice_a_line_waits_for_the_engine_to_load_its_voice(rigs:
         server.server_close()
 
 
-def test_a_line_waiting_for_the_engine_gives_up_after_the_wait_and_a_stop_drops_it(rigs: list[Rig]) -> None:
+def test_a_line_waits_for_the_engine_only_once_per_outage(rigs: list[Rig]) -> None:
     server = _serve(pace=0.0, loading_seconds=600.0)
     try:
         rig = _rig(rigs, server)
+        slept: list[float] = []
 
         def sleep(seconds: float) -> None:
+            slept.append(seconds)
             rig.clock.now += seconds
-            time.sleep(0.005)
 
         rig.voice._sleep = sleep
         rig.voice.notice("First.", "en")
         assert wait_until(lambda: rig.fallback == ["First."])  # LOADING_WAIT_S of the fake clock went by
         assert rig.reasons == ["the engine is still loading"]
+        waited = len(slept)
+        assert waited > 0
         rig.clock.now += LOADING_WAIT_S  # the next attempt, after the outage window
-        rig.voice._sleep = lambda _seconds: time.sleep(0.01)
         rig.voice.notice("Second.", "en")
-        time.sleep(0.1)
+        assert wait_until(lambda: rig.fallback == ["First.", "Second."])  # a provider that is down never loads
+        assert len(slept) == waited
+        server.state.loading_until = 0.0
+        rig.clock.now += LOADING_WAIT_S
+        rig.voice.notice("Third.", "en")
+        assert wait_until(lambda: _texts(server) == ["Third."])  # it speaks again
+        server.state.loading_until = time.monotonic() + 600.0
+        rig.voice.notice("Fourth.", "en")
+        assert wait_until(lambda: len(slept) > waited)  # a new outage has a wait of its own
+        rig.voice.stop()
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_a_stop_drops_a_line_waiting_for_the_engine(rigs: list[Rig]) -> None:
+    server = _serve(pace=0.0, loading_seconds=600.0)
+    try:
+        rig = _rig(rigs, server)
+        rig.voice.notice("First.", "en")
+        assert wait_until(lambda: server.state.warmups >= 1)
         rig.voice.stop()
         server.state.loading_until = 0.0
         time.sleep(0.3)
-        assert _texts(server) == [] and rig.fallback == ["First."]
+        assert _texts(server) == [] and rig.fallback == []
     finally:
         server.shutdown()
         server.server_close()

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-11-03 16:38-0300\n"
+"POT-Creation-Date: 2026-11-03 22:22-0300\n"
 "PO-Revision-Date: 2026-10-02 03:34-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: zh_CN\n"
@@ -1247,46 +1247,46 @@ msgstr "提供方没有发送音频。"
 msgid "Playing a test sentence from {name}."
 msgstr "正在播放来自 {name} 的测试语句。"
 
-#: app/companion/voice.py:192
+#: app/companion/voice.py:194
 msgid "the engine is not running"
 msgstr "引擎未运行"
 
-#: app/companion/voice.py:194
+#: app/companion/voice.py:196
 msgid "the engine refused the access token"
 msgstr "引擎拒绝了访问令牌"
 
-#: app/companion/voice.py:196
+#: app/companion/voice.py:198
 msgid "the engine is too old for the assistant voice"
 msgstr "引擎版本太旧，不支持助手声音"
 
-#: app/companion/voice.py:198
+#: app/companion/voice.py:200
 msgid "the voice engine set up in the engine cannot speak for the assistant"
 msgstr "引擎中设置的语音引擎无法为助手发声"
 
-#: app/companion/voice.py:200
+#: app/companion/voice.py:202
 msgid "text to speech is off in the engine"
 msgstr "引擎中的语音合成已关闭"
 
-#: app/companion/voice.py:202
+#: app/companion/voice.py:204
 msgid "the engine is still loading"
 msgstr "引擎仍在加载"
 
-#: app/companion/voice.py:204
+#: app/companion/voice.py:206
 #, python-brace-format
 msgid "the engine's voice is not available ({detail})"
 msgstr "引擎的声音不可用（{detail}）"
 
-#: app/companion/voice.py:205
+#: app/companion/voice.py:207
 #, python-brace-format
 msgid "the engine's voice failed ({detail})"
 msgstr "引擎的声音出错（{detail}）"
 
-#: app/companion/voice.py:519
+#: app/companion/voice.py:525
 #, python-brace-format
 msgid "the engine has no voice '{voice}'. Pick one in Settings, Assistant"
 msgstr "引擎中没有声音“{voice}”。请在 设置 > 助手 中选择一个"
 
-#: app/companion/voice.py:713
+#: app/companion/voice.py:719
 msgid "no audio output is available on this computer"
 msgstr "此电脑上没有可用的音频输出"
 
@@ -3382,13 +3382,20 @@ msgstr ""
 "[OmniVoiceSpeaker] "
 "显存（{label}）：alloc={allocated:.2f}GB，reserved={reserved:.2f}GB"
 
-#: app/features/tts/provider_launcher.py:103
+#: app/features/tts/provider_launcher.py:119
+#, python-brace-format
+msgid ""
+"[ExternalSpeaker] ⚠ The TTS provider start command exited with code "
+"{code}."
+msgstr "[ExternalSpeaker] ⚠ TTS 提供方的启动命令已退出，退出码 {code}。"
+
+#: app/features/tts/provider_launcher.py:133
 msgid ""
 "[ExternalSpeaker] The TTS provider is not running: starting it with the "
 "configured command."
 msgstr "[ExternalSpeaker] 语音提供方未在运行：正在用配置的命令启动它。"
 
-#: app/features/tts/provider_launcher.py:108
+#: app/features/tts/provider_launcher.py:138
 #, python-brace-format
 msgid "[ExternalSpeaker] ⚠ The TTS provider start command failed: {detail}"
 msgstr "[ExternalSpeaker] ⚠ 语音提供方的启动命令失败：{detail}"
