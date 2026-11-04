@@ -89,6 +89,8 @@ Flags reach the engine through the Makefile with `ARGS`, for example `make run A
 
 The provider token is never a flag: it is read from `VOICEMATE_TTS_TOKEN`, else from `tts_external_token` in the engine file, and it is never logged. The companion passes it in the environment, and the engine removes it from its environment once read. It stays in plain text in the companion's `companion.toml`.
 
+The start command of the provider is not a flag either: the engine reads it from `VOICEMATE_TTS_START_COMMAND`, removes it from its environment once read, and never logs it. See [Starting the provider](tts-provider-protocol.md#starting-the-provider-with-voicemate).
+
 The companion passes the address and the voice as `--tts-url=...` and `--tts-external-voice=...`, with an `=`, so a value that starts with `-` is not read as a flag.
 
 TTS only starts when a chat flow is on, and so does its warmup: the built-in Kokoro voice is not warmed up otherwise. If the packages of the chosen engine are missing, or the engine fails to start, the engine logs a warning with the fix and runs without TTS.
@@ -140,6 +142,7 @@ Location: Windows `%APPDATA%\VoiceMate\companion.toml`; Linux `${XDG_CONFIG_HOME
 | `tts_url` | `http://127.0.0.1:8765` | an `http://` or `https://` address without spaces, quotes or `$` | Voice > "Provider address:" |
 | `tts_voice` | `""` (the provider's default) | a voice id without spaces or shell characters | Voice > "Voice:" |
 | `tts_token` | `""` | text without line breaks. Plain text in this file | Voice > "Token:" |
+| `tts_start_command` | `""` (VoiceMate does not start the provider) | a single line, run through the shell as typed. Plain text in this file | Voice > "Start command:" |
 | `[assistant]` table | see [Assistant settings](#assistant-settings) | | Assistant tab |
 | `[[hotkeys]]` with `flow` and `chord` | `clipboard` = `ctrl+alt+v`, `claude_chat` = `ctrl+alt+a` | Ctrl, Alt, Shift or Win with a key, or a function key alone; F12 is reserved by Windows | Hotkeys tab |
 | `[cues.<name>]` for `start`, `transcribing`, `ready`, `ai_ready`, `warning`, `error`, `answer` (an answer of another conversation is waiting) | `enabled = true`, `source = "preset"`, `preset = "classic"`, `file = ""`, `volume = 1.0` | `source`: `preset`, `file`; `preset`: `classic`, `soft`, `click`; `file`: a PCM WAV (8 or 16 bit) | Sounds tab |
@@ -215,7 +218,7 @@ The voice assistant ([usage.md](usage.md#voice-assistant)) keeps its choices in 
 | `permission_mode` | `acceptEdits` | `default`, `acceptEdits`, `bypassPermissions` | Assistant > "Permissions:" ("Ask before every change", "Accept file edits, ask for the rest", "Full access, never ask (risky)") |
 | `answer_delivery` | `announce` | `speak`, `announce`, `sound`, `silent` | Assistant > "Answers from other conversations:" |
 | `speak_replies` | `true` | `true`, `false` | Assistant > "Speak the replies" |
-| `voice_source` | `auto` | `auto`, `engine`, `windows` | Assistant > "Voice source:" ("Automatic", "The engine's voice", "The voices of Windows") |
+| `voice_source` | `auto` | `auto`, `engine`, `windows` | Assistant > "Voice source:" ("Automatic", "The engine's voice", "The voices of Windows"). With `engine`, a sentence that finds the engine still loading its voice waits for it (up to 90 seconds, once per outage), and the short notices stay on screen instead of falling to Windows speech |
 | `voice` | `""` (the default voice of the source) | a voice id of the engine's voice engine, or a `windows/...` id of a voice of Windows | Assistant > "Assistant voice:" (**Load voices**, **Test**) |
 | `voice_commands` | `true` | `true`, `false` | Assistant > "Understand voice commands in typed text" |
 | `expressions` | `off` | `off`, `on` | Assistant > "Expression tags:" |
@@ -273,6 +276,7 @@ Left out on purpose: hotkeys; every file or folder (the personality file and tex
 |---|---|---|
 | `VOICEMATE_LANG` | engine | Language of the engine messages only (`pt-BR`, `en`, `es`, `ru`, `zh-CN`); without it the messages follow `--output-lang`, whose default is Portuguese. Set it in the shell that runs `make run` (bash inside WSL or on Linux, `$env:VOICEMATE_LANG` in PowerShell on Windows). Wins over `--output-lang`. It does not change what Whisper hears or the language of Claude's answers. The companion ignores it |
 | `VOICEMATE_TTS_TOKEN` | engine | Bearer token for the external TTS provider. Wins over the saved one. The companion sets it when it starts the engine |
+| `VOICEMATE_TTS_START_COMMAND` | engine | Command line that starts the external TTS provider when nothing listens at its address. The companion sets it when it starts the engine and lists it in `WSLENV`, so it reaches the engine inside WSL. Never logged |
 | `VOICEMATE_API_TOKEN` | engine, companion | Replaces the token file. For tests only |
 | `VOICEMATE_CLAUDE_CLI` | companion (assistant) | Path or command name of the Claude Code CLI the assistant starts. Without it, VoiceMate looks for `claude` on the `PATH`, then in `~/.local/bin` (`claude.exe`, the native installer) and `%APPDATA%\npm` (`claude.cmd`, npm). Set it with a full path when `claude` is somewhere else |
 | `CLAUDE_CONFIG_DIR` | companion (assistant) | Claude home, where the skill is installed and the conversations are read; default `~/.claude` |

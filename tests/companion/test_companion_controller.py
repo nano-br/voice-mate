@@ -1204,6 +1204,21 @@ def test_each_voice_source_lists_its_own_voices(
         controller._voice_info("engine")
 
 
+def test_a_notice_falls_back_to_windows_speech_except_with_the_engine_voice_only(
+    make_controller: ControllerKit, daemon: FakeDaemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import app.companion.controller as controller_module
+
+    controller, _parts, _backend = make_controller(daemon)
+    said: list[str] = []
+    monkeypatch.setattr(controller_module, "say", lambda text, _language: said.append(text))
+    settings = controller._store.get()
+    for source in ("auto", "windows", "engine"):
+        controller._store.update_cached(replace(settings, assistant=replace(settings.assistant, voice_source=source)))
+        controller._notice_fallback(f"Notice {source}.", "en")
+    assert said == ["Notice auto.", "Notice windows."]
+
+
 def test_the_assistant_voices_come_from_the_engine(
     make_controller: ControllerKit, daemon: FakeDaemon, monkeypatch: pytest.MonkeyPatch
 ) -> None:

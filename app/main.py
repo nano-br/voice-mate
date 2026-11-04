@@ -26,7 +26,7 @@ from app.daemon.auth import TOKEN_ENV, default_token_path, load_or_create_token
 from app.daemon.lifecycle import Lifecycle, hard_exit, watch_stdin_eof
 from app.daemon.server import ApiServer, EngineInfo
 from app.features.tts import PCM_ENGINES
-from app.features.tts.base import NullSpeaker, TextToSpeech
+from app.features.tts.base import NullSpeaker, TextToSpeech, is_enabled
 from app.features.tts.pcm import GatedSpeaker, SpeechGate
 from app.features.whispercpp.server_backend import kill_live_servers
 from app.i18n import _, setup_locale
@@ -342,7 +342,7 @@ def main() -> None:
         kill_live_servers()
         sys.exit(1)
 
-    tts_active = engine.speaker.is_active() and _has_chat_flow(engine.flows)
+    tts_active = is_enabled(engine.speaker) and _has_chat_flow(engine.flows)
     if api is not None:
         stt = describe_transcriber(engine.transcriber, config)
         api.attach(engine.session, _engine_info(platform, trigger, engine.flows, tts_active, stt))

@@ -133,6 +133,21 @@ On the VoiceMate side, stopping the speech returns at once (under 200 ms), for c
 
 On the engine's own endpoint, the engine warms its text to speech once at its own start, and only when a chat flow is on (the built-in Kokoro voice is not warmed up otherwise). The companion calls `/tts/v1/warmup` on demand, when `health` says `loading`.
 
+### Starting the provider with VoiceMate
+
+VoiceMate never needs to start the provider: it only knows its URL. If you also give the command that starts it (Settings > **Voice** > "Start command:", `tts_start_command` in `companion.toml`), VoiceMate starts the provider for you, so it comes up with VoiceMate, which can itself open with Windows.
+
+```text
+bash ~/my-voice-provider/start.sh
+```
+
+- The companion hands the command to the engine in `VOICEMATE_TTS_START_COMMAND` (listed in `WSLENV`, so it reaches the WSL side, like the token).
+- The engine runs it through the shell, on its own side (inside WSL when the engine runs there), whenever nothing listens at the provider's address (connection refused): when the engine starts, and again when the provider goes down later. A provider that answers, even with `503 not_ready` or an error, or that is only slow to answer, is not started again. The command does not inherit the engine's virtual environment or the GPU tuning the engine sets for itself.
+- It runs at most once every 60 seconds, and never while the process it started last is still running. Keep the command in the foreground, or have your script wait for the port: a command that starts the provider in the background and returns is protected only by the 60 seconds. Open the port first and answer `/v1/health` with `loading` while the models load: a port that opens only after loading can be started twice if the engine restarts meanwhile. If the command fails, the log shows its exit code; its own output is not kept, so write it to a file if you need it.
+- With no command, a provider that is down reads as down, at once: the assistant's voice says why instead of waiting.
+- The process is detached from the engine. VoiceMate orchestrates the start, never the stop: the provider keeps its models loaded across engine restarts, and stopping it is up to you.
+- The command must be a single line. It is not written to the log, but it shows in the process list and in the settings window, so keep secrets in a file your script reads, not on this line.
+
 ## What VoiceMate does with errors
 
 - Unreachable, `503 not_ready` and `5xx`: speech is off for about 10 seconds (`RETRY_AFTER_SECONDS`), then VoiceMate tries again. Only the first episode of an outage is logged, so a long outage does not flood the log. It never crashes.

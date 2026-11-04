@@ -91,6 +91,18 @@ def test_the_token_travels_in_the_environment_and_wsl_is_told_to_forward_it() ->
     assert local == {"PATH": "x", "VOICEMATE_TTS_TOKEN": "s3cret"}
 
 
+def test_the_start_command_travels_in_the_environment_only_for_an_external_provider() -> None:
+    command = "bash ~/provider/start.sh --fast"
+    env = spawn_env(engine_tts(replace(EXTERNAL, tts_start_command=command)), wsl=True, base={"PATH": "x"})
+    assert env is not None
+    assert env["VOICEMATE_TTS_START_COMMAND"] == command
+    assert env["WSLENV"] == "VOICEMATE_TTS_TOKEN:VOICEMATE_TTS_START_COMMAND"
+    default = replace(CompanionSettings(), tts_start_command=command)  # kept, but unused
+    assert spawn_env(engine_tts(default), wsl=True) is None
+    assert engine_tts(replace(EXTERNAL, tts_start_command=command)) != engine_tts(EXTERNAL)  # a change restarts
+    assert command not in repr(engine_tts(replace(EXTERNAL, tts_start_command=command)))
+
+
 def test_the_backends_put_the_flags_on_the_command_and_not_the_token(tmp_path: Path) -> None:
     wsl = WslBackend("ai-lab", 47821, tmp_path / "engine.log", tts=engine_tts(EXTERNAL))
     command = " ".join(wsl.spawn_command("voice-mate"))
@@ -107,6 +119,14 @@ def test_settings_round_trip_keeps_the_provider_fields() -> None:
     assert (result.settings.tts_engine, result.settings.tts_url) == ("external", "http://127.0.0.1:9000")
     assert (result.settings.tts_voice, result.settings.tts_token) == ("high", "s3cret")
     assert not result.problems
+
+
+def test_settings_round_trip_keeps_the_start_command_and_refuses_a_second_line() -> None:
+    command = 'bash "/home/me/start provider.sh"'
+    result = parse_settings(dump_settings(replace(EXTERNAL, tts_start_command=command)))
+    assert result.settings.tts_start_command == command and not result.problems
+    broken = parse_settings(dump_settings(replace(EXTERNAL, tts_start_command="one\ntwo")))
+    assert broken.settings.tts_start_command == "" and broken.problems
 
 
 def test_defaults_when_the_file_has_no_tts_keys() -> None:

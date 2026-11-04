@@ -308,13 +308,13 @@ class CompanionControllerImpl:
         self._cues = CuePlayer(CueBank(self._cues_dir), self._play_file)
         # Replies and notices of the assistant, spoken by the engine (`/tts`) or by Windows' own
         # voices (`assistant.voice_source`) and played here; the short notices fall back to Windows
-        # speech when neither can speak.
+        # speech when neither can speak, except with the "engine" source, which never uses Windows.
         self._local_voice = local_voice if local_voice is not None else _default_local_voice()
         self._voice = EngineVoice(
             self._voice_client,
             voice_output,
             voice=lambda: self._store.get().assistant.voice,
-            fallback=say,
+            fallback=self._notice_fallback,
             hold=self._recording,  # never over the microphone: what comes meanwhile waits for it
             local=self._fallback_voice,
         )
@@ -1066,6 +1066,12 @@ class CompanionControllerImpl:
         if client is None:
             return None
         return ProviderClient(engine_tts_url(self._host, client.port), client.token())
+
+    def _notice_fallback(self, text: str, language: str) -> None:
+        """A short notice the voices could not say: Windows speech, unless the person chose the
+        engine's voice only (then the notice stays on screen)."""
+        if self._store.get().assistant.voice_source != "engine":
+            say(text, language)
 
     def _fallback_voice(self) -> VoiceClient | None:
         """Windows' voices while the engine cannot speak, in the \"auto\" source only."""

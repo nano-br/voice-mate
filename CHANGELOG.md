@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-03
+
+### Added
+
+- Settings > Voice > "Start command:" (`tts_start_command`): the command line that starts your custom
+  voice provider. The engine runs it whenever nothing listens at the provider's address, at startup and
+  again if it goes down (at most once a minute, never while the last one it started is still running),
+  so the provider comes up with VoiceMate, and VoiceMate can open with Windows. A provider that is only
+  slow to answer is not started again. The command runs through the shell on the engine's side (inside
+  WSL when the engine runs there), without the engine's virtual environment and GPU tuning, detached
+  from it;
+  VoiceMate never stops the provider. It travels in `VOICEMATE_TTS_START_COMMAND`, is not logged and
+  must be a single line. See [docs/tts-provider-protocol.md](docs/tts-provider-protocol.md#starting-the-provider-with-voicemate).
+
+### Changed
+
+- With "Voice source:" set to "The engine's voice", a sentence that finds the engine still loading its
+  voice now waits for it (up to 90 seconds, trying every 5, once per outage) instead of being lost,
+  and the short notices no longer fall to Windows speech: they stay on screen. "Automatic" is
+  unchanged where a local voice exists; with none (outside Windows) it waits the same way.
+
+### Fixed
+
+- A custom voice provider that was down when the engine started no longer turned the engine's voice off
+  until the engine was restarted. The voice now comes back on its own when the provider does: with a
+  start command the assistant's voice waits for it, and without one it says the provider is down.
+
 ## [0.3.0] - 2026-10-29
 
 ### Added
@@ -413,7 +440,8 @@ Development happened on `main` and in seven pull requests before this first rele
 - [#7](https://github.com/nano-br/voice-mate/pull/7): choose the dictation language in
   the companion.
 
-[Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/nano-br/voice-mate/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/nano-br/voice-mate/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/nano-br/voice-mate/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/nano-br/voice-mate/releases/tag/v0.1.0

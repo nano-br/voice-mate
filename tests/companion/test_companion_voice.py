@@ -6,12 +6,14 @@ from __future__ import annotations
 import threading
 import time
 from collections.abc import Iterator
+from functools import partial
 
 import pytest
 from companion_core_fakes import use_english, wait_until
 
 from app.companion.voice import (
     LOADING_RETRY_S,
+    LOADING_WAIT_S,
     LOCAL_URL,
     PAUSE_GRACE_S,
     RETRY_AFTER_S,
@@ -179,6 +181,7 @@ class Rig:
             hold=lambda: self.holding,
             local=lambda: self.local,
             clock=self.clock,
+            sleep=lambda _seconds: time.sleep(0.0001),  # the fake clock stands still unless a test moves it
         )
         self.voice.on_unavailable(self.reasons.append)
 
@@ -512,11 +515,11 @@ def test_audio_in_another_format_than_asked_is_refused(provider: ProviderServer,
 
 def test_an_engine_still_loading_its_voice_is_asked_to_load_and_tried_again_soon(rigs: list[Rig]) -> None:
     server = _serve(pace=0.0, loading_seconds=60.0)
+    local = _serve(pace=0.0)
     try:
-        rig = _rig(rigs, server)
+        rig = _rig(rigs, server, local=local)
         rig.voice.notice("First.", "en")
-        assert wait_until(lambda: rig.fallback == ["First."])
-        assert rig.reasons == ["the engine is still loading"]
+        assert wait_until(lambda: _texts(local) == ["First."])  # the local voice takes over
         assert wait_until(lambda: server.state.warmups == 1)  # on-demand load, no warmup was done at start
         assert _texts(server) == []
         server.state.loading_until = 0.0
@@ -524,6 +527,108 @@ def test_an_engine_still_loading_its_voice_is_asked_to_load_and_tried_again_soon
         rig.voice.notice("Second.", "en")
         assert wait_until(lambda: _texts(server) == ["Second."])
         assert wait_until(lambda: rig.voice.reason == "")
+    finally:
+        for running in (server, local):
+            running.shutdown()
+            running.server_close()
+
+
+def test_with_no_local_voice_a_line_waits_for_the_engine_to_load_its_voice(rigs: list[Rig]) -> None:
+    server = _serve(pace=0.0, loading_seconds=60.0)
+    try:
+        rig = _rig(rigs, server)
+        rig.voice.notice("First.", "en")
+        rig.voice.speak("r", "A reply.", final=True)
+        assert wait_until(lambda: server.state.warmups >= 1)  # asked to load (again at each retry)
+        time.sleep(0.1)
+        assert (_texts(server), rig.fallback, rig.reasons) == ([], [], [])  # waiting, not lost
+        server.state.loading_until = 0.0
+        assert wait_until(lambda: _texts(server) == ["First.", "A reply."])  # in order, once loaded
+        assert rig.fallback == []
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_a_line_waits_for_the_engine_only_once_per_outage(rigs: list[Rig]) -> None:
+    server = _serve(pace=0.0, loading_seconds=600.0)
+    try:
+        rig = _rig(rigs, server)
+        slept: list[float] = []
+
+        def sleep(seconds: float) -> None:
+            slept.append(seconds)
+            rig.clock.now += seconds
+
+        rig.voice._sleep = sleep
+        rig.voice.notice("First.", "en")
+        assert wait_until(lambda: rig.fallback == ["First."])  # LOADING_WAIT_S of the fake clock went by
+        assert rig.reasons == ["the engine is still loading"]
+        waited = len(slept)
+        assert waited > 0
+        rig.clock.now += LOADING_WAIT_S  # the next attempt, after the outage window
+        rig.voice.notice("Second.", "en")
+        assert wait_until(lambda: rig.fallback == ["First.", "Second."])  # a provider that is down never loads
+        assert len(slept) == waited
+        server.state.loading_until = 0.0
+        rig.clock.now += LOADING_WAIT_S
+        rig.voice.notice("Third.", "en")
+        assert wait_until(lambda: _texts(server) == ["Third."])  # it speaks again
+        server.state.loading_until = time.monotonic() + 600.0
+        rig.voice.notice("Fourth.", "en")
+        assert wait_until(lambda: len(slept) > waited)  # a new outage has a wait of its own
+        rig.voice.stop()
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_only_an_engine_loading_its_voice_is_worth_a_wait_and_others_do_not_use_it_up(
+    rigs: list[Rig], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rig = _rig(rigs, None)
+    slept: list[float] = []
+    rig.voice._sleep = slept.append
+    errors = (ProviderError("unreachable", "no engine"), ProviderError("not_ready", "text to speech is off"))
+    for said, error in enumerate(errors, start=1):
+        monkeypatch.setattr(rig.voice, "_say_on_engine", partial(_fails_with, error))
+        rig.clock.now += LOADING_WAIT_S
+        rig.voice.notice("A line.", "en")
+        assert wait_until(partial(_said, rig, said))  # at once, and the wait stays for a load
+        assert slept == [] and not rig.voice._waited
+    loading = ProviderError("not_ready", "the engine is loading")
+    answers = iter([(loading, 5.0), (ProviderError("unreachable", "restarting"), 5.0)])
+    monkeypatch.setattr(rig.voice, "_say_on_engine", lambda _item: next(answers))
+    rig.clock.now += LOADING_WAIT_S
+    rig.voice.notice("Cut short.", "en")
+    assert wait_until(partial(_said, rig, 3))  # the engine went away during the wait: not spent
+    assert slept and not rig.voice._waited
+    rig.voice._waited = True  # a wait ran out, and then the engine goes away (Apply restarts it)
+    monkeypatch.setattr(rig.voice, "_say_on_engine", partial(_fails_with, ProviderError("unreachable", "restarting")))
+    rig.clock.now += LOADING_WAIT_S
+    rig.voice.notice("Restarting.", "en")
+    assert wait_until(partial(_said, rig, 4))
+    assert not rig.voice._waited
+
+
+def _fails_with(error: ProviderError, _item: object) -> tuple[ProviderError, float]:
+    return error, 5.0
+
+
+def _said(rig: Rig, count: int) -> bool:
+    return len(rig.fallback) == count
+
+
+def test_a_stop_drops_a_line_waiting_for_the_engine(rigs: list[Rig]) -> None:
+    server = _serve(pace=0.0, loading_seconds=600.0)
+    try:
+        rig = _rig(rigs, server)
+        rig.voice.notice("First.", "en")
+        assert wait_until(lambda: server.state.warmups >= 1)
+        rig.voice.stop()
+        server.state.loading_until = 0.0
+        time.sleep(0.3)
+        assert _texts(server) == [] and rig.fallback == []
     finally:
         server.shutdown()
         server.server_close()
@@ -623,6 +728,10 @@ def test_no_audio_output_is_reported(provider: ProviderServer, rigs: list[Rig]) 
         ),
         (ProviderError("not_ready", "text to speech is off in the engine"), "text to speech is off in the engine"),
         (ProviderError("not_ready", "the engine is loading"), "the engine is still loading"),
+        (
+            ProviderError("not_ready", "the TTS provider at http://official.lan is not available"),
+            "the engine's voice is not available (the TTS provider at http://official.lan is not available)",
+        ),
     ],
 )
 def test_explain_names_the_reason(error: ProviderError, reason: str) -> None:

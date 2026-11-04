@@ -281,7 +281,7 @@ Replies are spoken sentence by sentence, so the first sentence plays while the n
 | "Voice source:" | Who speaks | When to pick it |
 |---|---|---|
 | "Automatic" (`auto`, the default) | The engine's voice (Kokoro, or your own provider that follows the [TTS provider protocol](tts-provider-protocol.md), set in Settings > **Voice**); the voices of Windows when the engine has none or cannot speak | Out of the box: nothing to set up |
-| "The engine's voice" (`engine`) | Only the engine; if it cannot speak, the replies stay text | You want one voice, always the same |
+| "The engine's voice" (`engine`) | Only the engine; if it cannot speak, the replies stay text. A sentence that finds the engine still loading its voice waits for it (up to 90 seconds, once per outage), and the short notices stay on screen instead of falling to Windows speech | You want one voice, always the same |
 | "The voices of Windows" (`windows`) | Only the voices Windows already has, for every language installed under Settings, Time and language, Speech | No voice engine installed, or you prefer the voices of Windows |
 
 **Load voices** and **Test** follow the source picked, before you save it. Someone with no voice engine set up hears the assistant right away, with the voices of Windows.

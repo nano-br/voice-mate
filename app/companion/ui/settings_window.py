@@ -1478,6 +1478,15 @@ class VoicePage(QWidget):
             _("Optional. Sent to the provider as a bearer token. It is kept in this computer's settings file.")
         )
         form.addRow(_("Token:"), self.tts_token)
+        self.tts_start_command = QLineEdit()
+        self.tts_start_command.setPlaceholderText(_("None (start the provider yourself)"))
+        self.tts_start_command.setToolTip(
+            _(
+                "Optional. The command that starts the provider, run by the engine (inside WSL when the "
+                "engine runs there) whenever nothing listens at its address: it then starts with VoiceMate."
+            )
+        )
+        form.addRow(_("Start command:"), self.tts_start_command)
         self.test_button = QPushButton(_("Test voice"))
         self.test_button.setToolTip(_("Speaks a short sentence with the provider and voice above."))
         form.addRow("", self.test_button)
@@ -1499,6 +1508,7 @@ class VoicePage(QWidget):
         self.tts_engine.currentIndexChanged.connect(lambda _index: self._sync())
         self.tts_url.textChanged.connect(self.changed)
         self.tts_token.textChanged.connect(self.changed)
+        self.tts_start_command.textChanged.connect(self.changed)
         self.tts_voice.currentTextChanged.connect(self.changed)
         self.load_voices_button.clicked.connect(self.voices_requested)
         self.test_button.clicked.connect(self.test_requested)
@@ -1507,6 +1517,7 @@ class VoicePage(QWidget):
             (self.tts_url, _("Provider address")),
             (self.tts_voice, _("Voice")),
             (self.tts_token, _("Token")),
+            (self.tts_start_command, _("Start command")),
         ):
             widget.setAccessibleName(name)
 
@@ -1515,6 +1526,7 @@ class VoicePage(QWidget):
             _select(self.tts_engine, settings.tts_engine, texts.tts_engine_labels())
             self.tts_url.setText(settings.tts_url)
             self.tts_token.setText(settings.tts_token)
+            self.tts_start_command.setText(settings.tts_start_command)
             self.set_voices((), settings.tts_voice)
         self.show_status(None)
         self._sync()
@@ -1527,6 +1539,7 @@ class VoicePage(QWidget):
             tts_url=self.tts_url.text().strip() or DEFAULT_URL,
             tts_voice=self.voice_id(),
             tts_token=self.tts_token.text().strip(),
+            tts_start_command=self.tts_start_command.text().strip(),
         )
 
     # --- voices ---------------------------------------------------------------------------------------
@@ -1555,7 +1568,7 @@ class VoicePage(QWidget):
     def _sync(self) -> None:
         external = self.tts_engine.currentData() == "external"
         self._box.setEnabled(self._managed)
-        for widget in (self.tts_url, self.tts_voice, self.tts_token):
+        for widget in (self.tts_url, self.tts_voice, self.tts_token, self.tts_start_command):
             widget.setEnabled(external)
         for button in (self.load_voices_button, self.test_button):
             button.setEnabled(external and not self._busy)
