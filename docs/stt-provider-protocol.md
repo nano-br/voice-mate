@@ -1,3 +1,5 @@
+**English** | [Português](stt-provider-protocol.pt-BR.md) | [Español](stt-provider-protocol.es.md) | [Русский](stt-provider-protocol.ru.md) | [简体中文](stt-provider-protocol.zh-CN.md)
+
 # External STT provider protocol
 
 VoiceMate can transcribe what you say with a speech-to-text service you run yourself. This page is the contract: if your service answers these endpoints, VoiceMate can use it as its transcription engine. Nothing here depends on a particular STT stack, and VoiceMate ships no provider other than a test reference. Back to the [README](../README.md).

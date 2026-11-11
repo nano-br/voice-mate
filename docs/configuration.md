@@ -1,3 +1,5 @@
+**English** | [Português](configuration.pt-BR.md) | [Español](configuration.es.md) | [Русский](configuration.ru.md) | [简体中文](configuration.zh-CN.md)
+
 # Configuration reference
 
 Purpose: every engine flag, settings key, environment variable and file location of VoiceMate. Back to the [README](../README.md).

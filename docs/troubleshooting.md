@@ -1,3 +1,5 @@
+**English** | [Português](troubleshooting.pt-BR.md) | [Español](troubleshooting.es.md) | [Русский](troubleshooting.ru.md) | [简体中文](troubleshooting.zh-CN.md)
+
 # Troubleshooting
 
 Purpose: how to diagnose VoiceMate problems, with the exact messages the app shows and what to do about each one. Back to the [README](../README.md).
