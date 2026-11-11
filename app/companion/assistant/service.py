@@ -959,6 +959,7 @@ class AssistantServiceImpl:
         self._port_status = status
         if status.session_id and status.session_id != self._own_session:
             self._own_session = status.session_id
+            self._model_reminded = False
             self._central_id = status.session_id
             if any(item.conversation_id == status.session_id for item in self._pending):
                 # The central never watches or waits for itself: off the watcher and the list.
@@ -1083,10 +1084,14 @@ class AssistantServiceImpl:
             log.info("assistant reply problems: %s", "; ".join(parsed.problems))
         if not parsed.degraded:
             self._model_reminded = False
-        elif last.text.strip() and not self._model_reminded:
+        elif last.text.strip() and not self._model_reminded and self._speaks_replies():
             # One note per streak of such replies: a central that keeps missing the model is not asked again.
             self._model_reminded = True
             self._send_event(reply_model_note())
+
+    def _speaks_replies(self) -> bool:
+        settings = self._settings()
+        return self._voice is not None and settings.mode != "off" and settings.speak_replies
 
     def _run_action(self, action: Action) -> None:
         if action.type == "set_setting":
@@ -1616,6 +1621,7 @@ class AssistantServiceImpl:
     def _clear_raw(self) -> None:
         self._raw.clear()
         self._raw_total = 0
+        self._model_reminded = False  # a summarized or new conversation may be told again
 
     def _notice(self, text: str) -> None:
         self._notices.append((self._raw_total, ChatMessage("notice", text)))

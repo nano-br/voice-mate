@@ -914,7 +914,7 @@ def test_set_setting_action_changes_the_setting_and_tells_the_central(make_rig: 
 
 
 def test_a_reply_without_the_reply_model_is_asked_again_once_per_streak(make_rig: Callable[..., Rig]) -> None:
-    rig = make_rig()
+    rig = make_rig(voice=FakeVoice())
     rig.ready()
 
     def reminders() -> int:
@@ -934,6 +934,22 @@ def test_a_reply_without_the_reply_model_is_asked_again_once_per_streak(make_rig
     time.sleep(0.2)
     _append(rig.transcript("s1"), _plain("Lost it again.", "a4", "m4"))
     _until(lambda: reminders() == 2)
+
+    # A summarized conversation starts a new streak: that is when the model is usually lost.
+    _append(rig.transcript("s1"), json.dumps({"type": "system", "subtype": "compact_boundary"}))
+    _append(rig.transcript("s1"), _plain("After the summary.", "a5", "m5"))
+    _until(lambda: reminders() == 3)
+
+
+def test_a_reply_without_the_reply_model_is_not_asked_again_when_replies_are_not_spoken(
+    make_rig: Callable[..., Rig],
+) -> None:
+    rig = make_rig(replace(ON, speak_replies=False), voice=FakeVoice())
+    rig.ready()
+    _append(rig.transcript("s1"), _plain("Shown only.", "a1", "m1"))
+    rig.wait(lambda s: any(m.text == "Shown only." for m in s.messages))
+    time.sleep(0.2)
+    assert not any("had no <voice> block" in text for text in rig.port.sent)
 
 
 def test_set_setting_refusals_are_notices_and_notes(make_rig: Callable[..., Rig]) -> None:
