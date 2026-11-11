@@ -531,6 +531,14 @@ def test_health_carries_where_the_engine_transcribes() -> None:
     assert sim.snap().stt is None  # the next engine may run elsewhere
 
 
+def test_health_carries_an_external_stt_provider() -> None:
+    sim = Sim()
+    sim.feed(SupervisorUpdate("healthy", 0, None, None, 0, False))
+    stt = {"mode": "auto", "device": "cpu", "backend": "external", "model": "My STT"}
+    sim.feed(HealthSeen(health(stt=stt)))
+    assert sim.snap().stt == stt
+
+
 @pytest.mark.parametrize(
     "stt",
     [

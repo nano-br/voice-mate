@@ -13,7 +13,9 @@ from app.core.config import (
     ClaudeChatConfig,
     ClaudeEffort,
     Config,
+    ExternalSttConfig,
     GpuVendor,
+    SttEngine,
     SttStrategy,
     TranscriptionLanguage,
     TTSConfig,
@@ -25,6 +27,7 @@ from app.core.config import (
 )
 from app.i18n import _
 from app.platform.kinds import PlatformKind, TriggerKind
+from app.protocol import stt_provider
 from app.protocol.models import SttMode
 from app.protocol.tts_provider import DEFAULT_URL, START_COMMAND_ENV, TOKEN_ENV
 from app.setup.gpu_detect import detect_gpu
@@ -123,16 +126,7 @@ def _resolve_external_options(args: argparse.Namespace, persisted: PersistedConf
     """Precedence: --tts-options > saved config. Must be a JSON object; anything else is ignored
     with a warning (a typo here must not stop the engine from starting)."""
     raw = args.tts_options if args.tts_options is not None else persisted.tts_external_options
-    if not raw or not raw.strip():
-        return {}
-    try:
-        value = json.loads(raw)
-    except ValueError:
-        value = None
-    if not isinstance(value, dict):
-        print(_("[VoiceMate] ⚠ TTS options ignored: they must be a JSON object."), file=sys.stderr)
-        return {}
-    return value
+    return _json_object(raw, _("[VoiceMate] ⚠ TTS options ignored: they must be a JSON object."))
 
 
 def _resolve_external_url(args: argparse.Namespace, persisted: PersistedConfig) -> str:
@@ -156,6 +150,45 @@ def _resolve_external_start_command() -> str:
     """VOICEMATE_TTS_START_COMMAND (the companion sets it), taken out of the environment like the
     token: the processes the engine starts, the provider included, do not inherit it."""
     return os.environ.pop(START_COMMAND_ENV, "").strip()
+
+
+def _resolve_stt_engine(args: argparse.Namespace, persisted: PersistedConfig) -> SttEngine:
+    """Precedence: --stt-engine > saved config > "builtin"."""
+    if args.stt_engine is not None:
+        return cast(SttEngine, args.stt_engine)
+    return persisted.stt_engine or "builtin"
+
+
+def _resolve_stt_external(args: argparse.Namespace, persisted: PersistedConfig) -> ExternalSttConfig:
+    """The external STT provider, with the same precedence as the TTS one: flag > saved config >
+    default. The token and the start command come from the environment (never a flag, which would
+    show in `ps`) and are taken out of it once read, so the processes the engine starts later do
+    not inherit them."""
+    raw_options = args.stt_options if args.stt_options is not None else persisted.stt_external_options
+    options = _json_object(raw_options, _("[VoiceMate] ⚠ STT options ignored: they must be a JSON object."))
+    fallback = False if args.no_stt_fallback else persisted.stt_fallback is not False
+    return ExternalSttConfig(
+        url=args.stt_url or persisted.stt_external_url or stt_provider.DEFAULT_URL,
+        token=os.environ.pop(stt_provider.TOKEN_ENV, "").strip() or (persisted.stt_external_token or "").strip(),
+        options=options,
+        start_command=os.environ.pop(stt_provider.START_COMMAND_ENV, "").strip(),
+        fallback=fallback,
+    )
+
+
+def _json_object(raw: str | None, warning: str) -> dict[str, Any]:
+    """`raw` as a JSON object; anything else is ignored with `warning` (a typo in the options must
+    not stop the engine from starting)."""
+    if not raw or not raw.strip():
+        return {}
+    try:
+        value = json.loads(raw)
+    except ValueError:
+        value = None
+    if not isinstance(value, dict):
+        print(warning, file=sys.stderr)
+        return {}
+    return value
 
 
 def _resolve_claude_enabled(args: argparse.Namespace, persisted: PersistedConfig) -> bool:
@@ -235,6 +268,8 @@ def build_config(args: argparse.Namespace, persisted: PersistedConfig | None = N
         output_lang=args.output_lang,
         use_cpu=args.cpu,
         stt_mode=stt_mode,
+        stt_engine=_resolve_stt_engine(args, persisted),
+        stt_external=_resolve_stt_external(args, persisted),
         cpu_threads=max(0, int(getattr(args, "cpu_threads", 0) or 0)),
         gpu_vendor=gpu_vendor,
         whisper_backend=whisper_backend,

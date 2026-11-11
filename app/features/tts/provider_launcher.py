@@ -1,7 +1,8 @@
-"""Starts the external TTS provider when it is not running (`TTSConfig.external_start_command`).
+"""Starts an external provider when it is not running (`TTSConfig.external_start_command`,
+`ExternalSttConfig.start_command`).
 
-The provider is a service of its own (docs/tts-provider-protocol.md): VoiceMate only knows its
-URL. When the person also gives the command that starts it, the engine runs that command itself
+The provider is a service of its own (docs/tts-provider-protocol.md, docs/stt-provider-protocol.md):
+VoiceMate only knows its URL. When the person also gives the command that starts it, the engine runs that command itself
 whenever nothing listens at that URL: at startup, and again if the provider goes away later. So
 a provider set up this way starts with VoiceMate, and VoiceMate starts with Windows. A provider
 that is only slow to answer (a timeout) may well be running, so it is not started again.
@@ -22,10 +23,10 @@ import sys
 import threading
 import time
 from collections.abc import Callable
-from typing import Final
+from typing import Final, Literal
 
 from app.i18n import _
-from app.protocol.tts_provider import ProviderError
+from app.protocol.provider_http import ProviderError
 
 # The shortest time between two runs of the start command (a provider opens its port in seconds).
 RELAUNCH_AFTER_SECONDS: Final = 60.0
@@ -47,6 +48,8 @@ _ENGINE_ONLY_ENV: Final = (
 _ENGINE_ONLY_ENV_PREFIXES: Final = ("MIOPEN_", "PYTORCH_TUNABLEOP_")
 
 Spawn = Callable[[str], "subprocess.Popen[bytes]"]
+# Which provider the launcher starts: it only changes what the log says.
+ProviderService = Literal["tts", "stt"]
 
 
 def provider_env() -> dict[str, str]:
@@ -99,8 +102,10 @@ class ProviderLauncher:
         *,
         spawn: Spawn = spawn_detached,
         clock: Callable[[], float] = time.monotonic,
+        service: ProviderService = "tts",
     ) -> None:
         self._command = command.strip()
+        self._service: ProviderService = service
         self._health = health
         self._spawn = spawn
         self._clock = clock
@@ -126,7 +131,7 @@ class ProviderLauncher:
     def start_soon(self) -> None:
         """`start_if_down` on its own thread: the caller (a request, the engine's startup) never waits."""
         if self.enabled:
-            threading.Thread(target=self.start_if_down, name="tts-provider-start", daemon=True).start()
+            threading.Thread(target=self.start_if_down, name=f"{self._service}-provider-start", daemon=True).start()
 
     def start_if_down(self) -> bool:
         """Run the start command if the provider does not answer. True when it was run now."""
@@ -139,12 +144,7 @@ class ProviderLauncher:
                     return False  # what was started last is still running (still opening its port)
                 self._process = None
                 if code != 0:
-                    print(
-                        _("[ExternalSpeaker] ⚠ The TTS provider start command exited with code {code}.").format(
-                            code=code
-                        ),
-                        file=sys.stderr,
-                    )
+                    print(self._exited_message(code), file=sys.stderr)
             if self._last_run is not None and self._clock() - self._last_run < RELAUNCH_AFTER_SECONDS:
                 return False
             try:
@@ -155,17 +155,33 @@ class ProviderLauncher:
                     return False  # it may be there, only unhappy or busy: starting another would not help
             self._failed = False
             self._last_run = self._clock()
-            print(_("[ExternalSpeaker] The TTS provider is not running: starting it with the configured command."))
+            print(self._starting_message())
             try:
                 self._process = self._spawn(self._command)
             except OSError as exc:
                 self._failed = True
-                print(
-                    _("[ExternalSpeaker] ⚠ The TTS provider start command failed: {detail}").format(
-                        detail=exc.strerror or type(exc).__name__
-                    ),
-                    file=sys.stderr,
-                )
+                print(self._failed_message(exc.strerror or type(exc).__name__), file=sys.stderr)
                 return False
-            threading.Thread(target=self._reap, args=(self._process,), name="tts-provider-reap", daemon=True).start()
+            threading.Thread(
+                target=self._reap, args=(self._process,), name=f"{self._service}-provider-reap", daemon=True
+            ).start()
             return True
+
+    # --- what the log says (one literal per message, for the translation catalogs) -----------------------
+
+    def _starting_message(self) -> str:
+        if self._service == "stt":
+            return _("[ExternalTranscriber] The STT provider is not running: starting it with the configured command.")
+        return _("[ExternalSpeaker] The TTS provider is not running: starting it with the configured command.")
+
+    def _exited_message(self, code: int) -> str:
+        if self._service == "stt":
+            return _("[ExternalTranscriber] ⚠ The STT provider start command exited with code {code}.").format(
+                code=code
+            )
+        return _("[ExternalSpeaker] ⚠ The TTS provider start command exited with code {code}.").format(code=code)
+
+    def _failed_message(self, detail: str) -> str:
+        if self._service == "stt":
+            return _("[ExternalTranscriber] ⚠ The STT provider start command failed: {detail}").format(detail=detail)
+        return _("[ExternalSpeaker] ⚠ The TTS provider start command failed: {detail}").format(detail=detail)

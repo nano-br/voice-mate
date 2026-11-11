@@ -154,6 +154,50 @@ def test_a_command_that_failed_is_reported_with_its_exit_code(capsys: pytest.Cap
     assert "exited with code 127" in capsys.readouterr().err
 
 
+def test_the_stt_provider_launcher_names_the_stt_provider_in_the_log(capsys: pytest.CaptureFixture[str]) -> None:
+    clock = Clock()
+    ran: list[str] = []
+
+    def spawn(command: str) -> subprocess.Popen[bytes]:
+        ran.append(command)
+        return Failed()  # type: ignore[return-value]
+
+    def health() -> str:
+        raise _refused()
+
+    launcher = ProviderLauncher("start-stt", health, spawn=spawn, clock=clock, service="stt")
+    assert launcher.start_if_down()
+    clock.now += RELAUNCH_AFTER_SECONDS + 1
+    assert launcher.start_if_down()
+    out = capsys.readouterr()
+    assert ran == ["start-stt", "start-stt"]
+    assert "[ExternalTranscriber] The STT provider is not running" in out.out
+    assert "[ExternalTranscriber] ⚠ The STT provider start command exited with code 127." in out.err
+    assert "TTS" not in out.out + out.err
+
+
+def test_an_external_transcriber_asks_for_its_provider_when_it_is_built() -> None:
+    from app.core.config import Config, ExternalSttConfig
+    from app.features.stt_external.transcriber import ExternalTranscriber
+
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+    ran: list[str] = []
+
+    def spawn(command: str) -> subprocess.Popen[bytes]:
+        ran.append(command)
+        return Done()  # type: ignore[return-value]
+
+    config = Config(stt_engine="external", stt_external=ExternalSttConfig(url=f"http://127.0.0.1:{port}"))
+    from app.protocol.stt_provider import SttProviderClient
+
+    client = SttProviderClient(config.stt_external.url)
+    launcher = ProviderLauncher("start-stt", client.health, spawn=spawn, clock=Clock(), service="stt")
+    ExternalTranscriber(config, builtin=lambda: None, client=client, launcher=launcher)  # type: ignore[arg-type,return-value]
+    assert wait_until(lambda: ran == ["start-stt"])
+
+
 def test_the_provider_does_not_inherit_the_engine_virtual_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     venv = os.path.join(os.sep, "engine", "venv")
     scripts = os.path.join(venv, "Scripts" if sys.platform == "win32" else "bin")

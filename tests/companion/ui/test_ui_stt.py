@@ -202,3 +202,12 @@ def test_status_window_shows_the_effective_device_and_the_fallback(
     text = ui.status_window.stt_value.text()
     assert text.startswith("CPU, large-v3-turbo")
     assert "GPU mode is not working" in text
+
+
+def test_status_window_names_an_external_stt_provider(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    fake.publish(stt={"mode": "gpu", "device": "cpu", "backend": "external", "model": "My STT"})
+    process_events()
+    text = ui.status_window.stt_value.text()
+    assert text == "Custom provider: My STT"  # its device is its own: no GPU mode warning

@@ -332,6 +332,8 @@ def stt_line(stt: SttInfo | None) -> str:
     """Where the engine is transcribing, for the status window."""
     if stt is None:
         return _("Not known yet")
+    if stt["backend"] == "external":  # a provider of docs/stt-provider-protocol.md: its device is its own
+        return _("Custom provider: {model}").format(model=stt["model"])
     device = _("GPU") if stt["device"] == "gpu" else _("CPU")
     line = _("{device}, {model}").format(device=device, model=stt["model"])
     if stt["mode"] == "gpu" and stt["device"] == "cpu":

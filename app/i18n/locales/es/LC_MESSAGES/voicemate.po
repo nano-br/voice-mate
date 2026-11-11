@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-11-03 22:33-0300\n"
+"POT-Creation-Date: 2026-11-11 01:33-0300\n"
 "PO-Revision-Date: 2026-10-01 16:49-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: es\n"
@@ -137,17 +137,21 @@ msgstr "[VoiceMate] ❌ El motor no pudo iniciarse: {exc}"
 msgid "[VoiceMate] Failed to stop the listener: {exc}"
 msgstr "[VoiceMate] No se pudo detener el listener: {exc}"
 
-#: app/cli/config_builder.py:133
+#: app/cli/config_builder.py:129
 msgid "[VoiceMate] ⚠ TTS options ignored: they must be a JSON object."
 msgstr "[VoiceMate] ⚠ Opciones de TTS ignoradas: deben ser un objeto JSON."
 
-#: app/cli/config_builder.py:171
+#: app/cli/config_builder.py:168
+msgid "[VoiceMate] ⚠ STT options ignored: they must be a JSON object."
+msgstr "[VoiceMate] ⚠ Opciones de STT ignoradas: deben ser un objeto JSON."
+
+#: app/cli/config_builder.py:204
 msgid "[VoiceMate] ⚠ Claude flow requires input-method=keyboard. Disabling."
 msgstr ""
 "[VoiceMate] ⚠ El flujo de Claude requiere input-method=keyboard. "
 "Desactivándolo."
 
-#: app/cli/config_builder.py:190
+#: app/cli/config_builder.py:223
 msgid ""
 "[VoiceMate] ⚠ --claude-no-system-prompt and --claude-system-prompt were "
 "passed together; using --claude-no-system-prompt."
@@ -155,12 +159,12 @@ msgstr ""
 "[VoiceMate] ⚠ Se pasaron --claude-no-system-prompt y --claude-system-"
 "prompt juntos; usando --claude-no-system-prompt."
 
-#: app/cli/config_builder.py:308
+#: app/cli/config_builder.py:343
 #, python-brace-format
 msgid "[VoiceMate] Auto-seed removed: {path}"
 msgstr "[VoiceMate] Auto-seed eliminado: {path}"
 
-#: app/cli/config_builder.py:311
+#: app/cli/config_builder.py:346
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Failed to remove {path}: {exc}"
 msgstr "[VoiceMate] ⚠ No se pudo eliminar {path}: {exc}"
@@ -213,13 +217,22 @@ msgstr ""
 "[VoiceMate] ⚠ No hay ningún backend de GPU disponible en AMD; usando "
 "faster-whisper en la CPU."
 
-#: app/cli/wiring.py:191
+#: app/cli/wiring.py:184
+#, python-brace-format
+msgid ""
+"[VoiceMate] ⚠ The external STT provider URL '{url}' is not valid; using "
+"the built-in transcription engine."
+msgstr ""
+"[VoiceMate] ⚠ La URL '{url}' del proveedor externo de STT no es válida; "
+"se usa el motor de transcripción integrado."
+
+#: app/cli/wiring.py:211
 msgid "[VoiceMate] ⚠ GPU mode requested but no supported GPU was found."
 msgstr ""
 "[VoiceMate] ⚠ Se pidió el modo GPU, pero no se encontró ninguna GPU "
 "compatible."
 
-#: app/cli/wiring.py:235
+#: app/cli/wiring.py:255
 #, python-brace-format
 msgid ""
 "[VoiceMate] ⚠ TTS disabled: the external provider URL '{url}' is not "
@@ -228,14 +241,14 @@ msgstr ""
 "[VoiceMate] ⚠ TTS desactivado: la dirección del proveedor externo '{url}'"
 " no es válida."
 
-#: app/cli/wiring.py:243
+#: app/cli/wiring.py:263
 #, python-brace-format
 msgid "[VoiceMate] ⚠ TTS disabled: engine '{engine}' packages not installed."
 msgstr ""
 "[VoiceMate] ⚠ TTS desactivado: los paquetes del motor '{engine}' no están"
 " instalados."
 
-#: app/cli/wiring.py:247
+#: app/cli/wiring.py:267
 #, python-brace-format
 msgid ""
 "[VoiceMate]   Install with: poetry install --extras {extra} (or run with "
@@ -244,14 +257,14 @@ msgstr ""
 "[VoiceMate]   Instala con: poetry install --extras {extra} (o ejecuta con"
 " --no-tts)."
 
-#: app/cli/wiring.py:257
+#: app/cli/wiring.py:277
 #, python-brace-format
 msgid "[VoiceMate] ⚠ TTS disabled (failed to start engine '{engine}'): {exc}"
 msgstr ""
 "[VoiceMate] ⚠ TTS desactivado (no se pudo iniciar el motor '{engine}'): "
 "{exc}"
 
-#: app/cli/wiring.py:264
+#: app/cli/wiring.py:284
 #, python-brace-format
 msgid ""
 "[VoiceMate]   Check `poetry install --extras {extra}`, GPU availability, "
@@ -260,27 +273,27 @@ msgstr ""
 "[VoiceMate]   Verifica `poetry install --extras {extra}`, la "
 "disponibilidad de la GPU, o ejecuta con `--no-tts`."
 
-#: app/cli/wiring.py:304
+#: app/cli/wiring.py:324
 msgid "[VoiceMate] ⚠ Claude flow disabled: extra 'claude' not installed."
 msgstr ""
 "[VoiceMate] ⚠ Flujo de Claude desactivado: el extra 'claude' no está "
 "instalado."
 
-#: app/cli/wiring.py:308
+#: app/cli/wiring.py:328
 msgid "[VoiceMate]   Install with: poetry install --extras claude"
 msgstr "[VoiceMate]   Instala con: poetry install --extras claude"
 
-#: app/cli/wiring.py:324
+#: app/cli/wiring.py:344
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Failed to start Claude (run `claude login`): {exc}"
 msgstr "[VoiceMate] ⚠ No se pudo iniciar Claude (ejecuta `claude login`): {exc}"
 
-#: app/cli/wiring.py:336
+#: app/cli/wiring.py:356
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Unknown flow ignored: {kind}"
 msgstr "[VoiceMate] ⚠ Flujo desconocido ignorado: {kind}"
 
-#: app/cli/wiring.py:375
+#: app/cli/wiring.py:395
 #, python-brace-format
 msgid ""
 "[VoiceMate] ⚠ --input-method mouse is only supported on Windows "
@@ -3004,29 +3017,34 @@ msgstr "Proveedor personalizado (HTTP)"
 msgid "Not known yet"
 msgstr "Aún no se sabe"
 
-#: app/companion/ui/texts.py:335
+#: app/companion/ui/texts.py:336
+#, python-brace-format
+msgid "Custom provider: {model}"
+msgstr "Proveedor personalizado: {model}"
+
+#: app/companion/ui/texts.py:337
 msgid "GPU"
 msgstr "GPU"
 
-#: app/companion/ui/texts.py:335
+#: app/companion/ui/texts.py:337
 msgid "CPU"
 msgstr "CPU"
 
-#: app/companion/ui/texts.py:336
+#: app/companion/ui/texts.py:338
 #, python-brace-format
 msgid "{device}, {model}"
 msgstr "{device}, {model}"
 
-#: app/companion/ui/texts.py:338
+#: app/companion/ui/texts.py:340
 msgid "The GPU mode is not working. Install it from the Transcription menu."
 msgstr "El modo GPU no está funcionando. Instálalo desde el menú Transcripción."
 
-#: app/companion/ui/texts.py:344
+#: app/companion/ui/texts.py:346
 #, python-brace-format
 msgid "about {size} GB"
 msgstr "unos {size} GB"
 
-#: app/companion/ui/texts.py:345
+#: app/companion/ui/texts.py:347
 #, python-brace-format
 msgid "about {size} MB"
 msgstr "unos {size} MB"
@@ -3360,13 +3378,102 @@ msgstr ""
 msgid "[VoiceMate] ⚠ VAD failed (using full audio): {exc}"
 msgstr "[VoiceMate] ⚠ Falló el VAD (usando el audio completo): {exc}"
 
-#: app/features/tts/external_speaker.py:118
-#: app/features/tts/external_speaker.py:177
+#: app/features/stt_external/transcriber.py:129
+#, python-brace-format
+msgid "[ExternalTranscriber] warmup skipped: {detail}"
+msgstr "[ExternalTranscriber] calentamiento omitido: {detail}"
+
+#: app/features/stt_external/transcriber.py:189
+msgid "any language"
+msgstr "cualquier idioma"
+
+#: app/features/stt_external/transcriber.py:191
+#, python-brace-format
+msgid "[ExternalTranscriber] Connected to '{name}' ({languages})."
+msgstr "[ExternalTranscriber] Conectado a '{name}' ({languages})."
+
+#: app/features/stt_external/transcriber.py:202
+msgid "[ExternalTranscriber] The provider is loading, waiting for it..."
+msgstr "[ExternalTranscriber] El proveedor está cargando, esperando..."
+
+#: app/features/stt_external/transcriber.py:209
+msgid "[ExternalTranscriber] Loading the built-in transcription engine..."
+msgstr "[ExternalTranscriber] Cargando el motor de transcripción integrado..."
+
+#: app/features/stt_external/transcriber.py:235
+#, python-brace-format
+msgid "[ExternalTranscriber] ⚠ {message}"
+msgstr "[ExternalTranscriber] ⚠ {message}"
+
+#: app/features/stt_external/transcriber.py:238
+msgid ""
+"[ExternalTranscriber]   Using the built-in transcription engine until the"
+" settings change."
+msgstr ""
+"[ExternalTranscriber]   Se usa el motor de transcripción integrado hasta "
+"que cambie la configuración."
+
+#: app/features/stt_external/transcriber.py:241
+msgid ""
+"[ExternalTranscriber]   Using the built-in transcription engine "
+"meanwhile; the provider is tried again in a few seconds."
+msgstr ""
+"[ExternalTranscriber]   Mientras tanto se usa el motor de transcripción "
+"integrado; el proveedor se vuelve a intentar en unos segundos."
+
+#: app/features/stt_external/transcriber.py:245
+msgid ""
+"[ExternalTranscriber]   Using the built-in transcription engine for this "
+"recording."
+msgstr ""
+"[ExternalTranscriber]   Se usa el motor de transcripción integrado para "
+"esta grabación."
+
+#: app/features/stt_external/transcriber.py:252
+#, python-brace-format
+msgid "The STT provider at {url} is not reachable ({detail})."
+msgstr "El proveedor de STT en {url} no está accesible ({detail})."
+
+#: app/features/stt_external/transcriber.py:254
+msgid ""
+"The STT provider rejected the token. Set it in the saved config or in "
+"VOICEMATE_STT_TOKEN."
+msgstr ""
+"El proveedor de STT rechazó el token. Defínelo en la configuración "
+"guardada o en VOICEMATE_STT_TOKEN."
+
+#: app/features/stt_external/transcriber.py:256
+#, python-brace-format
+msgid "The service at {url} is not a compatible STT provider: {detail}"
+msgstr "El servicio en {url} no es un proveedor de STT compatible: {detail}"
+
+#: app/features/stt_external/transcriber.py:258
+#, python-brace-format
+msgid "The STT provider at {url} is not ready yet ({detail})."
+msgstr "El proveedor de STT en {url} aún no está listo ({detail})."
+
+#: app/features/stt_external/transcriber.py:260
+#, python-brace-format
+msgid "The STT provider at {url} is busy ({detail})."
+msgstr "El proveedor de STT en {url} está ocupado ({detail})."
+
+#: app/features/stt_external/transcriber.py:262
+#, python-brace-format
+msgid "The STT provider at {url} refused the recording: {detail}"
+msgstr "El proveedor de STT en {url} rechazó la grabación: {detail}"
+
+#: app/features/stt_external/transcriber.py:263
+#, python-brace-format
+msgid "The STT provider at {url} failed: {detail}"
+msgstr "El proveedor de STT en {url} falló: {detail}"
+
+#: app/features/tts/external_speaker.py:123
+#: app/features/tts/external_speaker.py:187
 #, python-brace-format
 msgid "[ExternalSpeaker] warmup skipped: {detail}"
 msgstr "[ExternalSpeaker] calentamiento omitido: {detail}"
 
-#: app/features/tts/external_speaker.py:126
+#: app/features/tts/external_speaker.py:131
 msgid ""
 "[ExternalSpeaker] ⚠ AudioPlayer drain timed out, audio may have been left"
 " incomplete."
@@ -3374,27 +3481,27 @@ msgstr ""
 "[ExternalSpeaker] ⚠ AudioPlayer agotó el tiempo al vaciar; el audio puede"
 " haber quedado incompleto."
 
-#: app/features/tts/external_speaker.py:230
+#: app/features/tts/external_speaker.py:240
 #, python-brace-format
 msgid "[ExternalSpeaker] Connected to '{name}' ({count} voices, {rate} Hz)."
 msgstr "[ExternalSpeaker] Conectado a '{name}' ({count} voces, {rate} Hz)."
 
-#: app/features/tts/external_speaker.py:245
+#: app/features/tts/external_speaker.py:255
 msgid "[ExternalSpeaker] The provider is loading, waiting for it..."
 msgstr "[ExternalSpeaker] El proveedor está cargando, esperando..."
 
-#: app/features/tts/external_speaker.py:283
-#: app/features/tts/external_speaker.py:336
+#: app/features/tts/external_speaker.py:293
+#: app/features/tts/external_speaker.py:346
 #, python-brace-format
 msgid "[ExternalSpeaker] error while speaking: {exc}"
 msgstr "[ExternalSpeaker] error al hablar: {exc}"
 
-#: app/features/tts/external_speaker.py:311
+#: app/features/tts/external_speaker.py:321
 #, python-brace-format
 msgid "[ExternalSpeaker] ⚠ {message}"
 msgstr "[ExternalSpeaker] ⚠ {message}"
 
-#: app/features/tts/external_speaker.py:375
+#: app/features/tts/external_speaker.py:385
 #, python-brace-format
 msgid ""
 "The TTS provider at {url} is not reachable ({detail}). Speech is off "
@@ -3403,7 +3510,7 @@ msgstr ""
 "El proveedor de TTS en {url} no está accesible ({detail}). La voz queda "
 "desactivada hasta que vuelva."
 
-#: app/features/tts/external_speaker.py:379
+#: app/features/tts/external_speaker.py:389
 msgid ""
 "The TTS provider rejected the token. Set it in the settings or in "
 "VOICEMATE_TTS_TOKEN."
@@ -3411,17 +3518,17 @@ msgstr ""
 "El proveedor de TTS rechazó el token. Defínelo en Configuración o en "
 "VOICEMATE_TTS_TOKEN."
 
-#: app/features/tts/external_speaker.py:381
+#: app/features/tts/external_speaker.py:391
 #, python-brace-format
 msgid "The service at {url} is not a compatible TTS provider: {detail}"
 msgstr "El servicio en {url} no es un proveedor de TTS compatible: {detail}"
 
-#: app/features/tts/external_speaker.py:383
+#: app/features/tts/external_speaker.py:393
 #, python-brace-format
 msgid "The TTS provider at {url} is not ready yet ({detail})."
 msgstr "El proveedor de TTS en {url} aún no está listo ({detail})."
 
-#: app/features/tts/external_speaker.py:384
+#: app/features/tts/external_speaker.py:394
 #, python-brace-format
 msgid "The TTS provider at {url} failed: {detail}"
 msgstr "El proveedor de TTS en {url} falló: {detail}"
@@ -3588,7 +3695,32 @@ msgstr ""
 "[OmniVoiceSpeaker] VRAM ({label}): alloc={allocated:.2f}GB, "
 "reserved={reserved:.2f}GB"
 
-#: app/features/tts/provider_launcher.py:119
+#: app/features/tts/provider_launcher.py:174
+msgid ""
+"[ExternalTranscriber] The STT provider is not running: starting it with "
+"the configured command."
+msgstr ""
+"[ExternalTranscriber] El proveedor de STT no se está ejecutando: se "
+"inicia con el comando configurado."
+
+#: app/features/tts/provider_launcher.py:175
+msgid ""
+"[ExternalSpeaker] The TTS provider is not running: starting it with the "
+"configured command."
+msgstr ""
+"[ExternalSpeaker] El proveedor de voz no está en marcha: iniciándolo con "
+"el comando configurado."
+
+#: app/features/tts/provider_launcher.py:179
+#, python-brace-format
+msgid ""
+"[ExternalTranscriber] ⚠ The STT provider start command exited with code "
+"{code}."
+msgstr ""
+"[ExternalTranscriber] ⚠ El comando de inicio del proveedor de STT terminó"
+" con el código {code}."
+
+#: app/features/tts/provider_launcher.py:182
 #, python-brace-format
 msgid ""
 "[ExternalSpeaker] ⚠ The TTS provider start command exited with code "
@@ -3597,15 +3729,14 @@ msgstr ""
 "[ExternalSpeaker] ⚠ El comando de inicio del proveedor de voz terminó con"
 " el código {code}."
 
-#: app/features/tts/provider_launcher.py:133
-msgid ""
-"[ExternalSpeaker] The TTS provider is not running: starting it with the "
-"configured command."
+#: app/features/tts/provider_launcher.py:186
+#, python-brace-format
+msgid "[ExternalTranscriber] ⚠ The STT provider start command failed: {detail}"
 msgstr ""
-"[ExternalSpeaker] El proveedor de voz no está en marcha: iniciándolo con "
-"el comando configurado."
+"[ExternalTranscriber] ⚠ El comando de inicio del proveedor de STT falló: "
+"{detail}"
 
-#: app/features/tts/provider_launcher.py:138
+#: app/features/tts/provider_launcher.py:187
 #, python-brace-format
 msgid "[ExternalSpeaker] ⚠ The TTS provider start command failed: {detail}"
 msgstr ""

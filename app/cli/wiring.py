@@ -170,7 +170,27 @@ def _build_amd_transcriber(config: Config) -> TranscriptionBackend:
 
 
 def build_transcriber(config: Config) -> TranscriptionBackend:
-    """Pick the transcription engine based on the STT mode and vendor/strategy.
+    """The transcription engine: the external provider when one is configured
+    (docs/stt-provider-protocol.md, with the built-in engine as its fallback), the built-in
+    engine otherwise. An invalid provider URL is reported and the built-in engine is used."""
+    if config.stt_engine == "external":
+        from app.features import stt_external as stt_external_feature
+        from app.protocol.stt_provider import url_is_valid
+
+        if url_is_valid(config.stt_external.url):
+            return stt_external_feature.build_backend(config, lambda: build_builtin_transcriber(config))
+        print(
+            _(
+                "[VoiceMate] ⚠ The external STT provider URL '{url}' is not valid; "
+                "using the built-in transcription engine."
+            ).format(url=_url_for_log(config.stt_external.url)),
+            file=sys.stderr,
+        )
+    return build_builtin_transcriber(config)
+
+
+def build_builtin_transcriber(config: Config) -> TranscriptionBackend:
+    """Pick the built-in transcription engine based on the STT mode and vendor/strategy.
 
     `stt_mode="cpu"` (or `--cpu`) → faster-whisper on the CPU, the GPU stays free.
     Otherwise AMD → the `_build_amd_transcriber` chain (goal: quality ≥ main's

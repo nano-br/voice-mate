@@ -44,7 +44,8 @@ ResultsQuery = Literal["unacked", "recent"]
 SttMode = Literal["auto", "cpu", "gpu"]
 # Where the transcription actually runs (may differ from the requested mode on fallback).
 SttDevice = Literal["cpu", "gpu"]
-SttBackendName = Literal["faster-whisper", "whispercpp", "openai-whisper"]
+# "external": a provider of docs/stt-provider-protocol.md (`model` is the provider's name).
+SttBackendName = Literal["faster-whisper", "whispercpp", "openai-whisper", "external"]
 # Whisper models offered per mode. large-v3-turbo is the default for both: on the CPU it
 # was more accurate than medium for about the same latency (docs/configuration.md).
 SttModel = Literal["large-v3-turbo", "large-v3", "medium", "small"]
