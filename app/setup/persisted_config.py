@@ -14,7 +14,7 @@ from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any
 
-from app.core.config import FlowKind, GpuVendor, SttStrategy, TTSEngine, WhisperBackend
+from app.core.config import FlowKind, GpuVendor, SttEngine, SttStrategy, TTSEngine, WhisperBackend
 from app.platform.kinds import PlatformKind, TriggerKind
 from app.protocol.models import SttMode
 
@@ -29,6 +29,7 @@ _TRIGGERS: tuple[TriggerKind, ...] = ("keyboard-hooks", "pynput", "evdev", "sock
 _STT_STRATEGIES: tuple[SttStrategy, ...] = ("auto", "faster-whisper-rocm", "whispercpp", "openai-whisper")
 _TTS_ENGINES: tuple[TTSEngine, ...] = ("omnivoice", "kokoro", "voxcpm", "external", "none")
 _STT_MODES: tuple[SttMode, ...] = ("auto", "cpu", "gpu")
+_STT_ENGINES: tuple[SttEngine, ...] = ("builtin", "external")
 
 
 @dataclass
@@ -55,6 +56,13 @@ class PersistedConfig:
     daemon_port: int | None = None
     # Default STT mode when the engine is started without --stt-mode.
     stt_mode: SttMode | None = None
+    # External STT provider (docs/stt-provider-protocol.md), like the TTS keys above.
+    # stt_fallback = false: no built-in transcription while the provider is down.
+    stt_engine: SttEngine | None = None
+    stt_external_url: str | None = None
+    stt_external_token: str | None = None
+    stt_external_options: str | None = None
+    stt_fallback: bool | None = None
 
     def is_empty(self) -> bool:
         return all(getattr(self, f.name) is None for f in fields(self))
@@ -86,6 +94,11 @@ def load_persisted(path: Path = CONFIG_PATH) -> PersistedConfig:
         ct2_rocm_ok=_read_bool(data, "ct2_rocm_ok"),
         daemon_port=_read_int(data, "daemon_port"),
         stt_mode=_read_choice(data, "stt_mode", _STT_MODES),
+        stt_engine=_read_choice(data, "stt_engine", _STT_ENGINES),
+        stt_external_url=_read_str(data, "stt_external_url"),
+        stt_external_token=_read_str(data, "stt_external_token"),
+        stt_external_options=_read_str(data, "stt_external_options"),
+        stt_fallback=_read_bool(data, "stt_fallback"),
     )
 
 

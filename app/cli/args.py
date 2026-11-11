@@ -108,6 +108,37 @@ def _add_core_args(parser: argparse.ArgumentParser) -> None:
         ),
     )
     parser.add_argument(
+        "--stt-engine",
+        default=None,  # None = the engine saved in the config, or "builtin"
+        choices=["builtin", "external"],
+        help=(
+            "Who transcribes. 'builtin' (default): VoiceMate's own engines (see --stt-mode and "
+            "--whisper-backend). 'external': a provider over HTTP (docs/stt-provider-protocol.md; "
+            "see --stt-url), with the built-in engine as the fallback while it is down."
+        ),
+    )
+    parser.add_argument(
+        "--stt-url",
+        default=None,  # None = the URL saved in the config, or the protocol default
+        help="Base URL of the external STT provider (only with --stt-engine=external; default http://127.0.0.1:8766).",
+    )
+    parser.add_argument(
+        "--stt-options",
+        default=None,
+        help=(
+            "JSON object passed through to the external STT provider in X-VoiceMate-Options "
+            "(for example '{\"beam_size\": 5}'). The token is not a flag: set VOICEMATE_STT_TOKEN."
+        ),
+    )
+    parser.add_argument(
+        "--no-stt-fallback",
+        action="store_true",
+        help=(
+            "With --stt-engine=external, never transcribe with the built-in engine: when the provider "
+            "fails, the recording fails with its error."
+        ),
+    )
+    parser.add_argument(
         "--platform",
         default=None,
         choices=["windows", "linux-x11", "linux-wayland", "wsl2"],

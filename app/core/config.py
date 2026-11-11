@@ -40,6 +40,14 @@ WhisperBackend = Literal["faster-whisper", "whispercpp", "openai-whisper"]
 #   - whispercpp / openai-whisper: forces the corresponding backend.
 SttStrategy = Literal["auto", "faster-whisper-rocm", "whispercpp", "openai-whisper"]
 
+# Who transcribes:
+#   - builtin: VoiceMate's own engines (faster-whisper, whisper.cpp, openai-whisper), picked
+#     by the mode and the GPU as described above.
+#   - external: any provider that speaks the HTTP protocol of docs/stt-provider-protocol.md
+#     (no extra packages: the audio is sent to the provider). The built-in engine is the
+#     fallback while the provider is down, unless the fallback is off.
+SttEngine = Literal["builtin", "external"]
+
 # whisper.cpp backend mode:
 #   - server: starts whisper-server.exe once (model warm in VRAM) and does a
 #     POST /inference per utterance — eliminates the model reload on every
@@ -137,6 +145,24 @@ class TTSConfig:
 
 
 @dataclass
+class ExternalSttConfig:
+    """The external STT provider (Config.stt_engine == "external", docs/stt-provider-protocol.md).
+
+    `options` is passed through untouched. The token is never logged (repr=False): it comes from
+    the saved config or from the VOICEMATE_STT_TOKEN environment variable.
+    """
+
+    url: str = "http://127.0.0.1:8766"
+    token: str = field(default="", repr=False)
+    options: dict[str, Any] = field(default_factory=dict)
+    # Shell command that starts the provider when it does not answer ("" = VoiceMate never starts
+    # it). From the VOICEMATE_STT_START_COMMAND environment variable; never logged (repr=False).
+    start_command: str = field(default="", repr=False)
+    # While the provider is down, transcribe with the built-in engine (False: the error surfaces).
+    fallback: bool = True
+
+
+@dataclass
 class FlowConfig:
     """Describes a flow (hotkey → destination of the transcribed text)."""
 
@@ -164,6 +190,9 @@ class Config:
     # Transcription mode picked by the user (companion / --stt-mode / setup): "cpu"
     # frees the GPU, "gpu" insists on the card, "auto" keeps the per-vendor chain.
     stt_mode: SttMode = "auto"
+    # Who transcribes: VoiceMate's own engines or an external provider (`stt_external`).
+    stt_engine: SttEngine = "builtin"
+    stt_external: ExternalSttConfig = field(default_factory=ExternalSttConfig)
     # faster-whisper threads on the CPU. 0 = auto (`app.core.transcriber.default_cpu_threads`).
     cpu_threads: int = 0
     # Result of the CTranslate2-ROCm validation done by setup (persisted):

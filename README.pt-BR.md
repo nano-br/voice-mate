@@ -66,7 +66,7 @@ Uma demonstração e teste ao vivo do agente pessoal de IA, por enquanto em port
 - Windows 10/11 com NVIDIA (CUDA): o caminho original, testado a fundo. O motor roda nativamente pela linha de comando.
 - O motor dentro do WSL2 (a configuração do companion) e GPUs AMD (ROCm 7.2) via WSL2: testado numa Radeon RX 9070 XT (RDNA4, `gfx1201`).
 - AMD com Vulkan no Windows, e Linux (X11, Wayland) com um companion opcional, usam a mesma configuração.
-- Em qualquer plataforma, a CPU serve de alternativa. O `make setup` detecta a plataforma e a GPU e instala o build do PyTorch e o backend de reconhecimento de fala correspondentes.
+- Em qualquer plataforma, a CPU serve de alternativa. O `make setup` detecta a plataforma e a GPU e instala o build do PyTorch e o backend de reconhecimento de fala correspondentes. Ou transcreva com um serviço que você roda, pelo [protocolo de provedor de STT](docs/stt-provider-protocol.md) (`--stt-engine external`).
 
 **Conversa por voz com o Claude**
 - `Ctrl+Alt+A` envia a sua fala ao Claude pela CLI do Claude Code (com o seu próprio login: o texto transcrito vai para a Anthropic, o áudio não). A resposta é copiada para a área de transferência e lida em voz alta.
@@ -502,6 +502,7 @@ Mais problemas e as mensagens exatas: [docs/troubleshooting.md](docs/troubleshoo
 - [Architecture](docs/architecture.md): diagramas e decisões de projeto.
 - [WSL2 and AMD](docs/wsl2.md), [Companion design](docs/companion-app.md), [Brand](docs/brand.md), [Releasing](docs/releasing.md).
 - [Perfil do Claude Desktop](docs/desktop-profile.md) e [protocolo de provedor TTS](docs/tts-provider-protocol.md): o arquivo que diz ao modo Desktop onde estão os controles, e o contrato HTTP para a sua própria voz.
+- [Protocolo de provedor STT](docs/stt-provider-protocol.md): o contrato HTTP para um serviço de reconhecimento de fala que você roda.
 - Notas de pesquisa (em inglês): [Projeto do assistente de voz](docs/research/voice-assistant-design.md) e [VoiceMate como cliente do Claude Code](docs/research/claude-code-client.md).
 
 ## Como contribuir

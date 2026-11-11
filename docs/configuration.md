@@ -31,6 +31,12 @@ Flags reach the engine through the Makefile with `ARGS`, for example `make run A
 | `--mouse-button` | `x` | Mouse button for `--input-method mouse` (`x` is a side button) |
 | `--max-recording-seconds` | `600` | Recording limit. A warning plays at 80 %; at the limit the recording stops and is transcribed |
 | `--output-lang` | `pt-BR` | BCP-47 code. The language of Claude's answers, the default transcription language (`pt-BR` gives `pt`, `en` gives `en`, `zh-CN` gives `zh`) and the default language of the engine messages. The default pins Whisper to Portuguese: pass `--output-lang en` (or `--transcription-language en`) when you dictate in English. The companion passes it for the engine it starts, from the "Dictation language:" setting |
+| `--stt-engine {builtin,external}` | saved choice, else `builtin` | `builtin` is the speech-to-text engine chosen above. `external` is a service you run ([protocol](stt-provider-protocol.md)) |
+| `--stt-url` | `http://127.0.0.1:8766` | `external` only: base URL of the provider. An invalid URL is logged and the built-in engine is used |
+| `--stt-options` | none | `external` only: JSON object of options passed to the provider as they are |
+| `--no-stt-fallback` | off | `external` only: a recording the provider cannot transcribe fails instead of going to the built-in engine |
+
+The STT provider token is never a flag: it is read from `VOICEMATE_STT_TOKEN`, else from `stt_external_token` in the engine file, and it is never logged. Its start command comes only from `VOICEMATE_STT_START_COMMAND`. The engine removes both from its environment once read. See the [STT provider protocol](stt-provider-protocol.md).
 
 ### Platform, trigger and API
 
@@ -107,6 +113,10 @@ A flat TOML file written by `make setup` and `make configure`. Invalid values ar
 | `tts_engine` | the default engine, `kokoro`, `voxcpm`, `external`, `none` | TTS engine |
 | `tts_external_url`, `tts_external_voice`, `tts_external_options` | text | Settings of the `external` engine (address, voice id, JSON options) |
 | `tts_external_token` | text | Bearer token of the `external` engine. Plain text in this file; `VOICEMATE_TTS_TOKEN` wins |
+| `stt_engine` | `builtin`, `external` | Transcription engine |
+| `stt_external_url`, `stt_external_options` | text | Settings of the `external` transcription engine (address, JSON options) |
+| `stt_external_token` | text | Bearer token of the `external` transcription engine. Plain text in this file; `VOICEMATE_STT_TOKEN` wins |
+| `stt_fallback` | `true`, `false` | `false` turns off the built-in fallback of the `external` transcription engine |
 | `default_flow` | `clipboard`, `claude_chat` | `clipboard` turns the Claude flow off |
 | `platform` | `windows`, `linux-x11`, `linux-wayland`, `wsl2` | Runtime environment |
 | `trigger` | `keyboard-hooks`, `pynput`, `evdev`, `socket` | Hotkey mechanism |
@@ -277,6 +287,8 @@ Left out on purpose: hotkeys; every file or folder (the personality file and tex
 | `VOICEMATE_LANG` | engine | Language of the engine messages only (`pt-BR`, `en`, `es`, `ru`, `zh-CN`); without it the messages follow `--output-lang`, whose default is Portuguese. Set it in the shell that runs `make run` (bash inside WSL or on Linux, `$env:VOICEMATE_LANG` in PowerShell on Windows). Wins over `--output-lang`. It does not change what Whisper hears or the language of Claude's answers. The companion ignores it |
 | `VOICEMATE_TTS_TOKEN` | engine | Bearer token for the external TTS provider. Wins over the saved one. The companion sets it when it starts the engine |
 | `VOICEMATE_TTS_START_COMMAND` | engine | Command line that starts the external TTS provider when nothing listens at its address. The companion sets it when it starts the engine and lists it in `WSLENV`, so it reaches the engine inside WSL. Never logged |
+| `VOICEMATE_STT_TOKEN` | engine | Bearer token for the external STT provider. Wins over the saved one |
+| `VOICEMATE_STT_START_COMMAND` | engine | Command line that starts the external STT provider when nothing listens at its address. Never logged |
 | `VOICEMATE_API_TOKEN` | engine, companion | Replaces the token file. For tests only |
 | `VOICEMATE_CLAUDE_CLI` | companion (assistant) | Path or command name of the Claude Code CLI the assistant starts. Without it, VoiceMate looks for `claude` on the `PATH`, then in `~/.local/bin` (`claude.exe`, the native installer) and `%APPDATA%\npm` (`claude.cmd`, npm). Set it with a full path when `claude` is somewhere else |
 | `CLAUDE_CONFIG_DIR` | companion (assistant) | Claude home, where the skill is installed and the conversations are read; default `~/.claude` |

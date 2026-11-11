@@ -66,7 +66,7 @@ Una demostración y prueba en vivo del agente personal de IA, por ahora en portu
 - Windows 10/11 con NVIDIA (CUDA): el camino original, probado a fondo. El motor funciona de forma nativa desde la línea de comandos.
 - El motor dentro de WSL2 (la configuración del companion) y GPUs AMD (ROCm 7.2) mediante WSL2: probado en una Radeon RX 9070 XT (RDNA4, `gfx1201`).
 - AMD con Vulkan en Windows, y Linux (X11, Wayland) con un companion opcional, usan la misma configuración.
-- En todas las plataformas hay respaldo en CPU. `make setup` detecta la plataforma y la GPU e instala la compilación de PyTorch y el backend de reconocimiento de voz que corresponden.
+- En todas las plataformas hay respaldo en CPU. `make setup` detecta la plataforma y la GPU e instala la compilación de PyTorch y el backend de reconocimiento de voz que corresponden. O transcribe con un servicio que ejecutas tú, mediante el [protocolo de proveedor de STT](docs/stt-provider-protocol.md) (`--stt-engine external`).
 
 **Conversación por voz con Claude**
 - `Ctrl+Alt+A` envía tu voz a Claude mediante la CLI de Claude Code (con tu propio inicio de sesión: el texto transcrito va a Anthropic, el audio no). La respuesta se copia al portapapeles y se lee en voz alta.
@@ -502,6 +502,7 @@ Más problemas y los mensajes exactos: [docs/troubleshooting.md](docs/troublesho
 - [Architecture](docs/architecture.md): diagramas y decisiones de diseño.
 - [WSL2 and AMD](docs/wsl2.md), [Companion design](docs/companion-app.md), [Brand](docs/brand.md), [Releasing](docs/releasing.md).
 - [Perfil de Claude Desktop](docs/desktop-profile.md) y [protocolo de proveedor TTS](docs/tts-provider-protocol.md): el archivo que indica al modo Desktop dónde están los controles, y el contrato HTTP para tu propia voz.
+- [Protocolo de proveedor STT](docs/stt-provider-protocol.md): el contrato HTTP para un servicio de reconocimiento de voz que ejecutas tú.
 - Notas de investigación (en inglés): [Diseño del asistente de voz](docs/research/voice-assistant-design.md) y [VoiceMate como cliente de Claude Code](docs/research/claude-code-client.md).
 
 ## Cómo contribuir

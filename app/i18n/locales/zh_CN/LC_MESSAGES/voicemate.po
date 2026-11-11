@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: voice-mate 0.1.0\n"
 "Report-Msgid-Bugs-To: alli.terhorst@gmail.com\n"
-"POT-Creation-Date: 2026-11-03 22:33-0300\n"
+"POT-Creation-Date: 2026-11-11 01:33-0300\n"
 "PO-Revision-Date: 2026-10-02 03:34-0300\n"
 "Last-Translator: Álli Terhorst <alli.terhorst@gmail.com>\n"
 "Language: zh_CN\n"
@@ -137,15 +137,19 @@ msgstr "[VoiceMate] ❌ 引擎启动失败：{exc}"
 msgid "[VoiceMate] Failed to stop the listener: {exc}"
 msgstr "[VoiceMate] 停止监听器失败：{exc}"
 
-#: app/cli/config_builder.py:133
+#: app/cli/config_builder.py:129
 msgid "[VoiceMate] ⚠ TTS options ignored: they must be a JSON object."
 msgstr "[VoiceMate] ⚠ 已忽略 TTS 选项：它们必须是 JSON 对象。"
 
-#: app/cli/config_builder.py:171
+#: app/cli/config_builder.py:168
+msgid "[VoiceMate] ⚠ STT options ignored: they must be a JSON object."
+msgstr "[VoiceMate] ⚠ 已忽略 STT 选项：必须是一个 JSON 对象。"
+
+#: app/cli/config_builder.py:204
 msgid "[VoiceMate] ⚠ Claude flow requires input-method=keyboard. Disabling."
 msgstr "[VoiceMate] ⚠ Claude 流程需要 input-method=keyboard，已禁用。"
 
-#: app/cli/config_builder.py:190
+#: app/cli/config_builder.py:223
 msgid ""
 "[VoiceMate] ⚠ --claude-no-system-prompt and --claude-system-prompt were "
 "passed together; using --claude-no-system-prompt."
@@ -153,12 +157,12 @@ msgstr ""
 "[VoiceMate] ⚠ 同时传入了 --claude-no-system-prompt 和 --claude-system-"
 "prompt；将使用 --claude-no-system-prompt。"
 
-#: app/cli/config_builder.py:308
+#: app/cli/config_builder.py:343
 #, python-brace-format
 msgid "[VoiceMate] Auto-seed removed: {path}"
 msgstr "[VoiceMate] 已删除自动参考音频：{path}"
 
-#: app/cli/config_builder.py:311
+#: app/cli/config_builder.py:346
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Failed to remove {path}: {exc}"
 msgstr "[VoiceMate] ⚠ 无法删除 {path}：{exc}"
@@ -205,35 +209,42 @@ msgid ""
 "CPU."
 msgstr "[VoiceMate] ⚠ AMD 上没有可用的 GPU 后端；改用 CPU 上的 faster-whisper。"
 
-#: app/cli/wiring.py:191
+#: app/cli/wiring.py:184
+#, python-brace-format
+msgid ""
+"[VoiceMate] ⚠ The external STT provider URL '{url}' is not valid; using "
+"the built-in transcription engine."
+msgstr "[VoiceMate] ⚠ 外部 STT 提供方的地址 '{url}' 无效；改用内置转写引擎。"
+
+#: app/cli/wiring.py:211
 msgid "[VoiceMate] ⚠ GPU mode requested but no supported GPU was found."
 msgstr "[VoiceMate] ⚠ 已选择 GPU 模式，但未找到受支持的 GPU。"
 
-#: app/cli/wiring.py:235
+#: app/cli/wiring.py:255
 #, python-brace-format
 msgid ""
 "[VoiceMate] ⚠ TTS disabled: the external provider URL '{url}' is not "
 "valid."
 msgstr "[VoiceMate] ⚠ TTS 已禁用：外部提供方地址 '{url}' 无效。"
 
-#: app/cli/wiring.py:243
+#: app/cli/wiring.py:263
 #, python-brace-format
 msgid "[VoiceMate] ⚠ TTS disabled: engine '{engine}' packages not installed."
 msgstr "[VoiceMate] ⚠ TTS 已禁用：未安装引擎“{engine}”的软件包。"
 
-#: app/cli/wiring.py:247
+#: app/cli/wiring.py:267
 #, python-brace-format
 msgid ""
 "[VoiceMate]   Install with: poetry install --extras {extra} (or run with "
 "--no-tts)."
 msgstr "[VoiceMate]   安装方法：poetry install --extras {extra}（或使用 --no-tts 运行）。"
 
-#: app/cli/wiring.py:257
+#: app/cli/wiring.py:277
 #, python-brace-format
 msgid "[VoiceMate] ⚠ TTS disabled (failed to start engine '{engine}'): {exc}"
 msgstr "[VoiceMate] ⚠ TTS 已禁用（引擎“{engine}”启动失败）：{exc}"
 
-#: app/cli/wiring.py:264
+#: app/cli/wiring.py:284
 #, python-brace-format
 msgid ""
 "[VoiceMate]   Check `poetry install --extras {extra}`, GPU availability, "
@@ -242,25 +253,25 @@ msgstr ""
 "[VoiceMate]   请检查 `poetry install --extras {extra}`、GPU 是否可用，或使用 `--no-"
 "tts` 运行。"
 
-#: app/cli/wiring.py:304
+#: app/cli/wiring.py:324
 msgid "[VoiceMate] ⚠ Claude flow disabled: extra 'claude' not installed."
 msgstr "[VoiceMate] ⚠ Claude 流程已禁用：未安装 extra“claude”。"
 
-#: app/cli/wiring.py:308
+#: app/cli/wiring.py:328
 msgid "[VoiceMate]   Install with: poetry install --extras claude"
 msgstr "[VoiceMate]   安装方法：poetry install --extras claude"
 
-#: app/cli/wiring.py:324
+#: app/cli/wiring.py:344
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Failed to start Claude (run `claude login`): {exc}"
 msgstr "[VoiceMate] ⚠ 无法启动 Claude（请运行 `claude login`）：{exc}"
 
-#: app/cli/wiring.py:336
+#: app/cli/wiring.py:356
 #, python-brace-format
 msgid "[VoiceMate] ⚠ Unknown flow ignored: {kind}"
 msgstr "[VoiceMate] ⚠ 已忽略未知流程：{kind}"
 
-#: app/cli/wiring.py:375
+#: app/cli/wiring.py:395
 #, python-brace-format
 msgid ""
 "[VoiceMate] ⚠ --input-method mouse is only supported on Windows "
@@ -2845,29 +2856,34 @@ msgstr "自定义提供方（HTTP）"
 msgid "Not known yet"
 msgstr "暂不清楚"
 
-#: app/companion/ui/texts.py:335
+#: app/companion/ui/texts.py:336
+#, python-brace-format
+msgid "Custom provider: {model}"
+msgstr "自定义提供方：{model}"
+
+#: app/companion/ui/texts.py:337
 msgid "GPU"
 msgstr "GPU"
 
-#: app/companion/ui/texts.py:335
+#: app/companion/ui/texts.py:337
 msgid "CPU"
 msgstr "CPU"
 
-#: app/companion/ui/texts.py:336
+#: app/companion/ui/texts.py:338
 #, python-brace-format
 msgid "{device}, {model}"
 msgstr "{device}，{model}"
 
-#: app/companion/ui/texts.py:338
+#: app/companion/ui/texts.py:340
 msgid "The GPU mode is not working. Install it from the Transcription menu."
 msgstr "GPU 模式无法使用。请从“转写”菜单安装。"
 
-#: app/companion/ui/texts.py:344
+#: app/companion/ui/texts.py:346
 #, python-brace-format
 msgid "about {size} GB"
 msgstr "约 {size} GB"
 
-#: app/companion/ui/texts.py:345
+#: app/companion/ui/texts.py:347
 #, python-brace-format
 msgid "about {size} MB"
 msgstr "约 {size} MB"
@@ -3176,62 +3192,143 @@ msgstr "[VoiceMate] ⚠ openai-whisper 预热失败（继续运行）：{exc}"
 msgid "[VoiceMate] ⚠ VAD failed (using full audio): {exc}"
 msgstr "[VoiceMate] ⚠ VAD 失败（使用完整音频）：{exc}"
 
-#: app/features/tts/external_speaker.py:118
-#: app/features/tts/external_speaker.py:177
+#: app/features/stt_external/transcriber.py:129
+#, python-brace-format
+msgid "[ExternalTranscriber] warmup skipped: {detail}"
+msgstr "[ExternalTranscriber] 已跳过预热：{detail}"
+
+#: app/features/stt_external/transcriber.py:189
+msgid "any language"
+msgstr "任意语言"
+
+#: app/features/stt_external/transcriber.py:191
+#, python-brace-format
+msgid "[ExternalTranscriber] Connected to '{name}' ({languages})."
+msgstr "[ExternalTranscriber] 已连接到 '{name}'（{languages}）。"
+
+#: app/features/stt_external/transcriber.py:202
+msgid "[ExternalTranscriber] The provider is loading, waiting for it..."
+msgstr "[ExternalTranscriber] 提供方正在加载，等待中..."
+
+#: app/features/stt_external/transcriber.py:209
+msgid "[ExternalTranscriber] Loading the built-in transcription engine..."
+msgstr "[ExternalTranscriber] 正在加载内置转写引擎..."
+
+#: app/features/stt_external/transcriber.py:235
+#, python-brace-format
+msgid "[ExternalTranscriber] ⚠ {message}"
+msgstr "[ExternalTranscriber] ⚠ {message}"
+
+#: app/features/stt_external/transcriber.py:238
+msgid ""
+"[ExternalTranscriber]   Using the built-in transcription engine until the"
+" settings change."
+msgstr "[ExternalTranscriber]   在设置更改之前使用内置转写引擎。"
+
+#: app/features/stt_external/transcriber.py:241
+msgid ""
+"[ExternalTranscriber]   Using the built-in transcription engine "
+"meanwhile; the provider is tried again in a few seconds."
+msgstr "[ExternalTranscriber]   暂时使用内置转写引擎；几秒后会再次尝试提供方。"
+
+#: app/features/stt_external/transcriber.py:245
+msgid ""
+"[ExternalTranscriber]   Using the built-in transcription engine for this "
+"recording."
+msgstr "[ExternalTranscriber]   此次录音使用内置转写引擎。"
+
+#: app/features/stt_external/transcriber.py:252
+#, python-brace-format
+msgid "The STT provider at {url} is not reachable ({detail})."
+msgstr "无法连接 {url} 上的 STT 提供方（{detail}）。"
+
+#: app/features/stt_external/transcriber.py:254
+msgid ""
+"The STT provider rejected the token. Set it in the saved config or in "
+"VOICEMATE_STT_TOKEN."
+msgstr "STT 提供方拒绝了令牌。请在已保存的配置或 VOICEMATE_STT_TOKEN 中设置。"
+
+#: app/features/stt_external/transcriber.py:256
+#, python-brace-format
+msgid "The service at {url} is not a compatible STT provider: {detail}"
+msgstr "{url} 上的服务不是兼容的 STT 提供方：{detail}"
+
+#: app/features/stt_external/transcriber.py:258
+#, python-brace-format
+msgid "The STT provider at {url} is not ready yet ({detail})."
+msgstr "{url} 上的 STT 提供方尚未就绪（{detail}）。"
+
+#: app/features/stt_external/transcriber.py:260
+#, python-brace-format
+msgid "The STT provider at {url} is busy ({detail})."
+msgstr "{url} 上的 STT 提供方正忙（{detail}）。"
+
+#: app/features/stt_external/transcriber.py:262
+#, python-brace-format
+msgid "The STT provider at {url} refused the recording: {detail}"
+msgstr "{url} 上的 STT 提供方拒绝了这段录音：{detail}"
+
+#: app/features/stt_external/transcriber.py:263
+#, python-brace-format
+msgid "The STT provider at {url} failed: {detail}"
+msgstr "{url} 上的 STT 提供方出错：{detail}"
+
+#: app/features/tts/external_speaker.py:123
+#: app/features/tts/external_speaker.py:187
 #, python-brace-format
 msgid "[ExternalSpeaker] warmup skipped: {detail}"
 msgstr "[ExternalSpeaker] 已跳过预热：{detail}"
 
-#: app/features/tts/external_speaker.py:126
+#: app/features/tts/external_speaker.py:131
 msgid ""
 "[ExternalSpeaker] ⚠ AudioPlayer drain timed out, audio may have been left"
 " incomplete."
 msgstr "[ExternalSpeaker] ⚠ AudioPlayer 清空缓冲超时，音频可能不完整。"
 
-#: app/features/tts/external_speaker.py:230
+#: app/features/tts/external_speaker.py:240
 #, python-brace-format
 msgid "[ExternalSpeaker] Connected to '{name}' ({count} voices, {rate} Hz)."
 msgstr "[ExternalSpeaker] 已连接到“{name}”（{count} 个声音，{rate} Hz）。"
 
-#: app/features/tts/external_speaker.py:245
+#: app/features/tts/external_speaker.py:255
 msgid "[ExternalSpeaker] The provider is loading, waiting for it..."
 msgstr "[ExternalSpeaker] 提供方正在加载，等待中..."
 
-#: app/features/tts/external_speaker.py:283
-#: app/features/tts/external_speaker.py:336
+#: app/features/tts/external_speaker.py:293
+#: app/features/tts/external_speaker.py:346
 #, python-brace-format
 msgid "[ExternalSpeaker] error while speaking: {exc}"
 msgstr "[ExternalSpeaker] 朗读时出错：{exc}"
 
-#: app/features/tts/external_speaker.py:311
+#: app/features/tts/external_speaker.py:321
 #, python-brace-format
 msgid "[ExternalSpeaker] ⚠ {message}"
 msgstr "[ExternalSpeaker] ⚠ {message}"
 
-#: app/features/tts/external_speaker.py:375
+#: app/features/tts/external_speaker.py:385
 #, python-brace-format
 msgid ""
 "The TTS provider at {url} is not reachable ({detail}). Speech is off "
 "until it is back."
 msgstr "无法访问 {url} 的 TTS 提供方（{detail}）。在其恢复前语音将保持关闭。"
 
-#: app/features/tts/external_speaker.py:379
+#: app/features/tts/external_speaker.py:389
 msgid ""
 "The TTS provider rejected the token. Set it in the settings or in "
 "VOICEMATE_TTS_TOKEN."
 msgstr "TTS 提供方拒绝了令牌。请在设置中或通过 VOICEMATE_TTS_TOKEN 设置。"
 
-#: app/features/tts/external_speaker.py:381
+#: app/features/tts/external_speaker.py:391
 #, python-brace-format
 msgid "The service at {url} is not a compatible TTS provider: {detail}"
 msgstr "{url} 处的服务不是兼容的 TTS 提供方：{detail}"
 
-#: app/features/tts/external_speaker.py:383
+#: app/features/tts/external_speaker.py:393
 #, python-brace-format
 msgid "The TTS provider at {url} is not ready yet ({detail})."
 msgstr "{url} 处的 TTS 提供方尚未就绪（{detail}）。"
 
-#: app/features/tts/external_speaker.py:384
+#: app/features/tts/external_speaker.py:394
 #, python-brace-format
 msgid "The TTS provider at {url} failed: {detail}"
 msgstr "{url} 处的 TTS 提供方出错：{detail}"
@@ -3382,20 +3479,38 @@ msgstr ""
 "[OmniVoiceSpeaker] "
 "显存（{label}）：alloc={allocated:.2f}GB，reserved={reserved:.2f}GB"
 
-#: app/features/tts/provider_launcher.py:119
+#: app/features/tts/provider_launcher.py:174
+msgid ""
+"[ExternalTranscriber] The STT provider is not running: starting it with "
+"the configured command."
+msgstr "[ExternalTranscriber] STT 提供方未在运行：正在用配置的命令启动它。"
+
+#: app/features/tts/provider_launcher.py:175
+msgid ""
+"[ExternalSpeaker] The TTS provider is not running: starting it with the "
+"configured command."
+msgstr "[ExternalSpeaker] 语音提供方未在运行：正在用配置的命令启动它。"
+
+#: app/features/tts/provider_launcher.py:179
+#, python-brace-format
+msgid ""
+"[ExternalTranscriber] ⚠ The STT provider start command exited with code "
+"{code}."
+msgstr "[ExternalTranscriber] ⚠ STT 提供方的启动命令以代码 {code} 退出。"
+
+#: app/features/tts/provider_launcher.py:182
 #, python-brace-format
 msgid ""
 "[ExternalSpeaker] ⚠ The TTS provider start command exited with code "
 "{code}."
 msgstr "[ExternalSpeaker] ⚠ TTS 提供方的启动命令已退出，退出码 {code}。"
 
-#: app/features/tts/provider_launcher.py:133
-msgid ""
-"[ExternalSpeaker] The TTS provider is not running: starting it with the "
-"configured command."
-msgstr "[ExternalSpeaker] 语音提供方未在运行：正在用配置的命令启动它。"
+#: app/features/tts/provider_launcher.py:186
+#, python-brace-format
+msgid "[ExternalTranscriber] ⚠ The STT provider start command failed: {detail}"
+msgstr "[ExternalTranscriber] ⚠ STT 提供方的启动命令失败：{detail}"
 
-#: app/features/tts/provider_launcher.py:138
+#: app/features/tts/provider_launcher.py:187
 #, python-brace-format
 msgid "[ExternalSpeaker] ⚠ The TTS provider start command failed: {detail}"
 msgstr "[ExternalSpeaker] ⚠ 语音提供方的启动命令失败：{detail}"
