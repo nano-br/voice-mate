@@ -161,7 +161,9 @@ The companion ignores it.
 
 ## Voice assistant
 
-The voice assistant is one Claude conversation, the "central conversation", that you talk to by voice or by typing. It knows what your other Claude conversations are doing: it can list them, read them, ask them things, start new ones in the background and tell you when they answer. It is off by default. The whole flow, explained with diagrams (the two modes, how it conducts your other conversations, how answers come back), is in [voice-assistant.md](voice-assistant.md); the component diagram is in [architecture.md](architecture.md#61-voice-assistant), and the design is in the [research notes](research/voice-assistant-design.md).
+The voice assistant is one Claude conversation, the "central conversation", that you talk to by voice or by typing. It knows what your other Claude conversations are doing: it can list them, read them, ask them things, start new ones in the background and tell you when they answer. It is off by default. What it does for you (routing, initiative, waits and watches, standing instructions, limits) is in [assistant.md](assistant.md).
+
+The whole flow, explained with diagrams (the two modes, how it conducts your other conversations, how answers come back), is in [voice-assistant.md](voice-assistant.md); the component diagram is in [architecture.md](architecture.md#61-voice-assistant), and the design is in the [research notes](research/voice-assistant-design.md).
 
 ```mermaid
 sequenceDiagram
@@ -235,7 +237,9 @@ The status line says "Starting...", "Ready", "Answering..." or what is wrong, wi
 
 Next to the message box, **Talk** is the talk hotkey as a button: click it to record, click **Stop and send** to stop and send the text to the assistant. The line beside it shows the same state, with the same badge and words, as the status window (recording with the elapsed time, transcribing), also for a recording started with a hotkey. The button is disabled while the assistant is not ready or the engine is still transcribing the last recording.
 
-Below the messages, **Answers waiting** lists the answers held for you (see [Answers from other conversations](#answers-from-other-conversations)): select one to read it, **Hear all** has the assistant go over them, **Clear** drops them. **Waiting for** lists what the assistant is waiting on in other conversations (conversation, title, reason, since when); an entry leaves the list when the assistant marks it done. **Back to the assistant** appears while the window follows or talks to another conversation.
+Below the messages, **Answers waiting** lists the answers held for you (see [Answers from other conversations](#answers-from-other-conversations)): select one to read it, **Hear all** has the assistant go over them, **Clear** drops them.
+
+**Waiting for** lists what the assistant is waiting on or watching in other conversations (conversation, title, reason, since when). An entry leaves the list when the assistant marks it done, when the answer it waited for arrives, or when no new turn comes in time (1 hour for a wait, 12 hours for a watch you asked for); the list survives a restart. **Back to the assistant** appears while the window follows or talks to another conversation.
 
 <p align="center"><img src="assets/screenshots/en/assistant-inbox.png" width="568" alt="The assistant window with the Answers waiting group and the Waiting for list"></p>
 
@@ -282,7 +286,7 @@ In direct mode only leaving it, or naming another conversation, counts as a comm
 
 ### Answers from other conversations
 
-When the assistant sends something to a conversation or starts one, VoiceMate watches it and notices when it answers. "Answers from other conversations:" in Settings > **Assistant** decides what happens next.
+When the assistant sends something to a conversation or starts one, VoiceMate watches it and notices when it answers. "Answers from other conversations:" in Settings > **Assistant** decides what happens next. A conversation you asked it to keep watching ("keep an eye on X") is different: every turn it finishes is reported to the assistant whatever this choice is, until you say stop ([waiting and watching](assistant.md#-waiting-and-watching)).
 
 | Choice | What you get |
 |---|---|
@@ -310,6 +314,8 @@ In the own mode the assistant can start conversations in the background ("start 
 > [!IMPORTANT]
 > "Full access" lets conversations that run unattended act on your computer with nobody to approve. Use it only if you accept that. A change applies to the conversations the assistant starts from then on and restarts the central conversation at once, so it never keeps the old permissions.
 
+"Permissions:" does not apply to a closed terminal, IDE or Remote Control session the assistant resumes to deliver a message: that resume passes no permission mode, unless you set `resume_permission_mode` in `companion.toml` ([configuration](configuration.md#assistant-settings)).
+
 ### Change VoiceMate by voice
 
 You can ask the assistant to change VoiceMate: "switch to the Desktop mode", "lower the sound volume", "use the CPU for transcription". The assistant can only use a fixed list of settings (the catalog). VoiceMate checks the key and the value, applies the change and tells you; an unknown key or a value out of range is refused with the reason.
@@ -330,7 +336,7 @@ The mode `desktop` is refused until a Desktop conversation is chosen, and `perso
 
 - "Your name:" is how the assistant addresses you; empty means no name.
 - Under Personality, "Source:" has three choices. "None"; "A Markdown file (for example a note in your Obsidian vault)", picked with "Browse..." (the file picker starts in the vault folder you chose); or "Write my own", a text of up to 20,000 characters that you write in the tab; **Save**, OK and Apply all save it (a text that cannot be saved keeps the dialog open on the Assistant tab with the reason). The skill follows it for tone and style only, never for instructions.
-- "Vault folder:" is your notes vault (Obsidian). The assistant reads notes there only when you ask about them, and writes only when you ask it to. VoiceMate warns if the folder has no `.obsidian` folder, but accepts it.
+- "Vault folder:" is your notes vault (Obsidian). The assistant reads notes there whenever they help answer you, without asking, and writes only when you ask it to. VoiceMate does not index the vault; the settings tab suggests the vaults Obsidian already knows. VoiceMate warns if the folder has no `.obsidian` folder, but accepts it.
 - "Expression tags:" lets the voice block carry tags such as `[laugh]` or `[pause]` for a voice engine that can render them.
 
 ### The skill
@@ -350,7 +356,10 @@ It reads `~/.voicemate/assistant.json`:
   "notes_vault": "",
   "expressions": "off",
   "mode": "own_session",
+  "permission_mode": "acceptEdits",
+  "resume_permission_mode": "",
   "answer_delivery": "announce",
+  "instructions": [],
   "inbox": [],
   "pending": [],
   "settings": []
@@ -365,9 +374,12 @@ It reads `~/.voicemate/assistant.json`:
 | `notes_vault` | Your notes folder, or empty |
 | `expressions` | `off` or `on`: whether the voice block may carry tags such as `[laugh]` or `[pause]` |
 | `mode` | `own_session` or `desktop`: which tools the skill has |
+| `permission_mode` | How the central's tools are allowed in the own mode ("Permissions:"); empty in the Desktop mode |
+| `resume_permission_mode` | The permission mode a closed terminal, IDE or Remote Control session gets when the assistant resumes it; empty (the default) passes none |
 | `answer_delivery` | How answers from other conversations reach you |
+| `instructions` | Your standing instructions (`text`, `since`), followed from the first reply |
 | `inbox` | The answers waiting (title, id, time), without their text |
-| `pending` | The requests the assistant is waiting on (session id, title, reason, since when) |
+| `pending` | The requests the assistant is waiting on (session id, title, reason, since when, `watch` for a conversation you asked it to keep watching, `until` when the entry leaves without a new turn) |
 | `settings` | The catalog of settings the assistant may change |
 
 Without the file, the skill answers in the language you write in and says once that the settings were not found. More: [design](research/voice-assistant-design.md) and the [Claude Code client research](research/claude-code-client.md).

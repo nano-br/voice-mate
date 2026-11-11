@@ -76,6 +76,7 @@ A demonstration and live test of the personal AI agent, in Brazilian Portuguese 
 - One central Claude conversation in two modes: VoiceMate's own conversation (a Claude Code process that VoiceMate starts, also visible in Claude Desktop and on your phone) or a Claude Desktop conversation you already have (written by a brief keyboard "flash", Windows only). It lists, reads and sends to your other conversations and starts new ones in the background.
 - Talk to it with `Ctrl+Alt+S`, or click **Talk** in its window (it turns into **Stop and send** while recording). It speaks with the voices Windows already has, with nothing to install, or with the engine's voice (Kokoro or your own provider): Settings > **Assistant** > "Voice source:". Voice commands in English, Portuguese and Spanish read the last answer, switch to a conversation, send to it or talk directly to it. A window shows the chat and the answers waiting; its voice waits while you record and while the recording is transcribed, then repeats what you cut; a blue tray badge and an "Answer ready" sound tell you when one arrives, and `Ctrl+Alt+R` reads what is ready.
 - It can change a fixed list of VoiceMate settings by voice, takes a personality (a file, a note in an Obsidian vault or a text you write) and uses a skill in English or Brazilian Portuguese that also works on its own in any Claude Code conversation. See [Voice assistant](#voice-assistant) and the [full guide](docs/voice-assistant.md).
+- It takes initiative: it finds the conversation you mean, asks it for the status, and tells you when it answers, asking you only for real decisions. It watches conversations until you say stop, survives a restart, writes to closed terminal and IDE sessions, and keeps the rules you give it across sessions. See [the assistant guide](docs/assistant.md).
 
 ## Screenshots
 
@@ -158,6 +159,16 @@ The voice conversation with Claude needs the Claude Code CLI installed and signe
 
 The assistant is one Claude conversation, the central one, that knows what your other conversations are doing and conducts them for you: it lists them, reads them, sends them a message, starts new ones in the background and tells you when they answer. It is off by default.
 
+Stop switching windows to check on your conversations. Just say what you want:
+
+- "How is the hotkey work going?"
+- "Ask the API conversation if the tests passed, and tell me."
+- "Keep an eye on the build and the docs conversations."
+- "Research the best way to do Y."
+- "From now on, don't ask before reading a conversation."
+
+It acts first and reports back, asks only about what is really yours to decide (deleting, spending, publishing, matters of taste), and remembers the rules you give it. **What it does and how: [docs/assistant.md](docs/assistant.md).**
+
 **The whole flow, with diagrams: [docs/voice-assistant.md](docs/voice-assistant.md)** (how VoiceMate plugs into Claude, the two modes, the orchestration of your conversations, how answers come back, the voice and safety).
 
 | | VoiceMate's own conversation | A Claude Desktop conversation |
@@ -185,7 +196,7 @@ More: [voice commands and direct mode](docs/voice-assistant.md#6-direct-mode-and
 | Logs (`companion.log`, `engine.log`) | Windows `%LOCALAPPDATA%\VoiceMate\logs`, Linux `~/.local/state/voicemate/logs` |
 | **Not copied** list | `pending.json` next to the `logs` folder |
 | Assistant settings (the skill reads them) | `~/.voicemate/assistant.json` in your user folder |
-| Assistant session, inbox, conversations it started, personality text and Desktop profile cache | `assistant-session.json`, `assistant-inbox.json`, `assistant-conversations\`, `assistant-personality.md`, `desktop-profile\` and `assistant\` next to `pending.json` |
+| Assistant session, inbox, waiting list, standing instructions, conversations it started, personality text and Desktop profile cache | `assistant-session.json`, `assistant-inbox.json`, `assistant-waiting.json`, `assistant-instructions.json`, `assistant-conversations\`, `assistant-personality.md`, `desktop-profile\` and `assistant\` next to `pending.json` |
 
 Every engine flag, every settings key and every environment variable: [docs/configuration.md](docs/configuration.md).
 
@@ -484,6 +495,7 @@ More problems and the exact messages: [docs/troubleshooting.md](docs/troubleshoo
 
 - [Installation guide](docs/install-guide.md): step by step, with screenshots of the installer.
 - [Installation](docs/installation.md): every install path, updating and uninstalling.
+- [The VoiceMate assistant](docs/assistant.md): what the assistant does for you, how it routes a request, waits and watches, the conversations it reaches, standing instructions and limits.
 - [Voice assistant and Claude](docs/voice-assistant.md): the whole assistant flow with diagrams, the two modes and how it conducts your other conversations.
 - [Usage](docs/usage.md): flows, hotkeys, tray icon, transcription modes, models, voice options and the voice assistant.
 - [Configuration](docs/configuration.md): engine flags, settings files, environment variables, speech-to-text modes and benchmark.
