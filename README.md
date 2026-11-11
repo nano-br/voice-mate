@@ -164,8 +164,10 @@ Stop switching windows to check on your conversations. Just say what you want:
 - "How is the hotkey work going?"
 - "Ask the API conversation if the tests passed, and tell me."
 - "Keep an eye on the build and the docs conversations."
-- "Research the best way to do Y."
+- "Find the best library for global hotkeys on Windows."
 - "From now on, don't ask before reading a conversation."
+
+And a few minutes later it tells you: *"The build finished and the tests passed. Only the docs are left."*
 
 It acts first and reports back, asks only about what is really yours to decide (deleting, spending, publishing, matters of taste), and remembers the rules you give it. **What it does and how: [docs/assistant.md](docs/assistant.md).**
 

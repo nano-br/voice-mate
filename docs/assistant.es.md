@@ -19,9 +19,11 @@ Hablas (`Ctrl+Alt+S`) o escribes en la ventana del asistente. Algunas cosas que 
 | "¿Cómo va el trabajo del atajo de teclado?" | Encuentra la conversación sobre atajos, lee sus últimos mensajes y te cuenta dónde se quedó. Si eso no responde la pregunta, se lo pregunta a la conversación y te dice que lo hizo. |
 | "Pregúntale a la conversación de la API si pasaron las pruebas y avísame" | Envía la pregunta, pone la conversación en su lista de espera y te cuenta la respuesta cuando llegue. |
 | "Vigila las conversaciones del build y de la documentación" | Vigila las dos y te avisa de cada turno que terminan, hasta que digas basta. |
-| "Investiga la mejor forma de hacer Y" | Te adelanta lo que ya sabe, si tiene algo útil, pasa el trabajo de verdad a una conversación en segundo plano y te avisa cuando esté listo. |
+| "Busca la mejor biblioteca de atajos globales para Windows" | Te adelanta lo que ya sabe, si tiene algo útil, pasa el trabajo de verdad a una conversación en segundo plano y te avisa cuando esté listo. |
 | "De ahora en adelante, no preguntes antes de leer una conversación" | Aplica la regla al momento y la guarda para todas las sesiones siguientes. |
 | "Solo reproduce un sonido cuando responda una conversación" | Cambia ese ajuste de VoiceMate. |
+
+Unos minutos después, con su voz: *"El build terminó y las pruebas pasaron. Solo falta la documentación."*
 
 Funciona en los dos modos del asistente, la conversación propia de VoiceMate y una conversación de Claude Desktop. La conversación central usa por defecto un modelo rápido con esfuerzo bajo, así que responde enseguida; el trabajo pesado va a otras conversaciones.
 
@@ -86,7 +88,7 @@ Azul: VoiceMate; morado: la conversación central trabajando; verde: la respuest
 
 ## 🚀 Iniciativa: actúa y luego te cuenta
 
-El asistente está orientado a comportarse como un asistente con iniciativa, no como un formulario que pide confirmación. Hacer la pregunta ya es pedirle que haga el trabajo.
+El asistente está hecho para tener iniciativa, no para pedir confirmación a cada paso. Hacer la pregunta ya es pedirle que haga el trabajo.
 
 | Lo hace sin preguntar | Te pregunta antes |
 |---|---|
@@ -201,7 +203,7 @@ stateDiagram-v2
     class Saved store
 ```
 
-- **Agrupación.** Los turnos de una conversación vigilada que terminan a menos de **15 segundos** uno de otro se convierten en una sola nota que dice cuántos fueron. Llegan a la central como mucho **4** notas de vigilancia por minuto; una nota retenida sigue recogiendo los turnos más nuevos, así que nada se acumula y una conversación muy activa no te inunda.
+- **Agrupación.** Los turnos de una conversación vigilada que terminan hasta **15 segundos** después del primero se convierten en una sola nota que dice cuántos fueron. Llegan a la central como mucho **4** notas de vigilancia por minuto; una nota retenida sigue recogiendo los turnos más nuevos, así que nada se acumula y una conversación muy activa no te inunda.
 - **Cerrar y volver a abrir VoiceMate.** La lista se guarda con el plazo de cada entrada y el punto hasta el que se leyó cada transcripción. Cuando VoiceMate vuelve a arrancar, sigue leyendo desde ahí, así que un turno que terminó con VoiceMate cerrado se avisa igual. Una entrada cuyo plazo venció entretanto sale de la lista con una nota.
 - **Caducidad.** Cuando una entrada sale sola de la lista, la central recibe una nota y te lo cuenta en pocas palabras; solo vuelve a vigilarla si aún lo quieres.
 - **El modo directo** ("hablar directamente con la conversación X") pausa los avisos: las respuestas y los turnos vigilados van a la bandeja de entrada, y el asistente te los cuenta al volver.
@@ -344,13 +346,13 @@ La skill también documenta las acciones `remember`, `forget` y `follow_up` con 
 
 | Síntoma | Qué hacer |
 |---|---|
-| "Not sent (in use)" para una sesión de terminal o IDE | Esa sesión está abierta en un programa ahora mismo. Ciérrala allí, o espera 2 minutos desde su último cambio, y vuelve a pedirlo. Sin las herramientas de sesión, el asistente te dice qué escribir allí |
-| "Not sent (busy)" | El último mensaje de VoiceMate a esa sesión todavía se está respondiendo, o se acaba de responder. Espera un momento y vuelve a pedirlo |
-| "Not sent (no_folder)" | La carpeta de la sesión ya no está en este equipo, así que no se puede reanudar |
+| El asistente cuenta que no pudo enviar a una sesión de terminal o IDE porque está en uso (la central recibe `not sent (in use)`) | Esa sesión está abierta en un programa ahora mismo. Ciérrala allí, o espera 2 minutos desde su último cambio, y vuelve a pedirlo. Sin las herramientas de sesión, el asistente te dice qué escribir allí |
+| El asistente cuenta que la sesión está ocupada (`not sent (busy)`) | El último mensaje de VoiceMate a esa sesión todavía se está respondiendo, o se acaba de responder. Espera un momento y vuelve a pedirlo |
+| El asistente cuenta que la carpeta de la sesión ya no está (`not sent (no_folder)`) | La carpeta de la sesión ya no está en este equipo, así que no se puede reanudar |
 | Una regla que diste no se cumple en una sesión nueva | Pregunta "¿qué reglas guardas?"; lee `instructions` en `assistant.json`. Si el archivo era ilegible, busca `assistant-instructions.json.bad` en la carpeta de estado |
 | "Standing instruction not removed" | No coincidió ninguna regla, o coincidió más de una: di más de su texto exacto |
 | Una vigilancia dejó de avisar | Sale de la lista tras 12 horas sin turno nuevo (una espera: 1 hora). Pide al asistente que la vigile otra vez |
-| Los avisos llegan agrupados o con retraso | Es a propósito: los turnos a menos de 15 segundos se convierten en una nota, y salen como mucho 4 notas de vigilancia por minuto |
+| Los avisos llegan agrupados o con retraso | Es a propósito: los turnos que terminan hasta 15 segundos después del primero se convierten en una nota, y salen como mucho 4 notas de vigilancia por minuto |
 | El asistente sigue con las instrucciones antiguas tras una actualización | Se conservó tu copia editada de la skill y la versión nueva está al lado como `.new`; la ventana lo dice. Combínalas, o borra tu copia |
 
 Más mensajes: [troubleshooting.md](troubleshooting.md#voice-assistant) (en inglés).

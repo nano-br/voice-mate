@@ -19,9 +19,11 @@ You speak (`Ctrl+Alt+S`) or type in the assistant window. A few things you can s
 | "How is the hotkey work going?" | Finds the conversation about hotkeys, reads its last messages and tells you where it stopped. If the transcript does not answer, it asks that conversation and says it asked. |
 | "Ask the API conversation if the tests passed and tell me" | Sends the question, puts the conversation on its waiting list, and tells you the answer when it arrives. |
 | "Keep an eye on the build and the docs conversations" | Watches both and reports every turn they finish, until you say stop. |
-| "Research the best way to do Y" | Gives a quick first take if it has one, then hands the real work to a background conversation and tells you when it is ready. |
+| "Find the best library for global hotkeys on Windows" | Gives a quick first take if it has one, then hands the real work to a background conversation and tells you when it is ready. |
 | "From now on, don't ask before reading a conversation" | Applies the rule at once and keeps it for every future session. |
 | "Only play a sound when a conversation answers" | Changes that VoiceMate setting. |
+
+A few minutes later, in its own voice: *"The build finished and the tests passed. Only the docs are left."*
 
 It works in both assistant modes, VoiceMate's own conversation and a Claude Desktop conversation. The central conversation runs on a fast model with low effort by default, so it answers in a moment; heavy work goes to other conversations.
 
@@ -194,7 +196,7 @@ stateDiagram-v2
     class Saved store
 ```
 
-- **Grouping.** Turns of a watched conversation that finish within **15 seconds** of each other become one note that says how many there were. At most **4** watch notes reach the central per minute; a note held back keeps taking the newer turns, so nothing piles up and a busy conversation does not flood you.
+- **Grouping.** Turns of a watched conversation that finish within **15 seconds** after the first one become one note that says how many there were. At most **4** watch notes reach the central per minute; a note held back keeps taking the newer turns, so nothing piles up and a busy conversation does not flood you.
 - **Closing and reopening VoiceMate.** The list is saved with each deadline and the point where each transcript was read up to. When VoiceMate starts again, it goes on reading from there, so a turn that finished while it was closed is still reported. An entry whose time ran out meanwhile leaves the list with one note.
 - **Expiry.** When an entry leaves the list by itself, the central gets one note and tells you in a few words; it watches again only if you still want it.
 - **Direct mode** ("talk directly to the conversation X") pauses the reports: answers and watched turns go to the inbox, and the assistant reports them when you come back.
@@ -335,13 +337,13 @@ The skill also documents the `remember`, `forget` and `follow_up` actions with `
 
 | Symptom | What to do |
 |---|---|
-| "Not sent (in use)" for a terminal or IDE session | That session is open in a program right now. Close it there, or wait 2 minutes after its last change, and ask again. Without the session tools, the assistant tells you what to type there |
-| "Not sent (busy)" | VoiceMate's last message to that session is still being answered, or was answered a moment ago. Wait a moment and ask again |
-| "Not sent (no_folder)" | The session's folder is no longer on this computer, so it cannot be resumed |
+| The assistant says it could not send to a terminal or IDE session because the session is in use (the central gets `not sent (in use)`) | That session is open in a program right now. Close it there, or wait 2 minutes after its last change, and ask again. Without the session tools, the assistant tells you what to type there |
+| The assistant says the session is busy (`not sent (busy)`) | VoiceMate's last message to that session is still being answered, or was answered a moment ago. Wait a moment and ask again |
+| The assistant says the session's folder is gone (`not sent (no_folder)`) | The session's folder is no longer on this computer, so it cannot be resumed |
 | A rule you gave is not followed in a new session | Ask "what rules do you keep?"; it reads `instructions` in `assistant.json`. If the file was unreadable, look for `assistant-instructions.json.bad` in the state folder |
 | "Standing instruction not removed" | No rule matched, or more than one did: say more of its exact text |
 | A watch stopped reporting | It leaves the list after 12 hours without a new turn (a wait: 1 hour). Ask the assistant to watch it again |
-| Reports come grouped or late | By design: turns within 15 seconds become one note, and at most 4 watch notes go out per minute |
+| Reports come grouped or late | By design: turns that end within 15 seconds after the first become one note, and at most 4 watch notes go out per minute |
 | The assistant still uses the old instructions after an update | Your edited copy of the skill was kept and the new version is next to it as `.new`; the window says so. Merge it, or delete your copy |
 
 More messages: [troubleshooting.md](troubleshooting.md#voice-assistant).

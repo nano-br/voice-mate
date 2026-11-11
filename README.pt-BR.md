@@ -164,8 +164,10 @@ Chega de trocar de janela para saber das suas conversas. É só dizer o que voc�
 - "Como está aquela dos atalhos?"
 - "Pergunta para a conversa da API se os testes passaram e me conta."
 - "Fica de olho nas conversas do build e da documentação."
-- "Pesquisa o melhor jeito de fazer Y."
+- "Acha a melhor biblioteca de atalhos globais para Windows."
 - "De agora em diante, não pergunta antes de ler uma conversa."
+
+E alguns minutos depois ele conta: *"O build terminou e os testes passaram. Falta só a documentação."*
 
 Ele age primeiro e conta depois, só pergunta o que é seu de decidir (apagar, gastar, publicar, questão de gosto) e lembra as regras que você ensina. **O que ele faz e como: [docs/assistant.pt-BR.md](docs/assistant.pt-BR.md).**
 

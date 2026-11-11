@@ -164,8 +164,10 @@ Deja de cambiar de ventana para saber cómo van tus conversaciones. Solo di lo q
 - "¿Cómo va lo de los atajos?"
 - "Pregúntale a la conversación de la API si pasaron las pruebas y cuéntamelo."
 - "Vigila las conversaciones del build y de la documentación."
-- "Investiga la mejor forma de hacer Y."
+- "Busca la mejor biblioteca de atajos globales para Windows."
 - "A partir de ahora, no preguntes antes de leer una conversación."
+
+Y unos minutos después te cuenta: *"El build terminó y las pruebas pasaron. Solo falta la documentación."*
 
 Actúa primero y te cuenta después, solo te pregunta lo que te toca decidir a ti (borrar, gastar, publicar, cuestiones de gusto) y recuerda las reglas que le enseñas. **Qué hace y cómo: [docs/assistant.es.md](docs/assistant.es.md).**
 

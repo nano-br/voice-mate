@@ -19,9 +19,11 @@ Você fala (`Ctrl+Alt+S`) ou escreve na janela do assistente. Algumas coisas que
 | "Como está o trabalho do atalho de teclado?" | Acha a conversa sobre atalhos, lê as últimas mensagens e conta onde ela parou. Se a conversa não responde isso, ele pergunta a ela e diz que perguntou. |
 | "Pergunta para a conversa da API se os testes passaram e me avisa" | Manda a pergunta, coloca a conversa na lista de espera e conta a resposta quando ela chegar. |
 | "Fica de olho nas conversas do build e da documentação" | Observa as duas e avisa a cada turno que elas terminam, até você mandar parar. |
-| "Pesquisa o melhor jeito de fazer Y" | Adianta o que já sabe, se souber algo útil, passa o trabalho de verdade para uma conversa em segundo plano e avisa quando estiver pronto. |
+| "Acha a melhor biblioteca de atalhos globais para Windows" | Adianta o que já sabe, se souber algo útil, passa o trabalho de verdade para uma conversa em segundo plano e avisa quando estiver pronto. |
 | "Daqui para a frente, não pergunta antes de ler uma conversa" | Aplica a regra na hora e guarda para todas as próximas sessões. |
 | "Só toca um som quando uma conversa responder" | Muda essa configuração do VoiceMate. |
+
+Alguns minutos depois, na voz dele: *"O build terminou e os testes passaram. Falta só a documentação."*
 
 Funciona nos dois modos do assistente, a conversa própria do VoiceMate e uma conversa do Claude Desktop. A conversa central roda por padrão num modelo rápido com esforço baixo, então responde em instantes; o trabalho pesado vai para outras conversas.
 
@@ -86,7 +88,7 @@ Azul: VoiceMate; roxo: a conversa central trabalhando; verde: a resposta que che
 
 ## 🚀 Iniciativa: ele age e depois conta
 
-O assistente é orientado a se comportar como um assistente com iniciativa, não como um formulário que pede confirmação. Fazer a pergunta já é pedir que ele faça o trabalho.
+O assistente foi feito para ter iniciativa, não para pedir confirmação a cada passo. Fazer a pergunta já é pedir que ele faça o trabalho.
 
 | Ele faz sem perguntar | Ele pergunta antes |
 |---|---|
@@ -156,7 +158,7 @@ O assistente guarda dois tipos de item na lista "Aguardando", e eles se comporta
 |---|---|---|
 | O que começa | O assistente mandou uma pergunta, iniciou uma conversa ou emitiu um `follow_up` simples | Você pediu: "fica de olho em X", "me avisa quando terminar" (um `follow_up` com `"watch": true`) |
 | O que avisa | O próximo turno terminado, uma vez | Cada turno terminado, até você mandar parar (`follow_up_done`) |
-| Como chega a você | Como "Respostas de outras conversas:" manda (falada ou guardada na caixa de entrada) | Sempre vai para a central, seja qual for essa configuração, porque você pediu para saber |
+| Como chega a você | Como "Respostas de outras conversas:" manda (falada ou guardada na caixa de entrada) | Sempre vai para a central, seja qual for essa configuração, porque você pediu o aviso |
 | Acaba sozinha | Quando a resposta chega, ou depois de **1 hora** sem turno | Depois de **12 horas** sem turno novo |
 
 O diagrama de estados responde: o que pode acontecer com uma conversa da lista?
@@ -201,7 +203,7 @@ stateDiagram-v2
     class Saved store
 ```
 
-- **Agrupamento.** Turnos de uma conversa observada que terminam a até **15 segundos** um do outro viram uma nota só, que diz quantos foram. No máximo **4** notas de observação chegam à central por minuto; uma nota segurada continua pegando os turnos mais novos, então nada se acumula e uma conversa agitada não inunda você.
+- **Agrupamento.** Turnos de uma conversa observada que terminam em até **15 segundos** depois do primeiro viram uma nota só, que diz quantos foram. No máximo **4** notas de observação chegam à central por minuto; uma nota segurada continua pegando os turnos mais novos, então nada se acumula e uma conversa agitada não inunda você.
 - **Fechar e reabrir o VoiceMate.** A lista é salva com o prazo de cada item e o ponto até onde cada transcrição foi lida. Quando o VoiceMate abre de novo, continua a leitura dali, então um turno que terminou com ele fechado ainda é avisado. Um item cujo prazo venceu nesse meio-tempo sai da lista com uma nota.
 - **Expiração.** Quando um item sai da lista sozinho, a central recebe uma nota e conta em poucas palavras; ela volta a observar só se você ainda quiser.
 - **Modo direto** ("falar direto com a conversa X") pausa os avisos: respostas e turnos observados vão para a caixa de entrada, e o assistente conta quando você volta.
@@ -344,13 +346,13 @@ A skill também documenta as ações `remember`, `forget` e `follow_up` com `"wa
 
 | Sintoma | O que fazer |
 |---|---|
-| "Not sent (in use)" para uma sessão de terminal ou IDE | A sessão está aberta num programa agora. Feche lá, ou espere 2 minutos depois da última mudança, e peça de novo. Sem as ferramentas de sessão, o assistente diz o que você deve digitar lá |
-| "Not sent (busy)" | A última mensagem do VoiceMate para aquela sessão ainda está sendo respondida, ou acabou de ser. Espere um pouco e peça de novo |
-| "Not sent (no_folder)" | A pasta da sessão não está mais neste computador, então ela não pode ser retomada |
+| O assistente conta que não conseguiu mandar para uma sessão de terminal ou IDE porque ela está em uso (a central recebe `not sent (in use)`) | A sessão está aberta num programa agora. Feche lá, ou espere 2 minutos depois da última mudança, e peça de novo. Sem as ferramentas de sessão, o assistente diz o que você deve digitar lá |
+| O assistente conta que a sessão está ocupada (`not sent (busy)`) | A última mensagem do VoiceMate para aquela sessão ainda está sendo respondida, ou acabou de ser. Espere um pouco e peça de novo |
+| O assistente conta que a pasta da sessão sumiu (`not sent (no_folder)`) | A pasta da sessão não está mais neste computador, então ela não pode ser retomada |
 | Uma regra que você deu não vale numa sessão nova | Pergunte "quais regras você guarda?"; ele lê `instructions` no `assistant.json`. Se o arquivo estava ilegível, procure `assistant-instructions.json.bad` na pasta de estado |
 | "Standing instruction not removed" | Nenhuma regra bateu, ou mais de uma bateu: diga mais do texto exato dela |
 | Uma observação parou de avisar | Ela sai da lista depois de 12 horas sem turno novo (uma espera: 1 hora). Peça para o assistente observar de novo |
-| Os avisos chegam agrupados ou atrasados | É de propósito: turnos a até 15 segundos um do outro viram uma nota, e saem no máximo 4 notas de observação por minuto |
+| Os avisos chegam agrupados ou atrasados | É de propósito: turnos que terminam em até 15 segundos depois do primeiro viram uma nota, e saem no máximo 4 notas de observação por minuto |
 | O assistente continua com as instruções antigas depois de uma atualização | A sua cópia editada da skill foi mantida, e a versão nova está ao lado dela como `.new`; a janela avisa. Junte as duas, ou apague a sua cópia |
 
 Mais mensagens: [troubleshooting.md](troubleshooting.md#voice-assistant) (em inglês).
