@@ -418,6 +418,7 @@ class AssistantServiceImpl:
         self._voiced: deque[str] = deque(maxlen=VOICED_LIMIT)  # replies whose voice block was spoken
         self._reply_seq = 0  # names replies that carry no message id
         self._model_reminded = False  # the central was told its reply had no reply model; one note per streak
+        self._unchecked_reply = ""  # message id of a reply that arrived live and was not checked for the model yet
         self._digests: dict[str, tuple[InboxEntry, ...]] = {}  # digest note -> its items, until delivered
         self._pending: list[PendingEntry] = []  # the "Waiting for" list (follow_up actions)
         self._turn_from_person = False  # the central's current turn answers the person's own words
@@ -1036,6 +1037,8 @@ class AssistantServiceImpl:
             else:
                 self._reply_seq += 1
                 self._add_raw(_Raw("assistant", event.text, event.message_id or f"reply-{self._reply_seq}"))
+            if self._followed is None and not self._replaying:
+                self._unchecked_reply = self._raw[-1].message_id or ""
             self._voice_reply(self._raw[-1], final=False)
             return True
         if event.kind == "turn_end":
@@ -1082,6 +1085,11 @@ class AssistantServiceImpl:
                 log.exception("assistant: action %s failed", action.type)
         if parsed.problems:
             log.info("assistant reply problems: %s", "; ".join(parsed.problems))
+        # A turn can end before its text is written (the thinking comes in a line of its own, already
+        # marked as the end of the turn): only a reply that arrived in this run is checked, and once.
+        if not self._unchecked_reply or last.message_id != self._unchecked_reply:
+            return
+        self._unchecked_reply = ""
         if not parsed.degraded:
             self._model_reminded = False
         elif last.text.strip() and not self._model_reminded and self._speaks_replies():
@@ -1622,6 +1630,7 @@ class AssistantServiceImpl:
         self._raw.clear()
         self._raw_total = 0
         self._model_reminded = False  # a summarized or new conversation may be told again
+        self._unchecked_reply = ""
 
     def _notice(self, text: str) -> None:
         self._notices.append((self._raw_total, ChatMessage("notice", text)))

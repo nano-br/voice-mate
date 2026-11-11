@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - When the assistant answers outside its reply model (it can lose the model when its conversation is
   summarized), VoiceMate tells it once, so the answer is said again and spoken instead of only shown.
+  Only a reply that arrived in the current run is checked, and once.
 
 ## [0.4.0] - 2026-11-03
 
