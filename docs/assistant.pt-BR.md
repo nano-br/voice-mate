@@ -6,7 +6,7 @@
 
 Você provavelmente mantém várias conversas do Claude Code abertas ao mesmo tempo: uma no Claude Desktop, uma no terminal, uma rodando em segundo plano. Acompanhar todas significa trocar de janela, rolar a tela e digitar o mesmo "e aí, como está?" de novo e de novo. O assistente do VoiceMate faz isso por você. Você fala, ele decide para onde as suas palavras vão, faz os passos óbvios sem perguntar e volta só com resultados ou com as decisões que são mesmo suas.
 
-Esta página explica o que o assistente faz por você e como ele faz. Como o VoiceMate se liga ao Claude (os dois modos, o modelo de resposta, a voz) está em [voice-assistant.md](voice-assistant.md) (em inglês); cada configuração passo a passo está em [usage.md](usage.md#voice-assistant) (em inglês).
+Esta página explica o que o assistente faz por você e como ele faz. Como o VoiceMate se liga ao Claude (os dois modos, o modelo de resposta, a voz) está em [voice-assistant.md](voice-assistant.md) (em inglês); cada configuração passo a passo está em [usage.pt-BR.md](usage.pt-BR.md#assistente-de-voz).
 
 [O que ele faz](#-o-que-ele-faz-por-você) · [Encaminhamento](#-como-um-pedido-é-encaminhado) · [Iniciativa](#-iniciativa-ele-age-e-depois-conta) · [Pergunte e me avise](#-pergunte-o-andamento-e-me-avise) · [Esperar e observar](#-esperar-e-observar) · [Conversas que ele enxerga](#%EF%B8%8F-as-conversas-que-ele-enxerga) · [Instruções permanentes](#-instruções-permanentes) · [Personalidade e notas](#-personalidade-contexto-e-as-suas-notas) · [Segurança](#-segurança-e-privacidade) · [Configuração](#%EF%B8%8F-configuração) · [Problemas comuns](#-problemas-comuns) · [Limites](#-limites)
 
@@ -29,7 +29,7 @@ Funciona nos dois modos do assistente, a conversa própria do VoiceMate e uma co
 
 ## 🧭 Como um pedido é encaminhado
 
-Toda mensagem passa pela mesma decisão, tomada pela conversa central (a skill, seção 3.1), sem perguntar a você. Os comandos de voz são reconhecidos pelo próprio VoiceMate antes disso, sem IA ([usage.md](usage.md#voice-commands), em inglês).
+Toda mensagem passa pela mesma decisão, tomada pela conversa central (a skill, seção 3.1), sem perguntar a você. Os comandos de voz são reconhecidos pelo próprio VoiceMate antes disso, sem IA ([usage.pt-BR.md](usage.pt-BR.md#comandos-de-voz)).
 
 O fluxograma responde: para onde vai uma mensagem sua?
 
@@ -323,7 +323,7 @@ Azul: o VoiceMate e as configurações dele; verde-azulado: arquivos; roxo: a co
 
 ## ⚙️ Configuração
 
-Não há nada novo para ligar: o comportamento desta página vem com o assistente (Configurações > **Assistente** > "Modo do assistente:"). As configurações que o moldam estão em [configuration.md](configuration.md#assistant-settings) (em inglês). O que o VoiceMate escreve para a skill, em `~/.voicemate/assistant.json`:
+Não há nada novo para ligar: o comportamento desta página vem com o assistente (Configurações > **Assistente** > "Modo do assistente:"). As configurações que o moldam estão em [configuration.pt-BR.md](configuration.pt-BR.md#configurações-do-assistente). O que o VoiceMate escreve para a skill, em `~/.voicemate/assistant.json`:
 
 | Chave | Significado |
 |---|---|
@@ -355,7 +355,7 @@ A skill também documenta as ações `remember`, `forget` e `follow_up` com `"wa
 | Os avisos chegam agrupados ou atrasados | É de propósito: turnos que terminam em até 15 segundos depois do primeiro viram uma nota, e saem no máximo 4 notas de observação por minuto |
 | O assistente continua com as instruções antigas depois de uma atualização | A sua cópia editada da skill foi mantida, e a versão nova está ao lado dela como `.new`; a janela avisa. Junte as duas, ou apague a sua cópia |
 
-Mais mensagens: [troubleshooting.md](troubleshooting.md#voice-assistant) (em inglês).
+Mais mensagens: [troubleshooting.pt-BR.md](troubleshooting.pt-BR.md#assistente-de-voz).
 
 ## 🚧 Limites
 

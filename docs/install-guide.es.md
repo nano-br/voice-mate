@@ -198,10 +198,10 @@ Todas las opciones del asistente: [voice-assistant.md](voice-assistant.md) (en i
 | El asistente no suena | Configuración > **Asistente**, "Origen de la voz:" = "Las voces de Windows", y luego **Probar** |
 | Cualquier cosa del lado del motor | `make doctor` en `~/voice-mate` imprime una solución para cada comprobación fallida |
 
-Más problemas y los mensajes exactos: [troubleshooting.md](troubleshooting.md) (en inglés).
+Más problemas y los mensajes exactos: [troubleshooting.es.md](troubleshooting.es.md).
 
 ## 📚 Qué leer después
 
-- [usage.md](usage.md): atajos, el icono de la bandeja, modos de transcripción y modelos.
+- [usage.es.md](usage.es.md): atajos, el icono de la bandeja, modos de transcripción y modelos.
 - [voice-assistant.md](voice-assistant.md): el asistente, sus dos modos y cómo dirige tus otras conversaciones.
 - [installation.md](installation.md): todas las vías de instalación, desde el código fuente y en Linux.

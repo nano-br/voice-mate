@@ -1,3 +1,5 @@
+**English** | [Português](usage.pt-BR.md) | [Español](usage.es.md) | [Русский](usage.ru.md) | [简体中文](usage.zh-CN.md)
+
 # Usage
 
 Purpose: how to use VoiceMate day to day: the flows, the hotkeys, the companion app, the transcription modes, the Whisper models, the voice options and the voice assistant. Back to the [README](../README.md).

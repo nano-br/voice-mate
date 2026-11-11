@@ -1,3 +1,5 @@
+**English** | [Português](architecture.pt-BR.md) | [Español](architecture.es.md) | [Русский](architecture.ru.md) | [简体中文](architecture.zh-CN.md)
+
 # Architecture
 
 Purpose: how VoiceMate is built, with the diagrams of every level, the HTTP API, the package tree and the reasons behind the main design choices. Back to the [README](../README.md).

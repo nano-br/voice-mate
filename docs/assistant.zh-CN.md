@@ -6,7 +6,7 @@
 
 你很可能同时开着好几个 Claude Code 对话：一个在 Claude Desktop 里，一个在终端里，还有一个在后台运行。要跟上它们，就得来回切换窗口、翻看记录，一遍又一遍地输入“进展如何？”。VoiceMate 助手替你做这些事。你开口，它判断你的话该去哪里，不用问就把显而易见的步骤做完，回来时只带着结果，或者只带着真正需要你来做的决定。
 
-本页说明助手能为你做什么，以及它是怎么做的。VoiceMate 如何接入 Claude（两种模式、回复模板、语音）见 [voice-assistant.md](voice-assistant.md)（英文）；每项设置的逐步说明见 [usage.md](usage.md#voice-assistant)（英文）。
+本页说明助手能为你做什么，以及它是怎么做的。VoiceMate 如何接入 Claude（两种模式、回复模板、语音）见 [voice-assistant.md](voice-assistant.md)（英文）；每项设置的逐步说明见 [usage.zh-CN.md](usage.zh-CN.md#语音助手)。
 
 [它能做什么](#-它能为你做什么) · [请求的去向](#-一条请求去往哪里) · [主动性](#-主动做事事后汇报) · [问进展并告诉我](#-问一下进展然后告诉我) · [等待与关注](#-等待与关注) · [它能看到的对话](#%EF%B8%8F-它能看到的对话) · [长期指令](#-长期指令) · [个性与笔记](#-个性上下文与你的笔记) · [安全](#-安全与隐私) · [配置](#%EF%B8%8F-配置) · [故障排查](#-故障排查) · [限制](#-限制)
 
@@ -29,7 +29,7 @@
 
 ## 🧭 一条请求去往哪里
 
-每条消息都经过同一套判断，由中央对话自己完成（技能第 3.1 节），不会问你。在此之前，语音指令由 VoiceMate 自己识别，不经过 AI（[usage.md](usage.md#voice-commands)，英文）。
+每条消息都经过同一套判断，由中央对话自己完成（技能第 3.1 节），不会问你。在此之前，语音指令由 VoiceMate 自己识别，不经过 AI（[usage.zh-CN.md](usage.zh-CN.md#语音指令)）。
 
 这张流程图回答的是：你说的一句话最终去了哪里？
 
@@ -323,7 +323,7 @@ flowchart LR
 
 ## ⚙️ 配置
 
-不需要开启任何新东西：本页描述的行为随助手一起提供（设置 > **助手** > “助手模式：”）。影响这些行为的设置见 [configuration.md](configuration.md#assistant-settings)（英文）。VoiceMate 为技能写入 `~/.voicemate/assistant.json` 的内容：
+不需要开启任何新东西：本页描述的行为随助手一起提供（设置 > **助手** > “助手模式：”）。影响这些行为的设置见 [configuration.zh-CN.md](configuration.zh-CN.md#助手设置)。VoiceMate 为技能写入 `~/.voicemate/assistant.json` 的内容：
 
 | 键 | 含义 |
 |---|---|
@@ -355,7 +355,7 @@ flowchart LR
 | 报告被合并或有延迟 | 这是有意的设计：在第一轮结束后 15 秒内结束的几轮合并成一条通知，每分钟最多发出 4 条关注通知 |
 | 更新后助手仍在使用旧的指令 | 你修改过的技能副本被保留了，新版本放在旁边，名为 `.new`；窗口里会有提示。把两者合并，或删除你的副本 |
 
-更多消息：[troubleshooting.md](troubleshooting.md#voice-assistant)（英文）。
+更多消息：[troubleshooting.zh-CN.md](troubleshooting.zh-CN.md#语音助手)。
 
 ## 🚧 限制
 

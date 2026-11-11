@@ -198,10 +198,10 @@ make run
 | 助手没有声音 | 设置 > **助手**，“语音来源：”选“Windows 的语音”，然后点 **试听** |
 | 引擎一侧的任何问题 | 在 `~/voice-mate` 中运行 `make doctor`，每一项未通过的检查它都会给出修复方法 |
 
-更多问题和确切的消息文本：[troubleshooting.md](troubleshooting.md)（英文）。
+更多问题和确切的消息文本：[troubleshooting.zh-CN.md](troubleshooting.zh-CN.md)。
 
 ## 📚 接下来读什么
 
-- [usage.md](usage.md)：快捷键、托盘图标、转写模式和模型（英文）。
+- [usage.zh-CN.md](usage.zh-CN.md)：快捷键、托盘图标、转写模式和模型。
 - [voice-assistant.md](voice-assistant.md)：助手、它的两种模式，以及它如何统筹你的其他对话（英文）。
 - [installation.md](installation.md)：所有安装方式，包括从源码安装和在 Linux 上安装（英文）。
