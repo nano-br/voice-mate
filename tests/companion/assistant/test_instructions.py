@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from app.companion.assistant.instructions import LIMIT, TEXT_LIMIT, StandingInstructions
 
 
@@ -56,3 +58,31 @@ def test_a_bad_file_is_an_empty_list(tmp_path: Path) -> None:
     path.write_text(json.dumps({"instructions": [1, {"text": ""}, {"text": "ok", "since": True}]}), encoding="utf-8")
     items = StandingInstructions(path).items()
     assert [(item.text, item.since) for item in items] == [("ok", 0.0)]
+
+
+def test_an_unreadable_file_is_set_aside_and_never_overwritten(tmp_path: Path) -> None:
+    path = tmp_path / "i.json"
+    path.write_text("{not json", encoding="utf-8")
+    store = StandingInstructions(path)
+    assert store.items() == ()
+    assert (tmp_path / "i.json.bad").read_text(encoding="utf-8") == "{not json"
+    assert store.add("A new rule.")  # saving later does not lose the old file
+    assert (tmp_path / "i.json.bad").read_text(encoding="utf-8") == "{not json"
+    path.write_text("[1, 2]", encoding="utf-8")
+    StandingInstructions(path)
+    assert (tmp_path / "i.json.bad").read_text(encoding="utf-8") == "[1, 2]"
+
+
+@pytest.mark.parametrize("since", [1e999, -1e999, 1e300, -5.0, 10.0, 9_999_999_999_999.0])
+def test_a_since_out_of_range_reads_as_unknown(tmp_path: Path, since: float) -> None:
+    path = tmp_path / "i.json"
+    path.write_text(json.dumps({"instructions": [{"text": "ok", "since": since}]}), encoding="utf-8")
+    store = StandingInstructions(path)
+    assert [(item.text, item.since) for item in store.items()] == [("ok", 0.0)]
+    assert store.as_json() == [{"text": "ok", "since": ""}]
+
+
+def test_a_clock_out_of_range_still_writes_the_context(tmp_path: Path) -> None:
+    store = StandingInstructions(tmp_path / "i.json", clock=lambda: 1e300)
+    assert store.add("Keep it short.")
+    assert store.as_json() == [{"text": "Keep it short.", "since": ""}]

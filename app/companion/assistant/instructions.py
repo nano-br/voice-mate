@@ -9,14 +9,16 @@ conversation too. The central never writes the file itself (VoiceMate files are 
 
 A rule is one line of plain text, at most `TEXT_LIMIT` characters; the same rule (ignoring case
 and spacing) is kept once, and beyond `LIMIT` rules the oldest go first. `forget` takes the exact
-text, or a fragment that matches exactly one rule. Never raises on a bad file. Thread-safe,
-standard library only.
+text, or a fragment that matches exactly one rule. Never raises on a bad file: one that cannot be
+parsed is renamed to `<name>.bad` before anything is saved, and a stored time that is not finite
+or not in a sane range reads as unknown. Thread-safe, standard library only.
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import tempfile
 import threading
@@ -32,6 +34,8 @@ log = logging.getLogger(__name__)
 VERSION: Final = 1
 LIMIT: Final = 40
 TEXT_LIMIT: Final = 300
+SINCE_MIN: Final = 946_684_800.0  # 2000-01-01
+SINCE_MAX: Final = 4_102_444_800.0  # 2100-01-01
 
 ForgetResult = Literal["removed", "missing", "ambiguous"]
 
@@ -48,6 +52,23 @@ def _one_line(text: str) -> str:
 
 def _key(text: str) -> str:
     return _one_line(text).casefold()
+
+
+def _valid_since(value: object) -> float:
+    """A stored time.time(): finite and between `SINCE_MIN` and `SINCE_MAX`, else 0 (not known)."""
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        return 0.0
+    stamp = float(value)
+    return stamp if math.isfinite(stamp) and SINCE_MIN <= stamp <= SINCE_MAX else 0.0
+
+
+def _iso(stamp: float) -> str:
+    if not stamp:
+        return ""
+    try:
+        return datetime.fromtimestamp(stamp, UTC).isoformat(timespec="seconds")
+    except (ValueError, OverflowError, OSError):
+        return ""
 
 
 class StandingInstructions:
@@ -91,28 +112,44 @@ class StandingInstructions:
         return "removed"
 
     def as_json(self) -> list[dict[str, str]]:
-        """The `instructions` list of assistant.json."""
-        return [
-            {"text": item.text, "since": datetime.fromtimestamp(item.since, UTC).isoformat(timespec="seconds")}
-            for item in self.items()
-        ]
+        """The `instructions` list of assistant.json ("since" is "" when the time is not known)."""
+        return [{"text": item.text, "since": _iso(item.since)} for item in self.items()]
 
     def _load(self) -> list[Instruction]:
         try:
-            raw = json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+            text = self._path.read_text(encoding="utf-8")
+        except FileNotFoundError:
             return []
-        entries = raw.get("instructions") if isinstance(raw, dict) else None
+        except (OSError, ValueError):
+            log.warning("assistant: cannot read the standing instructions %s", self._path)
+            return []
+        try:
+            raw = json.loads(text)
+        except ValueError:
+            self._set_aside()
+            return []
+        if not isinstance(raw, dict):
+            self._set_aside()
+            return []
+        entries = raw.get("instructions")
         loaded: list[Instruction] = []
         for item in entries if isinstance(entries, list) else []:
             if not isinstance(item, dict) or not isinstance(item.get("text"), str):
                 continue
             line = _one_line(item["text"])
-            since = item.get("since")
             if line and not any(_key(kept.text) == _key(line) for kept in loaded):
-                stamp = float(since) if isinstance(since, int | float) and not isinstance(since, bool) else 0.0
-                loaded.append(Instruction(line, stamp))
+                loaded.append(Instruction(line, _valid_since(item.get("since"))))
         return loaded[-LIMIT:]
+
+    def _set_aside(self) -> None:
+        """An unreadable file goes to `<name>.bad` (kept for the person), so the next save does
+        not overwrite the rules it may still hold."""
+        bad = self._path.with_name(self._path.name + ".bad")
+        try:
+            self._path.replace(bad)
+            log.warning("assistant: the standing instructions file was unreadable, kept as %s", bad)
+        except OSError as exc:
+            log.warning("assistant: cannot set aside the unreadable %s (%s)", self._path, exc)
 
     def _save(self) -> None:
         payload = json.dumps(
