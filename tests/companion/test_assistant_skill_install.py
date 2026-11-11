@@ -142,6 +142,7 @@ def test_context_json_has_exactly_the_keys_the_skill_reads(home: Path) -> None:
         answer_delivery="sound",
         instructions=[{"text": "Read conversations without asking.", "since": "2026-10-28T08:00:00+00:00"}],
         permission_mode="bypassPermissions",
+        resume_permission_mode="plan",
     )
 
     path = write_context(ctx)
@@ -165,6 +166,7 @@ def test_context_json_has_exactly_the_keys_the_skill_reads(home: Path) -> None:
         "settings": [{"key": "cues.volume", "type": "number", "range": [0, 100], "value": 70, "description": "x"}],
         "instructions": [{"text": "Read conversations without asking.", "since": "2026-10-28T08:00:00+00:00"}],
         "permission_mode": "bypassPermissions",
+        "resume_permission_mode": "plan",
     }
     for language in PACKAGED_LANGUAGES:
         example = json.loads((packaged_skill_dir(language) / "config.example.json").read_text(encoding="utf-8"))

@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from app.companion.assistant.cli_resume import ResumeError
+from app.companion.assistant.cli_resume import BusyReason, ResumeError
 from app.companion.assistant.conversations import ConversationEntry, OwnedConversations, OwnedError, OwnedRecord
 from app.companion.assistant.mcp_tools import SERVER_NAME, VoiceMateTools
 from app.companion.assistant.notifier import AnswerWatcher
@@ -75,12 +75,12 @@ class FakeWatcher:
 
 class FakeResumer:
     def __init__(self) -> None:
-        self.busy: set[str] = set()
+        self.reasons: dict[str, BusyReason] = {}
         self.sent: list[tuple[str, str, str]] = []
         self.error: ResumeError | None = None
 
-    def in_use(self, session_id: str) -> bool:
-        return session_id in self.busy
+    def busy(self, session_id: str) -> BusyReason | None:
+        return self.reasons.get(session_id)
 
     def send(self, session_id: str, cwd: str, text: str) -> None:
         if self.error is not None:
@@ -234,11 +234,21 @@ def test_a_closed_cli_session_is_resumed_with_the_message(tmp_path: Path) -> Non
 def test_an_open_cli_session_is_not_written_to(tmp_path: Path) -> None:
     rig = Rig(tmp_path, resumer=True)
     assert rig.resumer is not None
-    rig.resumer.busy.add("cli-1")
+    rig.resumer.reasons["cli-1"] = "open"
     text, failed = rig.call("send_to_conversation", id="cli-1", text="status?")
     assert failed and text.startswith("not sent (in use)") and "tell the person what to type" in text
     assert "SendMessage" in text and "notify_when_idle" in text
     assert rig.resumer.sent == [] and rig.watcher.watched == []
+
+
+def test_a_session_that_just_answered_voicemate_is_not_called_open_elsewhere(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, resumer=True)
+    assert rig.resumer is not None
+    rig.resumer.reasons["cli-1"] = "just_answered"
+    text, failed = rig.call("send_to_conversation", id="cli-1", text="status?")
+    assert failed and text.startswith("not sent (busy)") and "try again in a moment" in text
+    assert "another program" not in text
+    assert rig.resumer.sent == []
 
 
 def test_a_resume_that_cannot_start_puts_the_watch_back(tmp_path: Path) -> None:

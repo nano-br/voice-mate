@@ -64,6 +64,8 @@ class AssistantContext:
     # The permission mode the central runs with in mode own_session ("" when VoiceMate does not
     # choose it: a Desktop conversation keeps its own).
     permission_mode: str = ""
+    # The permission mode the person chose for resumed terminal sessions ("" = none passed).
+    resume_permission_mode: str = ""
 
 
 @dataclass(frozen=True)
@@ -169,6 +171,7 @@ def write_context(ctx: AssistantContext) -> Path:
         "notes_vault": ctx.notes_vault,
         "answer_delivery": ctx.answer_delivery,
         "permission_mode": ctx.permission_mode,
+        "resume_permission_mode": ctx.resume_permission_mode,
     }
     path = settings_file_path()
     _atomic_write(path, (json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))

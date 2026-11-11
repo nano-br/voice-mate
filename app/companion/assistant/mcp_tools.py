@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from app.companion.assistant.cli_resume import CliResumer, ResumeError
+from app.companion.assistant.cli_resume import CliResumer, ResumeError, busy_text
 from app.companion.assistant.conversations import ConversationEntry, OwnedConversations, OwnedError, list_entries
 from app.companion.assistant.mcp_server import JsonObject, McpServer, Tool, ToolError
 from app.companion.assistant.notifier import AnswerWatcher
@@ -239,7 +239,10 @@ class VoiceMateTools:
                 "not sent (read only): VoiceMate can read and watch this session but cannot write to it here; "
                 "tell the person what to type there"
             )
-        if resumer.in_use(entry.id):
+        reason = resumer.busy(entry.id)
+        if reason == "running" or reason == "just_answered":
+            raise ToolError(f"not sent (busy): {busy_text(reason)}")
+        if reason is not None:
             raise ToolError(
                 "not sent (in use): this terminal, IDE or Remote Control session is open in a program right now, "
                 "and Claude Code has no supported way for VoiceMate to write into a session another program is "

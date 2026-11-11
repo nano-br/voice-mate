@@ -58,6 +58,7 @@ Formato (veja `config.example.json` ao lado deste arquivo):
   "expressions": "off",
   "mode": "own_session",
   "permission_mode": "acceptEdits",
+  "resume_permission_mode": "",
   "answer_delivery": "announce",
   "instructions": [],
   "inbox": [],
@@ -73,6 +74,7 @@ Formato (veja `config.example.json` ao lado deste arquivo):
 - `expressions`: `off` ou `on`. Só com `on` o bloco voice pode ter tags de expressão (seção 5).
 - `mode`: onde esta conversa central roda. `own_session`: o VoiceMate roda a conversa e te dá as ferramentas `voicemate`. `desktop`: é uma conversa do app Claude Desktop e você tem as ferramentas de sessão do Desktop. A seção 3 diz o que cada uma oferece.
 - `permission_mode`: como as ferramentas desta conversa são liberadas (seção 0); vazio no modo `desktop`, em que a conversa do Desktop mantém o dela.
+- `resume_permission_mode`: o modo de permissão que uma sessão fechada de terminal, IDE ou Remote Control recebe quando o VoiceMate retoma ela com a sua mensagem; vazio (o padrão) quer dizer que nenhum é passado, então ela roda com as permissões padrão do Claude Code. Só a pessoa define, no arquivo de configurações do VoiceMate (`default`, `acceptEdits` ou `plan`; `bypassPermissions` é recusado); nunca peça para aumentar.
 - `answer_delivery`: o que o VoiceMate faz quando outra conversa responde (seção 3.5).
 - `instructions`: as instruções permanentes da pessoa, regras de comportamento que ela te deu em sessões anteriores (seção 8). **Siga desde a primeira resposta.**
 - `inbox`: respostas que o VoiceMate está guardando para a pessoa (título, id da conversa, quando chegou), sem o texto delas (seção 3.5).

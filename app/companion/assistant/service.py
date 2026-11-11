@@ -689,7 +689,10 @@ class AssistantServiceImpl:
                 desktop=self._desktop_sender(),
                 central_id=self._central,
                 new_defaults=self._new_defaults,
-                resumer=CliResumer(permission_mode=lambda: self._settings().permission_mode),
+                resumer=CliResumer(
+                    permission_mode=lambda: self._settings().resume_permission_mode,
+                    on_failed=lambda cid, why: self._dispatcher.post(lambda: self._resume_failed(cid, why)),
+                ),
             )
             servers.append(tools.server())
         return OwnSessionPort(
@@ -832,6 +835,7 @@ class AssistantServiceImpl:
                 pending=pending_entries(tuple(self._pending)),
                 instructions=self._standing().as_json(),
                 permission_mode=settings.permission_mode if settings.mode == "own_session" else "",
+                resume_permission_mode=settings.resume_permission_mode,
             )
         )
 
@@ -946,7 +950,10 @@ class AssistantServiceImpl:
             self._own_session = status.session_id
             self._central_id = status.session_id
             if any(item.conversation_id == status.session_id for item in self._pending):
-                self._watcher.unwatch(status.session_id)  # the central never watches itself
+                # The central never watches or waits for itself: off the watcher and the list.
+                self._watcher.unwatch(status.session_id)
+                self._pending = [item for item in self._pending if item.conversation_id != status.session_id]
+                self._pending_changed()
         if status.state == "ready" and self._pending_events:
             events, self._pending_events = self._pending_events, []
             for note in events:
@@ -1167,6 +1174,18 @@ class AssistantServiceImpl:
             "list; tell the person in one sentence when it matters to them."
         )
 
+    def _resume_failed(self, conversation_id: str, why: str) -> None:
+        """A closed session VoiceMate resumed with a message ended with an error or ran too long:
+        its reply watch goes back to what was there before, and the central is told."""
+        self._watcher.cancel_reply(conversation_id)
+        item = next((entry for entry in self._pending if entry.conversation_id == conversation_id), None)
+        title = item.title if item is not None else conversation_id
+        self._send_event(
+            f'{EVENT_MARKER} The message to the session "{safe_title(title)}" (id {safe_title(conversation_id)}) '
+            f"was not delivered: {_one_line(why, 160)}. Tell the person in one sentence, and read that "
+            "session before sending again."
+        )
+
     # --- worker: standing instructions -------------------------------------------------------
 
     def _remember(self, text: object) -> None:
@@ -1187,7 +1206,7 @@ class AssistantServiceImpl:
             return
         reason = "more than one instruction matches" if result == "ambiguous" else "no instruction matches"
         self._send_event(
-            f"{EVENT_MARKER} Standing instruction not removed: {_one_line(text, 120)!r} ({reason}). "
+            f'{EVENT_MARKER} Standing instruction not removed: "{safe_title(_one_line(text, 120))}" ({reason}). '
             "Read instructions in assistant.json and name the exact text."
         )
 

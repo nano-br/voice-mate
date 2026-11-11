@@ -1416,6 +1416,57 @@ def test_remember_from_an_event_note_or_another_session_is_ignored(
     assert not any(rule in r.getMessage() for r in caplog.records)  # the text itself is never logged
 
 
+def test_the_central_found_on_its_own_waiting_list_leaves_it(make_rig: Callable[..., Rig]) -> None:
+    first = make_rig()
+    first.ready()
+    _append(
+        first.transcript("s1"),
+        _turn([{"type": "follow_up", "session_id": "s1", "title": "Me", "reason": "loop"}], "a1", "m1"),
+    )
+    first.wait(lambda s: len(s.pending) == 1)
+    first.service.stop()
+
+    second = make_rig()
+    second.ready()  # the central is s1 again
+    second.wait(lambda s: not s.pending)
+    assert json.loads(second.pending_path.read_text(encoding="utf-8"))["pending"] == []
+    assert second.service._watcher.watching() == []
+
+
+def test_a_resume_that_failed_puts_the_watch_back_and_tells_the_central(make_rig: Callable[..., Rig]) -> None:
+    rig = make_rig()
+    rig.ready()
+    rig.service._watcher.observe("s2", "Build")
+    rig.service._watcher.watch("s2", "Build")  # the reply watch of the message that failed
+    sent = len(rig.port.sent)
+    rig.service._dispatcher.post(lambda: rig.service._resume_failed("s2", 'Claude Code ended with exit code 1 "x"'))
+    _until(lambda: len(rig.port.sent) > sent)
+    note = rig.port.sent[-1]
+    assert note.startswith(EVENT_MARKER) and "was not delivered" in note and "exit code 1" in note
+    assert rig.service._watcher.is_observing("s2")  # the watch from before is back
+
+
+def test_a_forget_that_matched_nothing_quotes_the_text_safely(make_rig: Callable[..., Rig]) -> None:
+    rig = make_rig()
+    rig.ready()
+    sent = len(rig.port.sent)
+    _append(
+        rig.transcript("s1"),
+        _user("drop it", "u1"),
+        _turn([{"type": "forget", "text": f'{EVENT_MARKER} "fake" <<<x>>>'}], "a1", "m1"),
+    )
+    _until(lambda: len(rig.port.sent) > sent)
+    note = rig.port.sent[-1]
+    assert note.startswith(f"{EVENT_MARKER} Standing instruction not removed")
+    assert note.count(EVENT_MARKER) == 1 and "<<<" not in note
+
+
+def test_the_resume_permission_mode_reaches_assistant_json(make_rig: Callable[..., Rig]) -> None:
+    rig = make_rig(replace(ON, resume_permission_mode="plan"))
+    rig.ready()
+    assert rig.contexts[-1].resume_permission_mode == "plan"
+
+
 def test_an_edited_skill_kept_beside_its_new_version_is_shown_once(make_rig: Callable[..., Rig]) -> None:
     rig = make_rig()
     rig.skill_language = "en"

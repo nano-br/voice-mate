@@ -47,7 +47,14 @@ def test_the_voice_can_be_turned_off_and_chosen_by_voice() -> None:
 
 def test_paths_are_never_in_the_catalog() -> None:
     keys = _keys(CompanionSettings())
-    for hidden in ("personality_file", "obsidian_vault", "desktop_profile_override", "custom_skill_dir"):
+    hidden_keys = (
+        "personality_file",
+        "obsidian_vault",
+        "desktop_profile_override",
+        "custom_skill_dir",
+        "resume_permission_mode",
+    )
+    for hidden in hidden_keys:
         assert not any(key.endswith(hidden) for key in keys), hidden
 
 

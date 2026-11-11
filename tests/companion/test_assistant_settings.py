@@ -388,6 +388,7 @@ def test_round_trip_keeps_the_wave_3_fields(tmp_path: Path) -> None:
     assistant = AssistantSettings(
         mode="desktop",
         desktop_conversation="VoiceMate central",
+        resume_permission_mode="plan",
         permission_mode="acceptEdits",
         skill_language="pt-BR",
         custom_skill_dir="C:/skills/mine",
