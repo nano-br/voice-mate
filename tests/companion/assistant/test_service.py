@@ -757,6 +757,12 @@ def _turn(actions: list[dict[str, object]], uuid: str, mid: str) -> str:
     )
 
 
+def _plain(text: str, uuid: str, mid: str) -> str:
+    """A finished reply of the central that does not follow the reply model."""
+    message = {"id": mid, "role": "assistant", "content": [{"type": "text", "text": text}], "stop_reason": "end_turn"}
+    return json.dumps({"type": "assistant", "uuid": uuid, "message": message})
+
+
 def _notices(snapshot: AssistantSnapshot) -> list[str]:
     return [m.text for m in snapshot.messages if m.role == "notice"]
 
@@ -905,6 +911,29 @@ def test_set_setting_action_changes_the_setting_and_tells_the_central(make_rig: 
     assert "Setting changed: " in _notices(snapshot)[-1]
     _until(lambda: any("Setting change applied: assistant.answer_delivery" in text for text in rig.port.sent))
     assert len(rig.ports) == 1
+
+
+def test_a_reply_without_the_reply_model_is_asked_again_once_per_streak(make_rig: Callable[..., Rig]) -> None:
+    rig = make_rig()
+    rig.ready()
+
+    def reminders() -> int:
+        return sum("had no <voice> block" in text for text in rig.port.sent)
+
+    _append(rig.transcript("s1"), _plain("Both conversations are stable.", "a1", "m1"))
+    _until(lambda: reminders() == 1)
+    assert rig.port.sent[-1].startswith(EVENT_MARKER)
+
+    _append(rig.transcript("s1"), _plain("Still stable.", "a2", "m2"))  # it missed again: not asked twice
+    rig.wait(lambda s: any(m.text == "Still stable." for m in s.messages))
+    time.sleep(0.2)
+    assert reminders() == 1
+
+    _append(rig.transcript("s1"), _turn([], "a3", "m3"))  # a reply in the model ends the streak
+    rig.wait(lambda s: any(m.role == "assistant" and not m.degraded for m in s.messages))
+    time.sleep(0.2)
+    _append(rig.transcript("s1"), _plain("Lost it again.", "a4", "m4"))
+    _until(lambda: reminders() == 2)
 
 
 def test_set_setting_refusals_are_notices_and_notes(make_rig: Callable[..., Rig]) -> None:

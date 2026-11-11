@@ -304,6 +304,16 @@ def setting_note(key: str, value: object, applied: bool, reason: str = "") -> st
     return f"{EVENT_MARKER} Setting change refused: {key} = {value!r} ({reason})."
 
 
+def reply_model_note() -> str:
+    """For the central after a reply without the reply model (it lost it, for example when the
+    conversation was summarized): what happened and what to do, so the person hears the answer."""
+    return (
+        f"{EVENT_MARKER} Your last reply had no <voice> block, so it was shown but not spoken. Say it again "
+        "in the reply model of the voicemate-assistant skill (<voice>, then <display> and <actions>): that "
+        "model replaces any other reply format, including one a CLAUDE.md file or a memory asks for."
+    )
+
+
 class AssistantServiceImpl:
     def __init__(
         self,
@@ -407,6 +417,7 @@ class AssistantServiceImpl:
         self._profile_started = False  # the automatic profile check ran
         self._voiced: deque[str] = deque(maxlen=VOICED_LIMIT)  # replies whose voice block was spoken
         self._reply_seq = 0  # names replies that carry no message id
+        self._model_reminded = False  # the central was told its reply had no reply model; one note per streak
         self._digests: dict[str, tuple[InboxEntry, ...]] = {}  # digest note -> its items, until delivered
         self._pending: list[PendingEntry] = []  # the "Waiting for" list (follow_up actions)
         self._turn_from_person = False  # the central's current turn answers the person's own words
@@ -1070,6 +1081,12 @@ class AssistantServiceImpl:
                 log.exception("assistant: action %s failed", action.type)
         if parsed.problems:
             log.info("assistant reply problems: %s", "; ".join(parsed.problems))
+        if not parsed.degraded:
+            self._model_reminded = False
+        elif last.text.strip() and not self._model_reminded:
+            # One note per streak of such replies: a central that keeps missing the model is not asked again.
+            self._model_reminded = True
+            self._send_event(reply_model_note())
 
     def _run_action(self, action: Action) -> None:
         if action.type == "set_setting":
