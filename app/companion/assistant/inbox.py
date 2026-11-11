@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Final
 
 from app.companion.assistant.contract import InboxEntry
-from app.companion.assistant.notifier import EVENT_MARKER, quoted, trim
+from app.companion.assistant.notifier import EVENT_MARKER, quoted, safe_title, trim
 
 log = logging.getLogger(__name__)
 
@@ -144,7 +144,8 @@ def digest_note(items: Sequence[InboxEntry]) -> str:
     ]
     for item in items:
         parts.append(
-            f'\n--- "{item.title}" (id {item.conversation_id}), ready at {_iso(item.ready_at)}:\n'
+            f'\n--- "{safe_title(item.title)}" (id {safe_title(item.conversation_id)}), '
+            f"ready at {_iso(item.ready_at)}:\n"
             f"{quoted(item.answer or '(no text in the answer)')}"
         )
     return "\n".join(parts)

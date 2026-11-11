@@ -455,6 +455,11 @@ msgstr "Não foi possível alterar a opção de iniciar ao entrar no sistema."
 msgid "No voice available: {reason}"
 msgstr "Nenhuma voz disponível: {reason}"
 
+#: app/companion/assistant/service.py
+#, python-brace-format
+msgid "Your edited copy of the assistant skill was kept, so the assistant still uses the old instructions. The new version is next to it as {files}: merge it, or delete your copy."
+msgstr "Sua cópia editada da skill do assistente foi mantida, então o assistente ainda usa as instruções antigas. A versão nova está ao lado dela como {files}: junte as duas, ou apague a sua cópia."
+
 #: app/companion/controller.py:1088
 #, python-brace-format
 msgid "VoiceMate speaks with the voices of Windows. Voices found: {count}."

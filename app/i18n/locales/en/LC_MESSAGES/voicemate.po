@@ -430,6 +430,11 @@ msgstr ""
 msgid "No voice available: {reason}"
 msgstr ""
 
+#: app/companion/assistant/service.py
+#, python-brace-format
+msgid "Your edited copy of the assistant skill was kept, so the assistant still uses the old instructions. The new version is next to it as {files}: merge it, or delete your copy."
+msgstr ""
+
 #: app/companion/controller.py:1088
 #, python-brace-format
 msgid "VoiceMate speaks with the voices of Windows. Voices found: {count}."

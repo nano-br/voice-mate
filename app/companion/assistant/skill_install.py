@@ -69,11 +69,13 @@ class AssistantContext:
 @dataclass(frozen=True)
 class SkillSource:
     """The folder `install_skill` copies. `rejected_custom` is the custom folder that was asked
-    for but has no SKILL.md (the packaged skill is used instead)."""
+    for but has no SKILL.md (the packaged skill is used instead); `kept_edited`, once installed,
+    the files the person edited and that were kept (the new version is beside each as `.new`)."""
 
     path: Path
     language: PackagedLanguage | None  # None for the person's own folder
     rejected_custom: str = ""
+    kept_edited: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

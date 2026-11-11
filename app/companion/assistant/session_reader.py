@@ -226,12 +226,22 @@ class Tail:
     dropped.
     """
 
-    def __init__(self, path: str | Path, *, from_start: bool = False) -> None:
+    def __init__(self, path: str | Path, *, from_start: bool = False, at: int | None = None) -> None:
+        """`at` resumes from a `position` an earlier Tail of the same file reported (the end of the
+        file when the file is now shorter than that: it was rewritten)."""
         self.path = Path(path)
-        self.offset = 0 if from_start else self._size()
+        size = self._size()
+        self.offset = 0 if from_start else size
+        if at is not None and 0 <= at <= size:
+            self.offset = at
         self._partial = b""
         self._last_title: str | None = None
         self._turn_open = False
+
+    @property
+    def position(self) -> int:
+        """Where the next complete line starts: the offset to resume from later (`at`)."""
+        return self.offset - len(self._partial)
 
     def _size(self) -> int:
         try:

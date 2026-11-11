@@ -441,6 +441,11 @@ msgstr "无法更改“登录时启动 VoiceMate”设置。"
 msgid "No voice available: {reason}"
 msgstr "没有可用的声音：{reason}"
 
+#: app/companion/assistant/service.py
+#, python-brace-format
+msgid "Your edited copy of the assistant skill was kept, so the assistant still uses the old instructions. The new version is next to it as {files}: merge it, or delete your copy."
+msgstr "已保留你编辑过的助手技能副本，因此助手仍在使用旧的说明。新版本在它旁边，名为 {files}：请合并，或删除你的副本。"
+
 #: app/companion/controller.py:1088
 #, python-brace-format
 msgid "VoiceMate speaks with the voices of Windows. Voices found: {count}."
