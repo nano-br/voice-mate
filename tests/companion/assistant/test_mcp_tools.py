@@ -84,6 +84,7 @@ ENTRIES = [
     ConversationEntry("desk-2", "Twin", "desktop", "idle", "2026-10-28T08:00:00+00:00", "C:\\d"),
     ConversationEntry("desk-3", "Twin", "desktop", "idle", "2026-10-28T07:00:00+00:00", "C:\\d"),
     ConversationEntry("desk-4", "", "desktop", "idle", "2026-10-28T06:00:00+00:00", "C:\\d"),
+    ConversationEntry("cli-1", "Terminal", "cli", "busy", "2026-10-28T05:00:00+00:00", "C:\\t"),
 ]
 
 
@@ -182,6 +183,13 @@ def test_desktop_failures_are_clear_errors(rig: Rig) -> None:
     assert rig.call("send_to_conversation", id="ghost", text="x")[1]
     assert rig.call("send_to_conversation", id="central", text="x") == ("that is this conversation", True)
     assert rig.call("send_to_conversation", id="desk-1", text="  ") == ("the text is empty", True)
+
+
+def test_a_local_cli_session_is_read_only(rig: Rig) -> None:
+    text, failed = rig.call("send_to_conversation", id="cli-1", text="status?")
+    assert failed and text.startswith("not sent (read only)")
+    assert rig.desktop is not None and rig.desktop.sent == []
+    assert rig.watcher.watched == []
 
 
 def test_without_a_desktop_sender_desktop_sends_are_refused(tmp_path: Path) -> None:

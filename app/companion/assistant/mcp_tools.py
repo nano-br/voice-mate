@@ -1,7 +1,8 @@
 """The `voicemate` sdk MCP server: the tools the central conversation (mode own_session) uses to
 work with other conversations.
 
-- `list_conversations`, `read_conversation`: from the transcripts on disk (session_reader.py).
+- `list_conversations`, `read_conversation`: from the transcripts on disk (session_reader.py),
+  Desktop, VoiceMate-owned and other local sessions (the "cli" ones are read only).
 - `send_to_conversation`: a VoiceMate-owned conversation gets the prompt on its stdin; a Desktop
   one through a `ConversationSender` (flash typing, app/companion/win/claude_desktop.py), injected;
   each `DesktopError` code becomes a plain reason for the central.
@@ -105,8 +106,10 @@ class VoiceMateTools:
         return [
             Tool(
                 "list_conversations",
-                "List the Claude Desktop conversations and the ones VoiceMate started, newest first: "
-                "id, title, owner (desktop or voicemate), state (busy, idle or waiting), last activity, cwd.",
+                "List the Claude Code conversations on this computer, newest first: id, title, owner "
+                "(desktop: a Claude Desktop conversation; voicemate: one VoiceMate started; cli: another "
+                "local session such as a terminal, IDE or Remote Control one, read only), state (busy, idle "
+                "or waiting), last activity, cwd.",
                 {
                     "type": "object",
                     "properties": {"limit": {"type": "integer", "default": 20, "description": "At most this many."}},
@@ -218,6 +221,11 @@ class VoiceMateTools:
     def _desktop_entry(self, conversation_id: str) -> ConversationEntry:
         entries = self._d.entries(100, self._excluded())
         entry = next((e for e in entries if e.id == conversation_id), None)
+        if entry is not None and entry.owner == "cli":
+            raise ToolError(
+                "not sent (read only): VoiceMate can read and watch this session but cannot write to a "
+                "terminal, IDE or Remote Control session; the person can type there or on the phone"
+            )
         if entry is None or entry.owner != "desktop":
             raise ToolError(f"no Desktop or VoiceMate conversation has the id {conversation_id}")
         if not entry.title:

@@ -293,24 +293,34 @@ def test_transcript_head(tmp_path: Path) -> None:
     assert transcript_head(tmp_path / "missing.jsonl") == ("", "")
 
 
-def test_list_entries_merges_desktop_and_owned_and_skips_the_rest(rig: Rig, tmp_path: Path) -> None:
+def test_list_entries_merges_desktop_owned_and_other_local_sessions(rig: Rig, tmp_path: Path) -> None:
     rig.owned.start("Mine", "p")
     desk = _transcript(tmp_path / "d1.jsonl", "claude-desktop", "C:\\proj")
     lab = _transcript(tmp_path / "l1.jsonl", "sdk-py", "C:\\lab")
     central = _transcript(tmp_path / "central.jsonl", "claude-desktop", "C:\\c")
     mine = _transcript(tmp_path / "id-0.jsonl", "sdk-cli", "C:\\mine")
+    terminal = _transcript(tmp_path / "t1.jsonl", "cli", "C:\\term")
+    script = _transcript(tmp_path / "s1.jsonl", "sdk-cli", "C:\\script")
     infos = [
         ConversationInfo("d1", desk, "Desk one", 2_000_000_000.0, "p"),
         ConversationInfo("l1", lab, "Lab", 1_900_000_000.0, "p"),
         ConversationInfo("central", central, "VoiceMate", 1_950_000_000.0, "p"),
+        ConversationInfo("s1", script, "", 1_850_000_000.0, "p"),  # untitled and finished: left out
         ConversationInfo("id-0", mine, "Mine", 1_800_000_000.0, "p"),
+        ConversationInfo("t1", terminal, "", 1_750_000_000.0, "p"),  # untitled but live: kept
         ConversationInfo("d2", _transcript(tmp_path / "d2.jsonl", "claude-desktop", "C:\\q"), "", 1_700_000_000.0, "p"),
     ]
-    live = {"d1": LiveSession("d1", 1, "busy"), "d2": LiveSession("d2", 2, "unknown", "Named live")}
+    live = {
+        "d1": LiveSession("d1", 1, "busy"),
+        "d2": LiveSession("d2", 2, "unknown", "Named live"),
+        "t1": LiveSession("t1", 3, "busy", "Remote job"),
+    }
     entries = list_entries(rig.owned, 10, exclude=["central"], lister=lambda _n: infos, sessions=lambda: live)
     assert [(e.id, e.title, e.owner, e.state) for e in entries] == [
         ("d1", "Desk one", "desktop", "busy"),
+        ("l1", "Lab", "cli", "idle"),
         ("id-0", "Mine", "voicemate", "busy"),
+        ("t1", "Remote job", "cli", "busy"),
         ("d2", "Named live", "desktop", "waiting"),
     ]
     assert entries[0].cwd == "C:\\proj"
