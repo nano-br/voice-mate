@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-11
+
 ### Added
 
 - External STT provider: VoiceMate can transcribe with a speech-to-text service you run yourself,
@@ -48,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - When the assistant answers outside its reply model (it can lose the model when its conversation is
   summarized), VoiceMate tells it once, so the answer is said again and spoken instead of only shown.
   Only a reply that arrived in the current run is checked, and once.
+- Starting a new turn no longer speaks or acts on the previous reply.
 
 ## [0.4.0] - 2026-11-03
 
@@ -482,7 +485,8 @@ Development happened on `main` and in seven pull requests before this first rele
 - [#7](https://github.com/nano-br/voice-mate/pull/7): choose the dictation language in
   the companion.
 
-[Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/nano-br/voice-mate/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/nano-br/voice-mate/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/nano-br/voice-mate/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/nano-br/voice-mate/compare/v0.1.0...v0.2.0
