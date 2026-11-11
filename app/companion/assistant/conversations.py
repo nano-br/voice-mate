@@ -13,7 +13,8 @@ quit stops them all at the same time without forgetting them; nothing starts aft
 `"entrypoint": "claude-desktop"`) and the other Claude Code sessions on this computer (terminal,
 IDE, Remote Control, other SDK hosts: owner "cli"), for the `list_conversations` tool. A "cli"
 session is listed only when it has a title or a live process, so one-shot `claude -p` runs of
-scripts stay out. VoiceMate can read and watch those, not write to them. Standard library only.
+scripts stay out, and after the Desktop and VoiceMate ones. VoiceMate reads and watches those, and
+writes to one only while no program has it open (cli_resume.py). Standard library only.
 """
 
 from __future__ import annotations
@@ -541,8 +542,8 @@ def list_entries(
     sessions: Callable[[], dict[str, LiveSession]] = live_sessions,
     head: Callable[[Path], tuple[str, str]] = transcript_head,
 ) -> list[ConversationEntry]:
-    """Desktop, VoiceMate-owned and other local Claude Code conversations, newest activity first.
-    `exclude` drops ids (the central conversation itself)."""
+    """Desktop and VoiceMate-owned conversations, newest activity first, then the other local
+    Claude Code sessions, newest first. `exclude` drops ids (the central conversation itself)."""
     limit = max(1, min(limit, 100))
     skip = set(exclude)
     live = sessions()
@@ -571,5 +572,8 @@ def list_entries(
             entries[record.id] = ConversationEntry(
                 record.id, record.title, "voicemate", owned.state(record.id), _iso(record.created), record.cwd
             )
+    # Desktop and VoiceMate conversations first, then the other local sessions: many terminal or
+    # IDE sessions must never push a Desktop conversation out of the limit.
     ordered = sorted(entries.values(), key=lambda e: e.last_activity, reverse=True)
+    ordered.sort(key=lambda e: e.owner == "cli")  # stable: newest first inside each group
     return ordered[:limit]

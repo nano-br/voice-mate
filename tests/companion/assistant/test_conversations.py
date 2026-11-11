@@ -318,11 +318,23 @@ def test_list_entries_merges_desktop_owned_and_other_local_sessions(rig: Rig, tm
     entries = list_entries(rig.owned, 10, exclude=["central"], lister=lambda _n: infos, sessions=lambda: live)
     assert [(e.id, e.title, e.owner, e.state) for e in entries] == [
         ("d1", "Desk one", "desktop", "busy"),
-        ("l1", "Lab", "cli", "idle"),
         ("id-0", "Mine", "voicemate", "busy"),
-        ("t1", "Remote job", "cli", "busy"),
         ("d2", "Named live", "desktop", "waiting"),
+        ("l1", "Lab", "cli", "idle"),  # the other local sessions come after, newest first
+        ("t1", "Remote job", "cli", "busy"),
     ]
     assert entries[0].cwd == "C:\\proj"
     assert entries[0].last_activity.startswith("2033-05-18T")
     assert list_entries(rig.owned, 1, lister=lambda _n: infos, sessions=dict)[0].id == "d1"
+
+
+def test_newer_local_sessions_never_push_a_desktop_conversation_out_of_the_limit(rig: Rig, tmp_path: Path) -> None:
+    infos = [
+        ConversationInfo(f"t{n}", _transcript(tmp_path / f"t{n}.jsonl", "cli", "C:\\t"), f"Term {n}", 2e9 - n, "p")
+        for n in range(5)
+    ]
+    infos.append(
+        ConversationInfo("d1", _transcript(tmp_path / "d1.jsonl", "claude-desktop", "C:\\d"), "Desk", 1e9, "p")
+    )
+    entries = list_entries(rig.owned, 3, lister=lambda _n: infos, sessions=dict)
+    assert [e.id for e in entries] == ["d1", "t0", "t1"]
