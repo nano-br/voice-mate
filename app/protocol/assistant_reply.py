@@ -15,7 +15,16 @@ from dataclasses import dataclass, field
 from typing import Final, Literal, get_args
 
 ActionType = Literal[
-    "open_conversation", "notify", "follow_up", "follow_up_done", "focus", "set_setting", "read_inbox", "clear_inbox"
+    "open_conversation",
+    "notify",
+    "follow_up",
+    "follow_up_done",
+    "focus",
+    "set_setting",
+    "read_inbox",
+    "clear_inbox",
+    "remember",
+    "forget",
 ]
 ACTION_TYPES: Final[frozenset[str]] = frozenset(get_args(ActionType))
 ACTIONS_VERSION: Final = 1

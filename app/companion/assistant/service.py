@@ -16,7 +16,10 @@ the assistant wrote to come from the `AnswerWatcher` (notifier.py) and reach the
 after a short notice or a sound, never while the person is dictating or is with another
 conversation. The reply actions `set_setting`, `read_inbox` and `clear_inbox` are carried out
 (settings_catalog.py), `follow_up` and `follow_up_done` keep the "Waiting for" list (shown on
-the text screen and written to assistant.json as `pending`), and `focus` makes the text screen
+the text screen and written to assistant.json as `pending`) and watch every conversation on it
+(an observation: each turn it finishes reaches the central, whatever the delivery setting, also
+after a restart), `remember` and `forget` keep the person's standing instructions
+(instructions.py, written to assistant.json as `instructions`), and `focus` makes the text screen
 follow a conversation (null: the central again); the others are logged
 (docs/research/voice-assistant-design.md, section 7). Direct mode sends every prompt verbatim to
 one conversation until the person comes back, and then tells the central what happened there.
@@ -68,6 +71,7 @@ from app.companion.assistant.contract import (
 from app.companion.assistant.conversations import OwnedConversations, OwnedError
 from app.companion.assistant.desktop_port import DesktopConversationPort
 from app.companion.assistant.inbox import Inbox, context_entries, digest_note
+from app.companion.assistant.instructions import StandingInstructions
 from app.companion.assistant.mcp_tools import VoiceMateTools
 from app.companion.assistant.notifier import EVENT_MARKER, AnswerWatcher, ReadyAnswer, quoted, trim
 from app.companion.assistant.own_session import FIRST_PROMPT, OwnSessionPort
@@ -267,6 +271,7 @@ class AssistantServiceImpl:
         personality_path: Path | None = None,
         inbox: Inbox | None = None,
         pending_path: Path | None = None,
+        instructions: StandingInstructions | None = None,
         find_file: Callable[[str], Path | None] = find_session_file,
         read_messages: Callable[[Path, int], list[Message]] = last_messages,
         poll_s: float = POLL_S,
@@ -289,6 +294,7 @@ class AssistantServiceImpl:
         self._voicemate_version = voicemate_version
         self._personality_path = personality_path
         self._inbox_override = inbox
+        self._instructions_override = instructions
         self._pending_path_override = pending_path
         self._find_file = find_file
         self._read_messages = read_messages
@@ -306,6 +312,7 @@ class AssistantServiceImpl:
         self._owned_resumed = False
         self._desktop: ConversationSender | None = None
         self._inbox: Inbox | None = None
+        self._instructions: StandingInstructions | None = None
         self._central_id = ""  # read by the MCP tools' thread
         self._watcher = AnswerWatcher(
             lambda note: False,
@@ -595,6 +602,14 @@ class AssistantServiceImpl:
                 self._inbox = self._inbox_override or Inbox(paths.assistant_inbox_path())
             return self._inbox
 
+    def _standing(self) -> StandingInstructions:
+        with self._lock:
+            if self._instructions is None:
+                self._instructions = self._instructions_override or StandingInstructions(
+                    paths.assistant_instructions_path()
+                )
+            return self._instructions
+
     def _default_port(self, settings: AssistantSettings) -> ConversationPort:
         if settings.mode == "desktop":
             return DesktopConversationPort(
@@ -666,6 +681,10 @@ class AssistantServiceImpl:
         self._publish()
         port.start(lambda status: self._dispatcher.post(lambda: self._on_port_status(port, status)))
         self._watcher.start()
+        # The "Waiting for" list survives a restart, and so does watching what is on it.
+        for item in self._pending:
+            if item.conversation_id != self._own_session:
+                self._watcher.observe(item.conversation_id, item.title)
         if settings.mode == "own_session":
             self._resume_owned()
         self._schedule_poll()
@@ -719,6 +738,8 @@ class AssistantServiceImpl:
                 notes_vault=settings.obsidian_vault,
                 answer_delivery=settings.answer_delivery,
                 pending=pending_entries(tuple(self._pending)),
+                instructions=self._standing().as_json(),
+                permission_mode=settings.permission_mode if settings.mode == "own_session" else "",
             )
         )
 
@@ -817,6 +838,9 @@ class AssistantServiceImpl:
         self._clear_raw()
         self._notices.clear()
         self._own_session = ""
+        for item in self._pending:
+            if self._watcher.is_observing(item.conversation_id):
+                self._watcher.unwatch(item.conversation_id)
         self._pending.clear()
         self._save_pending()
         self._away = False
@@ -830,6 +854,8 @@ class AssistantServiceImpl:
         if status.session_id and status.session_id != self._own_session:
             self._own_session = status.session_id
             self._central_id = status.session_id
+            if self._watcher.is_observing(status.session_id):
+                self._watcher.unwatch(status.session_id)  # the central never watches itself
         if status.state == "ready" and self._pending_events:
             events, self._pending_events = self._pending_events, []
             for note in events:
@@ -958,6 +984,10 @@ class AssistantServiceImpl:
             self._follow_up_done(action.params.get("session_id"))
         elif action.type == "focus":
             self._focus(action.params.get("session_id"), action.params.get("title"))
+        elif action.type == "remember":
+            self._remember(action.params.get("text"))
+        elif action.type == "forget":
+            self._forget(action.params.get("text"))
         else:
             log.info("assistant action (not dispatched): %s %s", action.type, action.params)
 
@@ -980,15 +1010,45 @@ class AssistantServiceImpl:
         self._pending = [item for item in self._pending if item.conversation_id != session_id]
         self._pending.append(PendingEntry(session_id, title, reason, since))
         del self._pending[:-PENDING_LIMIT]
+        # Waiting for a conversation means watching it: every turn it finishes reaches the central
+        # until follow_up_done, whether or not the assistant wrote to it (a reply watch is kept).
+        # Never the central itself: its own turns would come back to it forever.
+        if session_id != self._own_session:
+            self._watcher.observe(session_id, title)
         self._pending_changed()
 
     def _follow_up_done(self, session_id: object) -> None:
         if not isinstance(session_id, str):
             return
-        kept = [item for item in self._pending if item.conversation_id != session_id.strip()]
+        session_id = session_id.strip()
+        if self._watcher.is_observing(session_id):
+            self._watcher.unwatch(session_id)
+        kept = [item for item in self._pending if item.conversation_id != session_id]
         if len(kept) != len(self._pending):
             self._pending = kept
             self._pending_changed()
+
+    # --- worker: standing instructions -------------------------------------------------------
+
+    def _remember(self, text: object) -> None:
+        """The `remember` action: a rule of behavior the person gave, kept for every session."""
+        if self._standing().add(text):
+            log.info("assistant: standing instruction added")
+            self._write_context_now()
+        else:
+            log.info("assistant: remember without a new instruction (%r)", text)
+
+    def _forget(self, text: object) -> None:
+        result = self._standing().forget(text)
+        log.info("assistant: forget instruction -> %s", result)
+        if result == "removed":
+            self._write_context_now()
+            return
+        reason = "more than one instruction matches" if result == "ambiguous" else "no instruction matches"
+        self._send_event(
+            f"{EVENT_MARKER} Standing instruction not removed: {_one_line(text, 120)!r} ({reason}). "
+            "Read instructions in assistant.json and name the exact text."
+        )
 
     def _pending_file(self) -> Path:
         return self._pending_path_override or paths.assistant_pending_path()
@@ -1114,7 +1174,9 @@ class AssistantServiceImpl:
         """Watcher thread: where a finished answer goes. False = not now (it is offered again)."""
         delivery = self._settings().answer_delivery
         away = self._away  # with another conversation: the central's answer would not be heard
-        if delivery == "speak" and not away:
+        # A conversation the person asked to watch reports to the central whatever the delivery:
+        # "tell me when it has news" is the person's own request to be told.
+        if (delivery == "speak" or ready.observed) and not away:
             port = self._port
             if self._person_busy() or port is None or not self._running:
                 return False

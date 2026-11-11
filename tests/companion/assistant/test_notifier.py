@@ -6,7 +6,14 @@ import json
 import time
 from pathlib import Path
 
-from app.companion.assistant.notifier import ANSWER_LIMIT, EVENT_MARKER, AnswerWatcher, answer_note, trim
+from app.companion.assistant.notifier import (
+    ANSWER_LIMIT,
+    EVENT_MARKER,
+    OBSERVE_WAIT_S,
+    AnswerWatcher,
+    answer_note,
+    trim,
+)
 
 
 def user(text: str) -> dict[str, object]:
@@ -137,6 +144,72 @@ def test_unwatch_and_expiry(tmp_path: Path) -> None:
     assert rig.watcher.watching() == []
     rig.watcher.watch("c2", "never")
     rig.now = 101.0
+    rig.watcher.poll()
+    assert rig.watcher.watching() == []
+
+
+def test_an_observation_reports_the_running_turn_and_every_later_one(tmp_path: Path) -> None:
+    rig = Rig(tmp_path)
+    path = rig.file("c1")
+    append(path, user("long job"), assistant("working", "m0"))
+    assert rig.watcher.observe("c1", "Build")
+    assert rig.watcher.is_observing("c1")
+    append(path, assistant("step one done", "m0", end=True))  # no prompt since the watch: still counts
+    assert rig.watcher.poll() == 1
+    assert rig.notes == [answer_note("Build", "c1", "step one done", observed=True)]
+    assert "watching for the person" in rig.notes[0]
+    assert rig.watcher.watching() == ["c1"]  # it keeps watching
+    assert rig.watcher.poll() == 0  # nothing new: nothing reported twice
+    append(path, user("next"), assistant("all done", "m1", end=True))
+    assert rig.watcher.poll() == 1
+    assert rig.notes[1].endswith("all done\n>>>")
+    rig.watcher.unwatch("c1")
+    append(path, user("more"), assistant("x", "m2", end=True))
+    assert rig.watcher.poll() == 0
+
+
+def test_a_reply_watch_comes_first_and_the_observation_goes_on_after_it(tmp_path: Path) -> None:
+    rig = Rig(tmp_path)
+    path = rig.file("c1")
+    rig.watcher.watch("c1", "T")
+    assert not rig.watcher.is_observing("c1")
+    assert not rig.watcher.observe("c1", "T")  # the reply watch stays, then turns into an observation
+    assert rig.watcher.is_observing("c1")
+    append(path, user("q"), assistant("a", "m1", end=True))
+    assert rig.watcher.poll() == 1
+    assert "watching for the person" not in rig.notes[0]  # the reply, as a reply
+    assert rig.watcher.watching() == ["c1"]
+    append(path, assistant("later news", "m2", end=True))
+    assert rig.watcher.poll() == 1
+    assert "watching for the person" in rig.notes[1]
+
+
+def test_a_prompt_written_to_an_observed_conversation_keeps_the_observation(tmp_path: Path) -> None:
+    rig = Rig(tmp_path)
+    path = rig.file("c1")
+    assert rig.watcher.observe("c1", "T")
+    rig.watcher.watch("c1", "T")  # the assistant asks it something
+    append(path, user("status?"), assistant("half done", "m1", end=True))
+    assert rig.watcher.poll() == 1
+    assert "watching for the person" not in rig.notes[0]
+    assert rig.watcher.is_observing("c1")
+    rig.watcher.unwatch("c1")
+    assert rig.watcher.watching() == []
+
+
+def test_an_observation_outlives_the_reply_limit_and_expires_after_its_own(tmp_path: Path) -> None:
+    rig = Rig(tmp_path)
+    path = rig.file("c1")
+    rig.watcher.observe("c1", "T")
+    rig.now = 101.0  # past max_wait_s of a reply watch
+    assert rig.watcher.poll() == 0
+    assert rig.watcher.watching() == ["c1"]
+    append(path, user("q"), assistant("a", "m1", end=True))
+    assert rig.watcher.poll() == 1
+    rig.now += OBSERVE_WAIT_S - 1  # counted from the last reported turn
+    rig.watcher.poll()
+    assert rig.watcher.watching() == ["c1"]
+    rig.now += 2
     rig.watcher.poll()
     assert rig.watcher.watching() == []
 

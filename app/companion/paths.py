@@ -30,6 +30,7 @@ ASSISTANT_CONVERSATIONS_DIR_NAME = "assistant-conversations"
 ASSISTANT_INBOX_NAME = "assistant-inbox.json"
 ASSISTANT_PERSONALITY_NAME = "assistant-personality.md"
 ASSISTANT_PENDING_NAME = "assistant-waiting.json"
+ASSISTANT_INSTRUCTIONS_NAME = "assistant-instructions.json"
 DESKTOP_PROFILE_DIR_NAME = "desktop-profile"
 
 
@@ -133,6 +134,11 @@ def assistant_inbox_path() -> Path:
 def assistant_pending_path() -> Path:
     """The assistant's "Waiting for" list, kept across restarts: see app/companion/assistant/service.py."""
     return state_dir() / ASSISTANT_PENDING_NAME
+
+
+def assistant_instructions_path() -> Path:
+    """The person's standing instructions to the assistant: see app/companion/assistant/instructions.py."""
+    return state_dir() / ASSISTANT_INSTRUCTIONS_NAME
 
 
 def assistant_personality_path() -> Path:

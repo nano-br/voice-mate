@@ -13,6 +13,7 @@ import pytest
 
 from app.companion.assistant.contract import AssistantSnapshot, PortListener, PortStatus
 from app.companion.assistant.inbox import Inbox
+from app.companion.assistant.instructions import StandingInstructions
 from app.companion.assistant.notifier import EVENT_MARKER, ReadyAnswer
 from app.companion.assistant.service import AssistantServiceImpl, is_internal_user_text
 from app.companion.assistant.session_reader import ConversationInfo
@@ -236,6 +237,7 @@ class Rig:
             personality_path=claude_home.parent / "personality.md",
             inbox=self.inbox,
             pending_path=claude_home.parent / "waiting.json",
+            instructions=StandingInstructions(claude_home.parent / "instructions.json"),
             poll_s=0.02,
         )
         self.service.subscribe(self.snapshots.append)
@@ -1254,6 +1256,79 @@ def test_the_waiting_for_list_survives_a_restart(make_rig: Callable[..., Rig]) -
     ]
     _until(lambda: bool(second.contexts))
     assert [entry["session_id"] for entry in second.contexts[-1].pending] == ["s2"]
+
+
+def test_a_follow_up_watches_the_conversation_and_reports_its_turns_even_when_silent(
+    make_rig: Callable[..., Rig],
+) -> None:
+    rig = make_rig(replace(ON, answer_delivery="silent"))
+    rig.ready()
+    other = rig.transcript("s2")
+    _append(other, _user("long job", "o1"), _assistant("working", "o2", "mo"))
+    _append(
+        rig.transcript("s1"),
+        _turn([{"type": "follow_up", "session_id": "s2", "title": "Build", "reason": "tell me when done"}], "a1", "m1"),
+    )
+    rig.wait(lambda s: len(s.pending) == 1)
+    _until(lambda: rig.service._watcher.is_observing("s2"))
+    sent = len(rig.port.sent)
+    _append(other, _turn([], "o3", "mo"))  # the running turn ends: no new prompt was needed
+    _until(lambda: len(rig.port.sent) > sent)
+    note = rig.port.sent[-1]
+    assert note.startswith(EVENT_MARKER) and "watching for the person" in note and '"Build"' in note
+    assert rig.inbox.items() == ()  # told to the central, not held silently
+    _append(rig.transcript("s1"), _turn([{"type": "follow_up_done", "session_id": "s2"}], "a2", "m2"))
+    rig.wait(lambda s: not s.pending)
+    _until(lambda: not rig.service._watcher.is_observing("s2"))
+
+
+def test_the_central_never_watches_itself(make_rig: Callable[..., Rig]) -> None:
+    rig = make_rig()
+    rig.ready()
+    _append(
+        rig.transcript("s1"),
+        _turn([{"type": "follow_up", "session_id": "s1", "title": "Me", "reason": "loop"}], "a1", "m1"),
+    )
+    rig.wait(lambda s: len(s.pending) == 1)
+    assert rig.service._watcher.watching() == []
+
+
+def test_the_waiting_for_list_is_watched_again_after_a_restart(make_rig: Callable[..., Rig]) -> None:
+    first = make_rig()
+    first.ready()
+    _append(
+        first.transcript("s1"),
+        _turn([{"type": "follow_up", "session_id": "s2", "title": "Build", "reason": "news"}], "a1", "m1"),
+    )
+    first.wait(lambda s: len(s.pending) == 1)
+    first.service.stop()
+
+    second = make_rig()
+    second.service.start()
+    second.wait(lambda s: len(s.pending) == 1)
+    _until(lambda: second.service._watcher.is_observing("s2"))
+
+
+def test_remember_and_forget_keep_standing_instructions_for_every_session(make_rig: Callable[..., Rig]) -> None:
+    rig = make_rig()
+    rig.ready()
+    rule = "Read and ask other conversations without asking me first."
+    _append(rig.transcript("s1"), _turn([{"type": "remember", "text": rule}], "a1", "m1"))
+    _until(lambda: bool(rig.contexts) and [i["text"] for i in rig.contexts[-1].instructions] == [rule])
+    assert rig.contexts[-1].permission_mode == "acceptEdits"
+
+    second = make_rig()  # a later run reads them from the same file
+    second.service.start()
+    _until(lambda: bool(second.contexts))
+    assert [i["text"] for i in second.contexts[-1].instructions] == [rule]
+    second.service.stop()
+
+    sent = len(rig.port.sent)
+    _append(rig.transcript("s1"), _turn([{"type": "forget", "text": "something else"}], "a2", "m2"))
+    _until(lambda: len(rig.port.sent) > sent)
+    assert "Standing instruction not removed" in rig.port.sent[-1]
+    _append(rig.transcript("s1"), _turn([{"type": "forget", "text": "without asking me"}], "a3", "m3"))
+    _until(lambda: rig.contexts[-1].instructions == [])
 
 
 def test_focus_action_makes_the_screen_follow_a_conversation_and_null_comes_back(

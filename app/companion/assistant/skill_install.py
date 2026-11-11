@@ -9,7 +9,8 @@ from one the person edited: an edited file is never overwritten, the new version
 it as `<name>.new`. Switching the source updates the managed files the same way and removes the
 managed ones the new source does not have. The language, name, personality, mode and the
 settings the assistant may change live in `~/.voicemate/assistant.json` (`write_context`), with
-the answers held in the inbox and the requests the assistant is waiting on (`pending`).
+the answers held in the inbox, the requests the assistant is waiting on (`pending`), the person's
+standing instructions (`instructions`) and the central's permission mode.
 Stdlib only, no Qt.
 """
 
@@ -32,7 +33,7 @@ from app.companion.contract import ExpressionsMode as Expressions
 SKILL_NAME: Final = "voicemate-assistant"
 SKILL_FILE: Final = "SKILL.md"
 # Bump when the packaged skill changes in a way an installed copy should know about.
-SKILL_VERSION: Final = 3
+SKILL_VERSION: Final = 4
 SIDECAR_NAME: Final = ".voicemate-managed.json"
 NEW_SUFFIX: Final = ".new"
 SETTINGS_VERSION: Final = 1
@@ -58,6 +59,11 @@ class AssistantContext:
     answer_delivery: AnswerDelivery = "announce"
     # The requests the assistant is waiting on (its follow_up actions), as JSON objects.
     pending: Sequence[Mapping[str, object]] = ()
+    # The person's standing instructions (instructions.py), as JSON objects.
+    instructions: Sequence[Mapping[str, object]] = ()
+    # The permission mode the central runs with in mode own_session ("" when VoiceMate does not
+    # choose it: a Desktop conversation keeps its own).
+    permission_mode: str = ""
 
 
 @dataclass(frozen=True)
@@ -157,8 +163,10 @@ def write_context(ctx: AssistantContext) -> Path:
         "settings": [dict(entry) for entry in ctx.settings],
         "inbox": [dict(entry) for entry in ctx.inbox],
         "pending": [dict(entry) for entry in ctx.pending],
+        "instructions": [dict(entry) for entry in ctx.instructions],
         "notes_vault": ctx.notes_vault,
         "answer_delivery": ctx.answer_delivery,
+        "permission_mode": ctx.permission_mode,
     }
     path = settings_file_path()
     _atomic_write(path, (json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))

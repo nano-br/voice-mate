@@ -6,7 +6,9 @@
   "notes_vault": "",
   "expressions": "off",
   "mode": "own_session",
+  "permission_mode": "acceptEdits",
   "answer_delivery": "announce",
+  "instructions": [],
   "inbox": [],
   "pending": [],
   "settings": [
