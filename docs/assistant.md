@@ -214,8 +214,9 @@ In VoiceMate's own conversation, `list_conversations` reads the transcripts that
 | **Terminal, IDE or Remote Control, in use** (`cli`) | ✅ | ⚠️ Only through the session tools `ListAgents` and `SendMessage`, when the central has them; otherwise it tells you what to type there | ❌ |
 | **Cloud-only sessions** | ❌ Not on this computer | ❌ | ❌ |
 
-- **Why a session in use is read only.** Claude Code keeps one writer per session, and it has no supported way for another program to type into a session that a client is running. Two writers would split the conversation into branches. VoiceMate treats a session as in use when Claude Code lists it as live, when its transcript changed in the last **2 minutes**, or while VoiceMate's own resume of it is still running.
-- **Resuming a closed session.** VoiceMate runs Claude Code on that session in print mode, with the message on standard input (never on the command line), the permission mode from "Permissions:", and the same clean environment as the conversations it starts. The turn lands in the same transcript, so you find it when you open the session again, and the watcher reads the answer from there. A resumed turn still running after **30 minutes** is stopped.
+- **Why a session in use is read only.** Claude Code keeps one writer per session, and it has no supported way for another program to type into a session that a client is running. Two writers would split the conversation into branches. VoiceMate treats a session as in use when Claude Code lists it as live, when its transcript changed in the last **2 minutes**, or while VoiceMate's own resume of it is still running or has just ended.
+- **Resuming a closed session.** VoiceMate runs Claude Code on that session in print mode, with the message on standard input (never on the command line) and the same clean environment as the conversations it starts. It passes no permission mode, so the turn runs with Claude Code's default permissions, never with more. The turn lands in the same transcript, so you find it when you open the session again, and the watcher reads the answer from there. A resumed turn still running after **30 minutes** is stopped, and a message longer than 16,000 characters is refused. When a resume ends with an error or runs too long, the central gets a note and tells you.
+- **Permissions of a resumed session.** If you want resumed sessions to be allowed more, set `resume_permission_mode` in the `[assistant]` table of `companion.toml` to `default`, `acceptEdits` or `plan`. `bypassPermissions` is refused there, and the assistant cannot change this key by voice.
 - **Session tools.** Some Claude Code clients and modes give the central `ListAgents` and `SendMessage`; others do not. When it has them, the skill tells it to find the session there, send with `notify_when_idle`, say "I sent it" (never "it is doing it") until it has read the answer, and open the message by saying it comes from your assistant and approves nothing.
 - **In the Desktop mode** the central uses the Desktop's own session tools instead (`list_sessions`, `SendMessage`, `start_session` and others), which also list the Desktop's cloud and remote sessions. VoiceMate still watches what is on the "Waiting for" list.
 
@@ -306,7 +307,8 @@ Blue: VoiceMate and its settings; teal: files; purple: the central conversation;
 - **What stays on this computer.** Speech is transcribed locally. The waiting list, the inbox, the standing instructions, the personality text and `assistant.json` are local files; VoiceMate sends them nowhere. The conversations themselves run on Claude Code with your own login, so what the central reads from a transcript or a note goes to Claude like in any Claude Code conversation.
 - **What is not logged.** The text of a standing instruction (only its size), and a message sent to a resumed session (it goes on standard input, not on the command line).
 - **Writing is guarded.** A session in use is never written to by VoiceMate; a Desktop write checks three guards before every key. A failed write is reported, never retried behind your back.
-- **"Full access" is your call.** "Full access, never ask (risky)" lets the conversations the assistant starts, and the sessions it resumes, change any file and run any command without asking. By voice the assistant can switch only between `default` and `acceptEdits`.
+- **A resume never raises permissions.** Writing to a closed session passes no permission mode unless you set `resume_permission_mode` yourself (`default`, `acceptEdits` or `plan`; `bypassPermissions` is refused), and the assistant cannot change that key by voice.
+- **"Full access" is your call.** "Full access, never ask (risky)" lets the conversations the assistant starts change any file and run any command without asking. By voice the assistant can switch only between `default` and `acceptEdits`.
 
 ## ⚙️ Configuration
 
@@ -316,6 +318,7 @@ There is nothing new to turn on: the behavior on this page comes with the assist
 |---|---|
 | `instructions` | Your standing instructions: `text` and `since` (ISO 8601, empty when unknown) |
 | `permission_mode` | How the central's tools are allowed, in VoiceMate's own conversation; empty in the Desktop mode, where the Desktop conversation keeps its own |
+| `resume_permission_mode` | The permission mode a resumed terminal, IDE or Remote Control session gets; empty (the default) passes none |
 | `pending` | The "Waiting for" list: `session_id`, `title`, `reason`, `since`, `watch` (true for a watch you asked for) and `until` (when it leaves the list without a new turn) |
 | `notes_vault`, `personality_file`, `user_name` | Your notes folder, the personality file and your name |
 | `inbox`, `answer_delivery`, `settings` | The held answers (without their text), how answers reach you, the settings it may change by voice |
@@ -333,6 +336,7 @@ The skill also documents the `remember`, `forget` and `follow_up` actions with `
 | Symptom | What to do |
 |---|---|
 | "Not sent (in use)" for a terminal or IDE session | That session is open in a program right now. Close it there, or wait 2 minutes after its last change, and ask again. Without the session tools, the assistant tells you what to type there |
+| "Not sent (busy)" | VoiceMate's last message to that session is still being answered, or was answered a moment ago. Wait a moment and ask again |
 | "Not sent (no_folder)" | The session's folder is no longer on this computer, so it cannot be resumed |
 | A rule you gave is not followed in a new session | Ask "what rules do you keep?"; it reads `instructions` in `assistant.json`. If the file was unreadable, look for `assistant-instructions.json.bad` in the state folder |
 | "Standing instruction not removed" | No rule matched, or more than one did: say more of its exact text |

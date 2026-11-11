@@ -221,8 +221,9 @@ stateDiagram-v2
 | **终端、IDE 或 Remote Control，正在使用**（`cli`） | ✅ | ⚠️ 只能通过会话工具 `ListAgents` 和 `SendMessage`，前提是中央对话有这两个工具；否则它会告诉你在那里输入什么 | ❌ |
 | **只在云端运行的会话** | ❌ 不在这台电脑上 | ❌ | ❌ |
 
-- **为什么正在使用的会话只能读。** Claude Code 每个会话只允许一个写入者，也没有受支持的方式让另一个程序往客户端正在运行的会话里输入。两个写入者会让对话分叉。以下情况 VoiceMate 都视为正在使用：Claude Code 把它列为活动会话；它的记录在最近 **2 分钟** 内有变化；或者 VoiceMate 自己对它的恢复仍在运行。
-- **恢复已关闭的会话。** VoiceMate 以打印模式在这个会话上运行 Claude Code：消息通过标准输入传入（绝不放在命令行上），权限模式取自“权限：”，环境和它启动的对话一样干净。这一轮会写进同一份记录，你下次打开这个会话时就能看到，观察器也从那里读取回答。恢复后运行超过 **30 分钟** 的一轮会被停止。
+- **为什么正在使用的会话只能读。** Claude Code 每个会话只允许一个写入者，也没有受支持的方式让另一个程序往客户端正在运行的会话里输入。两个写入者会让对话分叉。以下情况 VoiceMate 都视为正在使用：Claude Code 把它列为活动会话；它的记录在最近 **2 分钟** 内有变化；或者 VoiceMate 自己对它的恢复仍在运行或刚刚结束。
+- **恢复已关闭的会话。** VoiceMate 以打印模式在这个会话上运行 Claude Code：消息通过标准输入传入（绝不放在命令行上），环境和它启动的对话一样干净。它不传递任何权限模式，所以这一轮以 Claude Code 的默认权限运行，绝不会更高。这一轮会写进同一份记录，你下次打开这个会话时就能看到，观察器也从那里读取回答。恢复后运行超过 **30 分钟** 的一轮会被停止，超过 16,000 个字符的消息会被拒绝。恢复以错误结束或运行太久时，中央对话会收到一条通知并告诉你。
+- **被恢复会话的权限。** 如果你想给被恢复的会话更多权限，可以在 `companion.toml` 的 `[assistant]` 表中把 `resume_permission_mode` 设为 `default`、`acceptEdits` 或 `plan`。那里会拒绝 `bypassPermissions`，助手也无法用语音修改这个键。
 - **会话工具。** 有些 Claude Code 客户端和模式会给中央对话提供 `ListAgents` 和 `SendMessage`，有些不会。有这两个工具时，技能会让它在那里找到会话，用 `notify_when_idle` 发送，在读到回答之前只说“我发过去了”（而不是“它正在做”），并在消息开头说明这条消息来自你的助手，不代表任何批准。
 - **在 Desktop 模式下**，中央对话使用 Desktop 自己的会话工具（`list_sessions`、`SendMessage`、`start_session` 等），这些工具也会列出 Desktop 的云端和远程会话。VoiceMate 仍会关注“等待中”列表里的条目。
 
@@ -315,7 +316,8 @@ flowchart LR
 - **留在这台电脑上的东西。** 语音在本地转写。等待列表、收件箱、长期指令、个性文本和 `assistant.json` 都是本地文件，VoiceMate 不会把它们发往任何地方。对话本身在 Claude Code 中用你自己的登录运行，因此中央对话从记录或笔记里读到的内容，会像任何 Claude Code 对话一样发送给 Claude。
 - **不写进日志的东西。** 长期指令的内容（只记录长度），以及发给被恢复会话的消息（它通过标准输入传入，不在命令行上）。
 - **写入有防护。** VoiceMate 绝不写入正在使用的会话；向 Desktop 写入时，每按一个键之前都会检查三项条件。写入失败会告诉你，绝不会在背后悄悄重试。
-- **“完全访问”由你决定。** “完全访问，从不询问（有风险）”会让助手启动的对话以及它恢复的会话不经询问就修改任何文件、运行任何命令。通过语音，助手只能在 `default` 和 `acceptEdits` 之间切换。
+- **恢复绝不提升权限。** 向已关闭的会话写入时不传递任何权限模式，除非你自己设置了 `resume_permission_mode`（`default`、`acceptEdits` 或 `plan`；`bypassPermissions` 会被拒绝），助手也无法用语音修改这个键。
+- **“完全访问”由你决定。** “完全访问，从不询问（有风险）”会让助手启动的对话不经询问就修改任何文件、运行任何命令。通过语音，助手只能在 `default` 和 `acceptEdits` 之间切换。
 
 ## ⚙️ 配置
 
@@ -325,6 +327,7 @@ flowchart LR
 |---|---|
 | `instructions` | 你的长期指令：`text` 和 `since`（ISO 8601，时间未知时为空） |
 | `permission_mode` | 在 VoiceMate 自己的对话中，中央对话的工具如何被允许；在 Desktop 模式下为空，Desktop 对话保留自己的设置 |
+| `resume_permission_mode` | 被恢复的终端、IDE 或 Remote Control 会话得到的权限模式；为空（默认）时不传递任何模式 |
 | `pending` | “等待中”列表：`session_id`、`title`、`reason`、`since`、`watch`（你要求的关注为 true）和 `until`（没有新一轮时何时离开列表） |
 | `notes_vault`、`personality_file`、`user_name` | 你的笔记文件夹、个性文件和你的名字 |
 | `inbox`、`answer_delivery`、`settings` | 保存的回答（不含正文）、回答如何送到你面前、它能用语音修改的设置 |
@@ -342,6 +345,7 @@ flowchart LR
 | 现象 | 怎么办 |
 |---|---|
 | 终端或 IDE 会话显示“Not sent (in use)” | 这个会话此刻正在某个程序中打开。在那里关掉它，或者在它最后一次变化后等 2 分钟，再让助手试一次。没有会话工具时，助手会告诉你在那里输入什么 |
+| “Not sent (busy)” | VoiceMate 发给这个会话的上一条消息还在被回答，或刚刚回答完。稍等片刻再让助手试一次 |
 | “Not sent (no_folder)” | 这个会话的文件夹已经不在这台电脑上，所以无法恢复 |
 | 你给的规则在新会话里没有生效 | 问它“你记着哪些规则？”；它会读取 `assistant.json` 里的 `instructions`。如果文件无法读取，到状态文件夹里找 `assistant-instructions.json.bad` |
 | “Standing instruction not removed” | 没有匹配的规则，或匹配到不止一条：多说一点那条规则的原文 |

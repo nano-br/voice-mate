@@ -221,8 +221,9 @@ En la conversación propia de VoiceMate, `list_conversations` lee las transcripc
 | **Terminal, IDE o Remote Control, en uso** (`cli`) | ✅ | ⚠️ Solo con las herramientas de sesión `ListAgents` y `SendMessage`, cuando la central las tiene; si no, te dice qué escribir allí | ❌ |
 | **Sesiones que corren solo en la nube** | ❌ No están en este equipo | ❌ | ❌ |
 
-- **Por qué una sesión en uso es de solo lectura.** Claude Code mantiene un solo escritor por sesión y no tiene una forma admitida para que otro programa escriba en una sesión que un cliente está ejecutando. Dos escritores partirían la conversación en ramas. VoiceMate considera una sesión en uso cuando Claude Code la lista como viva, cuando su transcripción cambió en los últimos **2 minutos**, o mientras la reanudación del propio VoiceMate sigue en marcha.
-- **Reanudar una sesión cerrada.** VoiceMate ejecuta Claude Code sobre esa sesión en modo de impresión, con el mensaje por la entrada estándar (nunca en la línea de comandos), el modo de permisos de "Permisos:" y el mismo entorno limpio que las conversaciones que inicia. El turno queda en la misma transcripción, así que lo encuentras cuando vuelvas a abrir la sesión, y el vigilante lee la respuesta de ahí. Un turno reanudado que sigue en marcha tras **30 minutos** se detiene.
+- **Por qué una sesión en uso es de solo lectura.** Claude Code mantiene un solo escritor por sesión y no tiene una forma admitida para que otro programa escriba en una sesión que un cliente está ejecutando. Dos escritores partirían la conversación en ramas. VoiceMate considera una sesión en uso cuando Claude Code la lista como viva, cuando su transcripción cambió en los últimos **2 minutos**, o mientras la reanudación del propio VoiceMate sigue en marcha o acaba de terminar.
+- **Reanudar una sesión cerrada.** VoiceMate ejecuta Claude Code sobre esa sesión en modo de impresión, con el mensaje por la entrada estándar (nunca en la línea de comandos) y el mismo entorno limpio que las conversaciones que inicia. No pasa ningún modo de permisos, así que el turno corre con los permisos predeterminados de Claude Code, nunca con más. El turno queda en la misma transcripción, así que lo encuentras cuando vuelvas a abrir la sesión, y el vigilante lee la respuesta de ahí. Un turno reanudado que sigue en marcha tras **30 minutos** se detiene, y un mensaje de más de 16.000 caracteres se rechaza. Cuando una reanudación termina con error o tarda demasiado, la central recibe un aviso y te lo cuenta.
+- **Permisos de una sesión reanudada.** Si quieres permitir más a las sesiones reanudadas, define `resume_permission_mode` en la tabla `[assistant]` de `companion.toml` como `default`, `acceptEdits` o `plan`. `bypassPermissions` se rechaza ahí, y el asistente no puede cambiar esa clave por voz.
 - **Herramientas de sesión.** Algunos clientes y modos de Claude Code le dan a la central `ListAgents` y `SendMessage`; otros no. Cuando las tiene, la skill le indica encontrar ahí la sesión, enviar con `notify_when_idle`, decir "lo envié" (nunca "lo está haciendo") hasta haber leído la respuesta, y empezar el mensaje diciendo que viene de tu asistente y no aprueba nada.
 - **En el modo Desktop** la central usa las herramientas de sesión propias de Desktop (`list_sessions`, `SendMessage`, `start_session` y otras), que también listan las sesiones en la nube y remotas de Desktop. VoiceMate sigue vigilando lo que está en la lista "Esperando".
 
@@ -315,7 +316,8 @@ Azul: VoiceMate y sus ajustes; verde azulado: archivos; morado: la conversación
 - **Lo que se queda en este equipo.** La voz se transcribe localmente. La lista de espera, la bandeja de entrada, las instrucciones permanentes, el texto de personalidad y `assistant.json` son archivos locales; VoiceMate no los envía a ningún sitio. Las conversaciones en sí corren en Claude Code con tu propio inicio de sesión, así que lo que la central lee de una transcripción o de una nota va a Claude como en cualquier conversación de Claude Code.
 - **Lo que no va al registro.** El texto de una instrucción permanente (solo su tamaño) y el mensaje enviado a una sesión reanudada (va por la entrada estándar, no por la línea de comandos).
 - **Escribir tiene protecciones.** VoiceMate nunca escribe en una sesión en uso; una escritura en Desktop comprueba tres condiciones antes de cada tecla. Una escritura que falla se avisa, nunca se reintenta a escondidas.
-- **"Acceso total" lo decides tú.** "Acceso total, nunca preguntar (arriesgado)" deja que las conversaciones que inicia el asistente, y las sesiones que reanuda, cambien cualquier archivo y ejecuten cualquier comando sin preguntar. Por voz el asistente solo puede alternar entre `default` y `acceptEdits`.
+- **Reanudar nunca aumenta los permisos.** Escribir en una sesión cerrada no pasa ningún modo de permisos, salvo que tú definas `resume_permission_mode` (`default`, `acceptEdits` o `plan`; `bypassPermissions` se rechaza), y el asistente no puede cambiar esa clave por voz.
+- **"Acceso total" lo decides tú.** "Acceso total, nunca preguntar (arriesgado)" deja que las conversaciones que inicia el asistente cambien cualquier archivo y ejecuten cualquier comando sin preguntar. Por voz el asistente solo puede alternar entre `default` y `acceptEdits`.
 
 ## ⚙️ Configuración
 
@@ -325,6 +327,7 @@ No hay nada nuevo que activar: el comportamiento de esta página viene con el as
 |---|---|
 | `instructions` | Tus instrucciones permanentes: `text` y `since` (ISO 8601, vacío si no se sabe) |
 | `permission_mode` | Cómo se permiten las herramientas de la central, en la conversación propia de VoiceMate; vacío en el modo Desktop, donde la conversación de Desktop conserva el suyo |
+| `resume_permission_mode` | El modo de permisos que recibe una sesión de terminal, IDE o Remote Control reanudada; vacío (el valor predeterminado) no pasa ninguno |
 | `pending` | La lista "Esperando": `session_id`, `title`, `reason`, `since`, `watch` (verdadero en una vigilancia que pediste) y `until` (cuándo sale de la lista sin turno nuevo) |
 | `notes_vault`, `personality_file`, `user_name` | La carpeta de tus notas, el archivo de personalidad y tu nombre |
 | `inbox`, `answer_delivery`, `settings` | Las respuestas guardadas (sin su texto), cómo te llegan las respuestas, los ajustes que puede cambiar por voz |
@@ -342,6 +345,7 @@ La skill también documenta las acciones `remember`, `forget` y `follow_up` con 
 | Síntoma | Qué hacer |
 |---|---|
 | "Not sent (in use)" para una sesión de terminal o IDE | Esa sesión está abierta en un programa ahora mismo. Ciérrala allí, o espera 2 minutos desde su último cambio, y vuelve a pedirlo. Sin las herramientas de sesión, el asistente te dice qué escribir allí |
+| "Not sent (busy)" | El último mensaje de VoiceMate a esa sesión todavía se está respondiendo, o se acaba de responder. Espera un momento y vuelve a pedirlo |
 | "Not sent (no_folder)" | La carpeta de la sesión ya no está en este equipo, así que no se puede reanudar |
 | Una regla que diste no se cumple en una sesión nueva | Pregunta "¿qué reglas guardas?"; lee `instructions` en `assistant.json`. Si el archivo era ilegible, busca `assistant-instructions.json.bad` en la carpeta de estado |
 | "Standing instruction not removed" | No coincidió ninguna regla, o coincidió más de una: di más de su texto exacto |
