@@ -43,6 +43,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `assistant.json` carries `instructions`, `permission_mode` and `resume_permission_mode`, and each
   `pending` entry carries `watch` and `until`.
 
+### Fixed
+
+- When the assistant answers outside its reply model (it can lose the model when its conversation is
+  summarized), VoiceMate tells it once, so the answer is said again and spoken instead of only shown.
+
 ## [0.4.0] - 2026-11-03
 
 ### Added
