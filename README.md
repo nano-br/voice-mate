@@ -66,7 +66,7 @@ A demonstration and live test of the personal AI agent, in Brazilian Portuguese 
 - Windows 10/11 with NVIDIA (CUDA): the original path, battle-tested. The engine runs natively from the command line.
 - The engine inside WSL2 (the companion's setup) and AMD GPUs (ROCm 7.2) through WSL2: tested on a Radeon RX 9070 XT (RDNA4, `gfx1201`).
 - AMD with Vulkan on Windows, and Linux (X11, Wayland) with an optional companion, use the same setup.
-- CPU fallback everywhere. `make setup` detects the platform and the GPU and installs the matching PyTorch build and speech-to-text backend.
+- CPU fallback everywhere. `make setup` detects the platform and the GPU and installs the matching PyTorch build and speech-to-text backend. Or transcribe with a service you run yourself, through the [STT provider protocol](docs/stt-provider-protocol.md) (`--stt-engine external`).
 
 **Voice conversation with Claude**
 - `Ctrl+Alt+A` sends your speech to Claude through the Claude Code CLI (your own sign-in: the transcribed text goes to Anthropic, the audio does not). The answer is copied to the clipboard and read aloud.
@@ -491,6 +491,7 @@ More problems and the exact messages: [docs/troubleshooting.md](docs/troubleshoo
 - [Architecture](docs/architecture.md): diagrams and design choices.
 - [WSL2 and AMD](docs/wsl2.md), [Companion design](docs/companion-app.md), [Brand](docs/brand.md), [Releasing](docs/releasing.md).
 - [Claude Desktop profile](docs/desktop-profile.md) and [TTS provider protocol](docs/tts-provider-protocol.md): the file that tells the Desktop mode where the controls are, and the HTTP contract for your own voice.
+- [STT provider protocol](docs/stt-provider-protocol.md): the HTTP contract for a speech-to-text service you run yourself.
 - Research notes: [Voice assistant design](docs/research/voice-assistant-design.md) and [VoiceMate as a Claude Code client](docs/research/claude-code-client.md).
 
 ## Contributing

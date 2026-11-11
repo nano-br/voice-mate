@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- External STT provider: VoiceMate can transcribe with a speech-to-text service you run yourself,
+  through the `voicemate-stt` protocol (docs/stt-provider-protocol.md), the transcription sibling of
+  the TTS provider protocol. Engine flags `--stt-engine external`, `--stt-url`, `--stt-options` and
+  `--no-stt-fallback`; saved keys `stt_engine`, `stt_external_url`, `stt_external_options`,
+  `stt_external_token` and `stt_fallback`; the token comes from `VOICEMATE_STT_TOKEN` and an optional
+  start command from `VOICEMATE_STT_START_COMMAND`. When the provider cannot be used, the recording is
+  transcribed by the built-in engine, unless `--no-stt-fallback` is given. `make stt-provider-check`
+  checks a provider and `make stt-provider-example` runs a reference one.
+
+### Changed
+
+- The HTTP transport of the TTS provider client moved to `app/protocol/provider_http.py`, shared with
+  the STT provider client. No behavior change.
+
 ## [0.4.0] - 2026-11-03
 
 ### Added

@@ -66,7 +66,7 @@ VoiceMate 是开源的，采用 MIT 许可证。如果你试用了，请告诉�
 - Windows 10/11 搭配 NVIDIA（CUDA）：最初的路径，经过实战检验。引擎可以在命令行中原生运行。
 - 引擎运行在 WSL2 内（配套应用采用的方式），以及通过 WSL2 使用 AMD GPU（ROCm 7.2）：已在 Radeon RX 9070 XT（RDNA4，`gfx1201`）上测试。
 - Windows 上的 AMD（Vulkan），以及搭配可选配套应用的 Linux（X11、Wayland），使用同样的设置。
-- 各平台都可以回退到 CPU。`make setup` 会检测平台和 GPU，并安装匹配的 PyTorch 版本和语音转文字后端。
+- 各平台都可以回退到 CPU。`make setup` 会检测平台和 GPU，并安装匹配的 PyTorch 版本和语音转文字后端。也可以通过 [STT 提供方协议](docs/stt-provider-protocol.md) 使用你自己运行的服务来转写（`--stt-engine external`）。
 
 **与 Claude 的语音对话**
 - `Ctrl+Alt+A` 通过 Claude Code CLI 把你的语音发送给 Claude（使用你自己的登录账号：转写后的文本会发送给 Anthropic，音频不会）。回答会复制到剪贴板并朗读出来。
@@ -504,6 +504,7 @@ flowchart TD
 - [架构](docs/architecture.md)：图表和设计取舍。
 - [WSL2 与 AMD](docs/wsl2.md)、[配套应用设计](docs/companion-app.md)、[品牌](docs/brand.md)、[发布流程](docs/releasing.md)。
 - [Claude Desktop 配置文件](docs/desktop-profile.md)和 [TTS 提供方协议](docs/tts-provider-protocol.md)：告诉 Desktop 模式控件位置的文件，以及你自己的声音所用的 HTTP 约定。
+- [STT 提供方协议](docs/stt-provider-protocol.md)：你自己运行的语音转文字服务所用的 HTTP 约定。
 - 研究笔记（英文）：[语音助手设计](docs/research/voice-assistant-design.md) 和 [VoiceMate 作为 Claude Code 客户端](docs/research/claude-code-client.md)。
 
 ## 参与贡献
