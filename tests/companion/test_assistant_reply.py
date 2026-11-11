@@ -115,6 +115,16 @@ def test_unknown_action_type_is_dropped_and_logged() -> None:
     assert any("launch_missiles" in p for p in reply.problems)
 
 
+def test_remember_and_forget_are_known_actions() -> None:
+    body = '{"version": 1, "actions": [{"type": "remember", "text": "act first"}, {"type": "forget", "text": "x"}]}'
+    reply = parse_reply(f"<voice>Ok</voice><actions>{body}</actions>")
+    assert [(a.type, a.params) for a in reply.actions] == [
+        ("remember", {"text": "act first"}),
+        ("forget", {"text": "x"}),
+    ]
+    assert reply.problems == ()
+
+
 def test_actions_without_list() -> None:
     reply = parse_reply('<voice>Hi</voice><actions>{"version": 1}</actions>')
     assert reply.actions == ()

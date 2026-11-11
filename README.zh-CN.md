@@ -76,6 +76,7 @@ VoiceMate 是开源的，采用 MIT 许可证。如果你试用了，请告诉�
 - 一个中央 Claude 对话，有两种模式：VoiceMate 自己的对话（VoiceMate 启动的 Claude Code 进程，也能在 Claude Desktop 和手机上看到），或你已有的一个 Claude Desktop 对话（通过短暂的键盘“闪现”写入，仅限 Windows）。它会列出、阅读并向你的其他对话发消息，还能在后台启动新对话。
 - 用 `Ctrl+Alt+S` 对它说话，或在它的窗口里点 **说话**（录音时它会变成 **停止并发送**）。它用 Windows 自带的语音朗读，无需安装任何东西，也可以用引擎的声音（Kokoro 或你自己的提供方）：设置 > **助手** > “语音来源：”。英语、葡萄牙语和西班牙语的语音指令可以朗读上一条回答、切换到某个对话、向它发送消息或直接与它交谈。窗口显示聊天和待听的回答；它的声音会在你录音和录音转写期间等待，之后再重复被你打断的内容；托盘上的蓝色角标和“回答已就绪”提示音会在回答到达时提醒你，`Ctrl+Alt+R` 朗读已就绪的内容。
 - 它能用语音修改一份固定清单中的 VoiceMate 设置，支持个性（文件、Obsidian 笔记库中的笔记或你自己写的文本），并使用英语或巴西葡萄牙语的技能，该技能也可以在任何 Claude Code 对话中单独使用。参见[语音助手](#语音助手)和[完整指南](docs/voice-assistant.md)（英文）。
+- 它有主动性：找到你说的那个对话，问它进展如何，回答后告诉你，只把真正的决定留给你。它会一直关注对话直到你说停，重启后接着工作，能向已关闭的终端和 IDE 会话写入，并在不同会话之间记住你教给它的规则。参见[助手指南](docs/assistant.zh-CN.md)。
 
 ## 截图
 
@@ -158,6 +159,18 @@ make run ARGS="--output-lang en"     # 用引擎自带的快捷键启动引擎�
 
 助手是一个 Claude 对话，即中央对话，它知道你的其他对话在做什么，并替你统筹它们：列出、阅读、发消息、在后台启动新对话，并在它们回答时告诉你。默认关闭。
 
+不用再来回切换窗口查看对话进展。说出你想要的就行：
+
+- “快捷键那件事进展怎么样？”
+- “问一下 API 那个对话测试过了没有，然后告诉我。”
+- “帮我盯着构建和文档这两个对话。”
+- “找一个 Windows 上最好的全局快捷键库。”
+- “以后读对话之前不用问我。”
+
+几分钟后它会告诉你：*“构建完成了，测试也通过了，只剩文档还没写。”*
+
+它先做事再汇报，只问真正该由你决定的事（删除、花钱、发布、个人偏好），并记住你教给它的规则。**它做什么、怎么做：[docs/assistant.zh-CN.md](docs/assistant.zh-CN.md)。**
+
 **完整流程，附图示：[docs/voice-assistant.md](docs/voice-assistant.md)**（英文；VoiceMate 如何接入 Claude、两种模式、对你其他对话的统筹、回答如何返回、声音与安全）。
 
 | | VoiceMate 自己的对话 | 一个 Claude Desktop 对话 |
@@ -185,7 +198,7 @@ make run ARGS="--output-lang en"     # 用引擎自带的快捷键启动引擎�
 | 日志（`companion.log`、`engine.log`） | Windows `%LOCALAPPDATA%\VoiceMate\logs`，Linux `~/.local/state/voicemate/logs` |
 | **未复制** 列表 | `logs` 文件夹旁边的 `pending.json` |
 | 助手设置（skill 会读取） | `~/.voicemate/assistant.json`，在你的用户文件夹中 |
-| 助手会话、收件箱、它启动的对话、个性文本和 Desktop 配置文件缓存 | `assistant-session.json`、`assistant-inbox.json`、`assistant-conversations\`、`assistant-personality.md`、`desktop-profile\`，以及 `pending.json` 旁的 `assistant\` |
+| 助手会话、收件箱、等待列表、长期指令、它启动的对话、个性文本和 Desktop 配置文件缓存 | `assistant-session.json`、`assistant-inbox.json`、`assistant-waiting.json`、`assistant-instructions.json`、`assistant-conversations\`、`assistant-personality.md`、`desktop-profile\`，以及 `pending.json` 旁的 `assistant\` |
 
 所有引擎参数、所有设置项和所有环境变量：[docs/configuration.md](docs/configuration.md)。
 
@@ -497,6 +510,7 @@ flowchart TD
 
 - [安装指南](docs/install-guide.zh-CN.md)：分步说明，附安装程序截图。
 - [安装](docs/installation.md)：所有安装方式、更新和卸载。
+- [VoiceMate 助手](docs/assistant.zh-CN.md)：助手能为你做什么、如何分派请求、等待与关注、能接触到哪些对话、长期指令和限制。
 - [语音助手与 Claude](docs/voice-assistant.md)：助手的完整流程（含图示）、两种模式，以及它如何统筹你的其他对话。
 - [使用](docs/usage.md)：流程、快捷键、托盘图标、转写模式、模型、语音选项和语音助手。
 - [配置](docs/configuration.md)：引擎参数、设置文件、环境变量、语音识别模式和基准测试。

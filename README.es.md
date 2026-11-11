@@ -76,6 +76,7 @@ Una demostración y prueba en vivo del agente personal de IA, por ahora en portu
 - Una conversación central de Claude en dos modos: la conversación propia de VoiceMate (un proceso de Claude Code que VoiceMate inicia, visible también en Claude Desktop y en el móvil) o una conversación de Claude Desktop que ya tienes (escrita con un "flash" breve de teclado, solo en Windows). Lista, lee y envía mensajes a tus otras conversaciones, e inicia nuevas en segundo plano.
 - Habla con él con `Ctrl+Alt+S`, o haz clic en **Hablar** en su ventana (pasa a **Detener y enviar** mientras graba). Habla con las voces que Windows ya tiene, sin instalar nada, o con la voz del motor (Kokoro o tu propio proveedor): Configuración > **Asistente** > "Origen de la voz:". Los comandos de voz en español, inglés y portugués leen la última respuesta, cambian de conversación, le envían un mensaje o hablan directamente con ella. Una ventana muestra el chat y las respuestas en espera; su voz espera mientras grabas y mientras se transcribe la grabación, y luego repite lo que cortaste; una insignia azul en la bandeja y el sonido "Respuesta lista" avisan cuando llega una, y `Ctrl+Alt+R` lee lo que está listo.
 - Cambia por voz una lista fija de ajustes de VoiceMate, admite una personalidad (un archivo, una nota de una bóveda de Obsidian o un texto que escribes) y usa una skill en español o inglés que también funciona sola en cualquier conversación de Claude Code. Consulta [Asistente de voz](#asistente-de-voz) y la [guía completa](docs/voice-assistant.md).
+- Tiene iniciativa: encuentra la conversación a la que te refieres, le pregunta cómo va y te avisa cuando responde, y solo te consulta las decisiones de verdad. Vigila conversaciones hasta que le digas que pare, sigue tras un reinicio, escribe en sesiones de terminal e IDE cerradas y conserva entre sesiones las reglas que le enseñas. Consulta [la guía del asistente](docs/assistant.es.md).
 
 ## Capturas de pantalla
 
@@ -158,6 +159,18 @@ La conversación por voz con Claude necesita la CLI de Claude Code instalada y c
 
 El asistente es una conversación de Claude, la central, que sabe qué hacen tus otras conversaciones y las dirige por ti: las lista, las lee, les envía un mensaje, inicia nuevas en segundo plano y te avisa cuando responden. Viene desactivado.
 
+Deja de cambiar de ventana para saber cómo van tus conversaciones. Solo di lo que quieres:
+
+- "¿Cómo va lo de los atajos?"
+- "Pregúntale a la conversación de la API si pasaron las pruebas y cuéntamelo."
+- "Vigila las conversaciones del build y de la documentación."
+- "Busca la mejor biblioteca de atajos globales para Windows."
+- "A partir de ahora, no preguntes antes de leer una conversación."
+
+Y unos minutos después te cuenta: *"El build terminó y las pruebas pasaron. Solo falta la documentación."*
+
+Actúa primero y te cuenta después, solo te pregunta lo que te toca decidir a ti (borrar, gastar, publicar, cuestiones de gusto) y recuerda las reglas que le enseñas. **Qué hace y cómo: [docs/assistant.es.md](docs/assistant.es.md).**
+
 **Todo el flujo, con diagramas: [docs/voice-assistant.md](docs/voice-assistant.md)** (en inglés: cómo VoiceMate se conecta con Claude, los dos modos, la orquestación de tus conversaciones, cómo vuelven las respuestas, la voz y la seguridad).
 
 | | Conversación propia de VoiceMate | Una conversación de Claude Desktop |
@@ -185,7 +198,7 @@ Más: [comandos de voz y modo directo](docs/voice-assistant.md#6-direct-mode-and
 | Registros (`companion.log`, `engine.log`) | Windows `%LOCALAPPDATA%\VoiceMate\logs`, Linux `~/.local/state/voicemate/logs` |
 | Lista **No copiadas** | `pending.json`, junto a la carpeta `logs` |
 | Configuración del asistente (la skill la lee) | `~/.voicemate/assistant.json`, en tu carpeta de usuario |
-| Sesión del asistente, bandeja de entrada, conversaciones que inició, texto de la personalidad y caché del perfil de Desktop | `assistant-session.json`, `assistant-inbox.json`, `assistant-conversations\`, `assistant-personality.md`, `desktop-profile\` y `assistant\` junto a `pending.json` |
+| Sesión del asistente, bandeja de entrada, lista de espera, instrucciones permanentes, conversaciones que inició, texto de la personalidad y caché del perfil de Desktop | `assistant-session.json`, `assistant-inbox.json`, `assistant-waiting.json`, `assistant-instructions.json`, `assistant-conversations\`, `assistant-personality.md`, `desktop-profile\` y `assistant\` junto a `pending.json` |
 
 Todas las opciones del motor, todas las claves de configuración y todas las variables de entorno: [docs/configuration.md](docs/configuration.md).
 
@@ -495,6 +508,7 @@ Más problemas y los mensajes exactos: [docs/troubleshooting.md](docs/troublesho
 
 - [Guía de instalación](docs/install-guide.es.md): paso a paso, con capturas del instalador.
 - [Installation](docs/installation.md) (en inglés): todas las vías de instalación, actualización y desinstalación.
+- [El asistente de VoiceMate](docs/assistant.es.md): qué hace el asistente por ti, cómo encamina una petición, espera y vigila, las conversaciones a las que llega, las instrucciones permanentes y los límites.
 - [Voice assistant and Claude](docs/voice-assistant.md) (en inglés): todo el flujo del asistente con diagramas, los dos modos y cómo dirige tus otras conversaciones.
 - [Usage](docs/usage.md): flujos, atajos, icono de la bandeja, modos de transcripción, modelos, opciones de voz y el asistente de voz.
 - [Configuration](docs/configuration.md): opciones del motor, archivos de configuración, variables de entorno, modos de reconocimiento de voz y benchmark.

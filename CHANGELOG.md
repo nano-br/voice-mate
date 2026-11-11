@@ -17,11 +17,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   start command from `VOICEMATE_STT_START_COMMAND`. When the provider cannot be used, the recording is
   transcribed by the built-in engine, unless `--no-stt-fallback` is given. `make stt-provider-check`
   checks a provider and `make stt-provider-example` runs a reference one.
+- The assistant takes initiative: it finds the conversation you mean, reads it, asks it what it needs
+  and tells you the answer, asking you only for real decisions (deleting, spending, publishing,
+  matters of taste). See [docs/assistant.md](docs/assistant.md), also in Portuguese, Spanish, Russian
+  and Simplified Chinese.
+- Watches: "keep an eye on X" reports every turn a conversation finishes until you say stop (up to
+  12 hours without a new turn), grouping turns that end close together. The "Waiting for" list is
+  saved in `assistant-waiting.json` with how far each transcript was read, so a turn that ended while
+  VoiceMate was closed is still reported, and an entry whose time ran out leaves with a note.
+- Standing instructions: a rule you give the assistant ("from now on...") is kept in
+  `assistant-instructions.json` (40 rules, 300 characters each) and followed in every session. Only a
+  reply to your own words can add or remove one.
+- Closed terminal, IDE and Remote Control sessions can receive a message: VoiceMate resumes the
+  session in the background in its own folder, and the answer comes back like any other. It passes
+  no permission mode unless you set `[assistant] resume_permission_mode` (`default`, `acceptEdits` or
+  `plan`; `bypassPermissions` is refused). A message that was not delivered is reported. A session
+  in use stays read only, reachable through the client's own session tools when the central has them.
 
 ### Changed
 
 - The HTTP transport of the TTS provider client moved to `app/protocol/provider_http.py`, shared with
   the STT provider client. No behavior change.
+- The assistant reads your notes vault whenever the notes help answer you, without asking first. The
+  settings tab suggests the vaults Obsidian already knows.
+- `assistant.json` carries `instructions`, `permission_mode` and `resume_permission_mode`, and each
+  `pending` entry carries `watch` and `until`.
 
 ## [0.4.0] - 2026-11-03
 

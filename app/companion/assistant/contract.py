@@ -48,13 +48,17 @@ class InboxEntry:
 
 @dataclass(frozen=True)
 class PendingEntry:
-    """A request the assistant sent to another conversation and is waiting on (the reply
-    actions `follow_up` and `follow_up_done`): the "Waiting for" list."""
+    """A conversation the assistant is waiting on or watching (the reply actions `follow_up` and
+    `follow_up_done`): the "Waiting for" list. `watch` is an observation the person asked for
+    (every turn is reported until it ends); otherwise it is a wait for one answer."""
 
     conversation_id: str
     title: str
     reason: str
     since: float  # time.time()
+    watch: bool = False
+    until: float = 0.0  # time.time() when it stops without a new turn (0: not known yet)
+    position: int | None = None  # where its transcript was read up to (resumed after a restart)
 
 
 ProfileSourceName = Literal["override", "remote", "packaged"]

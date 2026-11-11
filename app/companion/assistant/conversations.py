@@ -10,7 +10,11 @@ the lock before a process starts, so parallel tool calls cannot pass the limit t
 quit stops them all at the same time without forgetting them; nothing starts after that.
 
 `list_entries` merges them with the Claude Desktop's conversations (transcripts whose lines say
-`"entrypoint": "claude-desktop"`) for the `list_conversations` tool. Standard library only.
+`"entrypoint": "claude-desktop"`) and the other Claude Code sessions on this computer (terminal,
+IDE, Remote Control, other SDK hosts: owner "cli"), for the `list_conversations` tool. A "cli"
+session is listed only when it has a title or a live process, so one-shot `claude -p` runs of
+scripts stay out, and after the Desktop and VoiceMate ones. VoiceMate reads and watches those, and
+writes to one only while no program has it open (cli_resume.py). Standard library only.
 """
 
 from __future__ import annotations
@@ -52,7 +56,8 @@ MODEL_ALIASES: Final = ("haiku", "sonnet", "opus")
 EFFORTS: Final[tuple[AssistantEffort, ...]] = ("low", "medium", "high")
 _SAFE_NAME_RE: Final = re.compile(r"[^a-zA-Z0-9]+")
 
-ConversationOwner = Literal["desktop", "voicemate"]
+# "cli": any other Claude Code client on this computer (terminal, IDE, Remote Control, SDK hosts).
+ConversationOwner = Literal["desktop", "voicemate", "cli"]
 ConversationState = Literal["busy", "idle", "waiting"]
 OwnedErrorCode = Literal["unknown", "limit", "start_failed", "not_running", "invalid"]
 
@@ -537,8 +542,8 @@ def list_entries(
     sessions: Callable[[], dict[str, LiveSession]] = live_sessions,
     head: Callable[[Path], tuple[str, str]] = transcript_head,
 ) -> list[ConversationEntry]:
-    """Desktop and VoiceMate-owned conversations, newest activity first. `exclude` drops ids
-    (the central conversation itself)."""
+    """Desktop and VoiceMate-owned conversations, newest activity first, then the other local
+    Claude Code sessions, newest first. `exclude` drops ids (the central conversation itself)."""
     limit = max(1, min(limit, 100))
     skip = set(exclude)
     live = sessions()
@@ -554,16 +559,21 @@ def list_entries(
             )
             continue
         entrypoint, cwd = head(info.path)
-        if entrypoint != DESKTOP_ENTRYPOINT:
-            continue
-        title = info.title or (live[info.session_id].name if info.session_id in live else "")
+        session = live.get(info.session_id)
+        title = info.title or (session.name if session is not None else "")
+        owner: ConversationOwner = "desktop" if entrypoint == DESKTOP_ENTRYPOINT else "cli"
+        if owner == "cli" and not title and session is None:
+            continue  # an untitled finished run (a script's `claude -p`): not a conversation to follow
         entries[info.session_id] = ConversationEntry(
-            info.session_id, title, "desktop", _live_state(live.get(info.session_id)), _iso(info.modified), cwd
+            info.session_id, title, owner, _live_state(session), _iso(info.modified), cwd
         )
     for record in owned.records():
         if record.id not in entries and record.id not in skip:
             entries[record.id] = ConversationEntry(
                 record.id, record.title, "voicemate", owned.state(record.id), _iso(record.created), record.cwd
             )
+    # Desktop and VoiceMate conversations first, then the other local sessions: many terminal or
+    # IDE sessions must never push a Desktop conversation out of the limit.
     ordered = sorted(entries.values(), key=lambda e: e.last_activity, reverse=True)
+    ordered.sort(key=lambda e: e.owner == "cli")  # stable: newest first inside each group
     return ordered[:limit]

@@ -167,6 +167,10 @@ class AssistantSettings:
     # ("" = none chosen: the assistant does not start and says why).
     desktop_conversation: str = ""
     permission_mode: AssistantPermission = "acceptEdits"
+    # The permission mode a closed terminal, IDE or Remote Control session gets when the assistant
+    # resumes it to deliver a message ("" = none, so it never runs with more than print mode allows;
+    # only default, acceptEdits and plan are used: cli_resume.py). Not changeable by voice.
+    resume_permission_mode: str = ""
     skill_language: SkillLanguage = "auto"
     custom_skill_dir: str = ""  # a folder with a SKILL.md that replaces the packaged skill
     answer_delivery: AnswerDelivery = "announce"

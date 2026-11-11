@@ -13,6 +13,7 @@ from app.companion.assistant.skill_install import (
     PACKAGED_LANGUAGES,
     SKILL_NAME,
     AssistantContext,
+    PackagedLanguage,
     SkillSource,
     install_skill,
     packaged_language,
@@ -139,6 +140,9 @@ def test_context_json_has_exactly_the_keys_the_skill_reads(home: Path) -> None:
         pending=[{"session_id": "s2", "title": "Docs", "reason": "the review", "since": "2026-10-28T09:00:00+00:00"}],
         notes_vault="C:/vault",
         answer_delivery="sound",
+        instructions=[{"text": "Read conversations without asking.", "since": "2026-10-28T08:00:00+00:00"}],
+        permission_mode="bypassPermissions",
+        resume_permission_mode="plan",
     )
 
     path = write_context(ctx)
@@ -160,6 +164,9 @@ def test_context_json_has_exactly_the_keys_the_skill_reads(home: Path) -> None:
             {"session_id": "s2", "title": "Docs", "reason": "the review", "since": "2026-10-28T09:00:00+00:00"}
         ],
         "settings": [{"key": "cues.volume", "type": "number", "range": [0, 100], "value": 70, "description": "x"}],
+        "instructions": [{"text": "Read conversations without asking.", "since": "2026-10-28T08:00:00+00:00"}],
+        "permission_mode": "bypassPermissions",
+        "resume_permission_mode": "plan",
     }
     for language in PACKAGED_LANGUAGES:
         example = json.loads((packaged_skill_dir(language) / "config.example.json").read_text(encoding="utf-8"))
@@ -220,3 +227,42 @@ def test_switching_the_skill_reinstalls_and_drops_what_the_new_one_lacks(tmp_pat
     install_skill(claude_home, custom)
     assert skill_md.read_text(encoding="utf-8") == "# mine\n"
     assert not (english.skill_dir / "config.example.json").exists()  # not in the custom folder
+
+
+def _install_v3(tmp_path: Path, language: PackagedLanguage) -> Path:
+    """What a VoiceMate with skill version 3 left behind: its own files and a version 3 sidecar."""
+    old = tmp_path / "v3-source"
+    old.mkdir()
+    for name in _packaged_names():
+        current = (packaged_skill_dir(language) / name).read_bytes()
+        (old / name).write_bytes(current.replace(b"follow_up", b"wait_for") + b"\n<!-- skill version 3 -->\n")
+    skill_dir = install_skill(tmp_path / "home", old).skill_dir
+    sidecar_path = skill_dir / ".voicemate-managed.json"
+    sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    sidecar["skill_version"] = 3
+    sidecar_path.write_text(json.dumps(sidecar), encoding="utf-8")
+    return skill_dir
+
+
+@pytest.mark.parametrize("language", ["en", "pt-BR"])
+def test_a_version_3_install_moves_to_version_4_unless_the_person_edited_it(
+    tmp_path: Path, language: PackagedLanguage
+) -> None:
+    skill_dir = _install_v3(tmp_path, language)
+    edited = skill_dir / "config.example.json"
+    edited.write_text('{"mine": true}\n', encoding="utf-8")
+
+    result = install_skill(tmp_path / "home", packaged_skill_dir(language))
+
+    assert result.written == ("SKILL.md",)  # untouched since version 3: updated
+    assert (skill_dir / "SKILL.md").read_bytes() == (packaged_skill_dir(language) / "SKILL.md").read_bytes()
+    assert result.kept_edited == ("config.example.json",)  # edited: kept, the new one beside it
+    assert edited.read_text(encoding="utf-8") == '{"mine": true}\n'
+    assert (skill_dir / "config.example.json.new").read_bytes() == (
+        packaged_skill_dir(language) / "config.example.json"
+    ).read_bytes()
+    sidecar = json.loads((skill_dir / ".voicemate-managed.json").read_text(encoding="utf-8"))
+    assert sidecar["skill_version"] == skill_install.SKILL_VERSION == 4
+    assert "config.example.json" not in sidecar["files"] or sidecar["files"]["config.example.json"] != (
+        skill_install._sha256(edited.read_bytes())
+    )

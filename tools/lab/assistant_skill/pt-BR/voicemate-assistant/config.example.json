@@ -6,7 +6,10 @@
   "notes_vault": "",
   "expressions": "off",
   "mode": "own_session",
+  "permission_mode": "acceptEdits",
+  "resume_permission_mode": "",
   "answer_delivery": "announce",
+  "instructions": [],
   "inbox": [],
   "pending": [],
   "settings": [

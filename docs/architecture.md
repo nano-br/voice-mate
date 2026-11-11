@@ -523,7 +523,7 @@ A WSL restart is wanted when `audio` is `down` twice in a row, or on `mic_unavai
 
 ### 6.1 Voice assistant
 
-The assistant lives in the companion; the engine takes part only to transcribe the speech and to speak the replies. **Flow: how a request reaches the central conversation in either mode, how other conversations answer, and how the reply is spoken.** The same flow from the user's side, step by step: [voice-assistant.md](voice-assistant.md).
+The assistant lives in the companion; the engine takes part only to transcribe the speech and to speak the replies. **Flow: how a request reaches the central conversation in either mode, how other conversations answer, and how the reply is spoken.** The same flow from the user's side, step by step: [voice-assistant.md](voice-assistant.md); what the assistant does with it (routing, initiative, watches, standing instructions): [assistant.md](assistant.md).
 
 ```mermaid
 flowchart LR
@@ -534,18 +534,21 @@ flowchart LR
         svc["Assistant service<br/>commands, direct mode,<br/>settings by voice"]
         own["Own session port<br/>stream-json child"]
         tools["voicemate tools<br/>list, read, send, start,<br/>model, stop"]
+        resumer["CLI resumer<br/>closed terminal sessions"]
         dport["Desktop port<br/>flash typing"]
-        watch["Answer watcher"]
+        watch["Answer watcher<br/>reply, wait, observe"]
         inbox[("Inbox<br/>assistant-inbox.json")]
+        waiting[("Waiting list<br/>assistant-waiting.json")]
+        rules[("Standing instructions<br/>assistant-instructions.json")]
         voice["Voice output<br/>sentence by sentence"]
     end
     engine["Engine<br/>speech to text,<br/>/tts/v1"]
     provider["Custom TTS provider"]
     cli["Claude Code CLI<br/>mode own_session"]
     desk["Claude Desktop<br/>mode desktop"]
-    others["Other conversations<br/>Desktop, or started<br/>by VoiceMate"]
+    others["Other conversations<br/>Desktop, started by VoiceMate,<br/>terminal, IDE, Remote Control"]
     disk[("Transcripts<br/>.claude/projects")]
-    cfg[("assistant.json<br/>settings catalog, inbox, pending")]
+    cfg[("assistant.json<br/>settings catalog, inbox,<br/>pending, instructions")]
     phone["Phone"]
 
     user -->|"types"| win
@@ -557,6 +560,8 @@ flowchart LR
     own -->|"stdin"| cli
     cli --> tools
     tools -->|"send, start"| others
+    tools -->|"closed cli session"| resumer
+    resumer -->|"claude --resume -p,<br/>prompt on stdin"| others
     svc -->|"mode desktop"| dport
     dport -.->|"types for about 2 s"| desk
     desk -->|"Desktop session tools"| others
@@ -567,6 +572,8 @@ flowchart LR
     watch -->|"watches"| disk
     watch -->|"answer ready"| svc
     svc -->|"held answers"| inbox
+    svc -->|"follow_up, restart"| waiting
+    svc -->|"remember, forget"| rules
     svc -->|"writes"| cfg
     cli -->|"reads"| cfg
     svc -->|"voice block"| voice
@@ -584,21 +591,29 @@ flowchart LR
     classDef optional fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff,stroke-dasharray:5 5
     class user person
     class win,svc container
-    class hk,own,tools,dport,watch,voice component
+    class hk,own,tools,resumer,dport,watch,voice component
     class cli,desk,others agent
-    class disk,cfg,inbox store
+    class disk,cfg,inbox,waiting,rules store
     class engine,phone external
     class provider optional
 ```
 
 **Modes.** The service starts one port for the central conversation, by `mode`:
 
-- **`own_session`**: `OwnSessionPort` runs a persistent `claude -p --input-format stream-json` child named "VoiceMate" with the `voicemate` tools (an SDK MCP server that the companion serves over the child's stdio, `mcp_tools.py`). VoiceMate is the only writer; Claude Desktop and the phone are Remote Control clients of it. The tools list and read conversations from the transcripts, send to a conversation (a VoiceMate-owned one gets the prompt on its stdin, a Desktop one gets a flash), and start, re-model and stop the conversations VoiceMate owns (`conversations.py`: at most 4 alive, counting the ones still starting; Remote Control on, remembered in `assistant-conversations\conversations.json` and resumed at the next start).
+- **`own_session`**: `OwnSessionPort` runs a persistent `claude -p --input-format stream-json` child named "VoiceMate" with the `voicemate` tools (an SDK MCP server that the companion serves over the child's stdio, `mcp_tools.py`). VoiceMate is the only writer; Claude Desktop and the phone are Remote Control clients of it. The tools list and read conversations from the transcripts, send to a conversation (a VoiceMate-owned one gets the prompt on its stdin, a Desktop one gets a flash, a closed terminal, IDE or Remote Control session is resumed by `CliResumer`), and start, re-model and stop the conversations VoiceMate owns (`conversations.py`: at most 4 alive, counting the ones still starting; Remote Control on, remembered in `assistant-conversations\conversations.json` and resumed at the next start).
 - **`desktop`**: `DesktopConversationPort` finds the Desktop conversation by its exact title and writes to it by a **flash** (`app/companion/win/claude_desktop.py`): bring the Claude window forward, clear the draft, paste through the clipboard (saved, and restored only if nobody copied anything during the flash: the clipboard sequence number is checked before the paste and before Enter), press Enter and give the foreground back, in about 2 seconds. Three guards are checked before every key (each key is its own press). A Desktop flash failure is always a typed error (`DesktopError`): a clipboard held by another program becomes `busy`, a UI Automation failure (the window reloading or closing) becomes `unavailable`, so the window shows "Not sent to ..." instead of losing the message. Where the controls are comes from a [profile](desktop-profile.md). The central uses the Desktop's own session tools, so the `voicemate` tools do not exist here.
 
 Either way, replies are read from the transcript on disk, never from the process output, so a prompt typed on the phone or in Claude Desktop shows too.
 
-**Other conversations and answers.** The tools that write to a conversation never wait. They register it with the `AnswerWatcher` (`notifier.py`), which tails its transcript and, when a turn that started after the registration finishes, hands the answer to the service. Then `answer_delivery` decides:
+**Closed terminal sessions.** `cli_resume.py` writes to a `cli` session only when no program has it open: it is not in the live registry, its transcript has not changed for 120 seconds, and VoiceMate's own resume of it is neither running nor just ended. It runs `claude --resume <id> -p --output-format json` in the session's folder, with a scrubbed environment and the prompt on stdin behind a header that says the text comes from the assistant and approves nothing.
+
+No `--permission-mode` is passed unless the person set `resume_permission_mode` (`default`, `acceptEdits` or `plan`; `bypassPermissions` is refused). The id must be a UUID, the text is capped at 16,000 characters, and a turn is stopped after 30 minutes. A non-zero exit, a timeout or a broken pipe restores the earlier watch and sends the central a note that the message was not delivered. A session in use stays read only for VoiceMate; the skill may reach it through the client's own session tools when the central has them.
+
+**Other conversations and answers.** The tools that write to a conversation never wait. They register it with the `AnswerWatcher` (`notifier.py`), which tails its transcript and hands finished turns to the service. A watch has one of three kinds: `reply` (the answer to a message just sent, delivered once), `wait` (the next turn, for up to 1 hour) and `observe` (every turn, for up to 12 hours, asked for with `follow_up` and `"watch": true`).
+
+Observed turns that end within 15 seconds are grouped into one note, and the central gets at most 4 observed notes a minute. A reply on an observed conversation is delivered once, then the observation goes on. The "Waiting for" list is persisted in `assistant-waiting.json` with each transcript's read position, so a turn that ended while VoiceMate was closed is still reported, and an entry whose time ran out leaves with one note.
+
+Then `answer_delivery` decides (an observation always goes to the central, unless the person is away in direct mode or following another conversation, when it goes to the inbox):
 
 | Value | Path |
 |---|---|
@@ -611,7 +626,9 @@ Held answers never play a notice during a recording or a spoken answer. "Hear wh
 
 **The microphone button.** The assistant window has a **Talk** button that does what the talk hotkey does: it starts a recording, turns into **Stop and send** while recording, and shows the tray state of the status window (the same badge and line, including the elapsed time), so a recording started with the hotkey shows there too.
 
-**Settings and actions.** `settings_catalog.py` is the list of settings the central may change. VoiceMate writes it, with the current values, to `assistant.json`; a `set_setting` action in a reply is checked against it and applied through the same path as the settings window. `read_inbox` and `clear_inbox` are carried out as well. `follow_up` adds (or updates) an entry of the "Waiting for" list (conversation, title, reason, since when); `follow_up_done` removes it; `focus` makes the text screen follow that conversation, and `focus` with no session id comes back to the central. `open_conversation` and `notify` are parsed and logged only.
+**Settings and actions.** `settings_catalog.py` is the list of settings the central may change. VoiceMate writes it, with the current values, to `assistant.json`; a `set_setting` action in a reply is checked against it and applied through the same path as the settings window. `read_inbox` and `clear_inbox` are carried out as well.
+
+`follow_up` adds (or updates) an entry of the "Waiting for" list (conversation, title, reason, since when, and `watch` for an observation); `follow_up_done` removes it; `remember` and `forget` add and remove a standing instruction (`instructions.py`: 40 rules of up to 300 characters in `assistant-instructions.json`, copied to `assistant.json`), accepted only in a reply to the person's own words; `focus` makes the text screen follow that conversation, and `focus` with no session id comes back to the central. `open_conversation` and `notify` are parsed and logged only.
 
 - **One writer.** VoiceMate's process is the only writer of its own conversation. A restart resumes the session by id (`--resume`) only when no live process owns it, otherwise it starts a new one.
 - **The child is started clean.** The environment drops the variables Claude Desktop sets on its own sessions, because a child that inherited them rewrote the credentials file in the lab ([research](research/claude-code-client.md#2-authentication-is-the-first-blocker)).
@@ -642,8 +659,9 @@ app/
 ├── i18n/                gettext wrapper and catalogs (en, pt_BR, es, ru, zh_CN)
 └── companion/           Tray app: controller, client, reducer, delivery, settings, paths
     ├── assistant/       Voice assistant: service, own session, Desktop port,
-    │   │                voicemate tools, conversations, notifier, inbox, session reader, command
-    │   │                detector, settings catalog, personality, skill install
+    │   │                voicemate tools, conversations, CLI resumer, notifier, inbox, standing
+    │   │                instructions, session reader, command detector, settings catalog,
+    │   │                personality, skill install
     │   └── skill/       The packaged voicemate-assistant skill, in en/ and pt-BR/
     ├── supervisor/      Policy, WSL, local and external engine backends
     ├── ui/              PySide6: tray, status window, settings, assistant window, notifications
