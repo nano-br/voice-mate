@@ -243,8 +243,10 @@ class VoiceMateTools:
             raise ToolError(
                 "not sent (in use): this terminal, IDE or Remote Control session is open in a program right now, "
                 "and Claude Code has no supported way for VoiceMate to write into a session another program is "
-                "running. Read it, and tell the person what to type there (or on the phone with Remote Control); "
-                "VoiceMate can write to it once no program has it open"
+                "running. If this conversation has the session tools ListAgents and SendMessage, send it with "
+                "SendMessage and notify_when_idle: true, then read the result here (skill section 3); otherwise "
+                "read it and tell the person what to type there (or on the phone with Remote Control). VoiceMate "
+                "can write to it once no program has it open"
             )
         self._d.watcher.watch(entry.id, entry.title or entry.id)
         try:

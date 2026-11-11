@@ -237,6 +237,7 @@ def test_an_open_cli_session_is_not_written_to(tmp_path: Path) -> None:
     rig.resumer.busy.add("cli-1")
     text, failed = rig.call("send_to_conversation", id="cli-1", text="status?")
     assert failed and text.startswith("not sent (in use)") and "tell the person what to type" in text
+    assert "SendMessage" in text and "notify_when_idle" in text
     assert rig.resumer.sent == [] and rig.watcher.watched == []
 
 
