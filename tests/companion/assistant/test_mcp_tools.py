@@ -8,8 +8,10 @@ from typing import Any
 
 import pytest
 
+from app.companion.assistant.cli_resume import ResumeError
 from app.companion.assistant.conversations import ConversationEntry, OwnedConversations, OwnedError, OwnedRecord
 from app.companion.assistant.mcp_tools import SERVER_NAME, VoiceMateTools
+from app.companion.assistant.notifier import AnswerWatcher
 from app.companion.assistant.session_reader import Message
 from app.companion.win.claude_desktop import (
     AmbiguousConversation,
@@ -59,12 +61,31 @@ class FakeWatcher:
     def __init__(self) -> None:
         self.watched: list[tuple[str, str, bool]] = []
         self.unwatched: list[str] = []
+        self.cancelled: list[str] = []
 
     def watch(self, conversation_id: str, title: str, *, from_start: bool = False) -> None:
         self.watched.append((conversation_id, title, from_start))
 
+    def cancel_reply(self, conversation_id: str) -> None:
+        self.cancelled.append(conversation_id)
+
     def unwatch(self, conversation_id: str) -> None:
         self.unwatched.append(conversation_id)
+
+
+class FakeResumer:
+    def __init__(self) -> None:
+        self.busy: set[str] = set()
+        self.sent: list[tuple[str, str, str]] = []
+        self.error: ResumeError | None = None
+
+    def in_use(self, session_id: str) -> bool:
+        return session_id in self.busy
+
+    def send(self, session_id: str, cwd: str, text: str) -> None:
+        if self.error is not None:
+            raise self.error
+        self.sent.append((session_id, cwd, text))
 
 
 class FakeDesktop:
@@ -89,9 +110,17 @@ ENTRIES = [
 
 
 class Rig:
-    def __init__(self, tmp_path: Path, desktop: bool = True, defaults: tuple[str, str] = ("sonnet", "medium")) -> None:
+    def __init__(
+        self,
+        tmp_path: Path,
+        desktop: bool = True,
+        defaults: tuple[str, str] = ("sonnet", "medium"),
+        resumer: bool = False,
+        watcher: object | None = None,
+    ) -> None:
         self.owned = FakeOwned()
         self.watcher = FakeWatcher()
+        self.resumer = FakeResumer() if resumer else None
         self.desktop = FakeDesktop() if desktop else None
         self.excluded: list[list[str]] = []
         self.transcript = tmp_path / "desk-1.jsonl"
@@ -103,11 +132,12 @@ class Rig:
 
         self.server = VoiceMateTools(
             self.owned,  # type: ignore[arg-type]
-            self.watcher,  # type: ignore[arg-type]
+            watcher or self.watcher,  # type: ignore[arg-type]
             desktop=self.desktop,
             central_id=lambda: "central",
             new_defaults=lambda: defaults,
             entries=entries,
+            resumer=self.resumer,  # type: ignore[arg-type]
             find_file=lambda cid: self.transcript if cid == "desk-1" else None,
             read=lambda _path, n: [Message("user", "q"), Message("assistant", "a" * 5000)][-n:],
         ).server()
@@ -162,7 +192,7 @@ def test_send_to_an_owned_conversation_watches_first(rig: Rig) -> None:
     rig.owned.fail = OwnedError("limit", "4 conversations are already running")
     text, failed = rig.call("send_to_conversation", id="own-1", text="go")
     assert failed and "already running" in text
-    assert rig.watcher.unwatched == ["own-1"]
+    assert rig.watcher.cancelled == ["own-1"]
 
 
 def test_send_to_a_desktop_conversation_uses_the_sender(rig: Rig) -> None:
@@ -176,7 +206,7 @@ def test_desktop_failures_are_clear_errors(rig: Rig) -> None:
     rig.desktop.error = ScreenLocked("LockApp is in front")
     text, failed = rig.call("send_to_conversation", id="desk-1", text="hello")
     assert failed and text == "not sent (locked): the screen is locked, nothing was typed"
-    assert rig.watcher.unwatched == ["desk-1"]
+    assert rig.watcher.cancelled == ["desk-1"]
     text, failed = rig.call("send_to_conversation", id="desk-2", text="x")
     assert failed and "ambiguous" in text
     assert rig.call("send_to_conversation", id="desk-4", text="x")[1]
@@ -190,6 +220,47 @@ def test_a_local_cli_session_is_read_only(rig: Rig) -> None:
     assert failed and text.startswith("not sent (read only)")
     assert rig.desktop is not None and rig.desktop.sent == []
     assert rig.watcher.watched == []
+
+
+def test_a_closed_cli_session_is_resumed_with_the_message(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, resumer=True)
+    assert rig.resumer is not None
+    text, failed = rig.call("send_to_conversation", id="cli-1", text="status?")
+    assert not failed and text.startswith("sent: the session was closed")
+    assert rig.resumer.sent == [("cli-1", "C:\\t", "status?")]
+    assert rig.watcher.watched == [("cli-1", "Terminal", False)]
+
+
+def test_an_open_cli_session_is_not_written_to(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, resumer=True)
+    assert rig.resumer is not None
+    rig.resumer.busy.add("cli-1")
+    text, failed = rig.call("send_to_conversation", id="cli-1", text="status?")
+    assert failed and text.startswith("not sent (in use)") and "tell the person what to type" in text
+    assert rig.resumer.sent == [] and rig.watcher.watched == []
+
+
+def test_a_resume_that_cannot_start_puts_the_watch_back(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, resumer=True)
+    assert rig.resumer is not None
+    rig.resumer.error = ResumeError("no_folder", "the session's folder is not on this computer any more")
+    text, failed = rig.call("send_to_conversation", id="cli-1", text="status?")
+    assert failed and text.startswith("not sent (no_folder)")
+    assert rig.watcher.cancelled == ["cli-1"]
+
+
+def test_a_failed_send_keeps_the_observation_the_person_asked_for(tmp_path: Path) -> None:
+    watcher = AnswerWatcher(lambda _note: True, find_file=lambda _cid: None)
+    watcher.observe("desk-1", "Desk")
+    rig = Rig(tmp_path, watcher=watcher)
+    assert rig.desktop is not None
+    rig.desktop.error = ScreenLocked("LockApp is in front")
+    assert rig.call("send_to_conversation", id="desk-1", text="hello")[1]
+    assert watcher.is_observing("desk-1")
+    watcher.observe("own-1", "Mine")
+    rig.owned.fail = OwnedError("limit", "4 conversations are already running")
+    assert rig.call("send_to_conversation", id="own-1", text="go")[1]
+    assert watcher.is_observing("own-1")
 
 
 def test_without_a_desktop_sender_desktop_sends_are_refused(tmp_path: Path) -> None:
@@ -241,7 +312,7 @@ def test_every_desktop_error_code_has_a_clear_reason(rig: Rig, error: DesktopErr
     rig.desktop.error = error
     text, failed = rig.call("send_to_conversation", id="desk-1", text="hello")
     assert failed and text.startswith(f"not sent ({code}): ") and words in text
-    assert rig.watcher.unwatched == ["desk-1"]
+    assert rig.watcher.cancelled == ["desk-1"]
 
 
 def test_an_empty_title_refused_by_the_sender_is_an_error(rig: Rig) -> None:

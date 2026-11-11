@@ -60,6 +60,7 @@ from typing import Final
 
 from app.companion import paths
 from app.companion.assistant import commands, personality, settings_catalog
+from app.companion.assistant.cli_resume import CliResumer
 from app.companion.assistant.contract import (
     MAX_MESSAGES,
     AssistantErrorCode,
@@ -688,6 +689,7 @@ class AssistantServiceImpl:
                 desktop=self._desktop_sender(),
                 central_id=self._central,
                 new_defaults=self._new_defaults,
+                resumer=CliResumer(permission_mode=lambda: self._settings().permission_mode),
             )
             servers.append(tools.server())
         return OwnSessionPort(
