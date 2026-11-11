@@ -120,6 +120,8 @@ def test_a_send_goes_through_the_flash_in_order_and_makes_the_port_busy(h: Harne
     port = h.port()
     port.start(h.statuses.append)
     try:
+        # The port reads the transcript from where it ended at attach: a line appended before that is never seen.
+        h.wait_for(port, lambda s: bool(h.sender.calls) and s.state == "busy")
         _append(h.path, user(FIRST_PROMPT), reply("hello"))
         h.wait_for(port, lambda s: s.state == "ready")
         assert port.send("what is next?") is True
