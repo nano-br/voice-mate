@@ -418,6 +418,7 @@ class AssistantServiceImpl:
         self._voiced: deque[str] = deque(maxlen=VOICED_LIMIT)  # replies whose voice block was spoken
         self._reply_seq = 0  # names replies that carry no message id
         self._model_reminded = False  # the central was told its reply had no reply model; one note per streak
+        self._unchecked_reply = ""  # message id of a reply that arrived live and was not handled at a turn end yet
         self._digests: dict[str, tuple[InboxEntry, ...]] = {}  # digest note -> its items, until delivered
         self._pending: list[PendingEntry] = []  # the "Waiting for" list (follow_up actions)
         self._turn_from_person = False  # the central's current turn answers the person's own words
@@ -1036,15 +1037,21 @@ class AssistantServiceImpl:
             else:
                 self._reply_seq += 1
                 self._add_raw(_Raw("assistant", event.text, event.message_id or f"reply-{self._reply_seq}"))
+            if self._followed is None and not self._replaying:
+                self._unchecked_reply = self._raw[-1].message_id or ""
             self._voice_reply(self._raw[-1], final=False)
             return True
         if event.kind == "turn_end":
             # Only the assistant's own conversation has the reply template, and only new turns count.
             if self._followed is None and not self._replaying:
+                # A turn can end before its text is written (the thinking comes in a line of its own,
+                # already marked as the end of the turn), and then the newest reply here is still the
+                # one of the turn before: only a reply that arrived in this run is handled, and once.
                 last = next((raw for raw in reversed(self._raw) if raw.role == "assistant"), None)
-                if last is not None:
+                if last is not None and self._unchecked_reply and last.message_id == self._unchecked_reply:
+                    self._unchecked_reply = ""
                     self._voice_reply(last, final=True)
-                self._handle_actions()
+                    self._handle_actions(last)
         elif event.kind == "error":
             log.warning("assistant: the session reported an error: %s", event.text[:300])
         return False
@@ -1070,10 +1077,7 @@ class AssistantServiceImpl:
         if self._voice is not None:
             self._voice.stop()
 
-    def _handle_actions(self) -> None:
-        last = next((raw for raw in reversed(self._raw) if raw.role == "assistant"), None)
-        if last is None:
-            return
+    def _handle_actions(self, last: _Raw) -> None:
         parsed = parse_reply(last.text)
         for action in parsed.actions:
             try:
@@ -1622,6 +1626,7 @@ class AssistantServiceImpl:
         self._raw.clear()
         self._raw_total = 0
         self._model_reminded = False  # a summarized or new conversation may be told again
+        self._unchecked_reply = ""
 
     def _notice(self, text: str) -> None:
         self._notices.append((self._raw_total, ChatMessage("notice", text)))

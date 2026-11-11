@@ -941,6 +941,43 @@ def test_a_reply_without_the_reply_model_is_asked_again_once_per_streak(make_rig
     _until(lambda: reminders() == 3)
 
 
+def test_an_old_reply_without_the_reply_model_is_not_judged_again(make_rig: Callable[..., Rig]) -> None:
+    """The CLI writes the thinking of a reply in a line of its own, already marked as the end of the
+    turn, before the line with the text: the reply before it must not be taken for the new one."""
+    voice = FakeVoice()
+    rig = make_rig(voice=voice)
+    _append(rig.transcript("s1"), _plain("An old reply, from before this start.", "a0", "m0"))
+    rig.ready()
+    rig.wait(lambda s: any(m.text.startswith("An old reply") for m in s.messages))
+    thinking = {"id": "m1", "role": "assistant", "content": [{"type": "thinking", "thinking": "..."}]}
+    thinking["stop_reason"] = "end_turn"
+    _append(rig.transcript("s1"), _user("What is new?", "u1"))
+    _append(rig.transcript("s1"), json.dumps({"type": "assistant", "uuid": "a1", "message": thinking}))
+    _append(rig.transcript("s1"), _reply("<voice>All good.</voice>", "a2", "m1", end=True))
+    rig.wait(lambda s: any(m.role == "assistant" and not m.degraded for m in s.messages))
+    time.sleep(0.3)
+    assert not any("had no <voice> block" in text for text in rig.port.sent)
+
+
+def test_an_old_reply_is_not_spoken_or_acted_on_again_when_a_new_turn_starts(make_rig: Callable[..., Rig]) -> None:
+    voice = FakeVoice()
+    rig = make_rig(voice=voice)
+    old: list[dict[str, object]] = [{"type": "set_setting", "key": "assistant.answer_delivery", "value": "silent"}]
+    _append(rig.transcript("s1"), _turn(old, "a0", "m0"))  # read back at startup: neither spoken nor applied
+    rig.ready()
+    rig.wait(lambda s: any(m.role == "assistant" for m in s.messages))
+    thinking = {"id": "m1", "role": "assistant", "content": [{"type": "thinking", "thinking": "..."}]}
+    thinking["stop_reason"] = "end_turn"
+    _append(rig.transcript("s1"), _user("What is new?", "u1"))
+    _append(rig.transcript("s1"), json.dumps({"type": "assistant", "uuid": "a1", "message": thinking}))
+    time.sleep(0.3)
+    assert voice.spoken == []
+    assert rig.settings.answer_delivery == "announce"
+    _append(rig.transcript("s1"), _reply("<voice>All good.</voice>", "a2", "m1", end=True))
+    _until(lambda: bool(voice.spoken))
+    assert rig.settings.answer_delivery == "announce"
+
+
 def test_a_reply_without_the_reply_model_is_not_asked_again_when_replies_are_not_spoken(
     make_rig: Callable[..., Rig],
 ) -> None:
