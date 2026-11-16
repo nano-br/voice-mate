@@ -224,7 +224,11 @@ def parse_line(raw: str | bytes) -> list[ReaderEvent]:
         text = _text_blocks(message.get("content"))
         if text:
             events.append(ReaderEvent("assistant_text", text, ts, uuid, mid))
-        if message.get("stop_reason") == "end_turn":
+        if d.get("isApiErrorMessage"):
+            # The turn died: Claude Code wrote the error as the last line of the turn.
+            events.append(ReaderEvent("error", text, ts, uuid, mid))
+            events.append(ReaderEvent("turn_end", "", ts, uuid, mid))
+        elif message.get("stop_reason") == "end_turn":
             events.append(ReaderEvent("turn_end", "", ts, uuid, mid))
         return events
     if kind == "system":

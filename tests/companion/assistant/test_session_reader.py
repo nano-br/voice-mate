@@ -489,3 +489,11 @@ def test_activity_when_the_closing_line_of_a_message_is_not_its_last(tmp_path: P
     closing = _assistant("", mid="m1", stop="end_turn")
     path = _write(tmp_path / "s.jsonl", _user("go"), closing, _assistant("the answer", mid="m1", uuid="a2"))
     assert sr.activity(path).turn_open is False
+
+
+def test_a_turn_that_dies_on_an_error_ends(tmp_path: Path) -> None:
+    line = _assistant("The context is full.", mid="e1", stop="stop_sequence", isApiErrorMessage=True)
+    kinds = [(e.kind, e.text) for e in sr.parse_line(line)]
+    assert kinds == [("assistant_text", "The context is full."), ("error", "The context is full."), ("turn_end", "")]
+    assert [e.kind for e in sr.parse_line(_assistant("cut", stop="max_tokens"))] == ["assistant_text"]
+    assert [e.kind for e in sr.parse_line(_tool_use())] == []

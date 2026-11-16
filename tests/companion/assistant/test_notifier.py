@@ -13,8 +13,11 @@ from app.companion.assistant.notifier import (
     AnswerWatcher,
     ReadyAnswer,
     answer_note,
+    circles_note,
+    quiet_note,
     trim,
 )
+from app.companion.assistant.session_reader import Activity
 
 
 def user(text: str) -> dict[str, object]:
@@ -43,6 +46,8 @@ class Rig:
         self.ready: list[ReadyAnswer] = []
         self.accept = accept
         self.now = 0.0
+        self.wall = 1000.0
+        self.activity = Activity(False, 1000.0)
         self.tmp = tmp_path
         self.watcher = AnswerWatcher(
             self.deliver,
@@ -54,6 +59,9 @@ class Rig:
             max_wait_s=100.0,
             group_s=group_s,
             per_minute=per_minute,
+            activity_of=lambda path: self.activity,
+            wall=lambda: self.wall,
+            quiet_s=50.0,
         )
 
     def take(self, ready: ReadyAnswer) -> bool:
@@ -414,3 +422,113 @@ def test_a_task_notification_in_a_running_turn_is_not_the_prompt(tmp_path: Path)
     append(path, assistant("That was the old turn.", "m1", end=True))
     assert rig.watcher.poll() == 0
     assert rig.watcher.watching() == ["c1"]
+
+
+def failed(text: str) -> dict[str, object]:
+    message = {"id": "err", "content": [{"type": "text", "text": text}], "stop_reason": "stop_sequence"}
+    return {"type": "assistant", "isApiErrorMessage": True, "message": message}
+
+
+def test_a_turn_that_dies_on_an_error_is_reported_as_stopped(tmp_path: Path) -> None:
+    """It used to pass in silence: the turn never "finished", so nobody was told it had stopped."""
+    rig = Rig(tmp_path)
+    path = rig.file("c1")
+    rig.watcher.watch("c1", "Translation")
+    append(path, user("map the files"), assistant("Reading. ", "m1"), failed("The context is full."))
+    assert rig.watcher.poll() == 1
+    assert rig.notes == [answer_note("Translation", "c1", "The context is full.", failed=True)]
+    assert "stopped with an error" in rig.notes[0]
+    assert rig.watcher.watching() == []
+
+
+def test_a_turn_that_keeps_summarizing_its_context_is_reported_once(tmp_path: Path) -> None:
+    rig = Rig(tmp_path)
+    path = rig.file("c1")
+    rig.watcher.watch("c1", "Translation")
+    summary: dict[str, object] = {"type": "system", "subtype": "compact_boundary"}
+    append(path, user("map the files"), summary, summary)
+    assert rig.watcher.poll() == 0
+    assert rig.notes == []
+    append(path, summary)
+    rig.watcher.poll()
+    assert rig.notes == [circles_note("Translation", "c1", 3)]
+    append(path, summary, summary)
+    rig.watcher.poll()
+    assert len(rig.notes) == 1  # once a turn
+    append(path, assistant("Done.", "m9", end=True))
+    assert rig.watcher.poll() == 1
+    assert rig.notes[-1] == answer_note("Translation", "c1", "Done.")
+
+
+def test_a_turn_that_stops_writing_is_reported_once(tmp_path: Path) -> None:
+    rig = Rig(tmp_path)
+    path = rig.file("c1")
+    rig.watcher.watch("c1", "Build")
+    append(path, user("build it"), assistant("Starting. ", "m1"))
+    rig.watcher.poll()
+    rig.activity = Activity(True, 1000.0)
+    rig.now, rig.wall = 40.0, 1040.0
+    rig.watcher.poll()
+    assert rig.notes == []  # not long enough
+    rig.now, rig.wall = 60.0, 1060.0
+    rig.watcher.poll()
+    assert rig.notes == [quiet_note("Build", "c1", 1)]
+    rig.now, rig.wall = 90.0, 1090.0
+    rig.watcher.poll()
+    assert len(rig.notes) == 1  # once, until it writes again
+    append(path, assistant("Back. ", "m2"))
+    rig.watcher.poll()
+    rig.now, rig.wall, rig.activity = 150.0, 1150.0, Activity(True, 1090.0)
+    rig.watcher.poll()
+    assert rig.notes[1:] == [quiet_note("Build", "c1", 1)]
+
+
+def test_silence_is_not_reported_while_tools_write_or_after_the_turn_ended(tmp_path: Path) -> None:
+    rig = Rig(tmp_path)
+    path = rig.file("c1")
+    rig.watcher.observe("c1", "Build")
+    append(path, user("build it"), assistant("Starting. ", "m1"))
+    rig.watcher.poll()
+    rig.now, rig.wall = 60.0, 1060.0
+    rig.activity = Activity(True, 1050.0)  # a tool result was written 10 seconds ago
+    rig.watcher.poll()
+    assert rig.notes == []
+    rig.now, rig.wall = 200.0, 1200.0
+    rig.activity = Activity(False, 1050.0)  # the turn ended some other way: nothing is stuck
+    rig.watcher.poll()
+    assert rig.notes == []
+
+
+def test_an_error_the_conversation_recovers_from_is_not_a_stop(tmp_path: Path) -> None:
+    rig = Rig(tmp_path)
+    path = rig.file("c1")
+    rig.watcher.watch("c1", "Build")
+    retry: dict[str, object] = {"type": "system", "subtype": "api_error", "error": {"formatted": "overloaded"}}
+    append(path, user("build it"), retry, assistant("All built.", "m1", end=True))
+    assert rig.watcher.poll() == 1
+    assert rig.notes == [answer_note("Build", "c1", "All built.")]
+
+
+def test_a_stop_is_told_at_once_and_a_quiet_note_waits_for_the_central(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, group_s=15.0)
+    path = rig.file("c1")
+    rig.watcher.observe("c1", "Build")
+    append(path, user("build it"), failed("The context is full."))
+    assert rig.watcher.poll() == 1  # not held for the grouping window
+    assert "stopped with an error" in rig.notes[0]
+
+    rig.accept = False  # the central is not running
+    append(path, user("again"), assistant("Starting. ", "m2"))
+    rig.watcher.poll()
+    rig.activity = Activity(True, 1000.0)
+    rig.now, rig.wall = 60.0, 1060.0
+    rig.watcher.poll()
+    rig.now, rig.wall = 61.0, 1061.0
+    seen: list[Path] = []
+    rig.watcher._activity_of = lambda p: seen.append(p) or rig.activity  # type: ignore[func-returns-value]
+    rig.watcher.poll()
+    assert seen == []  # not read again every round
+    rig.accept = True
+    rig.now, rig.wall = 95.0, 1095.0
+    rig.watcher.poll()
+    assert rig.notes[-1] == quiet_note("Build", "c1", 1)

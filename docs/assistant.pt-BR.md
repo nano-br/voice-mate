@@ -208,6 +208,7 @@ stateDiagram-v2
 - **Fechar e reabrir o VoiceMate.** A lista é salva com o prazo de cada item e o ponto até onde cada transcrição foi lida. Quando o VoiceMate abre de novo, continua a leitura dali, então um turno que terminou com ele fechado ainda é avisado. Um item cujo prazo venceu nesse meio-tempo sai da lista com uma nota.
 - **Expiração.** Quando um item sai da lista sozinho, a central recebe uma nota e conta em poucas palavras; ela volta a observar só se você ainda quiser.
 - **Modo direto** ("falar direto com a conversa X") pausa os avisos: respostas e turnos observados vão para a caixa de entrada, e o assistente conta quando você volta.
+- **Uma conversa que para de avançar.** Enquanto o assistente espera por uma conversa, o VoiceMate avisa quando o turno morre com erro (na hora, também quando as respostas ficam guardadas para depois), quando o turno não escreve nada há 10 minutos e quando a conversa resumiu o contexto três vezes no mesmo turno. Os dois últimos avisos saem uma vez; o assistente lê a conversa e conta o que encontrou.
 - **Uma mensagem enviada com a conversa trabalhando.** O Claude Code entrega a mensagem ao turno que está rodando, sem abrir um turno novo. O VoiceMate vê isso na transcrição, e o fim daquele turno é avisado como a resposta.
 - **Uma resposta dentro de uma observação.** Quando o assistente pergunta algo a uma conversa observada, a resposta vem primeiro, uma vez, e a observação continua depois. Um envio que falha nunca derruba uma observação.
 

@@ -1857,3 +1857,21 @@ def test_a_note_taken_in_by_a_running_turn_is_hidden_and_changes_nothing(make_ri
     assert not any(EVENT_MARKER in m.text for m in snapshot.messages)
     time.sleep(0.1)
     assert len(voice.spoken) == 1  # the turn had said its reply: the stray line stays on screen
+
+
+def test_actions_without_the_envelope_get_the_central_to_read_the_skill_again(make_rig: Callable[..., Rig]) -> None:
+    """A central whose conversation was summarized writes `{"follow_up": {...}}`: the actions are
+    applied, and it is told once to read the skill again."""
+    rig = make_rig()
+    rig.ready()
+
+    def reminders() -> int:
+        return sum("without the envelope" in text for text in rig.port.sent)
+
+    bare = '<voice>ok</voice><actions>{"read_inbox": {}}</actions>'
+    _append(rig.transcript("s1"), _plain(bare, "a1", "m1"))
+    _until(lambda: reminders() == 1)
+    assert rig.port.sent[-1].startswith(EVENT_MARKER)
+    _append(rig.transcript("s1"), _plain(bare, "a2", "m2"))
+    time.sleep(0.3)
+    assert reminders() == 1

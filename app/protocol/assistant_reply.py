@@ -28,6 +28,7 @@ ActionType = Literal[
 ]
 ACTION_TYPES: Final[frozenset[str]] = frozenset(get_args(ActionType))
 ACTIONS_VERSION: Final = 1
+ACTIONS_WITHOUT_ENVELOPE: Final = "actions without the envelope"  # a problem of a reply
 
 # An opening tag, then the body up to its closing tag. A closing tag missing at the very
 # end of the text (the model was cut off) is tolerated: the body runs to the end.
@@ -181,6 +182,8 @@ def _parse_actions(raw: str, problems: list[str]) -> tuple[Action, ...]:
     elif not isinstance(data, dict):
         problems.append("actions is not a JSON object")
         return ()
+    elif not data:
+        return ()  # an empty object: nothing to do, and nothing wrong
     elif "version" not in data:
         # The envelope was forgotten (a central whose conversation was summarized tends to): what
         # was meant is still clear, and dropping it loses a wait the person is counting on.
@@ -188,7 +191,7 @@ def _parse_actions(raw: str, problems: list[str]) -> tuple[Action, ...]:
         if entries is None:
             problems.append("unsupported actions version: None")
             return ()
-        problems.append("actions without the envelope")
+        problems.append(ACTIONS_WITHOUT_ENVELOPE)
     else:
         version = data.get("version")
         if isinstance(version, bool) or version != ACTIONS_VERSION:

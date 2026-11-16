@@ -276,3 +276,9 @@ def test_an_object_that_names_no_action_is_still_refused() -> None:
     reply = parse_reply('<voice>Hi</voice><actions>{"clear_pending": "c1", "note": 1}</actions>')
     assert reply.actions == ()
     assert reply.problems == ("unsupported actions version: None",)
+
+
+def test_an_empty_actions_object_is_nothing_to_do() -> None:
+    reply = parse_reply("<voice>ok</voice><actions>{}</actions>")
+    assert reply.actions == ()
+    assert reply.problems == ()
