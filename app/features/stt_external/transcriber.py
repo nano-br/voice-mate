@@ -13,7 +13,11 @@ built the first time it is needed and kept for later failures.
 - `401`, a service that is not a `voicemate-stt` v1 provider, `unsupported_format` and
   `unsupported_language`: permanent. Reported once; the built-in engine is used until the
   settings change (the engine restarts with them).
-- `409 busy` and the other `4xx` (`audio_too_long`, `bad_request`): only that recording.
+- `409 busy` and the other `4xx` (`bad_request`): only that recording. A busy provider is
+  asked again for `BUSY_WAIT_SECONDS` first: it is usually in the middle of something short.
+
+A recording longer than the provider's `max_seconds` is sent in parts, each cut at the quietest
+moment near the limit, and the texts are joined.
 
 With the fallback off, every failure surfaces as the recording's error, the way a failing
 built-in backend does, and the provider is tried again on the next recording.
@@ -46,11 +50,56 @@ RETRY_AFTER_SECONDS: Final = 10.0
 # While the provider reports "loading", how long to wait for it (models can take minutes).
 LOADING_TIMEOUT_SECONDS: Final = 180.0
 LOADING_POLL_SECONDS: Final = 1.0
+# A provider that answers `busy` is asked again this long, this often, before the recording falls back.
+BUSY_WAIT_SECONDS: Final = 4.0
+BUSY_POLL_SECONDS: Final = 0.25
+# A recording over the provider's limit is cut into parts of at most this share of the limit, each
+# cut at the quietest `SPLIT_WINDOW_SECONDS` found in the last `SPLIT_SEARCH_SHARE` of the part.
+SPLIT_FILL: Final = 0.95
+SPLIT_SEARCH_SHARE: Final = 0.25
+SPLIT_WINDOW_SECONDS: Final = 0.2
 # The name `/health` reports until the provider has said its own.
 UNKNOWN_NAME: Final = "external provider"
 
 _OUTAGE: Final = ("unreachable", "not_ready", "server")
 _PERMANENT_CODES: Final = ("unsupported_format", "unsupported_language")
+
+
+def split_at_quiet(audio: NDArray[np.float32], rate: int, max_seconds: float) -> list[NDArray[np.float32]]:
+    """`audio` in parts no longer than `max_seconds`, cut where the sound is quietest (between
+    words, when there is a pause) in the last stretch of each part. One part when it fits."""
+    samples = np.asarray(audio, dtype=np.float32).reshape(-1)
+    limit = max(1, int(max_seconds * SPLIT_FILL * rate))
+    window = max(1, int(SPLIT_WINDOW_SECONDS * rate))
+    parts: list[NDArray[np.float32]] = []
+    start = 0
+    while samples.size - start > limit:
+        search_from = start + int(limit * (1.0 - SPLIT_SEARCH_SHARE))
+        stretch = samples[search_from : start + limit].astype(np.float64)
+        cut = start + limit
+        if stretch.size >= window:
+            energy = np.concatenate(([0.0], np.cumsum(stretch * stretch)))
+            begins = np.arange(0, stretch.size - window + 1, max(1, window // 4))
+            quietest = int(begins[np.argmin(energy[begins + window] - energy[begins])])
+            cut = max(start + 1, search_from + quietest + window // 2)
+        parts.append(samples[start:cut])
+        start = cut
+    parts.append(samples[start:])
+    return parts
+
+
+def join_texts(texts: list[str]) -> str:
+    """The texts of the parts as one: a space between them, except in scripts written without spaces."""
+    joined = ""
+    for text in (text.strip() for text in texts):
+        if text and joined and not (_unspaced(joined[-1]) or _unspaced(text[0])):
+            joined += " "
+        joined += text
+    return joined
+
+
+def _unspaced(char: str) -> bool:
+    return "\u3000" <= char <= "\u30ff" or "\u3400" <= char <= "\u9fff" or "\uff00" <= char <= "\uffef"
 
 
 def to_pcm16(audio: NDArray[np.float32], rate: int, target_rate: int) -> bytes:
@@ -149,27 +198,31 @@ class ExternalTranscriber:
 
     def _transcribe_with_provider(self, audio: NDArray[np.float32]) -> str:
         info = self._ensure_ready()
-        seconds = audio.size / self._sample_rate
-        if info.max_seconds is not None and seconds > info.max_seconds:
-            raise ProviderError(
-                "rejected",
-                f"the recording lasts {seconds:.1f} s and the provider takes at most {info.max_seconds:g} s",
-                code="audio_too_long",
-            )
         if not info.accepts_language(self._language):
             raise ProviderError(
                 "rejected",
                 f"the provider does not list the language '{self._language}'",
                 code="unsupported_language",
             )
+        parts = [audio]
+        if info.max_seconds is not None and audio.size / self._sample_rate > info.max_seconds:
+            parts = split_at_quiet(audio, self._sample_rate, info.max_seconds)
         rate = info.sample_rate_for(self._sample_rate)
-        result = self._client.transcribe(
-            to_pcm16(audio, self._sample_rate, rate),
-            sample_rate=rate,
-            language=self._language,
-            options=self._options,
-        )
-        return result.text
+        busy_deadline = self._now() + BUSY_WAIT_SECONDS  # one wait for the whole recording
+        return join_texts([self._transcribe_part(part, rate, busy_deadline) for part in parts])
+
+    def _transcribe_part(self, audio: NDArray[np.float32], rate: int, deadline: float) -> str:
+        """One request; a provider that is busy (with a short job, usually) is asked again until `deadline`."""
+        pcm = to_pcm16(audio, self._sample_rate, rate)
+        while True:
+            try:
+                result = self._client.transcribe(pcm, sample_rate=rate, language=self._language, options=self._options)
+            except ProviderError as exc:
+                if exc.kind != "busy" or self._now() >= deadline:
+                    raise
+                time.sleep(BUSY_POLL_SECONDS)
+                continue
+            return result.text
 
     def _ensure_ready(self) -> SttProviderInfo:
         """The provider's info once it answered and said it is ready (raises ProviderError otherwise)."""

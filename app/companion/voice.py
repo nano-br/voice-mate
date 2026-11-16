@@ -63,10 +63,13 @@ LOADING_RETRY_S: Final = 5.0
 # With no local voice to take over, how long a line waits for an engine that is loading its voice
 # (an external provider started with the engine has to load its models). Once per outage: the
 # engine also reports loading while its provider is down, and that may never end.
-LOADING_WAIT_S: Final = 90.0
+LOADING_WAIT_S: Final = 240.0
 # The one `not_ready` that ends by itself: the others (text to speech off, a voice the engine
 # cannot serve) would keep a line waiting for nothing.
 _ENGINE_LOADING: Final = "the engine is loading"
+# An engine that is there but too slow to say how it is, is usually still loading too: the
+# line waits for it the same way.
+_NO_ANSWER_IN_TIME: Final = "did not answer in time"
 # A `busy` answer right after a stop is the engine still letting go of the previous stream:
 # ask again for about a second (BUSY_TRIES x BUSY_STEP_S) before giving the line up.
 BUSY_TRIES: Final = 10
@@ -477,11 +480,11 @@ class EngineVoice:
             return
         if self._clock() >= self._down_until:
             error = self._say_on_engine(item)
-            if error is not None and error[0].detail != _ENGINE_LOADING:
+            if error is not None and not _still_loading(error[0]):
                 self._waited = False  # not the same outage: the engine went away, or it is another problem
-            if error is not None and error[0].detail == _ENGINE_LOADING and self._local() is None and not self._waited:
+            if error is not None and _still_loading(error[0]) and self._local() is None and not self._waited:
                 error = self._wait_for_engine(item, error)
-                self._waited = error is not None and error[0].detail == _ENGINE_LOADING
+                self._waited = error is not None and _still_loading(error[0])
             if error is None:
                 return
             self._down(error)
@@ -493,7 +496,7 @@ class EngineVoice:
         again every `LOADING_RETRY_S` (the line keeps its place), up to `LOADING_WAIT_S`. None
         when the line is over; else why the engine still cannot speak."""
         deadline = self._clock() + LOADING_WAIT_S
-        while error[0].detail == _ENGINE_LOADING and self._clock() < deadline:
+        while _still_loading(error[0]) and self._clock() < deadline:
             for _step in range(round(LOADING_RETRY_S / HOLD_POLL_S)):
                 if not self._current(item):
                     return None  # a stop or a newer line does not sit through the wait
@@ -602,8 +605,9 @@ class EngineVoice:
         try:
             if client.health() == "ok":
                 return True
-        except ProviderError:
-            return True  # not knowing is not a reason to stay silent: /v1/speak will say what is wrong
+        except ProviderError as exc:
+            if not exc.detail.endswith(_NO_ANSWER_IN_TIME):
+                return True  # not knowing is not a reason to stay silent: /v1/speak will say what is wrong
         if not self._warming:
             self._warming = True
             threading.Thread(target=self._warm_up, args=(client,), daemon=True, name="assistant-voice-warmup").start()
@@ -803,6 +807,11 @@ class EngineVoice:
             if self._reason:
                 log.info("voice: the engine speaks again")
             self._reason = ""
+
+
+def _still_loading(error: ProviderError) -> bool:
+    """An outage that ends by itself: the engine is loading (it says so, or is too slow to say it)."""
+    return error.detail == _ENGINE_LOADING
 
 
 def _cancel_later(client: VoiceClient, request_id: str) -> None:

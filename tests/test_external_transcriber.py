@@ -20,7 +20,7 @@ from app.cli.config_builder import build_config
 from app.cli.wiring import build_transcriber, describe_transcriber
 from app.core.config import Config, ExternalSttConfig
 from app.features.stt_external import transcriber as external_module
-from app.features.stt_external.transcriber import ExternalTranscriber, to_pcm16
+from app.features.stt_external.transcriber import ExternalTranscriber, join_texts, split_at_quiet, to_pcm16
 from app.protocol.provider_http import ProviderError
 from app.setup.persisted_config import PersistedConfig, load_persisted, save_persisted
 from tools.examples.stt_provider_reference import ProviderServer, make_server
@@ -190,11 +190,25 @@ def test_an_outage_after_a_recovery_is_logged_again(capsys: pytest.CaptureFixtur
     assert "not ready yet" in capsys.readouterr().err
 
 
-def test_a_busy_or_refused_recording_falls_back_for_that_recording_only(
-    started: list[ThreadingHTTPServer], capsys: pytest.CaptureFixture[str]
+def test_a_busy_provider_is_asked_again_before_the_recording_falls_back(
+    started: list[ThreadingHTTPServer], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     server, builder = _provider(started), Builder()
     stt = _transcriber(server, builder)
+    server.state.busy = True
+    monkeypatch.setattr(external_module, "BUSY_POLL_SECONDS", 0.01)
+    threading.Timer(0.1, lambda: setattr(server.state, "busy", False)).start()
+    assert stt.transcribe(TONE).startswith("I heard")  # it was busy for a moment only
+    assert builder.built == []
+
+
+def test_a_busy_or_refused_recording_falls_back_for_that_recording_only(
+    started: list[ThreadingHTTPServer], capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    server, builder = _provider(started), Builder()
+    stt = _transcriber(server, builder)
+    monkeypatch.setattr(external_module, "BUSY_WAIT_SECONDS", 0.05)
+    monkeypatch.setattr(external_module, "BUSY_POLL_SECONDS", 0.01)
     server.state.busy = True
     assert stt.transcribe(TONE) == "built-in text"
     server.state.busy = False
@@ -203,7 +217,7 @@ def test_a_busy_or_refused_recording_falls_back_for_that_recording_only(
     assert "is busy" in err and "for this recording" in err
 
 
-def test_a_recording_longer_than_max_seconds_is_not_sent(
+def test_a_recording_longer_than_max_seconds_is_sent_in_parts(
     started: list[ThreadingHTTPServer], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     server, builder = _provider(started), Builder()
@@ -211,9 +225,33 @@ def test_a_recording_longer_than_max_seconds_is_not_sent(
     stt.transcribe(TONE)
     assert stt._info is not None
     monkeypatch.setattr(stt, "_info", stt._info.__class__(**{**stt._info.__dict__, "max_seconds": 1.0}))
-    assert stt.transcribe(TONE) == "built-in text"
-    assert len(server.state.requests) == 1
-    assert stt.transcribe(TONE[:8000]).startswith("I heard")  # the next short one goes to the provider
+    long_one = np.concatenate([TONE, TONE, TONE]).astype(np.float32)
+    parts = split_at_quiet(long_one, 16000, 1.0)
+    assert len(parts) > 3
+    text = stt.transcribe(long_one)
+    assert builder.built == []  # the provider took it all
+    assert len(server.state.requests) == 1 + len(parts)
+    assert text.count("I heard") == len(parts)
+
+
+def test_split_at_quiet_cuts_in_the_pause_and_loses_nothing() -> None:
+    rate = 1000
+    loud = np.full(rate, 0.5, dtype=np.float32)
+    for pause_at in (7.3, 8.0, 8.85):  # anywhere in the last stretch of a 10 s part
+        before = np.tile(loud, 10)[: int(rate * pause_at)]
+        audio = np.concatenate([before, np.zeros(int(rate * 0.3), dtype=np.float32), np.tile(loud, 12)])
+        parts = split_at_quiet(audio, rate, 10.0)
+        assert len(parts) == 3
+        assert all(0 < part.size <= rate * 10 for part in parts)
+        assert np.array_equal(np.concatenate(parts), audio)
+        assert rate * pause_at <= parts[0].size <= rate * (pause_at + 0.3)  # the cut fell inside the pause
+    assert [part.size for part in split_at_quiet(loud, rate, 5.0)] == [rate]  # fits: one part
+    assert sum(part.size for part in split_at_quiet(loud, rate, 0.001)) == rate  # a tiny limit still ends
+
+
+def test_the_texts_of_the_parts_are_joined_by_script() -> None:
+    assert join_texts(["One part.", " ", "Another."]) == "One part. Another."
+    assert join_texts(["\u4f60\u597d\u3002", "\u518d\u89c1"]) == "\u4f60\u597d\u3002\u518d\u89c1"
 
 
 def test_a_wrong_token_is_permanent_and_never_printed(

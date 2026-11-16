@@ -88,9 +88,46 @@ def test_bad_json() -> None:
 
 
 def test_actions_json_not_an_object() -> None:
-    reply = parse_reply("<voice>Hi</voice><actions>[1, 2]</actions>")
+    reply = parse_reply('<voice>Hi</voice><actions>"text"</actions>')
     assert reply.actions == ()
-    assert len(reply.problems) == 1
+    assert reply.problems == ("actions is not a JSON object",)
+
+
+def test_a_bare_list_of_actions_is_accepted() -> None:
+    reply = parse_reply('<voice>Hi</voice><actions>[{"type": "read_inbox"}, 2]</actions>')
+    assert reply.actions == (Action("read_inbox", {}),)
+    assert reply.problems == ("dropped an action without a string type",)
+
+
+def test_conversation_id_is_read_as_the_session_id() -> None:
+    reply = parse_reply('<voice>Hi</voice><actions>[{"type": "follow_up", "conversation_id": "abc"}]</actions>')
+    assert reply.actions == (Action("follow_up", {"session_id": "abc"}),)
+    both = parse_reply(
+        '<voice>Hi</voice><actions>[{"type": "follow_up", "session_id": "s", "conversation_id": "c"}]</actions>'
+    )
+    assert both.actions[0].params == {"session_id": "s", "conversation_id": "c"}
+
+
+def test_a_reply_without_voice_keeps_its_actions_and_hides_the_raw_json() -> None:
+    reply = parse_reply(
+        'Sent the **three points** to [that conversation](x).\n<actions>[{"type": "follow_up", "session_id": "s"}]'
+        "</actions>"
+    )
+    assert reply.degraded
+    assert reply.display == "Sent the **three points** to [that conversation](x)."
+    assert reply.spoken_fallback == "Sent the three points to that conversation."
+    assert reply.actions == (Action("follow_up", {"session_id": "s"}),)
+
+
+def test_the_spoken_fallback_stops_at_a_sentence_end() -> None:
+    reply = parse_reply("First sentence. " + "word " * 200 + "end.")
+    assert reply.spoken_fallback == "First sentence."
+    assert parse_reply("<display>Only this.</display>").spoken_fallback == "Only this."
+
+
+def test_the_spoken_fallback_keeps_names_and_skips_code_and_links() -> None:
+    reply = parse_reply("# Done\n> Set `answer_delivery` to _read_, see https://example.com/x\n```\ncode\n```\nBye.")
+    assert reply.spoken_fallback == "Done Set answer_delivery to read , see Bye."
 
 
 @pytest.mark.parametrize("version", ["2", "0", '"1"', "true", "null"])

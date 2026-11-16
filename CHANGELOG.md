@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A message for a Claude Desktop conversation that was pasted but not sent is typed again, up to three
+  times, and VoiceMate checks that the prompt box is empty after Enter.
+- A reply of the assistant without a `<voice>` block is spoken (the start of its plain text) instead
+  of only shown, its actions are carried out, and the raw `<actions>` JSON is no longer displayed. A
+  bare list of actions and `conversation_id` in place of `session_id` are accepted.
+- Starting a conversation when four are already running no longer fails while one of them is idle:
+  the one unused the longest is parked (its next message resumes it with its history). When all are
+  busy, the error names them, and the skill (version 5) tells the assistant to send the request to
+  one of them instead of stopping.
+- A spoken line waits for an engine that is loading for up to 4 minutes (it was 90 seconds), also
+  when the engine is there but too busy loading to answer in time.
+- A recording longer than an external STT provider's `max_seconds` is sent in parts instead of going
+  to the built-in engine, and a provider that answers `busy` is asked again for a few seconds.
+- The assistant window keeps its messages when the central conversation summarizes its context; it
+  used to be emptied, which looked like a restart.
+
 ## [0.5.0] - 2026-11-11
 
 ### Added

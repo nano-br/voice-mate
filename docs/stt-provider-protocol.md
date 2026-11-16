@@ -76,7 +76,7 @@ The VoiceMate engine usually runs inside WSL2, so `127.0.0.1` in the provider ad
 - `languages`: ISO 639-1 codes the provider transcribes. Empty or missing means any language. When VoiceMate's transcription language is not listed, VoiceMate does not send recordings to the provider (see the errors below).
 - `sample_rates`: at least one positive integer. VoiceMate records at 16000 Hz and sends 16000 when it is listed; otherwise it resamples to the first rate of the list.
 - `formats`: must include `pcm_s16le` (mono, little endian), the only format VoiceMate sends in version 1.
-- `max_seconds` (optional): the longest recording the provider takes. VoiceMate never sends a longer one.
+- `max_seconds` (optional): the longest recording the provider takes. VoiceMate never sends a longer one: a longer recording is cut at the quietest moment near the limit and sent in parts, one request each, and the texts are joined.
 - `features`: reserved for later versions. VoiceMate ignores the values it does not know.
 
 ### `GET /v1/health`
@@ -153,7 +153,8 @@ An invalid URL is reported in the log and the built-in engine is used.
 - Unreachable, `503 not_ready` and `5xx`: that recording is transcribed by VoiceMate's built-in engine (the one it would use without a provider, loaded the first time it is needed and kept for later failures). The provider is left alone for about 10 seconds, then tried again. Only the first episode of an outage is logged, so a long outage does not flood the log.
 - `401`, `unsupported_format` and `unsupported_language` do not get better by retrying, so VoiceMate reports them once and uses the built-in engine until the settings change.
 - A `4xx` on `GET /v1/info` means "not a `voicemate-stt` provider" (or not version 1). It is permanent until the settings change.
-- `409 busy`, `audio_too_long` and `bad_request` affect only that recording: it is transcribed by the built-in engine, and the next one goes to the provider again.
+- A `409 busy` answer is asked again for about 4 seconds, since a provider is usually busy with something short.
+- `409 busy` (when it lasts), `audio_too_long` and `bad_request` affect only that recording: it is transcribed by the built-in engine, and the next one goes to the provider again.
 - With `--no-stt-fallback`, nothing is transcribed by the built-in engine: the recording fails with the provider's error, the way a failing built-in engine fails, and the next recording asks the provider again.
 - The token is never written to the log.
 
