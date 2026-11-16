@@ -504,6 +504,24 @@ def _user32() -> Control:
     return dll
 
 
+def top_level_handles() -> list[int]:
+    """The visible top-level windows, front to back, as the window manager lists them (no window
+    is asked anything, so a program that does not answer cannot delay it)."""
+    user32 = _user32()
+    from ctypes import wintypes
+
+    handles: list[int] = []
+
+    @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)  # type: ignore[attr-defined,untyped-decorator,unused-ignore]
+    def collect(handle: int, _param: int) -> bool:
+        if handle and user32.IsWindowVisible(handle):
+            handles.append(int(handle))
+        return True
+
+    user32.EnumWindows(collect, 0)
+    return handles
+
+
 def _force_foreground(handle: int) -> None:
     """SetForegroundWindow, attached to the current foreground thread's input queue so Windows
     does not refuse it (no synthetic key presses, which could open a menu in the app in front)."""
@@ -627,6 +645,7 @@ class UiaBackend:
         self._auto: Control = None
         self._source = profile
         self._tls = threading.local()
+        self._handles: Callable[[], list[int]] = top_level_handles
 
     def _a(self) -> Control:
         if self._auto is None:
@@ -659,12 +678,21 @@ class UiaBackend:
         return False
 
     def find_window(self) -> Control | None:
+        # The top-level windows come from the window manager, not from the UI Automation tree:
+        # listing the children of the tree's root asks every window on the desktop for its
+        # accessibility object, and one program that is slow to answer holds the whole listing
+        # for many seconds. Only the Claude Desktop's own windows are asked anything here.
         profile = self._p()
-        for window in self._a().GetRootControl().GetChildren():
-            if window.ControlTypeName != "WindowControl":
-                continue
-            if not is_claude_image(process_image_of(window.NativeWindowHandle)):
+        auto = self._a()
+        for handle in self._handles():
+            if not is_claude_image(process_image_of(handle)):
                 continue  # the profile's matcher only ever sees the Claude Desktop's own windows
+            try:
+                window = auto.ControlFromHandle(handle)
+            except Exception:  # noqa: BLE001 - a window that closed meanwhile is just not there
+                continue
+            if window is None or window.ControlTypeName != "WindowControl":
+                continue
             if profile.window.matches(window):
                 return window
         return None

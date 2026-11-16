@@ -33,7 +33,7 @@ from app.companion.contract import ExpressionsMode as Expressions
 SKILL_NAME: Final = "voicemate-assistant"
 SKILL_FILE: Final = "SKILL.md"
 # Bump when the packaged skill changes in a way an installed copy should know about.
-SKILL_VERSION: Final = 5
+SKILL_VERSION: Final = 6
 SIDECAR_NAME: Final = ".voicemate-managed.json"
 NEW_SUFFIX: Final = ".new"
 SETTINGS_VERSION: Final = 1

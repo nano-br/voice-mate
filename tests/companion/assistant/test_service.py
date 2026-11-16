@@ -1052,7 +1052,8 @@ def test_held_answers_go_to_the_inbox(
     time.sleep(0.1)
     assert rig.cues == cues
     assert rig.spoken == spoken
-    assert len(rig.port.sent) == sent
+    # The answer itself is not delivered; only the request for its summary, kept for later, goes out.
+    assert all(text.startswith(f"{EVENT_MARKER} prepare") for text in rig.port.sent[sent:])
     assert [entry["title"] for entry in rig.contexts[-1].inbox] == ["Report"]
 
 
@@ -1422,7 +1423,8 @@ def test_a_plain_follow_up_is_a_wait_that_respects_silent_delivery_and_ends_by_i
     sent = len(rig.port.sent)
     _append(other, _turn([], "o3", "mo"))
     rig.wait(lambda s: len(s.inbox) == 1 and not s.pending)  # held silently, and the wait is over
-    assert len(rig.port.sent) == sent  # nothing was spoken to the central
+    # The answer is not delivered to the central; at most its summary is asked, to be kept.
+    assert all(text.startswith(f"{EVENT_MARKER} prepare") for text in rig.port.sent[sent:])
     _until(lambda: not rig.service._watcher.is_watching("s2"))
 
 
@@ -1659,3 +1661,164 @@ def test_stop_stops_the_central_and_the_owned_conversations_at_the_same_time(mak
     began = time.monotonic()
     rig.service.stop()
     assert time.monotonic() - began < 0.75
+
+
+# --- a line said on the way, and summaries written ahead ---------------------------------------
+
+
+def test_a_plain_line_before_a_tool_call_is_spoken_at_once(make_rig: Callable[..., Rig]) -> None:
+    voice = FakeVoice()
+    rig = make_rig(voice=voice)
+    rig.ready()
+    _append(rig.transcript("s1"), _user("send it", "u1"), _reply("Sending it now.", "a1", "m1"))
+    _until(lambda: bool(voice.spoken))  # no turn end yet: the tool call is still running
+    assert voice.spoken == [("m1#plain", "Sending it now.", True)]
+    _append(
+        rig.transcript("s1"),
+        _reply('<voice>Sent.</voice><actions>{"version": 1, "actions": []}</actions>', "a2", "m2", end=True),
+    )
+    _until(lambda: len(voice.spoken) == 2)
+    assert voice.spoken[1] == ("m2", "Sent.", True)
+    time.sleep(0.1)
+    assert len(voice.spoken) == 2  # the turn end repeats neither
+
+
+def test_a_voice_line_on_the_way_does_not_silence_a_plain_final_reply(make_rig: Callable[..., Rig]) -> None:
+    voice = FakeVoice()
+    rig = make_rig(voice=voice)
+    rig.ready()
+    _append(rig.transcript("s1"), _user("send it", "u1"), _reply("<voice>Sending it now.</voice>", "a1", "m1"))
+    _until(lambda: len(voice.spoken) == 1)
+    _append(rig.transcript("s1"), _plain("Sent to the report conversation.", "a2", "m2"))
+    _until(lambda: len(voice.spoken) == 2)
+    assert voice.spoken[1] == ("m2#plain", "Sent to the report conversation.", True)
+
+
+def test_a_stray_plain_line_after_the_reply_of_the_turn_is_not_spoken(make_rig: Callable[..., Rig]) -> None:
+    voice = FakeVoice()
+    rig = make_rig(voice=voice)
+    rig.ready()
+    full = '<voice>All sent.</voice><actions>{"version": 1, "actions": []}</actions>'
+    _append(rig.transcript("s1"), _user("send it", "u1"), _reply(full, "a1", "m1"))
+    _until(lambda: len(voice.spoken) == 1)
+    _append(rig.transcript("s1"), _plain("Done.", "a2", "m2"))
+    rig.wait(lambda s: any(m.text == "Done." for m in s.messages))
+    time.sleep(0.1)
+    assert [key for key, _text, _final in voice.spoken] == ["m1"]
+
+
+def _prepare_sent(rig: Rig) -> list[str]:
+    return [text for text in rig.port.sent if text.startswith(f"{EVENT_MARKER} prepare")]
+
+
+def test_a_held_answer_gets_its_summary_ahead_and_is_said_without_a_digest(make_rig: Callable[..., Rig]) -> None:
+    voice = FakeVoice()
+    rig = make_rig(replace(ON, answer_delivery="silent"), voice=voice)
+    rig.ready()
+    rig.service._answer_ready(_ready_answer())
+    _until(lambda: len(_prepare_sent(rig)) == 1)
+    note = _prepare_sent(rig)[0]
+    assert "All done." in note and "Report" in note
+    summary = '<voice>The report is done.</voice><actions>{"version": 1, "actions": []}</actions>'
+    _append(rig.transcript("s1"), _user(note, "u1"), _reply(summary, "a1", "m1", end=True))
+    _until(lambda: rig.inbox.items()[0].summary == "The report is done.")
+    time.sleep(0.1)
+    assert voice.spoken == []  # kept, not said: the person did not ask yet
+    assert not any("report is done" in m.text for m in rig.service.snapshot().messages)
+    sent_before = len(rig.port.sent)
+    rig.service.hear_ready()
+    _until(lambda: bool(voice.spoken))
+    assert voice.spoken[0][1:] == ("The report is done.", True)
+    snapshot = rig.wait(lambda s: s.inbox == ())
+    assert any(m.text == "The report is done." for m in snapshot.messages)
+    assert len(rig.port.sent) == sent_before  # no digest: nothing was sent to the central
+    time.sleep(0.1)
+    assert len(_prepare_sent(rig)) == 1  # each answer is asked once
+
+
+def test_an_answer_without_a_summary_still_goes_in_the_digest(make_rig: Callable[..., Rig]) -> None:
+    rig = make_rig(replace(ON, answer_delivery="silent"))
+    rig.ready()
+    rig.inbox.add("c1", "Report", "All done.")
+    rig.inbox.add("c2", "Deploy", "Deployed.")
+    rig.inbox.set_summary(rig.inbox.items()[0], "The report is done.")
+    rig.service.hear_ready()
+    _until(lambda: any(text.startswith(f"{EVENT_MARKER} digest") for text in rig.port.sent))
+    digest = next(text for text in rig.port.sent if text.startswith(f"{EVENT_MARKER} digest"))
+    assert "Deployed." in digest and "All done." not in digest
+    rig.wait(lambda s: s.inbox == ())
+
+
+def test_no_summary_is_asked_while_the_person_dictates_or_in_desktop_mode(make_rig: Callable[..., Rig]) -> None:
+    rig = make_rig(replace(ON, answer_delivery="silent"))
+    rig.ready()
+    rig.busy = True
+    rig.service._answer_ready(_ready_answer())
+    rig.wait(lambda s: len(s.inbox) == 1)
+    time.sleep(0.15)
+    assert _prepare_sent(rig) == []
+    rig.busy = False
+    _until(lambda: len(_prepare_sent(rig)) == 1)
+    desktop = make_rig(replace(DESKTOP, answer_delivery="silent"))
+    desktop.ready()
+    desktop.service._answer_ready(_ready_answer())
+    desktop.wait(lambda s: len(s.inbox) == 1)
+    time.sleep(0.15)
+    assert _prepare_sent(desktop) == []  # that would type on the person's screen
+
+
+def test_a_summary_is_kept_with_its_answer_and_survives_a_restart(tmp_path: Path) -> None:
+    path = tmp_path / "inbox.json"
+    inbox = Inbox(path)
+    inbox.add("c1", "Report", "All done.")
+    item = inbox.items()[0]
+    assert item.summary == ""
+    assert inbox.set_summary(item, "  The report is done.  ")
+    assert Inbox(path).items()[0].summary == "The report is done."
+    inbox.remove([item])  # the copy read before the summary still names the same answer
+    assert inbox.items() == ()
+    assert not inbox.set_summary(item, "late")
+
+
+def test_a_late_summary_is_kept_for_its_own_answer_and_the_last_wording_wins(make_rig: Callable[..., Rig]) -> None:
+    rig = make_rig(replace(ON, answer_delivery="silent"))
+    rig.ready()
+    rig.service._answer_ready(_ready_answer())
+    _until(lambda: len(_prepare_sent(rig)) == 1)
+    first = _prepare_sent(rig)[0]
+    rig.inbox.add("c2", "Deploy", "Deployed.")
+    # The reply about the first answer comes after VoiceMate moved on to the second one.
+    _until(lambda: rig.service._preparing is not None)
+    rig.service._dispatcher.post(lambda: setattr(rig.service, "_preparing", (rig.inbox.items()[1], time.monotonic())))
+    actions = '<actions>{"version": 1, "actions": []}</actions>'
+    _append(rig.transcript("s1"), _user(first, "u1"), _reply("Let me read it.", "a1", "m1"))
+    _until(lambda: rig.inbox.items()[0].summary == "Let me read it.")
+    _append(rig.transcript("s1"), _reply(f"<voice>The report is done.</voice>{actions}", "a2", "m2", end=True))
+    _until(lambda: rig.inbox.items()[0].summary == "The report is done.")
+    assert rig.inbox.items()[1].summary == ""
+
+
+def test_the_person_speaking_during_a_summary_gets_the_reply(make_rig: Callable[..., Rig]) -> None:
+    voice = FakeVoice()
+    rig = make_rig(replace(ON, answer_delivery="silent"), voice=voice)
+    rig.ready()
+    rig.service._answer_ready(_ready_answer())
+    _until(lambda: len(_prepare_sent(rig)) == 1)
+    _append(rig.transcript("s1"), _user(_prepare_sent(rig)[0], "u1"))
+    _until(lambda: rig.service._prepare_turn)
+    rig.service.send("what time is it")
+    _until(lambda: "what time is it" in rig.port.sent)
+    actions = '<actions>{"version": 1, "actions": []}</actions>'
+    _append(rig.transcript("s1"), _reply(f"<voice>It is noon.</voice>{actions}", "a1", "m1", end=True))
+    _until(lambda: bool(voice.spoken))
+    assert voice.spoken[0][1] == "It is noon."
+
+
+def test_a_plain_line_is_spoken_when_the_turn_before_ended_ahead_of_its_text(make_rig: Callable[..., Rig]) -> None:
+    voice = FakeVoice()
+    rig = make_rig(voice=voice)
+    rig.ready()
+    rig.service._dispatcher.post(lambda: setattr(rig.service, "_turn_voiced", True))  # left over by such a turn
+    _append(rig.transcript("s1"), _user("send it", "u1"), _reply("Sending it now.", "a1", "m1"))
+    _until(lambda: bool(voice.spoken))
+    assert voice.spoken[0][1] == "Sending it now."

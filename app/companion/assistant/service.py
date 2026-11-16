@@ -78,7 +78,7 @@ from app.companion.assistant.contract import (
 )
 from app.companion.assistant.conversations import OwnedConversations, OwnedError
 from app.companion.assistant.desktop_port import DesktopConversationPort
-from app.companion.assistant.inbox import Inbox, context_entries, digest_note
+from app.companion.assistant.inbox import PREPARE_HEAD, Inbox, context_entries, digest_note, prepare_note
 from app.companion.assistant.instructions import StandingInstructions
 from app.companion.assistant.mcp_tools import VoiceMateTools
 from app.companion.assistant.notifier import (
@@ -127,10 +127,16 @@ DIRECT_ANSWER_LIMIT: Final = 1500
 PENDING_LIMIT: Final = 20  # the "Waiting for" list keeps the newest beyond this
 REASON_LIMIT: Final = 200
 DIGESTS_KEPT: Final = 3  # digests remembered in case their Desktop flash fails
+PREPARE_WAIT_S: Final = 120.0  # a summary asked ahead that did not come by then is given up
 # Marks the synthetic prompt of a "send to that conversation" command: it is never the person's words.
 _DELEGATE_MARKER: Final = "[voicemate:delegate]"
 # The reply's voice block is complete once its closing tag arrived.
 _VOICE_CLOSED: Final = re.compile(r"</voice\s*>", re.IGNORECASE)
+# The voice key of a reply's plain text, apart from the key of a <voice> block the same reply may get.
+_PLAIN_KEY: Final = "#plain"
+# The parser's note for a reply that has a <voice> block and no <actions> block.
+_NO_ACTIONS: Final = "no <actions> block"
+_NO_ACTIONS_BLOCK: Final = '<actions>\n{"version": 1, "actions": []}\n</actions>'
 # What the CLI writes for the slash command we send first, and our own synthetic prompts:
 # they are not part of the conversation.
 _INTERNAL_USER_MARKERS: Final = (
@@ -417,11 +423,17 @@ class AssistantServiceImpl:
         self._rejected_custom = ""
         self._profile_started = False  # the automatic profile check ran
         self._voiced: deque[str] = deque(maxlen=VOICED_LIMIT)  # replies whose voice block was spoken
-        self._turn_voiced = False  # a <voice> block of the turn in progress was sent to the voice
+        self._turn_voiced = False  # the reply of the turn in progress (its <voice> block) went to the voice
+        self._spoken_plain: deque[str] = deque(maxlen=VOICED_LIMIT)  # replies whose plain text was spoken
         self._reply_seq = 0  # names replies that carry no message id
         self._model_reminded = False  # the central was told its reply had no reply model; one note per streak
         self._unchecked_reply = ""  # message id of a reply that arrived live and was not handled at a turn end yet
         self._digests: dict[str, tuple[InboxEntry, ...]] = {}  # digest note -> its items, until delivered
+        self._preparing: tuple[InboxEntry, float] | None = None  # the held answer being summarized ahead, since when
+        self._prepare_tried: set[tuple[str, str]] = set()  # held answers already sent for a summary, once each
+        self._prepare_turn = False  # the central's current turn answers a prepare note: kept, not said
+        self._prepare_item: InboxEntry | None = None  # the held answer that turn is about
+        self._prepare_text = ""
         self._pending: list[PendingEntry] = []  # the "Waiting for" list (follow_up actions)
         self._turn_from_person = False  # the central's current turn answers the person's own words
         self._kept_edited: tuple[str, ...] = ()  # skill files the person edited (a .new is beside them)
@@ -987,6 +999,7 @@ class AssistantServiceImpl:
         if self._poll():
             self._publish()
         self._flush_alerts()
+        self._prepare_held()
         self._schedule_poll()
 
     def _wanted_session(self) -> str:
@@ -1023,6 +1036,11 @@ class AssistantServiceImpl:
             return False
         if event.kind == "user":
             if self._followed is None:
+                self._prepare_turn = event.text.lstrip().startswith(PREPARE_HEAD)
+                self._prepare_text = ""
+                self._prepare_item = self._prepare_target(event.text) if self._prepare_turn else None
+                self._turn_voiced = False  # a new turn: nothing of it was said yet
+            if self._followed is None:
                 # Only a turn that answers the person's own words may keep or drop a standing rule.
                 self._turn_from_person = is_person_text(event.text)
             if is_internal_user_text(event.text):
@@ -1030,6 +1048,12 @@ class AssistantServiceImpl:
             self._add_raw(_Raw("user", event.text))
             return True
         if event.kind == "assistant_text":
+            if self._prepare_turn and self._followed is None:
+                # What the central would say about a held answer: kept for "hear what's ready",
+                # neither shown nor said now (the person did not ask yet).
+                self._prepare_text = f"{self._prepare_text}\n{event.text}".strip()
+                self._prepared()
+                return False
             last = self._raw[-1] if self._raw else None
             if (
                 last is not None
@@ -1072,17 +1096,26 @@ class AssistantServiceImpl:
             return
         parsed = parse_reply(raw.text)
         if parsed.degraded:
-            # Whether a reply has a <voice> block is only known at its end: then its prose is spoken,
-            # so the person hears the answer now instead of after another turn of the model.
-            if final and parsed.spoken_fallback and not self._turn_voiced:
-                voice.speak(key, parsed.spoken_fallback, final=True, language=self._reply_language())
+            # Plain text without a <voice> block is spoken as soon as it is written, once: a line
+            # said before a slow tool call ("sending it now") is worth nothing after the call.
+            # Each line of the transcript is a whole block of text, so nothing is cut short.
+            if not parsed.spoken_fallback or key in self._spoken_plain:
+                return
+            if self._turn_voiced:
+                return  # the turn already spoke its reply; a stray line after it stays on screen
+            voice.speak(f"{key}{_PLAIN_KEY}", parsed.spoken_fallback, final=True, language=self._reply_language())
+            self._spoken_plain.append(key)
+            if final:
                 self._voiced.append(key)
             return
         if not parsed.voice_raw:
             return
         closed = _VOICE_CLOSED.search(raw.text) is not None
         voice.speak(key, parsed.voice_raw, final=final or closed, language=self._reply_language())
-        self._turn_voiced = True
+        # A <voice> block alone is a line said on the way (before a tool call), not the reply of
+        # the turn: what comes after it is still spoken.
+        if _NO_ACTIONS not in parsed.problems:
+            self._turn_voiced = True
         if final or closed:
             self._voiced.append(key)
 
@@ -1430,6 +1463,17 @@ class AssistantServiceImpl:
             self._say(line)
             self._notice(line)
             return
+        prepared = tuple(item for item in items if item.summary)
+        if prepared:
+            # Their summaries were written when they arrived: said now, with no turn of the model.
+            for item in prepared:
+                self._say_prepared(item)
+            self._held().remove(prepared)
+            items = tuple(item for item in items if not item.summary)
+            if not items:
+                self._write_context_now()
+                self._publish()
+                return
         port = self._port
         note = digest_note(items)
         if port is None or not self._running or not port.send(note):
@@ -1443,9 +1487,77 @@ class AssistantServiceImpl:
         self._write_context_now()
         self._publish()
 
+    def _say_prepared(self, item: InboxEntry) -> None:
+        key = f"held-{item.conversation_id}-{int(item.ready_at)}"
+        self._add_raw(_Raw("assistant", f"<voice>{item.summary}</voice>\n\n{_NO_ACTIONS_BLOCK}", key))
+        if self._voice is not None and self._speaks_replies():
+            self._voice.speak(key, item.summary, final=True, language=self._reply_language())
+            self._voiced.append(key)
+
+    def _prepare_held(self) -> None:
+        """Ask the central, while nobody waits for it, what it would say about a held answer.
+
+        Only VoiceMate's own conversation is asked (nothing is typed on the screen for it), only
+        while it is idle and the person is not dictating, one answer at a time and each answer
+        once: an answer that got no summary is covered by the digest, as before."""
+        now = time.monotonic()
+        if self._preparing is not None:
+            if now - self._preparing[1] < PREPARE_WAIT_S:
+                return
+            self._preparing = None
+        port = self._port
+        if (
+            port is None
+            or not self._running
+            or self._followed is not None
+            or self._away
+            or self._settings().mode != "own_session"
+            or self._port_status.state != "ready"
+            or self._person_busy()
+        ):
+            return
+        held = self._held().items()
+        self._prepare_tried &= {(item.conversation_id, item.answer) for item in held}
+        item = next(
+            (i for i in held if not i.summary and (i.conversation_id, i.answer) not in self._prepare_tried), None
+        )
+        if item is None:
+            return
+        self._prepare_tried.add((item.conversation_id, item.answer))
+        if port.send(prepare_note(item)):
+            self._preparing = (item, now)
+
+    def _prepare_target(self, note: str) -> InboxEntry | None:
+        """The held answer a prepare note in the transcript is about, by the note's own text."""
+        if self._replaying:
+            return None
+        note = note.strip()
+        return next((item for item in self._held().items() if prepare_note(item).strip() == note), None)
+
+    def _prepared(self) -> None:
+        """The central wrote (part of) its reply to a prepare note: keep what it would say.
+
+        The reply may come in pieces (a line, a tool call, then the reply itself): each piece
+        replaces what was kept, so the last wording stays, and a `<voice>` block wins over
+        plain text."""
+        item = self._prepare_item
+        if item is None or self._replaying:
+            return
+        parsed = parse_reply(self._prepare_text)
+        summary = parsed.voice_raw or parsed.spoken_fallback
+        if not summary:
+            return
+        if self._preparing is not None and self._preparing[0] == item:
+            self._preparing = None
+        if self._held().set_summary(item, summary):
+            log.info("assistant: the summary of a held answer is ready (%d characters)", len(summary))
+
     def _send_failed(self, text: str) -> None:
         """A Desktop flash failed after `send` had queued it: nothing is lost on the way."""
         log.info("assistant: a message did not reach the Desktop conversation")
+        if text.startswith(PREPARE_HEAD):
+            self._preparing = None  # no summary ahead for that answer: the digest covers it
+            return
         items = self._digests.pop(text, ())
         if items:
             self._held().restore(items)  # the digest never arrived: the answers wait again
@@ -1467,6 +1579,9 @@ class AssistantServiceImpl:
         if settings.mode == "off":
             return
         self.stop_speaking()  # a new prompt (or command) interrupts what is being said
+        # The person spoke while a summary was being written: what the central writes from here
+        # on may answer them, so it is shown and said again.
+        self._prepare_turn = False
         direct = self._direct is not None
         if settings.voice_commands:
             try:
