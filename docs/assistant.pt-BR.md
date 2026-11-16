@@ -83,6 +83,7 @@ flowchart TD
 Azul: VoiceMate; roxo: a conversa central trabalhando; verde: a resposta que chega a você.
 
 - **Achar a conversa.** Ele compara "a conversa sobre X", "a outra" ou "aquele build" com os títulos e, quando os títulos não bastam, lê as últimas mensagens das prováveis. Se duas ainda servem, fica com a de atividade mais recente naquele assunto e diz qual escolheu, para você corrigir se for o caso.
+- **Em que pé a conversa está.** Uma pergunta como "terminou?" ou "tem novidade?" é respondida pela transcrição, lida naquele momento. O `read_conversation` devolve as últimas mensagens com um estado: **working** (o turno está rodando, então a última mensagem é andamento), **finished** (o turno acabou, então a última mensagem é a resposta, tenha ou não chegado um aviso) ou **quiet** (o turno não acabou e nada foi escrito há 10 minutos). As mensagens anteriores a um resumo da conversa continuam sendo lidas.
 - **Foco.** Quando você diz "vamos voltar para a conversa sobre X", as perguntas seguintes vão para lá até você sair ("ok, voltando para você", "novo assunto").
 - **Pedidos ambíguos**, como "troca o modelo", são decididos pelo foco e pelas últimas mensagens. Ele faz uma pergunta curta só quando as duas leituras são prováveis e a errada atrapalharia alguma coisa.
 
@@ -207,6 +208,7 @@ stateDiagram-v2
 - **Fechar e reabrir o VoiceMate.** A lista é salva com o prazo de cada item e o ponto até onde cada transcrição foi lida. Quando o VoiceMate abre de novo, continua a leitura dali, então um turno que terminou com ele fechado ainda é avisado. Um item cujo prazo venceu nesse meio-tempo sai da lista com uma nota.
 - **Expiração.** Quando um item sai da lista sozinho, a central recebe uma nota e conta em poucas palavras; ela volta a observar só se você ainda quiser.
 - **Modo direto** ("falar direto com a conversa X") pausa os avisos: respostas e turnos observados vão para a caixa de entrada, e o assistente conta quando você volta.
+- **Uma mensagem enviada com a conversa trabalhando.** O Claude Code entrega a mensagem ao turno que está rodando, sem abrir um turno novo. O VoiceMate vê isso na transcrição, e o fim daquele turno é avisado como a resposta.
 - **Uma resposta dentro de uma observação.** Quando o assistente pergunta algo a uma conversa observada, a resposta vem primeiro, uma vez, e a observação continua depois. Um envio que falha nunca derruba uma observação.
 
 A lista guarda os 20 itens mais recentes.

@@ -12,7 +12,7 @@ from app.companion.assistant.cli_resume import BusyReason, ResumeError
 from app.companion.assistant.conversations import ConversationEntry, OwnedConversations, OwnedError, OwnedRecord
 from app.companion.assistant.mcp_tools import SERVER_NAME, VoiceMateTools
 from app.companion.assistant.notifier import AnswerWatcher
-from app.companion.assistant.session_reader import Message
+from app.companion.assistant.session_reader import Activity, Message
 from app.companion.win.claude_desktop import (
     AmbiguousConversation,
     ConversationMissing,
@@ -72,6 +72,9 @@ class FakeWatcher:
     def unwatch(self, conversation_id: str) -> None:
         self.unwatched.append(conversation_id)
 
+    def is_watching(self, conversation_id: str) -> bool:
+        return any(cid == conversation_id for cid, _title, _start in self.watched)
+
 
 class FakeResumer:
     def __init__(self) -> None:
@@ -123,6 +126,7 @@ class Rig:
         self.resumer = FakeResumer() if resumer else None
         self.desktop = FakeDesktop() if desktop else None
         self.excluded: list[list[str]] = []
+        self.activity = Activity(False, 1000.0)
         self.transcript = tmp_path / "desk-1.jsonl"
         self.transcript.touch()
 
@@ -140,6 +144,8 @@ class Rig:
             resumer=self.resumer,  # type: ignore[arg-type]
             find_file=lambda cid: self.transcript if cid == "desk-1" else None,
             read=lambda _path, n: [Message("user", "q"), Message("assistant", "a" * 5000)][-n:],
+            activity_of=lambda _path: self.activity,
+            now=lambda: 1030.0,
         ).server()
 
     def call(self, name: str, **arguments: object) -> tuple[str, bool]:
@@ -179,9 +185,12 @@ def test_list_conversations_leaves_out_the_central(rig: Rig) -> None:
 def test_read_conversation(rig: Rig) -> None:
     text, failed = rig.call("read_conversation", id="desk-1", last=2)
     assert not failed
-    messages = json.loads(text)
-    assert messages[0] == {"role": "user", "text": "q"}
-    assert len(messages[1]["text"]) == 4000
+    read = json.loads(text)
+    assert read["messages"][0] == {"role": "user", "text": "q"}
+    assert len(read["messages"][1]["text"]) == 4000
+    assert read["state"] == "finished" and read["seconds_since_last_write"] == 30
+    assert "is its answer" in read["status"] and "30 s ago" in read["status"]
+    assert read["voicemate_is_waiting_for_it"] is False
     assert rig.call("read_conversation", id="nope") == ("no conversation has the id nope", True)
 
 
@@ -339,3 +348,20 @@ def test_start_conversation_falls_back_to_the_new_conversation_defaults(tmp_path
     rig.call("start_conversation", title="B", prompt="p", model="haiku")
     rig.call("start_conversation", title="C", prompt="p", effort="low")
     assert [call[3:5] for call in rig.owned.calls] == [("opus", "high"), ("haiku", "high"), ("opus", "low")]
+
+
+def test_read_conversation_says_when_it_is_still_working(rig: Rig) -> None:
+    """The last message of a running turn is progress: the central must not take it for the end."""
+    rig.activity = Activity(True, 1018.0)
+    rig.watcher.watch("desk-1", "Desk")
+    read = json.loads(rig.call("read_conversation", id="desk-1")[0])
+    assert read["state"] == "working"
+    assert "working right now" in read["status"] and "not its final answer" in read["status"]
+    assert read["voicemate_is_waiting_for_it"] is True
+
+
+def test_read_conversation_tells_a_long_silence_from_work_and_from_an_answer(rig: Rig) -> None:
+    rig.activity = Activity(True, 1030.0 - 1500.0)
+    read = json.loads(rig.call("read_conversation", id="desk-1")[0])
+    assert read["state"] == "quiet" and read["seconds_since_last_write"] == 1500
+    assert "25 min" in read["status"] and "did not answer yet" in read["status"]

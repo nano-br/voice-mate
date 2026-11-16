@@ -83,6 +83,7 @@ flowchart TD
 Azul: VoiceMate; morado: la conversación central trabajando; verde: la respuesta que recibes.
 
 - **Encontrar la conversación.** Compara "la conversación sobre X", "la otra" o "ese build" con los títulos y, cuando los títulos no bastan, lee los últimos mensajes de las probables. Si aún encajan dos, se queda con la de actividad más reciente en ese tema y te dice cuál eligió, para que lo corrijas si hace falta.
+- **En qué punto está la conversación.** Una pregunta como "¿terminó?" o "¿hay novedades?" se responde con la transcripción, leída en ese momento. `read_conversation` devuelve los últimos mensajes con un estado: **working** (el turno está en marcha, así que el último mensaje es un avance), **finished** (el turno terminó, así que el último mensaje es la respuesta, haya llegado o no un aviso) o **quiet** (el turno no terminó y no se ha escrito nada en 10 minutos). Los mensajes anteriores a un resumen de la conversación se siguen leyendo.
 - **Foco.** Cuando dices "volvamos a la conversación sobre X", las preguntas siguientes van allí hasta que salgas ("vale, vuelvo contigo", "cambio de tema").
 - **Peticiones ambiguas**, como "cambia el modelo", se deciden por el foco y los últimos mensajes. Solo hace una pregunta corta cuando las dos lecturas son probables y la equivocada estropearía algo.
 
@@ -207,6 +208,7 @@ stateDiagram-v2
 - **Cerrar y volver a abrir VoiceMate.** La lista se guarda con el plazo de cada entrada y el punto hasta el que se leyó cada transcripción. Cuando VoiceMate vuelve a arrancar, sigue leyendo desde ahí, así que un turno que terminó con VoiceMate cerrado se avisa igual. Una entrada cuyo plazo venció entretanto sale de la lista con una nota.
 - **Caducidad.** Cuando una entrada sale sola de la lista, la central recibe una nota y te lo cuenta en pocas palabras; solo vuelve a vigilarla si aún lo quieres.
 - **El modo directo** ("hablar directamente con la conversación X") pausa los avisos: las respuestas y los turnos vigilados van a la bandeja de entrada, y el asistente te los cuenta al volver.
+- **Un mensaje enviado mientras la conversación trabaja.** Claude Code se lo entrega al turno en marcha en lugar de abrir uno nuevo. VoiceMate lo ve en la transcripción, y el final de ese turno se avisa como la respuesta.
 - **Una respuesta dentro de una vigilancia.** Cuando el asistente le pregunta algo a una conversación vigilada, la respuesta llega primero, una vez, y la vigilancia sigue después. Un envío que falla nunca anula una vigilancia.
 
 La lista conserva las 20 entradas más recientes.

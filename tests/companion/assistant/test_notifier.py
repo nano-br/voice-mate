@@ -370,3 +370,47 @@ def test_the_thread_loop_delivers(tmp_path: Path) -> None:
     finally:
         rig.watcher.stop()
     assert len(rig.notes) == 1
+
+
+def queued(text: str, **attachment: object) -> dict[str, object]:
+    body: dict[str, object] = {"type": "queued_command", "prompt": text, "commandMode": "prompt", **attachment}
+    return {"type": "attachment", "attachment": body}
+
+
+def test_a_prompt_taken_in_keeps_what_the_turn_already_wrote(tmp_path: Path) -> None:
+    rig = Rig(tmp_path)
+    path = rig.file("c1")
+    rig.watcher.watch("c1", "Research")
+    append(
+        path, user("long job"), assistant("Result: 42. ", "m1"), queued("thanks"), assistant("Welcome.", "m1", end=True)
+    )
+    assert rig.watcher.poll() == 1
+    assert "Result: 42." in rig.notes[0]
+
+
+def test_a_prompt_taken_in_by_a_running_turn_gets_its_answer_reported(tmp_path: Path) -> None:
+    """A conversation in the middle of a turn takes the prompt in without a turn of its own: the end
+    of that turn is the answer. It used to pass unseen, and the central said nothing had come."""
+    rig = Rig(tmp_path)
+    path = rig.file("c1")
+    append(path, user("long job"), assistant("Working. ", "m0"))
+    rig.watcher.watch("c1", "Research")
+    append(path, assistant("Still at it. ", "m1"))
+    assert rig.watcher.poll() == 0
+    append(path, queued("how long?", origin={"kind": "human"}, humanTurn=True), assistant("Two minutes. ", "m2"))
+    assert rig.watcher.poll() == 0  # the turn goes on
+    append(path, assistant("Done: all merged.", "m3", end=True))
+    assert rig.watcher.poll() == 1
+    assert rig.notes == [answer_note("Research", "c1", "Done: all merged.")]
+    assert rig.watcher.watching() == []
+
+
+def test_a_task_notification_in_a_running_turn_is_not_the_prompt(tmp_path: Path) -> None:
+    rig = Rig(tmp_path)
+    path = rig.file("c1")
+    append(path, user("long job"), assistant("Working. ", "m0"))
+    rig.watcher.watch("c1", "Research")
+    append(path, queued("<task-notification>", origin={"kind": "task-notification"}))
+    append(path, assistant("That was the old turn.", "m1", end=True))
+    assert rig.watcher.poll() == 0
+    assert rig.watcher.watching() == ["c1"]

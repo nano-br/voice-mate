@@ -1034,6 +1034,19 @@ class AssistantServiceImpl:
             # and heard them: the window keeps them (emptying it looked like a restart).
             self._summarized()
             return False
+        if event.kind == "user" and event.queued:
+            # Taken in by the turn that was running: it starts no turn, so what that turn is (an
+            # answer to the person, a summary written ahead) stays as it was. Words of the person
+            # are answered aloud; a note in the middle of a turn never makes it the person's.
+            if self._followed is None:
+                from_person = is_person_text(event.text)
+                if from_person and not self._prepare_turn:
+                    self._turn_voiced = False
+                self._turn_from_person = self._turn_from_person and from_person
+            if is_internal_user_text(event.text):
+                return False
+            self._add_raw(_Raw("user", event.text))
+            return True
         if event.kind == "user":
             if self._followed is None:
                 self._prepare_turn = event.text.lstrip().startswith(PREPARE_HEAD)

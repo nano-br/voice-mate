@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,7 +31,13 @@ from app.companion.assistant.cli_resume import CliResumer, ResumeError, busy_tex
 from app.companion.assistant.conversations import ConversationEntry, OwnedConversations, OwnedError, list_entries
 from app.companion.assistant.mcp_server import JsonObject, McpServer, Tool, ToolError
 from app.companion.assistant.notifier import AnswerWatcher
-from app.companion.assistant.session_reader import Message, find_session_file, last_messages
+from app.companion.assistant.session_reader import (
+    Activity,
+    Message,
+    activity,
+    find_session_file,
+    last_messages,
+)
 from app.companion.win.claude_desktop import ConversationSender, DesktopError
 
 log = logging.getLogger(__name__)
@@ -39,6 +46,9 @@ SERVER_NAME: Final = "voicemate"
 SERVER_VERSION: Final = "1.0.0"
 MESSAGE_LIMIT: Final = 4000  # characters of one message read_conversation returns
 READ_LIMIT: Final = 50
+# A turn that did not end and wrote nothing for this long: a long tool call, a permission
+# prompt nobody answered, or a client that was closed. Not the same as working, nor as finished.
+QUIET_S: Final = 600.0
 
 _DESKTOP_REASONS: Final[dict[str, str]] = {
     "window_missing": "the Claude Desktop window was not found (is the app open?)",
@@ -71,6 +81,8 @@ class _Deps:
     resumer: CliResumer | None
     find_file: Callable[[str], Path | None]
     read: Callable[[Path, int], list[Message]]
+    activity: Callable[[Path], Activity]
+    now: Callable[[], float]
 
 
 class VoiceMateTools:
@@ -90,6 +102,8 @@ class VoiceMateTools:
         resumer: CliResumer | None = None,
         find_file: Callable[[str], Path | None] = find_session_file,
         read: Callable[[Path, int], list[Message]] = last_messages,
+        activity_of: Callable[[Path], Activity] = activity,
+        now: Callable[[], float] = time.time,
     ) -> None:
         self._d = _Deps(
             owned,
@@ -101,6 +115,8 @@ class VoiceMateTools:
             resumer,
             find_file,
             read,
+            activity_of,
+            now,
         )
 
     def server(self) -> McpServer:
@@ -125,7 +141,11 @@ class VoiceMateTools:
             ),
             Tool(
                 "read_conversation",
-                "Read the last messages (role and text) of a conversation.",
+                "Read where a conversation is and its last messages (role and text). `state` is working (its "
+                "turn is running: the last message is progress, not the answer), finished (its turn ended: the "
+                "last assistant message is its answer, whether or not VoiceMate told you about it) or quiet (its "
+                "turn did not end but nothing was written for a while). `status` says the same in words. Read "
+                "this before telling the person that a conversation has, or has not, answered.",
                 {
                     "type": "object",
                     "properties": {"id": conv_id, "last": {"type": "integer", "default": 10}},
@@ -194,7 +214,41 @@ class VoiceMateTools:
             raise ToolError(f"no conversation has the id {conversation_id}")
         last = max(1, min(int(args["last"]), READ_LIMIT))
         messages = self._d.read(path, last)
-        return _json([{"role": m.role, "text": _clip(m.text)} for m in messages])
+        state, status, quiet_s = self._state(self._d.activity(path))
+        return _json(
+            {
+                "state": state,
+                "status": status,
+                "seconds_since_last_write": quiet_s,
+                "voicemate_is_waiting_for_it": self._d.watcher.is_watching(conversation_id),
+                "messages": [{"role": m.role, "text": _clip(m.text)} for m in messages],
+            }
+        )
+
+    def _state(self, act: Activity) -> tuple[str, str, int]:
+        """`(state, the same in words for the central, seconds since the transcript changed)`."""
+        quiet_s = max(0, int(self._d.now() - act.last_write)) if act.last_write else 0
+        ago = _ago(quiet_s)
+        if not act.turn_open:
+            return (
+                "finished",
+                f"It finished its turn {ago} ago and is not working now. The last assistant message below is "
+                "its answer: tell the person what it says, even if no VoiceMate note about it reached you.",
+                quiet_s,
+            )
+        if quiet_s >= QUIET_S:
+            return (
+                "quiet",
+                f"Its turn did not end, but it wrote nothing for {ago}: a long tool call may be running, it may "
+                "be waiting for a permission prompt, or its program was closed. Say that; it did not answer yet.",
+                quiet_s,
+            )
+        return (
+            "working",
+            f"It is working right now (it last wrote {ago} ago) and its turn did not end. The last message below "
+            "is progress, not its final answer. Do not tell the person it stopped or is stuck.",
+            quiet_s,
+        )
 
     def _send(self, args: JsonObject) -> str:
         conversation_id, text = str(args["id"]), str(args["text"])
@@ -311,6 +365,14 @@ class VoiceMateTools:
         self._d.watcher.unwatch(conversation_id)
         self._d.owned.stop(conversation_id)
         return "stopped"
+
+
+def _ago(seconds: int) -> str:
+    if seconds < 90:
+        return f"{seconds} s"
+    if seconds < 5400:
+        return f"{round(seconds / 60)} min"
+    return f"{round(seconds / 3600)} h"
 
 
 def _clip(text: str, limit: int = MESSAGE_LIMIT) -> str:

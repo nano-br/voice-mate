@@ -260,7 +260,9 @@ def test_last_messages_joins_reply_lines_and_limits(tmp_path: Path) -> None:
     assert sr.last_messages(path, 0) == []
 
 
-def test_last_messages_starts_after_last_compact_boundary(tmp_path: Path) -> None:
+def test_last_messages_keeps_what_was_said_before_a_compaction(tmp_path: Path) -> None:
+    """A conversation that was just summarized is still the same conversation: a reader that saw
+    only what follows took one hard at work for one that said a single line and stopped."""
     path = _write(
         tmp_path / "s.jsonl",
         _user("before"),
@@ -270,7 +272,7 @@ def test_last_messages_starts_after_last_compact_boundary(tmp_path: Path) -> Non
         _user("after", uuid="u2"),
         _assistant("new answer", mid="m2", uuid="a2"),
     )
-    assert [m.text for m in sr.last_messages(path, 10)] == ["after", "new answer"]
+    assert [m.text for m in sr.last_messages(path, 10)] == ["before", "old answer", "after", "new answer"]
 
 
 def test_last_messages_missing_file(tmp_path: Path) -> None:
@@ -382,3 +384,108 @@ def test_find_sessions_by_title_blank_or_unknown(claude_dir: Path) -> None:
     assert sr.find_sessions_by_title("") == []
     assert sr.find_sessions_by_title("   ") == []
     assert sr.find_sessions_by_title("Y") == []
+
+
+# --- a prompt taken in by a running turn -------------------------------------
+
+
+def _queued(prompt: object, uuid: str = "q1", **attachment: object) -> str:
+    body = {"type": "queued_command", "prompt": prompt, "commandMode": "prompt", **attachment}
+    return _line(type="attachment", uuid=uuid, timestamp="t-" + uuid, attachment=body)
+
+
+def test_a_prompt_taken_in_by_a_running_turn_is_a_user_event() -> None:
+    [event] = sr.parse_line(_queued("how is it going?", origin={"kind": "human"}, humanTurn=True))
+    assert (event.kind, event.text, event.queued) == ("user", "how is it going?", True)
+    [blocks] = sr.parse_line(_queued([{"type": "text", "text": "in blocks"}]))
+    assert (blocks.text, blocks.queued) == ("in blocks", True)
+    [plain] = sr.parse_line(_user("a turn of its own"))
+    assert plain.queued is False
+
+
+def test_a_task_notification_and_other_attachments_are_not_prompts() -> None:
+    assert sr.parse_line(_queued("<task-notification>", origin={"kind": "task-notification"})) == []
+    assert sr.parse_line(_queued("x", commandMode="task-notification")) == []
+    assert sr.parse_line(_queued("")) == []
+    assert sr.parse_line(_line(type="attachment", attachment={"type": "environment"})) == []
+    assert sr.parse_line(_line(type="attachment", attachment="odd")) == []
+    assert sr.parse_line(_queued("side", isSidechain=True)[:-1] + ', "isSidechain": true}') == []
+
+
+def test_last_messages_show_a_prompt_taken_in_by_a_running_turn(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path / "s.jsonl",
+        _user("start"),
+        _assistant("on it", mid="m1"),
+        _queued("and the other thing?"),
+        _assistant("both done", mid="m2", uuid="a2", stop="end_turn"),
+    )
+    assert [(m.role, m.text) for m in sr.last_messages(path, 10)] == [
+        ("user", "start"),
+        ("assistant", "on it"),
+        ("user", "and the other thing?"),
+        ("assistant", "both done"),
+    ]
+
+
+# --- where a conversation is --------------------------------------------------
+
+
+def _tool_use(uuid: str = "t1") -> str:
+    message = {
+        "id": "mt",
+        "role": "assistant",
+        "content": [{"type": "tool_use", "name": "Bash"}],
+        "stop_reason": "tool_use",
+    }
+    return _line(type="assistant", uuid=uuid, message=message)
+
+
+def test_activity_tells_a_running_turn_from_a_finished_one(tmp_path: Path) -> None:
+    path = _write(tmp_path / "s.jsonl", _user("go"), _assistant("working on it", mid="m1"), _tool_use())
+    os.utime(path, (500.0, 500.0))
+    assert sr.activity(path) == sr.Activity(True, 500.0)
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(_assistant("done", mid="m2", uuid="a2", stop="end_turn") + "\n")
+        f.write(_line(type="ai-title", aiTitle="A title") + "\n")  # written after the end: not a turn
+    assert sr.activity(path).turn_open is False
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(_line(type="system", subtype="stop_hook_summary") + "\n")
+        f.write(_queued("one more thing") + "\n")
+    assert sr.activity(path).turn_open is True
+
+
+def test_activity_of_a_tool_result_a_summary_and_a_missing_file(tmp_path: Path) -> None:
+    result = [{"type": "tool_result", "content": "ok"}]
+    path = _write(tmp_path / "s.jsonl", _assistant("done", stop="end_turn"), _user(result, uuid="u2"))
+    assert sr.activity(path).turn_open is True  # the tool answered: the turn goes on
+    path = _write(tmp_path / "t.jsonl", _assistant("done", stop="end_turn"), _user("summary", isCompactSummary=True))
+    assert sr.activity(path).turn_open is False
+    assert sr.activity(tmp_path / "nope.jsonl") == sr.Activity(False, 0.0)
+    assert sr.activity(_write(tmp_path / "e.jsonl", "not json")).turn_open is False
+
+
+def test_activity_reads_only_the_end_of_a_big_transcript(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sr, "ACTIVITY_TAIL_BYTES", 400)
+    path = _write(tmp_path / "s.jsonl", _user("go"), _tool_use(), _assistant("x" * 2000, stop="end_turn"))
+    assert sr.activity(path).turn_open is False  # the last line alone is longer than the window
+    path = _write(tmp_path / "t.jsonl", _assistant("done", stop="end_turn"), _user("y" * 2000, uuid="u2"))
+    assert sr.activity(path).turn_open is True
+
+
+def test_activity_of_a_turn_that_ended_without_an_answer(tmp_path: Path) -> None:
+    stopped = _user("[Request interrupted by user for tool use]", uuid="u2")
+    assert sr.activity(_write(tmp_path / "a.jsonl", _user("go"), _tool_use(), stopped)).turn_open is False
+    cut = _assistant("too long", stop="max_tokens")
+    assert sr.activity(_write(tmp_path / "b.jsonl", _user("go"), cut)).turn_open is False
+    failed = _line(type="assistant", isApiErrorMessage=True, message={"role": "assistant", "content": []})
+    assert sr.activity(_write(tmp_path / "c.jsonl", _user("go"), failed)).turn_open is False
+    command = _user("<command-name>/model</command-name>", uuid="u3")
+    path = _write(tmp_path / "d.jsonl", _assistant("done", stop="end_turn"), command)
+    assert sr.activity(path).turn_open is False  # a local command is not a turn
+
+
+def test_activity_when_the_closing_line_of_a_message_is_not_its_last(tmp_path: Path) -> None:
+    closing = _assistant("", mid="m1", stop="end_turn")
+    path = _write(tmp_path / "s.jsonl", _user("go"), closing, _assistant("the answer", mid="m1", uuid="a2"))
+    assert sr.activity(path).turn_open is False
