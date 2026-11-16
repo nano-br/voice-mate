@@ -340,7 +340,7 @@ La skill también documenta las acciones `remember`, `forget` y `follow_up` con 
 |---|---|
 | `assistant-instructions.json` | Tus instrucciones permanentes |
 | `assistant-waiting.json` | La lista "Esperando", con los plazos y el punto hasta el que se leyó cada transcripción |
-| `assistant-inbox.json` | Las respuestas guardadas para "Escuchar lo que está listo", con su texto |
+| `assistant-inbox.json` | Las respuestas guardadas para "Escuchar lo que está listo", con su texto y, una vez escrito, el resumen que dirá el asistente |
 
 ## 🩺 Problemas comunes
 

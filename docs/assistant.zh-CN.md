@@ -340,7 +340,7 @@ flowchart LR
 |---|---|
 | `assistant-instructions.json` | 你的长期指令 |
 | `assistant-waiting.json` | “等待中”列表，包括时限以及每份记录读到的位置 |
-| `assistant-inbox.json` | 为“收听已就绪的内容”保存的回答，含正文 |
+| `assistant-inbox.json` | 为“收听已就绪的内容”保存的回答，含正文，以及写好后助手将要朗读的摘要 |
 
 ## 🩺 故障排查
 

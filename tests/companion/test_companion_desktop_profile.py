@@ -472,8 +472,10 @@ def fake_backend(
     windows: list[FakeControl], profile: DesktopProfile | None = None, sent: list[str] | None = None
 ) -> cd.UiaBackend:
     backend = cd.UiaBackend(profile)
+    by_handle = {window.NativeWindowHandle: window for window in windows}
+    backend._handles = lambda: list(by_handle)
     backend._auto = SimpleNamespace(
-        GetRootControl=lambda: FakeControl("PaneControl", children=windows),
+        ControlFromHandle=by_handle.get,
         UIAutomationInitializerInThread=nullcontext,
         SendKeys=lambda keys, **_: (sent if sent is not None else []).append(keys),
         GetFocusedControl=lambda: FakeControl("EditControl", "ProseMirror"),
@@ -507,6 +509,30 @@ def test_a_hostile_window_matcher_cannot_reach_another_program(images: dict[int,
     assert fake_backend([editor, desktop], hostile).find_window() is None
     wide = parse_profile(as_bytes(variant(9, window={"class_contains": "o"})))
     assert fake_backend([editor, desktop], wide).find_window() is None  # only top-level windows, always
+
+
+def test_only_the_claude_windows_are_asked_for_their_accessibility_object(images: dict[int, str]) -> None:
+    # Another program's window that is slow to answer must not delay the search: it is never asked.
+    claude = FakeControl("WindowControl", "Chrome_WidgetWin_1", "", "Claude", 10)
+    images[10] = r"C:\Program Files\WindowsApps\Claude_4.29.0.0_x64__pzs8sxrjxfjjc\app\claude.exe"
+    images[11] = r"C:\Windows\System32\slow.exe"
+    backend = fake_backend([claude])
+    asked: list[int] = []
+
+    def control(handle: int) -> FakeControl | None:
+        asked.append(handle)
+        return claude if handle == 10 else None
+
+    backend._handles = lambda: [11, 10]
+    backend._auto.ControlFromHandle = control
+    assert backend.find_window() is claude
+    assert asked == [10]
+
+
+def test_a_claude_window_that_is_not_a_window_control_is_skipped(images: dict[int, str]) -> None:
+    pane = FakeControl("PaneControl", "Chrome_WidgetWin_1", "", "Claude", 12)
+    images[12] = r"C:\Program Files\WindowsApps\Claude_4.29.0.0_x64__pzs8sxrjxfjjc\app\claude.exe"
+    assert fake_backend([pane]).find_window() is None
 
 
 class _WatchedWindow(FakeControl):

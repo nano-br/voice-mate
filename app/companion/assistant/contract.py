@@ -44,6 +44,7 @@ class InboxEntry:
     title: str
     ready_at: float  # time.time()
     answer: str
+    summary: str = ""  # what the assistant will say about it, written ahead (may be empty)
 
 
 @dataclass(frozen=True)

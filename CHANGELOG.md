@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The assistant says one short line as soon as it gets a request that needs work ("Got it, sending it
+  now"), VoiceMate speaks that line when it is written instead of at the end of the turn, and the
+  result is spoken when the work is done (skill version 6).
+- With VoiceMate's own conversation, an answer held for "Hear what's ready" gets its summary written
+  while nobody waits: asking to hear it speaks the summary at once, with no turn of the model.
+
+### Fixed
+
+- Finding the Claude Desktop window no longer waits for every other window on the screen: only the
+  windows of the Claude app are asked for their accessibility tree. With a program that answers
+  slowly, each message to a Desktop conversation used to take many seconds longer.
+
 ## [0.5.1] - 2026-11-15
 
 ### Fixed

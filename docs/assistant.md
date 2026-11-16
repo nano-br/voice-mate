@@ -331,7 +331,7 @@ The skill also documents the `remember`, `forget` and `follow_up` actions with `
 |---|---|
 | `assistant-instructions.json` | Your standing instructions |
 | `assistant-waiting.json` | The "Waiting for" list, with deadlines and where each transcript was read up to |
-| `assistant-inbox.json` | Answers held for "Hear what's ready", with their text |
+| `assistant-inbox.json` | Answers held for "Hear what's ready", with their text and, once written, the summary the assistant will say |
 
 ## 🩺 Troubleshooting
 
