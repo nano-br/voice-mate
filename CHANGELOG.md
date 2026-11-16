@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A conversation the assistant is waiting for no longer stops in silence. When its turn dies on an
+  error, the assistant is told and tells you at once, even when answers are held for later. When it
+  writes nothing for 10 minutes in the middle of a turn, or summarizes its context three times in
+  the same turn, the assistant is told once, reads it and reports (skill version 8).
+- A turn that ends on an error, on the output limit or on a refusal counts as ended. It used to look
+  like a turn still running.
+- An assistant that writes its actions without the `version` envelope is told once to read its skill
+  again, and an empty actions object is no longer logged as a problem.
+
 ## [0.5.2] - 2026-11-16
 
 ### Changed

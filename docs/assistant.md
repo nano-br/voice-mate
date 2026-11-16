@@ -201,6 +201,7 @@ stateDiagram-v2
 - **Closing and reopening VoiceMate.** The list is saved with each deadline and the point where each transcript was read up to. When VoiceMate starts again, it goes on reading from there, so a turn that finished while it was closed is still reported. An entry whose time ran out meanwhile leaves the list with one note.
 - **Expiry.** When an entry leaves the list by itself, the central gets one note and tells you in a few words; it watches again only if you still want it.
 - **Direct mode** ("talk directly to the conversation X") pauses the reports: answers and watched turns go to the inbox, and the assistant reports them when you come back.
+- **A conversation that stops getting anywhere.** While the assistant waits for a conversation, VoiceMate tells it when the turn dies on an error (at once, also when answers are held for later), when the turn has written nothing for 10 minutes, and when the conversation summarized its context three times in the same turn. The last two are told once; the assistant reads the conversation and tells you what it found.
 - **A message sent while the conversation works.** Claude Code hands it to the running turn instead of starting a new one. VoiceMate sees that in the transcript, and the end of that turn is reported as the answer.
 - **A reply inside a watch.** When the assistant asks a watched conversation something, the answer comes first, once, and the watch goes on after it. A message that fails to send never drops a watch.
 

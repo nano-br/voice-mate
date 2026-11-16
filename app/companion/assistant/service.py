@@ -115,7 +115,7 @@ from app.companion.runtime import Dispatcher, SerialExecutor, TimerHandle
 from app.companion.win.claude_desktop import ConversationSender, DesktopError, DesktopSender
 from app.companion.win.desktop_profile import DesktopProfile, ProfileError, ProfileManager, UpdateResult
 from app.i18n import _
-from app.protocol.assistant_reply import Action, parse_reply
+from app.protocol.assistant_reply import ACTIONS_WITHOUT_ENVELOPE, Action, parse_reply
 
 log = logging.getLogger(__name__)
 
@@ -310,6 +310,17 @@ def setting_note(key: str, value: object, applied: bool, reason: str = "") -> st
     return f"{EVENT_MARKER} Setting change refused: {key} = {value!r} ({reason})."
 
 
+def envelope_note() -> str:
+    """For the central after actions written without the envelope: it lost part of the skill
+    (its conversation was summarized), so it reads the skill again before it loses more."""
+    return (
+        f"{EVENT_MARKER} Your last reply wrote its actions without the envelope. VoiceMate applied them this time. "
+        "Your conversation was probably summarized: read the SKILL.md of the voicemate-assistant skill again now, "
+        'and from the next reply on write the actions as {"version": 1, "actions": [{"type": "..."}]}, with an '
+        "empty list when there is nothing to do. This note is not from the person and needs no spoken answer."
+    )
+
+
 def reply_model_note() -> str:
     """For the central after a reply without the reply model (it lost it, for example when the
     conversation was summarized): what happened and what to do, so the person hears the answer."""
@@ -428,6 +439,7 @@ class AssistantServiceImpl:
         self._reply_seq = 0  # names replies that carry no message id
         self._model_reminded = False  # the central was told its reply had no reply model; one note per streak
         self._unchecked_reply = ""  # message id of a reply that arrived live and was not handled at a turn end yet
+        self._error_reply = ""  # message id of an error Claude Code wrote in place of a reply
         self._digests: dict[str, tuple[InboxEntry, ...]] = {}  # digest note -> its items, until delivered
         self._preparing: tuple[InboxEntry, float] | None = None  # the held answer being summarized ahead, since when
         self._prepare_tried: set[tuple[str, str]] = set()  # held answers already sent for a summary, once each
@@ -1096,6 +1108,8 @@ class AssistantServiceImpl:
                     self._turn_voiced = False
         elif event.kind == "error":
             log.warning("assistant: the session reported an error: %s", event.text[:300])
+            if event.message_id:
+                self._error_reply = event.message_id  # the turn ends with this error, not with a reply
         return False
 
     def _voice_reply(self, raw: _Raw, *, final: bool) -> None:
@@ -1145,12 +1159,15 @@ class AssistantServiceImpl:
                 log.exception("assistant: action %s failed", action.type)
         if parsed.problems:
             log.info("assistant reply problems: %s", "; ".join(parsed.problems))
-        if not parsed.degraded:
+        bare = ACTIONS_WITHOUT_ENVELOPE in parsed.problems
+        if last.message_id and last.message_id == self._error_reply:
+            return  # an error of the service, not a reply that lost the model
+        if not parsed.degraded and not bare:
             self._model_reminded = False
-        elif last.text.strip() and not self._model_reminded and self._speaks_replies():
+        elif last.text.strip() and not self._model_reminded and (bare or self._speaks_replies()):
             # One note per streak of such replies: a central that keeps missing the model is not asked again.
             self._model_reminded = True
-            self._send_event(reply_model_note())
+            self._send_event(reply_model_note() if parsed.degraded else envelope_note())
 
     def _speaks_replies(self) -> bool:
         settings = self._settings()
