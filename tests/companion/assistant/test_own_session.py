@@ -83,6 +83,8 @@ class Rig:
             self.children.append(child)
             return child
 
+        port_kwargs.setdefault("alive", lambda _pid: True)
+        port_kwargs.setdefault("owner_wait_s", 0.0)
         self.port = OwnSessionPort(
             SETTINGS,
             cwd=self.cwd,
@@ -317,6 +319,27 @@ def test_a_live_owner_means_a_new_session(tmp_path: Path) -> None:
     rig = Rig(tmp_path, sessions=lambda: live)
     SessionStateStore(rig.state_path).save(SessionRecord("old-id", "", str(rig.cwd)))
     assert "--resume" not in rig.start().command
+
+
+def test_an_owner_that_is_gone_does_not_cost_the_conversation(tmp_path: Path) -> None:
+    """VoiceMate restarted while the conversation worked: the killed process left its entry."""
+    live = {"old-id": LiveSession("old-id", 123, "busy")}
+    rig = Rig(tmp_path, sessions=lambda: live, alive=lambda _pid: False)
+    SessionStateStore(rig.state_path).save(SessionRecord("old-id", "", str(rig.cwd)))
+    assert rig.start().command[-2:] == ["--resume", "old-id"]
+
+
+def test_an_owner_that_is_ending_is_waited_for(tmp_path: Path) -> None:
+    live = {"old-id": LiveSession("old-id", 123, "busy")}
+    asked: list[int] = []
+
+    def sessions() -> dict[str, LiveSession]:
+        asked.append(1)
+        return live if len(asked) < 3 else {}
+
+    rig = Rig(tmp_path, sessions=sessions, owner_wait_s=5.0)
+    SessionStateStore(rig.state_path).save(SessionRecord("old-id", "", str(rig.cwd)))
+    assert rig.start().command[-2:] == ["--resume", "old-id"]
 
 
 def test_no_transcript_or_another_cwd_means_a_new_session(tmp_path: Path) -> None:

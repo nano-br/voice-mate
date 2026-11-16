@@ -75,6 +75,10 @@ class FakeOwned:
         self.sent: list[tuple[str, str]] = []
         self.modes: list[str] = []
         self.stop_s = 0.0
+        self.renamed: Callable[[str, str], None] | None = None
+
+    def on_rename(self, listener: Callable[[str, str], None]) -> None:
+        self.renamed = listener
 
     def set_permission_mode(self, mode: str) -> None:
         self.modes.append(mode)
@@ -1875,3 +1879,93 @@ def test_actions_without_the_envelope_get_the_central_to_read_the_skill_again(ma
     _append(rig.transcript("s1"), _plain(bare, "a2", "m2"))
     time.sleep(0.3)
     assert reminders() == 1
+
+
+def _watching(rig: Rig, session_id: str, title: str = "Build") -> None:
+    """The central asks to watch `session_id`, and the watch exists."""
+    _append(
+        rig.transcript("s1"),
+        _turn(
+            [{"type": "follow_up", "session_id": session_id, "title": title, "reason": "news", "watch": True}],
+            "a1",
+            "m1",
+        ),
+    )
+    rig.wait(lambda s: len(s.pending) == 1)
+    _until(lambda: rig.service._watcher.is_observing(session_id))
+
+
+def _died(text: str, uuid: str, mid: str) -> str:
+    """The line Claude Code writes in place of a reply when the turn dies on an error."""
+    return json.dumps(
+        {
+            "type": "assistant",
+            "uuid": uuid,
+            "isApiErrorMessage": True,
+            "message": {
+                "id": mid,
+                "role": "assistant",
+                "model": "<synthetic>",
+                "content": [{"type": "text", "text": text}],
+                "stop_reason": "stop_sequence",
+            },
+        }
+    )
+
+
+def test_a_watched_conversation_that_goes_quiet_is_told_to_the_central(make_rig: Callable[..., Rig]) -> None:
+    """Through the whole service: the note has to reach the central's port, not only be built."""
+    rig = make_rig(replace(ON, answer_delivery="silent"))
+    rig.ready()
+    other = rig.transcript("s2")
+    _append(other, _user("long job", "o1"), _assistant("working", "o2", "mo"))
+    rig.service._watcher._quiet_s = 0.2
+    _watching(rig, "s2")
+    sent = len(rig.port.sent)
+    _until(lambda: len(rig.port.sent) > sent)
+    note = rig.port.sent[-1]
+    assert note.startswith(EVENT_MARKER) and '"Build"' in note and "s2" in note
+    assert "written nothing" in note
+
+
+def test_a_watched_conversation_that_dies_on_an_error_is_told_even_when_silent(make_rig: Callable[..., Rig]) -> None:
+    rig = make_rig(replace(ON, answer_delivery="silent"))
+    rig.ready()
+    other = rig.transcript("s2")
+    _append(other, _user("long job", "o1"), _assistant("working", "o2", "mo"))
+    _watching(rig, "s2")
+    sent = len(rig.port.sent)
+    _append(other, _died("The context is full.", "o3", "me"))
+    _until(lambda: len(rig.port.sent) > sent)
+    note = rig.port.sent[-1]
+    assert note.startswith(EVENT_MARKER) and "stopped with an error" in note and "The context is full." in note
+    assert rig.inbox.items() == ()  # told now, not held for later
+
+
+def test_a_watched_conversation_that_goes_in_circles_is_told_to_the_central(make_rig: Callable[..., Rig]) -> None:
+    rig = make_rig()
+    rig.ready()
+    other = rig.transcript("s2")
+    _append(other, _user("long job", "o1"), _assistant("working", "o2", "mo"))
+    _watching(rig, "s2")
+    sent = len(rig.port.sent)
+    summary = json.dumps({"type": "system", "subtype": "compact_boundary"})
+    _append(other, summary, summary, summary)
+    _until(lambda: len(rig.port.sent) > sent)
+    assert "summarized" in rig.port.sent[-1]
+
+
+def test_what_the_assistant_waits_for_follows_a_conversation_that_changes_id(make_rig: Callable[..., Rig]) -> None:
+    rig = make_rig()
+    rig.ready()
+    _append(rig.transcript("s2"), _user("long job", "o1"), _assistant("working", "o2", "mo"))
+    _watching(rig, "s2")
+    assert rig.owned.renamed is not None
+    new = rig.transcript("s3")
+    rig.owned.renamed("s2", "s3")
+    rig.wait(lambda s: [item.conversation_id for item in s.pending] == ["s3"])
+    assert rig.service._watcher.watching() == ["s3"]
+    sent = len(rig.port.sent)
+    _append(new, _user("go on", "n1"), _turn([], "n2", "mn"))
+    _until(lambda: len(rig.port.sent) > sent)
+    assert '"Build"' in rig.port.sent[-1]

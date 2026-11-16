@@ -29,6 +29,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 from collections import deque
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, replace
@@ -37,7 +38,7 @@ from typing import Any, Final, Protocol
 
 from app.companion.assistant.contract import PortListener, PortStatus
 from app.companion.assistant.mcp_server import McpServer
-from app.companion.assistant.session_reader import LiveSession, find_session_file, live_sessions
+from app.companion.assistant.session_reader import LiveSession, find_session_file, live_sessions, pid_alive
 from app.companion.contract import AssistantEffort, AssistantModel, AssistantPermission, AssistantSettings
 
 log = logging.getLogger(__name__)
@@ -50,6 +51,7 @@ INITIALIZE_REQUEST_ID: Final = "voicemate-initialize"
 SET_MODEL_REQUEST_PREFIX: Final = "voicemate-set-model-"
 STOP_WAIT_S: Final = 4.0
 KILL_WAIT_S: Final = 2.0
+OWNER_WAIT_S: Final = 5.0  # for the process that had the session before to finish ending
 TAIL_LINES: Final = 8  # last non-JSON output lines kept for the log when the child dies
 # The CLI aliases of the three models (the CLI picks the current version of each).
 MODEL_ALIASES: Final[dict[AssistantModel, str]] = {"haiku": "haiku", "sonnet": "sonnet", "opus": "opus"}
@@ -324,6 +326,8 @@ class OwnSessionPort:
         permission_mode: AssistantPermission | None = None,
         mcp_servers: Iterable[McpServer] = (),
         new_session_id: Callable[[], str] | None = None,
+        alive: Callable[[int], bool] = pid_alive,
+        owner_wait_s: float = OWNER_WAIT_S,
     ) -> None:
         if store is None:
             if state_path is None:
@@ -345,6 +349,8 @@ class OwnSessionPort:
         self._find_cli = find_cli_fn
         self._environ = environ
         self._sessions = sessions
+        self._alive = alive
+        self._owner_wait_s = owner_wait_s
         self._transcript_exists = transcript_exists
         self._lock = threading.RLock()
         self._status = PortStatus()
@@ -479,10 +485,24 @@ class OwnSessionPort:
         if not self._transcript_exists(record.session_id):
             log.info("assistant: session %s has no transcript, starting a new one", record.session_id)
             return ""
-        if record.session_id in self._sessions():
+        if self._owned_elsewhere(record.session_id):
             log.info("assistant: session %s is owned by a live process, starting a new one", record.session_id)
             return ""
         return record.session_id
+
+    def _owned_elsewhere(self, session_id: str) -> bool:
+        """True when a running process has that session. A process that was killed leaves its
+        registry entry behind, and one that is ending takes a moment (VoiceMate restarting
+        while the conversation worked): neither owns the session, and taking them for an
+        owner would throw the conversation away for a new, empty one."""
+        deadline = time.monotonic() + self._owner_wait_s
+        while True:
+            owner = self._sessions().get(session_id)
+            if owner is None or (owner.pid is not None and not self._alive(owner.pid)):
+                return False
+            if time.monotonic() >= deadline:
+                return True
+            time.sleep(0.2)
 
     def _write(self, message: dict[str, object]) -> bool:
         with self._lock:

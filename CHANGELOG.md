@@ -7,14 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-11-16
+
 ### Fixed
 
 - A conversation the assistant is waiting for no longer stops in silence. When its turn dies on an
   error, the assistant is told and tells you at once, even when answers are held for later. When it
   writes nothing for 10 minutes in the middle of a turn, or summarizes its context three times in
   the same turn, the assistant is told once, reads it and reports (skill version 8).
-- A turn that ends on an error, on the output limit or on a refusal counts as ended. It used to look
-  like a turn still running.
+- A turn that ends on an error counts as ended. It used to look like a turn still running.
+- A conversation the assistant opened comes back after VoiceMate restarts while it was working.
+  The process that was just closed could still be listed as its owner, and the conversation came
+  back as a new, empty one. When a conversation does continue under a new id, what the assistant
+  waits for follows it.
 - An assistant that writes its actions without the `version` envelope is told once to read its skill
   again, and an empty actions object is no longer logged as a problem.
 
@@ -542,7 +547,8 @@ Development happened on `main` and in seven pull requests before this first rele
 - [#7](https://github.com/nano-br/voice-mate/pull/7): choose the dictation language in
   the companion.
 
-[Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.5.3...HEAD
+[0.5.3]: https://github.com/nano-br/voice-mate/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/nano-br/voice-mate/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/nano-br/voice-mate/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/nano-br/voice-mate/compare/v0.4.0...v0.5.0
