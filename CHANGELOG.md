@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-11-16
+
 ### Changed
 
 - The assistant says one short line as soon as it gets a request that needs work ("Got it, sending it
@@ -529,7 +531,8 @@ Development happened on `main` and in seven pull requests before this first rele
 - [#7](https://github.com/nano-br/voice-mate/pull/7): choose the dictation language in
   the companion.
 
-[Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/nano-br/voice-mate/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/nano-br/voice-mate/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/nano-br/voice-mate/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/nano-br/voice-mate/compare/v0.3.0...v0.4.0
