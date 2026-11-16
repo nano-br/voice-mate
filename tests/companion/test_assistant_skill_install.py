@@ -245,7 +245,7 @@ def _install_v3(tmp_path: Path, language: PackagedLanguage) -> Path:
 
 
 @pytest.mark.parametrize("language", ["en", "pt-BR"])
-def test_a_version_3_install_moves_to_version_4_unless_the_person_edited_it(
+def test_a_version_3_install_moves_to_the_current_version_unless_the_person_edited_it(
     tmp_path: Path, language: PackagedLanguage
 ) -> None:
     skill_dir = _install_v3(tmp_path, language)
@@ -262,7 +262,7 @@ def test_a_version_3_install_moves_to_version_4_unless_the_person_edited_it(
         packaged_skill_dir(language) / "config.example.json"
     ).read_bytes()
     sidecar = json.loads((skill_dir / ".voicemate-managed.json").read_text(encoding="utf-8"))
-    assert sidecar["skill_version"] == skill_install.SKILL_VERSION == 4
+    assert sidecar["skill_version"] == skill_install.SKILL_VERSION
     assert "config.example.json" not in sidecar["files"] or sidecar["files"]["config.example.json"] != (
         skill_install._sha256(edited.read_bytes())
     )

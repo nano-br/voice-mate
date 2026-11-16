@@ -76,7 +76,7 @@ El motor de VoiceMate suele correr dentro de WSL2, así que `127.0.0.1` en la di
 - `languages`: códigos ISO 639-1 que transcribe el proveedor. Vacío o ausente significa cualquier idioma. Cuando el idioma de transcripción de VoiceMate no está en la lista, VoiceMate no envía grabaciones al proveedor (mira los errores más abajo).
 - `sample_rates`: al menos un entero positivo. VoiceMate graba a 16000 Hz y envía 16000 cuando está en la lista; en otro caso remuestrea a la primera frecuencia de la lista.
 - `formats`: debe incluir `pcm_s16le` (mono, little endian), el único formato que VoiceMate envía en la versión 1.
-- `max_seconds` (opcional): la grabación más larga que acepta el proveedor. VoiceMate nunca envía una más larga.
+- `max_seconds` (opcional): la grabación más larga que acepta el proveedor. VoiceMate nunca envía una más larga: una grabación mayor se corta en el momento más silencioso cerca del límite y se envía en partes, una petición por cada una, y los textos se unen.
 - `features`: reservado para versiones posteriores. VoiceMate ignora los valores que no conoce.
 
 ### `GET /v1/health`
@@ -153,7 +153,8 @@ Una URL no válida se informa en el registro y se usa el motor integrado.
 - Inaccesible, `503 not_ready` y `5xx`: esa grabación la transcribe el motor integrado de VoiceMate (el que usaría sin un proveedor, cargado la primera vez que hace falta y conservado para fallos posteriores). El proveedor se deja en paz unos 10 segundos y luego se vuelve a probar. Solo se registra el primer episodio de una caída, así que una caída larga no inunda el registro.
 - `401`, `unsupported_format` y `unsupported_language` no mejoran reintentando, así que VoiceMate los informa una vez y usa el motor integrado hasta que cambie la configuración.
 - Un `4xx` en `GET /v1/info` significa "no es un proveedor `voicemate-stt`" (o no es la versión 1). Es permanente hasta que cambie la configuración.
-- `409 busy`, `audio_too_long` y `bad_request` afectan solo a esa grabación: la transcribe el motor integrado, y la siguiente vuelve a ir al proveedor.
+- Una respuesta `409 busy` se vuelve a pedir durante unos 4 segundos, porque un proveedor suele estar ocupado con algo corto.
+- `409 busy` (cuando persiste), `audio_too_long` y `bad_request` afectan solo a esa grabación: la transcribe el motor integrado, y la siguiente vuelve a ir al proveedor.
 - Con `--no-stt-fallback`, el motor integrado no transcribe nada: la grabación falla con el error del proveedor, igual que fallaría un motor integrado defectuoso, y la siguiente grabación vuelve a preguntarle al proveedor.
 - El token nunca se escribe en el registro.
 

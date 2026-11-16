@@ -104,6 +104,8 @@ class FakeBackend:
         self.copy_on_key: tuple[str, str] | None = None  # (key, what another program copies after it)
         self.minimize_error: Exception | None = None
         self.copy_after_set: str | None = None  # copied by another program right after our text went on
+        self.steal_once = False  # the steal happens on the first such key only (the person clicked once)
+        self.enter_misses = 0  # how many Enter presses do nothing (the key did not reach the prompt)
 
     def session(self) -> Control:
         return nullcontext()
@@ -177,6 +179,8 @@ class FakeBackend:
             self.open_title = self.switch_on_key[1]
         if keys == self.steal_on_key:
             self.foreground_handle = 555
+            if self.steal_once:
+                self.steal_on_key = None
         if self.copy_on_key and keys == self.copy_on_key[0]:
             self.clipboard.copy(self.copy_on_key[1])
         if keys == "{Delete}":
@@ -184,17 +188,22 @@ class FakeBackend:
         elif keys == "{Ctrl}v" and self.paste_lands:
             self.prompt = str(self.clipboard.content)
         elif keys == "{Enter}":
+            if self.enter_misses > 0:
+                self.enter_misses -= 1
+                return
             self.sent.append(self.prompt)
             self.prompt = ""
 
 
 def make(
-    titles: list[str] | None = None, open_title: str = TITLE
+    titles: list[str] | None = None, open_title: str = TITLE, attempts: int = 1
 ) -> tuple[DesktopSender, FakeBackend, FakeClipboard, Clock]:
     clock = Clock()
     clipboard = FakeClipboard()
     backend = FakeBackend(clipboard, titles, open_title)
-    sender = DesktopSender(backend, clipboard, sleep=clock.sleep, monotonic=clock.monotonic, lock_wait_s=0.2)
+    sender = DesktopSender(
+        backend, clipboard, sleep=clock.sleep, monotonic=clock.monotonic, lock_wait_s=0.2, attempts=attempts
+    )
     return sender, backend, clipboard, clock
 
 
@@ -248,6 +257,56 @@ def test_empty_title_or_text_is_a_value_error(title: str, text: str) -> None:
     with pytest.raises(ValueError):
         sender.send(title, text)
     assert backend.log == []
+
+
+# --- a flash that loses the focus is typed again ------------------------------------------------
+
+
+def test_a_click_elsewhere_between_the_paste_and_enter_is_typed_again() -> None:
+    sender, backend, clipboard, _ = make(attempts=3)
+    backend.steal_on_key = "{Ctrl}v"  # pasted, then the person clicked another window
+    backend.steal_once = True
+    sender.send(TITLE, "oi")
+    assert backend.sent == ["oi"]  # once: the second attempt cleared the draft first
+    assert backend.keys == ["{Ctrl}a", "{Delete}", "{Ctrl}v", "{Ctrl}a", "{Delete}", "{Ctrl}v", "{Enter}"]
+    assert clipboard.content == "previous"
+    assert backend.foreground_handle == 111
+
+
+def test_an_enter_that_did_not_take_is_typed_again() -> None:
+    sender, backend, _, _ = make(attempts=3)
+    backend.enter_misses = 1
+    sender.send(TITLE, "oi")
+    assert backend.sent == ["oi"]
+    assert backend.keys.count("{Enter}") == 2
+
+
+def test_an_enter_that_never_takes_is_an_error_not_a_sent_message() -> None:
+    sender, backend, clipboard, _ = make(attempts=3)
+    backend.enter_misses = 99
+    with pytest.raises(FocusLost, match="still in the prompt box"):
+        sender.send(TITLE, "oi")
+    assert backend.sent == []
+    assert backend.keys.count("{Enter}") == 3
+    assert clipboard.content == "previous"
+
+
+def test_the_focus_that_never_comes_gives_up_after_the_attempts() -> None:
+    sender, backend, _, _ = make(attempts=3)
+    backend.focus_ok = False
+    with pytest.raises(FocusLost):
+        sender.send(TITLE, "oi")
+    assert backend.log.count("activate") == 3
+    assert backend.keys == []
+
+
+def test_a_copy_by_the_person_is_not_typed_again() -> None:
+    sender, backend, clipboard, _ = make(attempts=3)
+    backend.copy_after_set = "copied by the person"
+    with pytest.raises(FocusLost, match="before the paste"):
+        sender.send(TITLE, "oi")
+    assert backend.log.count("activate") == 1  # their clipboard is not overwritten by a second attempt
+    assert clipboard.content == "copied by the person"
 
 
 # --- refusals: nothing is typed ----------------------------------------------------------------

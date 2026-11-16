@@ -37,6 +37,13 @@ _BLOCK = re.compile(
 )
 # A closing tag cut in the middle ("</actio") left at the end of a truncated body.
 _PARTIAL_CLOSE = re.compile(r"</[A-Za-z]*\s*\Z")
+# For a reply without a <voice> block: its prose is spoken, so Markdown marks must not be read out.
+_MD_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+_MD_CODE = re.compile(r"```.*?(```|\Z)", re.DOTALL)
+_MD_URL = re.compile(r"https?://\S+")
+_MD_MARKS = re.compile(r"[*`|]+|^\s*[#>]+|(?<!\w)_+|_+(?!\w)", re.MULTILINE)
+_SENTENCE_END = re.compile(r"[.!?…](?=\s|\Z)")
+FALLBACK_VOICE_LIMIT: Final = 600  # characters of prose spoken for a reply without a <voice> block
 # Single-word bracket tags such as [laugh] or [/whisper]; "[see note 2]" is not one.
 _EXPRESSION = re.compile(r"\[/?[^\W\d_]+\]")
 _TAG_BEFORE_PUNCT = re.compile(r"\s*\[/?[^\W\d_]+\](?=\s*[,.;:!?])")
@@ -56,7 +63,8 @@ class ParsedReply:
     voice_raw: str  # the voice block as written, expression tags kept
     display: str
     actions: tuple[Action, ...] = ()
-    degraded: bool = False  # no <voice> block: the text is shown, not spoken
+    degraded: bool = False  # no <voice> block: the prose is shown, and spoken as `spoken_fallback`
+    spoken_fallback: str = ""  # degraded only: the start of the prose, Markdown marks removed
     problems: tuple[str, ...] = ()
 
 
@@ -88,12 +96,22 @@ def _parse(text: str) -> ParsedReply:
         blocks.setdefault(match.group(1).lower(), body)
 
     if "voice" not in blocks:
+        # The person still gets the answer: the blocks that are there are honored, the prose is
+        # shown without the raw <actions> JSON, and its start is offered for speaking.
+        degraded_problems = ["no <voice> block"]
+        degraded_actions: tuple[Action, ...] = ()
+        if "actions" in blocks:
+            degraded_actions = _parse_actions(blocks["actions"], degraded_problems)
+        prose = _BLOCK.sub("", text).strip()
+        shown = "\n\n".join(part for part in (prose, blocks.get("display", "")) if part)
         return ParsedReply(
             voice="",
             voice_raw="",
-            display=text.strip(),
+            display=shown,
+            actions=degraded_actions,
             degraded=True,
-            problems=("no <voice> block",),
+            spoken_fallback=plain_speech(prose or blocks.get("display", "")),
+            problems=tuple(degraded_problems),
         )
 
     problems: list[str] = []
@@ -114,20 +132,34 @@ def _parse(text: str) -> ParsedReply:
     )
 
 
+def plain_speech(text: str, limit: int = FALLBACK_VOICE_LIMIT) -> str:
+    """`text` as something to say: Markdown marks removed, one line, cut at a sentence end near `limit`."""
+    prose = _MD_URL.sub(" ", _MD_LINK.sub(r"\1", _MD_CODE.sub(" ", text)))
+    spoken = " ".join(_MD_MARKS.sub(" ", prose).split())
+    if len(spoken) <= limit:
+        return spoken
+    ends = [match.end() for match in _SENTENCE_END.finditer(spoken, 0, limit)]
+    return spoken[: ends[-1]] if ends else spoken[:limit].rsplit(" ", 1)[0]
+
+
 def _parse_actions(raw: str, problems: list[str]) -> tuple[Action, ...]:
     try:
         data = json.loads(raw)
     except (ValueError, RecursionError):
         problems.append("actions is not valid JSON")
         return ()
-    if not isinstance(data, dict):
+    entries: object
+    if isinstance(data, list):
+        entries = data  # the bare list of actions, without the envelope: what was meant is clear
+    elif not isinstance(data, dict):
         problems.append("actions is not a JSON object")
         return ()
-    version = data.get("version")
-    if isinstance(version, bool) or version != ACTIONS_VERSION:
-        problems.append(f"unsupported actions version: {version!r}")
-        return ()
-    entries = data.get("actions")
+    else:
+        version = data.get("version")
+        if isinstance(version, bool) or version != ACTIONS_VERSION:
+            problems.append(f"unsupported actions version: {version!r}")
+            return ()
+        entries = data.get("actions")
     if not isinstance(entries, list):
         problems.append("actions has no list")
         return ()
@@ -142,5 +174,7 @@ def _parse_actions(raw: str, problems: list[str]) -> tuple[Action, ...]:
             problems.append(f"dropped unknown action type: {kind!r}")
             continue
         params = {key: value for key, value in entry.items() if key != "type"}
+        if "session_id" not in params and "conversation_id" in params:
+            params["session_id"] = params.pop("conversation_id")  # the name the conversation tools use
         parsed.append(Action(type=kind, params=params))  # type: ignore[arg-type]
     return tuple(parsed)

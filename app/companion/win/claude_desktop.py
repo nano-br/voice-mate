@@ -64,6 +64,8 @@ Control = Any
 
 LOCK_WAIT_S: Final = 30.0  # the packaged profile's timeouts.lock_wait_s
 MAX_CLIPBOARD_BYTES: Final = 32 * 1024 * 1024
+FLASH_ATTEMPTS: Final = 3  # a flash that loses the focus (a click elsewhere mid-way) is typed again
+FLASH_RETRY_WAIT_S: Final = 0.15
 
 DesktopErrorCode = Literal[
     "window_missing", "conversation_missing", "ambiguous", "focus_lost", "locked", "busy", "unavailable"
@@ -94,6 +96,10 @@ class AmbiguousConversation(DesktopError):
 
 class FocusLost(DesktopError):
     code = "focus_lost"
+
+
+class ClipboardTaken(FocusLost):
+    """Another program (or the person) copied something mid-flash: the clipboard is theirs."""
 
 
 class ScreenLocked(DesktopError):
@@ -206,8 +212,10 @@ class DesktopSender:
         monotonic: Callable[[], float] = time.monotonic,
         lock_wait_s: float | None = None,
         profile: ProfileSource = None,
+        attempts: int = FLASH_ATTEMPTS,
     ) -> None:
         self._profile_source = profile
+        self._attempts = max(1, attempts)
         self._tls = threading.local()  # the profile one operation runs with (it does not change midway)
         self._backend = backend if backend is not None else UiaBackend(self._operation_profile)
         self._clipboard = clipboard if clipboard is not None else Win32Clipboard()
@@ -270,7 +278,7 @@ class DesktopSender:
             raise DesktopBusy("another message is being typed into the Claude Desktop")
         try:
             with self._backend.session():
-                self._flash(profile, title, text)
+                self._flash_with_retries(profile, title, text)
         except DesktopError:
             raise
         except OSError as exc:
@@ -332,6 +340,28 @@ class DesktopSender:
         if focus and not self._wait(profile, self._backend.focus_in_prompt, timeouts.focus_wait_s):
             raise FocusLost("the keyboard focus is not in the prompt box")
 
+    def _flash_with_retries(self, profile: DesktopProfile, title: str, text: str) -> None:
+        """The person clicking elsewhere mid-flash must not lose the message: a flash that lost the
+        focus starts over (the draft is cleared first, so nothing is typed twice). A clipboard the
+        person changed is theirs: that flash is not repeated."""
+        for attempt in range(1, self._attempts + 1):
+            try:
+                self._flash(profile, title, text)
+                return
+            except ClipboardTaken:
+                raise
+            except FocusLost as exc:
+                if attempt == self._attempts:
+                    raise
+                log.info(
+                    "desktop: flash to %r lost the focus (%s), attempt %d of %d",
+                    title,
+                    exc.detail,
+                    attempt,
+                    self._attempts,
+                )
+                self._sleep(FLASH_RETRY_WAIT_S)
+
     def _flash(self, profile: DesktopProfile, title: str, text: str) -> None:
         backend = self._backend
         timeouts = profile.timeouts
@@ -360,6 +390,7 @@ class DesktopSender:
                     profile, window, title, "submit", lambda: self._check_clipboard(still_ours, "before Enter")
                 )
                 self._wait(profile, lambda: not backend.prompt_text(window).strip(), timeouts.submit_wait_s)
+                self._check_submitted(profile, window, text)
             finally:
                 self._restore_clipboard(saved, ours)
         finally:
@@ -388,7 +419,22 @@ class DesktopSender:
 
     def _check_clipboard(self, ours: int, when: str) -> None:
         if self._clipboard.sequence() != ours:
-            raise FocusLost(f"another program changed the clipboard {when}")
+            raise ClipboardTaken(f"another program changed the clipboard {when}")
+
+    def _check_submitted(self, profile: DesktopProfile, window: Control, text: str) -> None:
+        """Enter that did not take leaves our text in the prompt box: that is a lost flash, not a sent one."""
+        paste = profile.paste
+        if len(text) > paste.verify_max_chars:
+            return  # a long paste is not prompt text (see `_wait_pasted`): nothing to compare
+        head = _squash(text)[: paste.verify_head_chars]
+
+        def gone() -> bool:
+            return head not in _squash(self._backend.prompt_text(window))
+
+        # A box that is only slow to empty gets one more wait: typing again a message that was
+        # sent would send it twice.
+        if not gone() and not self._wait(profile, gone, profile.timeouts.submit_wait_s):
+            raise FocusLost("the message is still in the prompt box after Enter")
 
     def _restore_clipboard(self, saved: object, ours: int | None) -> None:
         """Put the old content back, but only while the clipboard still holds our text: a copy

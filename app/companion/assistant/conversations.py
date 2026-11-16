@@ -47,6 +47,7 @@ from app.companion.contract import AssistantEffort, AssistantPermission, Assista
 log = logging.getLogger(__name__)
 
 OWNED_LIMIT: Final = 4  # VoiceMate-owned processes alive at once
+PROMPT_GRACE_S: Final = 3.0  # a conversation that got a prompt this recently is not parked to make room
 STOP_ALL_WAIT_S: Final = 9.0  # at quit, for all of them together (each one stops in about 8 s at worst)
 REGISTRY_NAME: Final = "conversations.json"
 REGISTRY_VERSION: Final = 1
@@ -246,6 +247,8 @@ class OwnedConversations:
         self._records: dict[str, OwnedRecord] = {r.id: r for r in self._registry.load()}
         self._ports: dict[str, OwnedPort] = {}
         self._starting: set[str] = set()  # ids whose process is starting (a reserved slot each)
+        self._used: dict[str, float] = {}  # when each one last got a prompt (never: resumed without one)
+        self._prompted: dict[str, float] = {}  # the same on the monotonic clock, for `PROMPT_GRACE_S`
         self._closed = False  # stop_all ran: nothing starts any more
 
     # --- queries -------------------------------------------------------------------------------
@@ -317,7 +320,7 @@ class OwnedConversations:
         if chosen is not None and not chosen.is_dir():
             raise OwnedError("invalid", f"the folder {chosen} does not exist")
         conversation_id = self._new_id()
-        self._reserve(conversation_id)
+        self._reserve(conversation_id, make_room=True)
         try:
             return self._start_reserved(conversation_id, title, prompt, model, effort_value, chosen)
         finally:
@@ -350,13 +353,14 @@ class OwnedConversations:
     def send(self, conversation_id: str, text: str) -> None:
         """Write a prompt; a conversation that is not running is resumed with it."""
         record = self._require(conversation_id)
-        with self._lock:
+        with self._lock:  # held while the prompt is written: the conversation is not parked under it
             port = self._ports.get(record.id)
-        if port is not None and self.alive(record.id):
-            if not port.send(text):
-                raise OwnedError("not_running", f"the conversation {record.title!r} is not accepting prompts")
-            return
-        self._reserve(record.id)
+            if port is not None and self.alive(record.id):
+                if not port.send(text):
+                    raise OwnedError("not_running", f"the conversation {record.title!r} is not accepting prompts")
+                self._touch(record.id)
+                return
+        self._reserve(record.id, make_room=True)
         try:
             self._update(replace(record, active=True))
             self._run(record, text)
@@ -379,6 +383,8 @@ class OwnedConversations:
         self._update(replace(record, active=False))
         with self._lock:
             port = self._ports.pop(record.id, None)
+            self._used.pop(record.id, None)
+            self._prompted.pop(record.id, None)
         if port is not None:
             port.stop()
 
@@ -414,17 +420,43 @@ class OwnedConversations:
             raise OwnedError("unknown", f"no VoiceMate conversation has the id {conversation_id}")
         return record
 
-    def _reserve(self, conversation_id: str) -> None:
-        """Take a process slot for `conversation_id` (check and take under one lock)."""
+    def _touch(self, conversation_id: str) -> None:
+        with self._lock:
+            self._used[conversation_id] = self._clock()
+            self._prompted[conversation_id] = time.monotonic()
+
+    def _just_prompted(self, conversation_id: str) -> bool:
+        """A prompt was written a moment ago: its turn may not show as running yet."""
+        return time.monotonic() - self._prompted.get(conversation_id, -PROMPT_GRACE_S) < PROMPT_GRACE_S
+
+    def _reserve(self, conversation_id: str, *, make_room: bool = False) -> None:
+        """Take a process slot for `conversation_id` (check and take under one lock). At the limit,
+        `make_room` parks the conversation that has been idle the longest: its process stops, its
+        record stays, and the next prompt to it resumes it with its whole history."""
+        parked: OwnedPort | None = None
         with self._lock:
             if self._closed:
                 raise OwnedError("not_running", "VoiceMate is quitting")
             if conversation_id in self._starting:
                 raise OwnedError("not_running", "that conversation is starting already")
-            running = sum(1 for i in self._ports if i != conversation_id and self.alive(i))
-            if running + len(self._starting) >= OWNED_LIMIT:
-                raise OwnedError("limit", f"{OWNED_LIMIT} conversations are already running: stop one first")
+            running = [i for i in self._ports if i != conversation_id and self.alive(i)]
+            if len(running) + len(self._starting) >= OWNED_LIMIT:
+                idle = [i for i in running if self.state(i) == "idle" and not self._just_prompted(i)]
+                if not make_room:
+                    idle = []
+                if not idle:
+                    titles = ", ".join(repr(self._records[i].title) for i in running if i in self._records)
+                    raise OwnedError(
+                        "limit",
+                        f"{OWNED_LIMIT} conversations are already running and none is idle ({titles}): "
+                        "send the request to one of them, or stop one first",
+                    )
+                oldest = min(idle, key=lambda i: self._used.get(i, 0.0))
+                parked = self._ports.pop(oldest)
+                log.info("assistant: conversation %s parked to make room (a prompt resumes it)", oldest)
             self._starting.add(conversation_id)
+        if parked is not None:
+            self._stop_port(parked)
 
     def _release(self, conversation_id: str) -> None:
         with self._lock:
@@ -447,6 +479,8 @@ class OwnedConversations:
             closed = self._closed
             if not closed:
                 self._ports[conversation_id] = port
+                if first_prompt:
+                    self._touch(conversation_id)
         if closed:  # VoiceMate quit while it started: no child outlives it
             self._stop_port(port)
             raise OwnedError("not_running", "VoiceMate is quitting")
@@ -467,6 +501,9 @@ class OwnedConversations:
             port = self._ports.pop(old_id, None)
             if port is not None:
                 self._ports[new_id] = port
+            for uses in (self._used, self._prompted):
+                if old_id in uses:
+                    uses[new_id] = uses.pop(old_id)
             self._save()
         log.info("assistant: conversation %s continues as %s", old_id, new_id)
 

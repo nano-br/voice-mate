@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from app.companion.assistant import conversations as conversations_module
 from app.companion.assistant.contract import PortListener, PortStatus
 from app.companion.assistant.conversations import (
     OWNED_LIMIT,
@@ -151,6 +152,57 @@ def test_at_most_the_limit_runs(rig: Rig) -> None:
     assert err.value.code == "limit"
     rig.owned.stop("id-0")
     assert rig.owned.start("one more", "p")
+
+
+def test_a_start_at_the_limit_parks_the_one_idle_the_longest(rig: Rig, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(conversations_module, "PROMPT_GRACE_S", 0.0)
+    for n in range(OWNED_LIMIT):
+        rig.owned.start(f"c{n}", "p")
+    for port in rig.ports[:3]:
+        port.state = PortStatus(state="ready")  # their turns ended: idle
+    rig.owned.send("id-0", "again")  # used after the others
+    new_id = rig.owned.start("one more", "p")
+    assert rig.ports[1].state.state == "stopped"  # id-1: idle and not used for the longest
+    assert rig.owned.alive(new_id) and rig.owned.alive("id-0") and rig.owned.alive("id-2")
+    assert rig.owned.record("id-1").active is True  # type: ignore[union-attr]
+    rig.ports[2].state = PortStatus(state="ready")
+    rig.owned.send("id-1", "back")  # a prompt resumes the parked one (and parks another idle one)
+    assert rig.ports[-1].spec.first_prompt == "back"
+    assert rig.owned.alive("id-1")
+
+
+def test_the_limit_error_names_the_busy_conversations(rig: Rig) -> None:
+    for n in range(OWNED_LIMIT):
+        rig.owned.start(f"c{n}", "p")
+    with pytest.raises(OwnedError, match="none is idle.*'c0'.*send the request to one of them"):
+        rig.owned.start("one more", "p")
+
+
+def test_a_conversation_that_just_got_a_prompt_is_not_parked(rig: Rig) -> None:
+    for n in range(OWNED_LIMIT):
+        rig.owned.start(f"c{n}", "p")
+    for port in rig.ports:
+        port.state = PortStatus(state="ready")  # the turn of the prompt may not show as running yet
+    with pytest.raises(OwnedError, match="none is idle"):
+        rig.owned.start("one more", "p")
+    assert all(port.state.state == "ready" for port in rig.ports)
+
+
+def test_a_conversation_resumed_without_a_prompt_is_parked_first(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(conversations_module, "PROMPT_GRACE_S", 0.0)
+    records = [OwnedRecord(f"r{n}", f"t{n}", str(tmp_path), "sonnet", "medium", created=float(n)) for n in range(3)]
+    OwnedRegistry(tmp_path / REGISTRY_NAME).save(records)
+    rig = Rig(tmp_path)
+    rig.owned.resume_all()
+    rig.owned.start("new", "p")
+    for port in rig.ports:
+        port.state = PortStatus(state="ready")
+    rig.owned.send("r2", "used")
+    rig.owned.start("another", "p")
+    stopped = [port.spec.record.id for port in rig.ports if port.state.state == "stopped"]
+    assert len(stopped) == 1 and stopped[0] in ("r0", "r1")  # never the ones that got a prompt
 
 
 def _in_thread(errors: list[str], call: object) -> threading.Thread:

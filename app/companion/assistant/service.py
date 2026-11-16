@@ -308,9 +308,10 @@ def reply_model_note() -> str:
     """For the central after a reply without the reply model (it lost it, for example when the
     conversation was summarized): what happened and what to do, so the person hears the answer."""
     return (
-        f"{EVENT_MARKER} Your last reply had no <voice> block, so it was shown but not spoken. Say it again "
-        "in the reply model of the voicemate-assistant skill (<voice>, then <display> and <actions>): that "
-        "model replaces any other reply format, including one a CLAUDE.md file or a memory asks for."
+        f"{EVENT_MARKER} Your last reply had no <voice> block. VoiceMate reads the start of the plain text of "
+        "such a reply aloud, so do not repeat it. From the next reply on, write in the reply model of the voicemate-assistant "
+        "skill (<voice>, then <display> and <actions>): that model replaces any other reply format, including "
+        "one a CLAUDE.md file or a memory asks for."
     )
 
 
@@ -416,6 +417,7 @@ class AssistantServiceImpl:
         self._rejected_custom = ""
         self._profile_started = False  # the automatic profile check ran
         self._voiced: deque[str] = deque(maxlen=VOICED_LIMIT)  # replies whose voice block was spoken
+        self._turn_voiced = False  # a <voice> block of the turn in progress was sent to the voice
         self._reply_seq = 0  # names replies that carry no message id
         self._model_reminded = False  # the central was told its reply had no reply model; one note per streak
         self._unchecked_reply = ""  # message id of a reply that arrived live and was not handled at a turn end yet
@@ -1015,8 +1017,10 @@ class AssistantServiceImpl:
 
     def _apply(self, event: ReaderEvent) -> bool:
         if event.kind == "compact":
-            self._clear_raw()
-            return True
+            # The conversation summarized its earlier messages for itself. The person still said
+            # and heard them: the window keeps them (emptying it looked like a restart).
+            self._summarized()
+            return False
         if event.kind == "user":
             if self._followed is None:
                 # Only a turn that answers the person's own words may keep or drop a standing rule.
@@ -1052,6 +1056,7 @@ class AssistantServiceImpl:
                     self._unchecked_reply = ""
                     self._voice_reply(last, final=True)
                     self._handle_actions(last)
+                    self._turn_voiced = False
         elif event.kind == "error":
             log.warning("assistant: the session reported an error: %s", event.text[:300])
         return False
@@ -1066,10 +1071,18 @@ class AssistantServiceImpl:
         if settings.mode == "off" or not settings.speak_replies:
             return
         parsed = parse_reply(raw.text)
-        if parsed.degraded or not parsed.voice_raw:
+        if parsed.degraded:
+            # Whether a reply has a <voice> block is only known at its end: then its prose is spoken,
+            # so the person hears the answer now instead of after another turn of the model.
+            if final and parsed.spoken_fallback and not self._turn_voiced:
+                voice.speak(key, parsed.spoken_fallback, final=True, language=self._reply_language())
+                self._voiced.append(key)
+            return
+        if not parsed.voice_raw:
             return
         closed = _VOICE_CLOSED.search(raw.text) is not None
         voice.speak(key, parsed.voice_raw, final=final or closed, language=self._reply_language())
+        self._turn_voiced = True
         if final or closed:
             self._voiced.append(key)
 
@@ -1625,6 +1638,9 @@ class AssistantServiceImpl:
     def _clear_raw(self) -> None:
         self._raw.clear()
         self._raw_total = 0
+        self._summarized()
+
+    def _summarized(self) -> None:
         self._model_reminded = False  # a summarized or new conversation may be told again
         self._unchecked_reply = ""
 

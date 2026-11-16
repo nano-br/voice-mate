@@ -939,6 +939,9 @@ def test_a_reply_without_the_reply_model_is_asked_again_once_per_streak(make_rig
     _append(rig.transcript("s1"), json.dumps({"type": "system", "subtype": "compact_boundary"}))
     _append(rig.transcript("s1"), _plain("After the summary.", "a5", "m5"))
     _until(lambda: reminders() == 3)
+    # ... and the window keeps what was said before the summary.
+    snapshot = rig.wait(lambda s: any(m.text == "After the summary." for m in s.messages))
+    assert any(m.text == "Lost it again." for m in snapshot.messages)
 
 
 def test_an_old_reply_without_the_reply_model_is_not_judged_again(make_rig: Callable[..., Rig]) -> None:
