@@ -376,7 +376,8 @@ class AnswerWatcher:
         for event in watch.tail.poll():
             if event.kind == "user":
                 watch.saw_prompt = started = True
-                watch.answer, watch.answer_id = "", None
+                if not event.queued:  # taken in by the running turn: what it wrote so far still counts
+                    watch.answer, watch.answer_id = "", None
             elif event.kind == "assistant_text" and started:
                 same = event.message_id is not None and event.message_id == watch.answer_id
                 watch.answer = watch.answer + event.text if same else event.text

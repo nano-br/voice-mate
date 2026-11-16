@@ -83,6 +83,7 @@ flowchart TD
 Blue: VoiceMate; purple: the central conversation at work; green: the answer you get.
 
 - **Finding the conversation.** It matches "the conversation about X", "the other one" or "that build" against the titles, and reads the last messages of the likely ones when titles are not enough. When two still fit, it takes the one with the most recent activity on that subject and says which one it took, so you can correct it.
+- **Where a conversation is.** A question such as "did it finish?" or "any news?" is answered from the transcript, read at that moment. `read_conversation` returns the last messages with a state: **working** (the turn is running, so the last message is progress), **finished** (the turn ended, so the last message is the answer, whether or not a note about it arrived) or **quiet** (the turn did not end and nothing was written for 10 minutes). The messages before a summary of the conversation are still read.
 - **Focus.** When you say "let's go back to the conversation about X", follow-up questions go there until you leave it ("ok, back to you", "new subject").
 - **Ambiguous requests** such as "change the model" are decided from the focus and the last messages. It asks a short question only when both readings are likely and the wrong one would disrupt something.
 
@@ -200,6 +201,7 @@ stateDiagram-v2
 - **Closing and reopening VoiceMate.** The list is saved with each deadline and the point where each transcript was read up to. When VoiceMate starts again, it goes on reading from there, so a turn that finished while it was closed is still reported. An entry whose time ran out meanwhile leaves the list with one note.
 - **Expiry.** When an entry leaves the list by itself, the central gets one note and tells you in a few words; it watches again only if you still want it.
 - **Direct mode** ("talk directly to the conversation X") pauses the reports: answers and watched turns go to the inbox, and the assistant reports them when you come back.
+- **A message sent while the conversation works.** Claude Code hands it to the running turn instead of starting a new one. VoiceMate sees that in the transcript, and the end of that turn is reported as the answer.
 - **A reply inside a watch.** When the assistant asks a watched conversation something, the answer comes first, once, and the watch goes on after it. A message that fails to send never drops a watch.
 
 The list keeps the 20 newest entries.

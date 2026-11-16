@@ -14,9 +14,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   result is spoken when the work is done (skill version 6).
 - With VoiceMate's own conversation, an answer held for "Hear what's ready" gets its summary written
   while nobody waits: asking to hear it speaks the summary at once, with no turn of the model.
+- `read_conversation` tells the assistant where a conversation is (working, finished, or quiet for a
+  long time) next to its last messages, and the skill has it read and report when you ask for news
+  instead of asking whether to read (skill version 7).
 
 ### Fixed
 
+- The answer to a message sent while a conversation was in the middle of a turn is reported. Claude
+  Code hands such a message to the running turn without starting a new one, and VoiceMate kept
+  waiting for a turn that never began, so the assistant was never told.
+- A conversation that had just been summarized no longer looks stopped: its last messages are read
+  across the summary. The assistant used to see one line and say the conversation was stuck.
+- Actions the assistant writes without the `version` envelope are applied instead of dropped, so a
+  wait it asked for is not lost.
 - Finding the Claude Desktop window no longer waits for every other window on the screen: only the
   windows of the Claude app are asked for their accessibility tree. With a program that answers
   slowly, each message to a Desktop conversation used to take many seconds longer.

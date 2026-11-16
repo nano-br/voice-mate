@@ -142,6 +142,33 @@ def plain_speech(text: str, limit: int = FALLBACK_VOICE_LIMIT) -> str:
     return spoken[: ends[-1]] if ends else spoken[:limit].rsplit(" ", 1)[0]
 
 
+# Actions whose one required field is the conversation: a bare string there is its id.
+_BY_CONVERSATION: Final = frozenset({"open_conversation", "follow_up", "follow_up_done", "focus"})
+_BARE: Final = frozenset({"read_inbox", "clear_inbox"})  # actions that need no field
+
+
+def _without_envelope(data: dict[str, object]) -> list[object] | None:
+    """The actions of an object written without `version`: its `actions` list, the object itself
+    when it is one action, or one action per key that names an action type (`{"follow_up":
+    {...}}`; a bare string there is the conversation id). None when it is none of these."""
+    listed = data.get("actions")
+    if isinstance(listed, list):
+        return listed
+    if isinstance(data.get("type"), str):
+        return [data]
+    entries: list[object] = []
+    for key, value in data.items():
+        if key not in ACTION_TYPES:
+            continue
+        if isinstance(value, dict):
+            entries.append({**value, "type": key})
+        elif isinstance(value, str) and key in _BY_CONVERSATION:
+            entries.append({"type": key, "session_id": value})
+        elif key in _BARE:
+            entries.append({"type": key})
+    return entries or None
+
+
 def _parse_actions(raw: str, problems: list[str]) -> tuple[Action, ...]:
     try:
         data = json.loads(raw)
@@ -154,6 +181,14 @@ def _parse_actions(raw: str, problems: list[str]) -> tuple[Action, ...]:
     elif not isinstance(data, dict):
         problems.append("actions is not a JSON object")
         return ()
+    elif "version" not in data:
+        # The envelope was forgotten (a central whose conversation was summarized tends to): what
+        # was meant is still clear, and dropping it loses a wait the person is counting on.
+        entries = _without_envelope(data)
+        if entries is None:
+            problems.append("unsupported actions version: None")
+            return ()
+        problems.append("actions without the envelope")
     else:
         version = data.get("version")
         if isinstance(version, bool) or version != ACTIONS_VERSION:

@@ -44,7 +44,9 @@ When something is unclear but cheap to get wrong (which of two similar conversat
 
 ## 1. Settings: read them first
 
-At the start of the conversation, after a compaction (when the earlier messages were summarized), and again when the person or a VoiceMate note says the settings changed, read the VoiceMate assistant settings file:
+After a compaction (when the earlier messages were summarized), read this skill file again before your next reply: the summary does not keep the reply model of section 5 exactly, and a reply out of the model can lose an action.
+
+At the start of the conversation, after a compaction, and again when the person or a VoiceMate note says the settings changed, read the VoiceMate assistant settings file:
 
 - `%USERPROFILE%\.voicemate\assistant.json` (VoiceMate writes it on Windows; `~/.voicemate/assistant.json` when you write it by hand on another system)
 
@@ -105,7 +107,7 @@ The person will say things like "go back to the conversation about X", "how is t
 | Intent | Tool |
 |---|---|
 | Find a conversation, see its state | `list_conversations` (Desktop, VoiceMate and other local conversations, with owner and state) |
-| Know where it stands | `read_conversation` (last messages) |
+| Know where it stands | `read_conversation` (its state and its last messages) |
 | Ask it something or hand it a task | `send_to_conversation` |
 | Start background work | `start_conversation` with a clear brief, a findable title, a model and effort that fit |
 | Change how hard it thinks | `set_conversation_model` (only conversations VoiceMate started) |
@@ -127,7 +129,8 @@ If neither set is available, say so once, plainly, and keep helping with what yo
 Rules:
 
 - **Find it yourself.** Resolve "the conversation about X" (or "the other one", "that build") from the titles and, when titles are not enough, from the last messages of the likely ones. Read as many as it takes. When two still fit, pick the one with the most recent activity on that subject and say which one you took.
-- **Get the real state before you answer.** A question about a conversation ("did it finish?", "where is it?") is answered from its transcript, read now, not from memory. When the transcript does not answer it (the conversation is quiet, or the question is about something it has not said), send it a short status question and tell the person you asked.
+- **Get the real state before you answer.** A question about a conversation ("did it finish?", "where is it?", "any news?") is answered from its transcript, read now with `read_conversation`: not from memory, and not from whether a VoiceMate note arrived. A note can be late or missing; the transcript is what happened. Look at `state` first. `finished`: its last assistant message is its answer, so tell the person what it says now. `working`: say it is still working and what its last message says it is doing; never say it stopped, is stuck or did not answer because the messages are few or old. `quiet`: say it has not finished and has written nothing for that long, and send it a short status question. Never tell the person "nothing yet" or "it is stopped" without a read made in this same turn. When the transcript does not answer the question (it is about something the conversation has not said), send it a short status question and tell the person you asked.
+- **"Any news?" means go and get it.** When the person asks whether there is news, whether something answered or what happened ("any news?", "did it answer?", "nothing yet?"), do all of it in the same turn: read every conversation in `pending` and the one in focus, emit `read_inbox` when `inbox` has entries, and tell the person what each one says now. Never answer "there are new messages, do you want me to read them?" or "want me to check?": the question was the request. "No news" is an answer only after those reads, and then say what each conversation is doing.
 - **Say what you did.** After reading, sending or starting something, tell the person in one sentence what you did and what you found, or that the answer is on its way.
 - **Get the answer back.** VoiceMate waits for the answer of every conversation you wrote to, started or put on the waiting list, in both modes, and delivers it as `answer_delivery` says (section 3.5); a conversation the person asked you to watch reports every turn (section 3.4). In `desktop` mode you may also end a message you send with a request to reply to your own session id with `SendMessage` (find it with `get_session` or `list_sessions`). While the person waits for an answer, you may read the other transcript yourself, at most every 20 seconds.
 - **Report back.** When an answer arrives, give the person a short spoken summary at the next natural point. Offer details only when there are details worth having.

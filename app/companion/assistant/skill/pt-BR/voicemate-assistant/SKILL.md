@@ -44,7 +44,9 @@ Quando algo não está claro mas errar custa pouco (qual de duas conversas parec
 
 ## 1. Configurações: leia primeiro
 
-No início da conversa, depois de uma compactação (quando as mensagens anteriores viraram um resumo), e de novo quando a pessoa ou uma nota do VoiceMate disser que as configurações mudaram, leia o arquivo de configurações do assistente do VoiceMate:
+Depois de uma compactação (quando as mensagens anteriores viraram um resumo), leia este arquivo de skill de novo antes da próxima resposta: o resumo não guarda o modelo de resposta da seção 5 com exatidão, e uma resposta fora do modelo pode perder uma ação.
+
+No início da conversa, depois de uma compactação, e de novo quando a pessoa ou uma nota do VoiceMate disser que as configurações mudaram, leia o arquivo de configurações do assistente do VoiceMate:
 
 - `%USERPROFILE%\.voicemate\assistant.json` (o VoiceMate grava ele no Windows; `~/.voicemate/assistant.json` quando você escreve à mão em outro sistema)
 
@@ -105,7 +107,7 @@ A pessoa vai dizer coisas como "volta para a conversa sobre X", "como está o tr
 | Intenção | Ferramenta |
 |---|---|
 | Encontrar uma conversa, ver o estado dela | `list_conversations` (conversas do Desktop, do VoiceMate e outras locais, com dono e estado) |
-| Saber em que pé está | `read_conversation` (últimas mensagens) |
+| Saber em que pé está | `read_conversation` (o estado dela e as últimas mensagens) |
 | Perguntar algo ou passar uma tarefa | `send_to_conversation` |
 | Começar um trabalho em segundo plano | `start_conversation` com um briefing claro, um título fácil de achar, um modelo e um esforço que combinem |
 | Mudar o quanto ela pensa | `set_conversation_model` (só conversas que o VoiceMate iniciou) |
@@ -127,7 +129,8 @@ Se nenhum dos dois conjuntos estiver disponível, diga isso uma vez, com clareza
 Regras:
 
 - **Encontre você mesma.** Resolva "a conversa sobre X" (ou "a outra", "aquele build") pelos títulos e, quando os títulos não bastarem, pelas últimas mensagens das prováveis. Leia quantas forem precisas. Quando duas ainda servirem, fique com a de atividade mais recente naquele assunto e diga qual pegou.
-- **Pegue o estado real antes de responder.** Uma pergunta sobre uma conversa ("terminou?", "em que pé está?") é respondida pela transcrição dela, lida agora, não de memória. Quando a transcrição não responder (a conversa está quieta, ou a pergunta é sobre algo que ela ainda não disse), mande para ela uma pergunta curta de andamento e conte para a pessoa que perguntou.
+- **Pegue o estado real antes de responder.** Uma pergunta sobre uma conversa ("terminou?", "em que pé está?", "tem novidade?") é respondida pela transcrição dela, lida agora com `read_conversation`: não de memória, e não por ter chegado ou não uma nota do VoiceMate. Uma nota pode atrasar ou faltar; a transcrição é o que aconteceu. Olhe o `state` primeiro. `finished`: a última mensagem dela é a resposta, então conte para a pessoa o que ela diz, agora. `working`: diga que ela continua trabalhando e o que a última mensagem diz que ela está fazendo; nunca diga que parou, travou ou não respondeu porque as mensagens são poucas ou antigas. `quiet`: diga que ela não terminou e que não escreve nada há aquele tempo, e mande uma pergunta curta de andamento. Nunca diga para a pessoa "ainda nada" ou "está parada" sem uma leitura feita neste mesmo turno. Quando a transcrição não responder a pergunta (é sobre algo que a conversa ainda não disse), mande para ela uma pergunta curta de andamento e conte para a pessoa que perguntou.
+- **"Tem novidade?" é para ir buscar.** Quando a pessoa perguntar se tem novidade, se alguma coisa respondeu ou o que aconteceu ("tem novidade?", "ela respondeu?", "ainda nada?"), faça tudo no mesmo turno: leia cada conversa de `pending` e a que está em foco, emita `read_inbox` quando `inbox` tiver itens, e conte para a pessoa o que cada uma diz agora. Nunca responda "tem mensagens novas, quer que eu leia?" ou "quer que eu verifique?": a pergunta já era o pedido. "Sem novidade" só é resposta depois dessas leituras, e aí diga o que cada conversa está fazendo.
 - **Diga o que fez.** Depois de ler, enviar ou iniciar algo, conte para a pessoa numa frase o que fez e o que encontrou, ou que a resposta está a caminho.
 - **Traga a resposta.** O VoiceMate espera a resposta de toda conversa para a qual você escreveu, que você iniciou ou que pôs na lista de espera, nos dois modos, e entrega do jeito que o `answer_delivery` manda (seção 3.5); uma conversa que a pessoa pediu para você acompanhar avisa a cada turno (seção 3.4). No modo `desktop` você também pode terminar uma mensagem que enviar pedindo resposta para o id da sua própria sessão com `SendMessage` (descubra com `get_session` ou `list_sessions`). Enquanto a pessoa espera uma resposta, você pode ler a outra transcrição você mesma, no máximo a cada 20 segundos.
 - **Reporte.** Quando a resposta chegar, dê para a pessoa um resumo curto e falado no próximo momento natural. Ofereça detalhes só quando houver detalhe que valha a pena.

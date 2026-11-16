@@ -9,6 +9,11 @@ The formats are undocumented and can change, so everything here is defensive: un
 files, bad JSON and unknown line types are skipped, never raised. Standard library only
 (no Qt, nothing from `app.core` or `app.features`) so it also runs on the engine side.
 
+A prompt that arrives while a turn is running is not written as a `user` line: the client
+hands it to the running turn and records it as an `attachment` line of type
+`queued_command`. `parse_line` reports it as a `user` event with `queued` set, so whoever
+waits for the answer to that prompt sees that it was taken.
+
 A turn can end with two signals (an assistant line with `stop_reason == "end_turn"` and,
 when hooks are configured, a later `stop_hook_summary` line). `parse_line` reports both;
 `Tail` collapses the pair into one `turn_end`.
@@ -28,6 +33,8 @@ from typing import Final, Literal
 MAX_SANITIZED_LENGTH: Final = 200
 # The title lives in a line the CLI rewrites every turn: reading this much of the end is enough.
 TITLE_TAIL_BYTES: Final = 256_000
+# Whether a turn is running is decided by the last lines of the transcript.
+ACTIVITY_TAIL_BYTES: Final = 512_000
 _SANITIZE_RE: Final = re.compile(r"[^a-zA-Z0-9]")
 _BASE36_DIGITS: Final = "0123456789abcdefghijklmnopqrstuvwxyz"
 
@@ -52,6 +59,16 @@ class ReaderEvent:
     # Identity used to merge the lines of one assistant reply; consumers can ignore both.
     uuid: str | None = None
     message_id: str | None = None
+    # A `user` event for a prompt the running turn took in (it did not start a turn of its own).
+    queued: bool = False
+
+
+@dataclass(frozen=True)
+class Activity:
+    """Where a conversation is, read from the end of its transcript."""
+
+    turn_open: bool  # a turn started and did not end yet
+    last_write: float  # when the transcript last changed (time.time(); 0 when unreadable)
 
 
 @dataclass(frozen=True)
@@ -161,6 +178,21 @@ def _as_str(value: object) -> str | None:
     return value if isinstance(value, str) else None
 
 
+def _queued_prompt(d: dict[str, object]) -> str | None:
+    """The text of a prompt the running turn took in (an `attachment` line of type
+    `queued_command`), or None. A notification of a background task comes in the same kind of
+    line and is not a prompt."""
+    attachment = d.get("attachment")
+    if d.get("isSidechain") or not isinstance(attachment, dict) or attachment.get("type") != "queued_command":
+        return None
+    origin = attachment.get("origin")
+    if isinstance(origin, dict) and origin.get("kind") != "human":
+        return None
+    if attachment.get("commandMode") not in (None, "prompt"):
+        return None
+    return _text_blocks(attachment.get("prompt")) or None
+
+
 def parse_line(raw: str | bytes) -> list[ReaderEvent]:
     """Map one transcript line to zero or more events. Never raises."""
     try:
@@ -206,6 +238,9 @@ def parse_line(raw: str | bytes) -> list[ReaderEvent]:
             formatted = err.get("formatted") if isinstance(err, dict) else None
             return [ReaderEvent("error", str(formatted or ""), ts, uuid)]
         return []
+    if kind == "attachment":
+        prompt = _queued_prompt(d)
+        return [ReaderEvent("user", prompt, ts, uuid, queued=True)] if prompt else []
     if kind in ("custom-title", "ai-title"):
         title = _as_str(d.get("customTitle")) or _as_str(d.get("aiTitle")) or ""
         return [ReaderEvent("title", title, ts, uuid)]
@@ -292,9 +327,12 @@ class Tail:
 
 
 def last_messages(path: str | Path, n: int) -> list[Message]:
-    """The last `n` user and assistant messages, counting only what follows the last compaction.
+    """The last `n` user and assistant messages.
 
     The lines of one assistant reply (same message id, adjacent) are joined into one message.
+    A compaction does not hide what came before it: the conversation summarized those messages
+    for itself, but they were said, and a reader that saw only what follows a compaction took a
+    conversation hard at work for one that had said a single line and stopped.
     """
     if n <= 0:
         return []
@@ -304,10 +342,7 @@ def last_messages(path: str | Path, n: int) -> list[Message]:
         with open(path, "rb") as f:
             for line in f:
                 for ev in parse_line(line):
-                    if ev.kind == "compact":
-                        kept.clear()
-                        last_mid = None
-                    elif ev.kind == "user":
+                    if ev.kind == "user":
                         kept.append(Message("user", ev.text, ev.timestamp, ev.uuid))
                         last_mid = None
                     elif ev.kind == "assistant_text":
@@ -320,6 +355,86 @@ def last_messages(path: str | Path, n: int) -> list[Message]:
     except OSError:
         return []
     return list(kept)
+
+
+_INTERRUPTED: Final = "[Request interrupted by user"
+_LOCAL_COMMAND: Final = ("<command-name>", "<command-message>", "<local-command-", "<bash-")
+
+
+def _message_id(raw: bytes) -> str:
+    try:
+        d = json.loads(raw)
+    except (ValueError, TypeError):
+        return ""
+    message = d.get("message") if isinstance(d, dict) else None
+    mid = message.get("id") if isinstance(message, dict) else None
+    return mid if isinstance(mid, str) else ""
+
+
+def _turn_mark(raw: bytes) -> bool | None:
+    """True when the line opens or continues a turn, False when it ends one, None otherwise."""
+    try:
+        d = json.loads(raw)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(d, dict) or d.get("isSidechain"):
+        return None
+    kind = d.get("type")
+    message = d.get("message")
+    if kind == "user":
+        if d.get("isMeta") or d.get("isCompactSummary"):
+            return None
+        content = message.get("content") if isinstance(message, dict) else None
+        if _is_tool_result_only(content):
+            return True
+        text = _text_blocks(content).lstrip()
+        if text.startswith(_INTERRUPTED):
+            return False  # the person stopped the turn
+        return None if text.startswith(_LOCAL_COMMAND) else True
+    if kind == "assistant":
+        if d.get("isApiErrorMessage"):
+            return False  # the turn died on an error
+        stop = message.get("stop_reason") if isinstance(message, dict) else None
+        return stop in (None, "tool_use", "pause_turn")
+    if kind == "system" and d.get("subtype") == "stop_hook_summary":
+        return False
+    if kind == "attachment" and _queued_prompt(d) is not None:
+        return True
+    return None
+
+
+def activity(path: str | Path) -> Activity:
+    """Whether the conversation is in the middle of a turn, and when it last wrote. Reads only
+    the end of the transcript; never raises."""
+    window = ACTIVITY_TAIL_BYTES
+    while True:
+        try:
+            stat = os.stat(path)
+            with open(path, "rb") as f:
+                start = max(0, stat.st_size - window)
+                f.seek(start)
+                lines = f.read().split(b"\n")
+        except OSError:
+            return Activity(False, 0.0)
+        if start:
+            lines = lines[1:]  # the first one is cut in the middle
+        last = ""  # the message whose last line left the turn open
+        for line in reversed(lines):
+            mark = _turn_mark(line) if line.strip() else None
+            if mark is None:
+                continue
+            mid = _message_id(line)
+            if last and mid != last:
+                return Activity(True, stat.st_mtime)
+            if mark and mid:
+                # One message is written a line per block, and the closing one is not always
+                # the last: an earlier line of the same message may have ended the turn.
+                last = mid
+                continue
+            return Activity(mark, stat.st_mtime)
+        if last or not start:
+            return Activity(bool(last), stat.st_mtime)
+        window *= 4  # nothing readable in the window (one very long line): look further back
 
 
 # ---------------------------------------------------------------------------

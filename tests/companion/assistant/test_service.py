@@ -1822,3 +1822,38 @@ def test_a_plain_line_is_spoken_when_the_turn_before_ended_ahead_of_its_text(mak
     _append(rig.transcript("s1"), _user("send it", "u1"), _reply("Sending it now.", "a1", "m1"))
     _until(lambda: bool(voice.spoken))
     assert voice.spoken[0][1] == "Sending it now."
+
+
+def _queued(text: str, uuid: str) -> str:
+    body = {"type": "queued_command", "prompt": text, "commandMode": "prompt", "origin": {"kind": "human"}}
+    return json.dumps({"type": "attachment", "uuid": uuid, "attachment": body})
+
+
+def test_words_said_while_the_assistant_works_are_shown_and_answered_aloud(make_rig: Callable[..., Rig]) -> None:
+    """A prompt the running turn takes in starts no turn of its own: it is still shown, and what
+    the assistant says after it is spoken even though the turn had already said its reply."""
+    voice = FakeVoice()
+    rig = make_rig(voice=voice)
+    rig.ready()
+    full = '<voice>All sent.</voice><actions>{"version": 1, "actions": []}</actions>'
+    _append(rig.transcript("s1"), _user("send it", "u1"), _reply(full, "a1", "m1"))
+    _until(lambda: len(voice.spoken) == 1)
+    _append(rig.transcript("s1"), _queued("and tell me when it answers", "q1"), _plain("Will do.", "a2", "m2"))
+    snapshot = rig.wait(lambda s: any(m.text == "Will do." for m in s.messages))
+    assert any(m.role == "user" and m.text == "and tell me when it answers" for m in snapshot.messages)
+    _until(lambda: len(voice.spoken) == 2)
+
+
+def test_a_note_taken_in_by_a_running_turn_is_hidden_and_changes_nothing(make_rig: Callable[..., Rig]) -> None:
+    voice = FakeVoice()
+    rig = make_rig(voice=voice)
+    rig.ready()
+    full = '<voice>All sent.</voice><actions>{"version": 1, "actions": []}</actions>'
+    _append(rig.transcript("s1"), _user("send it", "u1"), _reply(full, "a1", "m1"))
+    _until(lambda: len(voice.spoken) == 1)
+    _append(rig.transcript("s1"), _queued(f"{EVENT_MARKER} Setting change applied: x = 1.", "q1"))
+    _append(rig.transcript("s1"), _plain("Noted.", "a2", "m2"))
+    snapshot = rig.wait(lambda s: any(m.text == "Noted." for m in s.messages))
+    assert not any(EVENT_MARKER in m.text for m in snapshot.messages)
+    time.sleep(0.1)
+    assert len(voice.spoken) == 1  # the turn had said its reply: the stray line stays on screen

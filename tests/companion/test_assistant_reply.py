@@ -241,3 +241,38 @@ def test_fuzz_never_raises() -> None:
         assert isinstance(reply.problems, tuple)
         if reply.degraded:
             assert reply.voice == ""
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        ('{"actions": [{"type": "read_inbox"}]}', [("read_inbox", {})]),
+        (
+            '{"type": "follow_up", "session_id": "c1", "reason": "r"}',
+            [("follow_up", {"session_id": "c1", "reason": "r"})],
+        ),
+        (
+            '{"follow_up": {"session_id": "c1", "reason": "r", "watch": true}}',
+            [("follow_up", {"session_id": "c1", "reason": "r", "watch": True})],
+        ),
+        (
+            '{"follow_up_done": "c1", "read_inbox": true}',
+            [("follow_up_done", {"session_id": "c1"}), ("read_inbox", {})],
+        ),
+    ],
+)
+def test_actions_written_without_the_envelope_still_count(
+    body: str, expected: list[tuple[str, dict[str, object]]]
+) -> None:
+    """A central that forgot the envelope still said what it wanted: dropping a `follow_up` loses a
+    wait the person is counting on."""
+    reply = parse_reply(f"<voice>Sent.</voice><actions>{body}</actions>")
+    assert [(a.type, a.params) for a in reply.actions] == expected
+    assert reply.problems == ("actions without the envelope",)
+    assert not reply.degraded
+
+
+def test_an_object_that_names_no_action_is_still_refused() -> None:
+    reply = parse_reply('<voice>Hi</voice><actions>{"clear_pending": "c1", "note": 1}</actions>')
+    assert reply.actions == ()
+    assert reply.problems == ("unsupported actions version: None",)
