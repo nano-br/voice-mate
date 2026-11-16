@@ -250,6 +250,11 @@ class OwnedConversations:
         self._used: dict[str, float] = {}  # when each one last got a prompt (never: resumed without one)
         self._prompted: dict[str, float] = {}  # the same on the monotonic clock, for `PROMPT_GRACE_S`
         self._closed = False  # stop_all ran: nothing starts any more
+        self._renamed: Callable[[str, str], None] | None = None
+
+    def on_rename(self, listener: Callable[[str, str], None]) -> None:
+        """`listener(old_id, new_id)` runs when a conversation continues under a new id."""
+        self._renamed = listener
 
     # --- queries -------------------------------------------------------------------------------
 
@@ -506,6 +511,11 @@ class OwnedConversations:
                     uses[new_id] = uses.pop(old_id)
             self._save()
         log.info("assistant: conversation %s continues as %s", old_id, new_id)
+        if self._renamed is not None:
+            try:
+                self._renamed(old_id, new_id)
+            except Exception:  # noqa: BLE001 - a listener must not stop the conversation
+                log.exception("assistant: rename listener failed")
 
     def _update(self, record: OwnedRecord) -> None:
         with self._lock:

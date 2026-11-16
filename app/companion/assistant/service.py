@@ -402,7 +402,7 @@ class AssistantServiceImpl:
         self._instructions: StandingInstructions | None = None
         self._central_id = ""  # read by the MCP tools' thread
         self._watcher = AnswerWatcher(
-            lambda note: False,
+            self._note_ready,
             deliver_answer=self._answer_ready,
             on_answer=lambda _cid, title: self._dispatcher.post(lambda: self._answered(title)),
             on_expire=lambda cid, title, observed: self._dispatcher.post(lambda: self._expired(cid, title, observed)),
@@ -614,6 +614,9 @@ class AssistantServiceImpl:
         with self._lock:
             if self._owned is None and self._owned_factory is not None:
                 self._owned = self._owned_factory(self._settings().permission_mode)
+                self._owned.on_rename(
+                    lambda old, new: self._dispatcher.post(lambda: self._conversation_renamed(old, new))
+                )
             return self._owned
 
     def _desktop_sender(self) -> ConversationSender:
@@ -1442,7 +1445,8 @@ class AssistantServiceImpl:
         # A conversation the person asked to watch reports to the central whatever the delivery:
         # "tell me when it has news" is the person's own request to be told. A wait or a reply
         # follows the delivery setting. In direct mode both go to the inbox.
-        if (delivery == "speak" or ready.observed) and not away:
+        # A conversation that stopped with an error is never held for later either.
+        if (delivery == "speak" or ready.observed or ready.failed) and not away:
             port = self._port
             if self._person_busy() or port is None or not self._running:
                 return False
@@ -1463,6 +1467,36 @@ class AssistantServiceImpl:
 
         self._dispatcher.post(held)
         return True
+
+    def _note_ready(self, note: str) -> bool:
+        """Watcher thread: a note about a watched conversation that goes on without getting
+        anywhere. It goes to the central whatever the delivery: nothing else would tell the
+        person. False = not now (it is offered again)."""
+        port = self._port
+        if self._away or self._person_busy() or port is None or not self._running:
+            return False
+        return port.send(note)
+
+    def _conversation_renamed(self, old_id: str, new_id: str) -> None:
+        """A conversation the assistant opened continues under a new id: what the assistant
+        waits for follows it, or the list would name a conversation that never writes again."""
+        item = next((entry for entry in self._pending if entry.conversation_id == old_id), None)
+        if item is None:
+            return
+        self._watcher.unwatch(old_id)
+        left = max(1.0, item.until - time.time()) if item.until > 0 else None
+        if item.watch:
+            self._watcher.observe(new_id, item.title, limit=left)
+        else:
+            self._watcher.wait(new_id, item.title, limit=left)
+        moved = replace(item, conversation_id=new_id, position=self._watcher.position(new_id))
+        self._pending = [
+            moved if entry is item else entry
+            for entry in self._pending
+            if entry.conversation_id != new_id or entry is item
+        ]
+        self._pending_changed()
+        log.info("assistant: waiting for %s instead of %s", new_id, old_id)
 
     def _answered(self, title: str) -> None:
         self._notice(_('"{title}" answered.').format(title=title))

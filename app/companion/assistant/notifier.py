@@ -76,6 +76,7 @@ class ReadyAnswer:
     observed: bool = False  # from an observation the person asked for, not a reply or a wait
     turns: int = 1
     position: int | None = None  # where the transcript was read up to
+    failed: bool = False  # the turn died on an error: told now, whatever the delivery
 
 
 # Takes a finished answer (to the central, to the inbox...); False = not now, try again later.
@@ -430,10 +431,19 @@ class AnswerWatcher:
             turns=watch.turns,
             failed=watch.done_failed,
         )
-        if self._deliver_answer is None or watch.done_failed:
-            return self._deliver(note)  # a conversation that stopped is never held for later
+        if self._deliver_answer is None:
+            return self._deliver(note)
         position = watch.tail.position if watch.tail is not None else None
-        ready = ReadyAnswer(watch.conversation_id, watch.title, trim(watch.done), note, observed, watch.turns, position)
+        ready = ReadyAnswer(
+            watch.conversation_id,
+            watch.title,
+            trim(watch.done),
+            note,
+            observed,
+            watch.turns,
+            position,
+            watch.done_failed,
+        )
         return self._deliver_answer(ready)
 
     def _open_tail(self, watch: _Watch) -> None:
