@@ -68,7 +68,9 @@
 | Desktop 模式下出现“助手无法启动”，日志里写着 `window_missing`、`conversation_missing` 或 `ambiguous` | Claude Desktop 没有打开，对话不在它的侧边栏里，或者有两个对话用了这个标题 | 打开 Claude Desktop，给两个相同标题中的一个改名，然后点 **重新启动** |
 | 日志里写着 `locked` 或 `focus_lost`，并且有一条消息没有到达 Desktop | 屏幕被锁定了，或者 VoiceMate 输入时另一个窗口抢走了焦点。什么都没有输入 | 解锁屏幕，在一条消息所需的 2 秒内不要碰键盘，然后重新发送 |
 | 你正在 Desktop 对话里输入的草稿消失了 | 助手发来的消息会清除它所写入的那个对话的草稿 | 不要在助手使用的对话（Desktop 模式）里打字，也不要在它即将写入的对话里打字 |
-| Claude Desktop 更新之后，Desktop 模式找不到它的控件了 | 更新改变了窗口，所以配置文件不再匹配 | 设置 > **助手** > **立即检查** 是否有更新的配置文件；如果没有，见 [desktop-profile.md](desktop-profile.md#writing-a-profile-for-a-new-desktop-version) |
+| Claude Desktop 更新之后，Desktop 模式找不到它的控件了 | 更新改变了窗口，所以配置文件不再匹配 | 设置 > **助手** > **立即检查** 是否有更新的配置文件（已安装的应用无需新版本即可获取）；如果没有，见 [desktop-profile.md](desktop-profile.md#writing-a-profile-for-a-new-desktop-version) |
+| Claude Desktop 更新之后，Desktop 模式找不到对话，或发送到 Desktop 对话失败 | Desktop 6.28899 及更高版本把侧边栏的行显示为链接，配置文件版本 2 与此匹配；更旧的 Desktop 不再匹配该配置文件 | 更新 Claude Desktop（它会自动更新），然后点 **立即检查** 和 **重启**；见 [desktop-profile.md](desktop-profile.md#where-the-profile-comes-from) |
+| 助手找不到我的对话 | 标题没有包含你说的所有词，它是定时任务或没有标题的单条提示运行（不在列表中），或者最后一次被动过是在最近 1500 个之前 | 说出标题中有特点的一部分，词少一些；见 [assistant.zh-CN.md](assistant.zh-CN.md#%EF%B8%8F-它能看到的对话) |
 | Claude Desktop 配置文件下方出现“问题：...” | 导入或下载的配置文件被拒绝了（原因会指出字段） | 修复文件后再次 **导入...**，或者点 **使用默认值** |
 | 助手无法浏览网页、打开 pull request 或使用其他仅限 Desktop 的工具 | 在“VoiceMate 自己的对话”中它只有 `voicemate` 工具 | 请它把任务交给一个 Desktop 对话，或者切换到 Desktop 模式 |
 | 助手没有声音，窗口显示“没有可用的声音” | 没有任何东西能朗读：引擎已停止或没有声音（它的语音引擎不是 Kokoro 或自定义提供方，或者提供方掉线了），并且 Windows 没有这种语言的声音，或者“语音来源：”是“引擎的声音” | 在设置 > **助手** 中，把“语音来源：”设为“Windows 的声音”（或“自动”）并点 **测试**；在 Windows 设置 > 时间和语言 > 语音 下添加一个声音。或者检查设置 > **声音** 和引擎的语音引擎（[协议](tts-provider-protocol.md#the-engine-speaks-the-same-protocol)）；“朗读回复”必须开启。回复仍然可以在窗口里阅读 |

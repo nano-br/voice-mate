@@ -360,6 +360,8 @@ def test_list_entries_merges_desktop_owned_and_other_local_sessions(rig: Rig, tm
         ConversationInfo("s1", script, "", 1_850_000_000.0, "p"),  # untitled and finished: left out
         ConversationInfo("id-0", mine, "Mine", 1_800_000_000.0, "p"),
         ConversationInfo("t1", terminal, "", 1_750_000_000.0, "p"),  # untitled but live: kept
+        # A one-prompt run started from a Desktop conversation: untitled and finished, left out too.
+        ConversationInfo("r1", _transcript(tmp_path / "r1.jsonl", "claude-desktop", "C:\r"), "", 1_760_000_000.0, "p"),
         ConversationInfo("d2", _transcript(tmp_path / "d2.jsonl", "claude-desktop", "C:\\q"), "", 1_700_000_000.0, "p"),
     ]
     live = {

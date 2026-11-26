@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Installed copies pick it up on their next profile check, without a new release.
   A Desktop older than 6.28899 no longer matches this profile; the Desktop updates itself, so update
   it if sending stops working.
+- The assistant knows which conversations are the latest. They are now ordered by the time of their
+  last message, not by when the file last changed: the new Claude Desktop writes bookkeeping lines
+  into every conversation it loads, which made old conversations look new.
+- The assistant finds a conversation by any part of its title, ignoring accents and case, however
+  old it is and wherever it sits in the Desktop sidebar (pinned, in a project folder or nested), and
+  can send to a conversation older than the newest 100 (skill version 9).
+- The runs of Desktop scheduled tasks and the one-prompt runs that other conversations start no
+  longer crowd the list of conversations.
 
 ## [0.5.3] - 2026-11-16
 

@@ -82,7 +82,7 @@ flowchart TD
 
 Azul: VoiceMate; roxo: a conversa central trabalhando; verde: a resposta que chega a você.
 
-- **Achar a conversa.** Ele compara "a conversa sobre X", "a outra" ou "aquele build" com os títulos e, quando os títulos não bastam, lê as últimas mensagens das prováveis. Se duas ainda servem, fica com a de atividade mais recente naquele assunto e diz qual escolheu, para você corrigir se for o caso.
+- **Achar a conversa.** Ele compara "a conversa sobre X", "a outra" ou "aquele build" com os títulos e, quando os títulos não bastam, lê as últimas mensagens das prováveis. Se duas ainda servem, fica com a de atividade mais recente naquele assunto e diz qual escolheu, para você corrigir se for o caso. Os títulos são buscados por qualquer parte do nome, sem diferenciar acentos e maiúsculas, entre as 1500 conversas mexidas mais recentemente, então uma conversa antiga também é achada.
 - **Em que pé a conversa está.** Uma pergunta como "terminou?" ou "tem novidade?" é respondida pela transcrição, lida naquele momento. O `read_conversation` devolve as últimas mensagens com um estado: **working** (o turno está rodando, então a última mensagem é andamento), **finished** (o turno acabou, então a última mensagem é a resposta, tenha ou não chegado um aviso) ou **quiet** (o turno não acabou e nada foi escrito há 10 minutos). As mensagens anteriores a um resumo da conversa continuam sendo lidas.
 - **Foco.** Quando você diz "vamos voltar para a conversa sobre X", as perguntas seguintes vão para lá até você sair ("ok, voltando para você", "novo assunto").
 - **Pedidos ambíguos**, como "troca o modelo", são decididos pelo foco e pelas últimas mensagens. Ele faz uma pergunta curta só quando as duas leituras são prováveis e a errada atrapalharia alguma coisa.
@@ -216,7 +216,7 @@ A lista guarda os 20 itens mais recentes.
 
 ## 🗂️ As conversas que ele enxerga
 
-Na conversa própria do VoiceMate, `list_conversations` lê as transcrições que o Claude Code guarda neste computador e mostra cada conversa com um **dono** e um estado (ocupada, parada ou esperando). As conversas do Claude Desktop e do VoiceMate vêm primeiro, depois as outras sessões locais, das mais recentes para as mais antigas em cada grupo. Uma sessão local aparece só quando tem título ou um processo vivo, então execuções avulsas de scripts ficam de fora. A conversa central nunca lista a si mesma.
+Na conversa própria do VoiceMate, `list_conversations` lê as transcrições que o Claude Code guarda neste computador e mostra cada conversa com um **dono** e um estado (ocupada, parada ou esperando). As conversas do Claude Desktop e do VoiceMate vêm primeiro, depois as outras sessões locais, com a de mensagem mais nova primeiro em cada grupo (vale a hora da última mensagem, não a da última alteração do arquivo). Uma sessão local aparece só quando tem título ou um processo vivo, então execuções avulsas de scripts ficam de fora. As execuções de tarefas agendadas do Desktop e as execuções sem título de um só prompt que outras conversas iniciam também ficam de fora. Quando você cita uma conversa por parte do título, o assistente busca nos títulos (`query`: qualquer parte do título, sem diferenciar acentos e maiúsculas, as 1500 conversas mexidas mais recentemente) e consegue ler ou enviar para uma mais antiga que as 100 mais novas pelo id. A conversa central nunca lista a si mesma.
 
 | Conversa | Ler e observar | Mandar mensagem | Iniciar, trocar modelo, parar |
 |---|---|---|---|
@@ -352,6 +352,7 @@ A skill também documenta as ações `remember`, `forget` e `follow_up` com `"wa
 | O assistente conta que não conseguiu mandar para uma sessão de terminal ou IDE porque ela está em uso (a central recebe `not sent (in use)`) | A sessão está aberta num programa agora. Feche lá, ou espere 2 minutos depois da última mudança, e peça de novo. Sem as ferramentas de sessão, o assistente diz o que você deve digitar lá |
 | O assistente conta que a sessão está ocupada (`not sent (busy)`) | A última mensagem do VoiceMate para aquela sessão ainda está sendo respondida, ou acabou de ser. Espere um pouco e peça de novo |
 | O assistente conta que a pasta da sessão sumiu (`not sent (no_folder)`) | A pasta da sessão não está mais neste computador, então ela não pode ser retomada |
+| O assistente diz que não achou uma conversa que você citou | Nem todas as palavras estão no título, a conversa é uma execução de tarefa agendada do Desktop ou de um só prompt sem título (ficam de fora), ou foi mexida pela última vez antes das 1500 mais recentes | Cite uma parte característica do título (menos palavras acham mais) ou peça as últimas conversas e escolha uma |
 | Uma regra que você deu não vale numa sessão nova | Pergunte "quais regras você guarda?"; ele lê `instructions` no `assistant.json`. Se o arquivo estava ilegível, procure `assistant-instructions.json.bad` na pasta de estado |
 | "Standing instruction not removed" | Nenhuma regra bateu, ou mais de uma bateu: diga mais do texto exato dela |
 | Uma observação parou de avisar | Ela sai da lista depois de 12 horas sem turno novo (uma espera: 1 hora). Peça para o assistente observar de novo |
