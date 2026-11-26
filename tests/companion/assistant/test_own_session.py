@@ -237,11 +237,35 @@ def test_send_without_a_child_is_refused(rig: Rig) -> None:
     assert rig.port.send("hello") is False
 
 
-def test_login_failure_is_reported(rig: Rig) -> None:
+def test_login_failure_is_reported_and_cleared_by_a_turn_that_works(rig: Rig) -> None:
     child = rig.start()
-    child.emit(type="result", is_error=True, result="Not logged in. Please run /login")
-    rig.wait_for(lambda s: s.state == "error")
-    assert rig.port.status().error == "not_logged_in"
+    child.emit(
+        type="result", is_error=True, result="Failed to authenticate. API Error: 401 OAuth access token has expired"
+    )
+    rig.wait_for(lambda s: s.login_expired)
+    status = rig.port.status()
+    assert status.state == "ready"  # the person can try again once signed in
+    assert status.error is None
+    assert rig.port.send("hello again")
+    child.emit(type="result", is_error=False, result="hi")
+    rig.wait_for(lambda s: not s.login_expired)
+
+
+def test_another_failed_turn_is_not_a_login_failure(rig: Rig) -> None:
+    child = rig.start()
+    child.emit(type="result", is_error=True, result="API Error: 529 Overloaded")
+    rig.wait_for(lambda s: s.state == "ready")
+    assert not rig.port.status().login_expired
+
+
+def test_remote_control_refused_for_the_login_is_reported(rig: Rig) -> None:
+    child = rig.start()
+    child.emit(
+        type="control_response",
+        response={"subtype": "error", "request_id": "voicemate-remote-control", "error": "/login"},
+    )
+    rig.wait_for(lambda s: s.login_expired)
+    assert rig.port.status().remote == "failed"
 
 
 def test_process_ending_by_itself_is_an_error_with_its_output(rig: Rig) -> None:

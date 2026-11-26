@@ -55,7 +55,7 @@
 | 现象 | 原因 | 怎么办 |
 |---|---|---|
 | “未找到 Claude Code”，并且语音提示回答“助手无法启动” | 登录时启动的 VoiceMate 获得的是保存在 Windows 注册表中的 `PATH`。原生的 Claude Code 安装程序把 `claude.exe` 放在 `%USERPROFILE%\.local\bin`，这个文件夹往往只由 shell 配置文件加入 `PATH`，所以终端能找到 `claude`，VoiceMate 却找不到 | 在当前版本上无需处理：VoiceMate 还会在 `~/.local/bin` 和 `%APPDATA%\npm` 中查找。要检查，在终端里运行 `where claude`：如果什么都没打印，请安装 Claude Code。如果 `claude` 在其他位置，请把 `VOICEMATE_CLAUDE_CLI` 设为它的完整路径（[configuration.zh-CN.md](configuration.zh-CN.md#环境变量)），然后在助手窗口中点 **重新启动** |
-| “Claude Code 尚未登录” | 这台电脑上没有 Claude 登录 | 在终端里运行 `claude auth login`，然后点 **重新启动**。Claude Desktop 的登录不算数 |
+| 托盘图标上有警告角标，助手窗口提示它的 Claude 登录已过期，助手不再回答 | `claude` 程序的 Claude 登录已过期（401 或 “/login” 错误） | 点击托盘图标并按步骤操作（在终端里运行 `claude auth login`）。窗口会显示 VoiceMate 使用的是哪个 `claude`。第一次成功回答后角标会自动消失。Claude Desktop 的登录不算数。详情：[重新登录](assistant.zh-CN.md#login-expired) |
 | “助手无法启动”或“助手已停止” | 进程失败或结束了 | 打开 `companion.log`（托盘菜单 > **引擎** > **打开日志**），排除原因，然后点 **重新启动** |
 | “无法准备助手” | VoiceMate 无法安装技能，或无法写入 `~/.voicemate/assistant.json` | 检查你的用户文件夹和 `~/.claude` 是否可写；日志里有详情 |
 | 没有“在 claude.ai 上打开”链接，手机上也什么都没有 | 无法开启 Remote Control。助手在这台电脑上继续工作 | 重启对话：设置 > **助手**，把“助手模式：”设为关闭，应用，再重新打开。`companion.log` 会说明那个请求得到的回答。这个请求没有文档说明，可能在不同的 Claude Code 版本之间发生变化（见[研究](research/claude-code-client.md#61-a-voicemate-owned-session-in-the-desktop-tested-works)） |

@@ -37,6 +37,7 @@ from pathlib import Path
 from typing import Any, Final, Protocol
 
 from app.companion.assistant.contract import PortListener, PortStatus
+from app.companion.assistant.login import is_login_failure
 from app.companion.assistant.mcp_server import McpServer
 from app.companion.assistant.session_reader import LiveSession, find_session_file, live_sessions, pid_alive
 from app.companion.contract import AssistantEffort, AssistantModel, AssistantPermission, AssistantSettings
@@ -58,7 +59,6 @@ MODEL_ALIASES: Final[dict[AssistantModel, str]] = {"haiku": "haiku", "sonnet": "
 # Settings the person chose, not Desktop host state (same rule as the lab's scrub_host_env).
 _KEEP_ENV: Final = frozenset({"CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_GIT_BASH_PATH"})
 _HOST_ENV_NAMES: Final = frozenset({"CLAUDECODE", "CLAUDE_PID"})
-_LOGIN_HINTS: Final = ("/login", "not logged in", "invalid api key", "authentication")
 
 
 def scrubbed_env(environ: Mapping[str, str]) -> dict[str, str]:
@@ -674,16 +674,21 @@ class OwnSessionPort:
         url = _find_value(event, "session_url")
         bridge = _find_value(event, "bridge_session_id")
         if subtype == "error" or not url:
-            log.warning("assistant: Remote Control was not turned on: %s", json.dumps(event)[:300])
+            reason = json.dumps(event)
+            log.warning("assistant: Remote Control was not turned on: %s", reason[:300])
             with self._lock:
-                self._status = replace(self._status, remote="failed")
+                self._status = replace(
+                    self._status,
+                    remote="failed",
+                    login_expired=self._status.login_expired or is_login_failure(reason),
+                )
             self._notify()
             return
         with self._lock:
             if self._record is not None:
                 self._record = replace(self._record, bridge_session_id=bridge)
                 self._store.save(self._record)
-            self._status = replace(self._status, session_url=url, remote="on")
+            self._status = replace(self._status, session_url=url, remote="on", login_expired=False)
         log.info("assistant: Remote Control is on")
         self._notify()
 
@@ -695,17 +700,20 @@ class OwnSessionPort:
         with self._lock:
             # Decide and store the state under one lock: send() may start a new turn meanwhile.
             self._pending_turns = max(0, self._pending_turns - 1)
-            if failed and any(hint in text.lower() for hint in _LOGIN_HINTS):
-                self._status = replace(self._status, state="error", error="not_logged_in", detail=text[:300])
-                request_remote = False
+            login_failed = failed and is_login_failure(text)
+            if failed:
+                self._status = replace(
+                    self._status, detail=text[:300], login_expired=login_failed or self._status.login_expired
+                )
             else:
-                if failed:
-                    self._status = replace(self._status, detail=text[:300])
-                request_remote = not self._remote_requested
+                self._status = replace(self._status, login_expired=False)  # a turn went through: signed in again
+            # Remote Control would fail the same way without a sign-in: it waits for a turn that works.
+            request_remote = not login_failed and not self._remote_requested
+            if not login_failed:
                 # After the first turn, like the lab: the session exists on disk by then.
                 self._remote_requested = True
-                if self._pending_turns == 0 and self._status.state in ("starting", "busy"):
-                    self._status = replace(self._status, state="ready")
+            if self._pending_turns == 0 and self._status.state in ("starting", "busy"):
+                self._status = replace(self._status, state="ready")
         if request_remote:
             self._request_remote_control()
         self._notify()

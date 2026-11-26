@@ -2706,10 +2706,6 @@ msgstr ""
 msgid "Claude Code was not found"
 msgstr ""
 
-#: app/companion/ui/texts.py:265
-msgid "Claude Code is not signed in"
-msgstr ""
-
 #: app/companion/ui/texts.py:267
 msgid "The assistant stopped"
 msgstr ""
@@ -2742,12 +2738,6 @@ msgstr ""
 msgid ""
 "Install Claude Code, or set VOICEMATE_CLAUDE_CLI to its path, then "
 "restart the assistant."
-msgstr ""
-
-#: app/companion/ui/texts.py:289
-msgid ""
-"Sign in with \"claude auth login\" in a terminal, then restart the "
-"assistant."
 msgstr ""
 
 #: app/companion/ui/texts.py:290
@@ -4686,6 +4676,74 @@ msgstr ""
 #: app/setup/stt_modes.py:278
 #, python-brace-format
 msgid "[stt] ⚠ {mode} mode still not ready: {detail}"
+msgstr ""
+
+#: app/companion/ui/texts.py:167
+msgid "Claude sign-in expired: click to renew it"
+msgstr ""
+
+#: app/companion/ui/login_dialog.py:58
+msgid "Copy the command"
+msgstr ""
+
+#: app/companion/ui/login_dialog.py:48
+msgid "Follow the page that opens in your browser, then come back and talk to the assistant."
+msgstr ""
+
+#: app/companion/ui/assistant_window.py:120
+msgid "How to sign in"
+msgstr ""
+
+#: app/companion/ui/login_dialog.py:64
+msgid "Older versions of Claude Code have no such command: type \"claude\", press Enter, then type \"/login\"."
+msgstr ""
+
+#: app/companion/ui/login_dialog.py:46
+msgid "Open a terminal (Windows Terminal, PowerShell or Command Prompt)."
+msgstr ""
+
+#: app/companion/ui/login_dialog.py:75
+msgid "Open the guide"
+msgstr ""
+
+#: app/companion/ui/app.py:185
+msgid "Sign in to Claude again"
+msgstr ""
+
+#: app/companion/ui/tray.py:94
+msgid "Sign in to Claude again..."
+msgstr ""
+
+#: app/companion/ui/texts.py:278
+msgid "The Claude sign-in expired"
+msgstr ""
+
+#: app/companion/assistant/service.py:1898
+msgid "The Claude sign-in expired. Open the VoiceMate menu to see how to sign in again."
+msgstr ""
+
+#: app/companion/assistant/service.py:220
+msgid "The assistant cannot answer because its Claude sign-in expired. Choose \"Sign in to Claude again...\" in the VoiceMate menu to see how to renew it."
+msgstr ""
+
+#: app/companion/ui/app.py:186
+msgid "The assistant cannot answer until you renew its Claude sign-in. Click here to see how."
+msgstr ""
+
+#: app/companion/ui/login_dialog.py:37
+msgid "The assistant needs you to sign in to Claude again. Its sign-in expired, so it cannot answer until you renew it. This takes about a minute and nothing you said or wrote is lost."
+msgstr ""
+
+#: app/companion/ui/login_dialog.py:47
+msgid "Type the command below and press Enter."
+msgstr ""
+
+#: app/companion/ui/login_dialog.py:94
+msgid "VoiceMate did not find the Claude Code program on this computer. Install it first, or set VOICEMATE_CLAUDE_CLI to its path, then restart the assistant."
+msgstr ""
+
+#: app/companion/ui/login_dialog.py:99
+msgid "VoiceMate uses this Claude Code program, so sign in with it:"
 msgstr ""
 
 #~ msgid ""

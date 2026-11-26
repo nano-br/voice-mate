@@ -12,14 +12,18 @@ import pytest
 pytest.importorskip("PySide6")
 
 from PySide6.QtCore import Qt  # noqa: E402
+from PySide6.QtGui import QGuiApplication  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
+from PySide6.QtWidgets import QApplication, QSystemTrayIcon  # noqa: E402
 
 from app.companion.assistant import personality  # noqa: E402
 from app.companion.assistant.contract import ChatMessage, InboxEntry, PendingEntry, ProfileStatus  # noqa: E402
+from app.companion.assistant.login import LOGIN_COMMAND  # noqa: E402
 from app.companion.contract import AssistantSettings  # noqa: E402
 from app.companion.ui.app import CompanionUi  # noqa: E402
 from app.companion.ui.assistant_window import AssistantWindow  # noqa: E402
 from app.companion.ui.demo_controller import FakeController  # noqa: E402
+from app.companion.ui.login_dialog import LoginHelpDialog, display_path  # noqa: E402
 from app.companion.ui.settings_window import AssistantPage  # noqa: E402
 
 ON = AssistantSettings(mode="own_session")
@@ -65,7 +69,6 @@ def test_off_disables_the_input_with_the_reason(ui: CompanionUi, fake: FakeContr
         ({"state": "starting"}, "starting"),
         ({"state": "busy"}, "answering"),
         ({"state": "error", "error": "cli_missing"}, "VOICEMATE_CLAUDE_CLI"),
-        ({"state": "error", "error": "not_logged_in"}, "claude auth login"),
         ({"state": "error", "error": "exited"}, "Restart the assistant"),
     ],
 )
@@ -503,3 +506,123 @@ def test_the_microphone_waits_for_an_assistant_that_takes_prompts(
     fake.publish(tray_state="recording", recording_since=None)  # the hotkey recorded anyway
     assert process_events(lambda: window.mic_button.isEnabled())  # stopping is always offered
     assert window.mic_button.text() == "Stop and send"
+
+
+# --- the Claude sign-in expired --------------------------------------------------------------------
+
+
+def test_an_expired_login_shows_the_attention_badge_menu_entry_and_tooltip(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool]
+) -> None:
+    _enable(fake, process_events)
+    tray = ui.tray
+    assert tray is not None
+    assert not tray.login_expired
+    plain = tray.tray.icon().pixmap(32, 32).toImage()
+    tray._before_menu_shows()
+    assert not tray.login_action.isVisible()
+
+    fake.assistant_service.publish(state="ready", login_expired=True)
+    assert process_events(lambda: tray.login_expired)
+    assert tray.login_action.isVisible()
+    assert tray.login_action.text() == "Sign in to Claude again..."
+    assert "Claude sign-in expired" in tray.tray.toolTip()
+    assert tray.tray.icon().pixmap(32, 32).toImage() != plain  # the corner badge
+
+    fake.assistant_service.publish(login_expired=False)
+    assert process_events(lambda: not tray.login_expired)
+    assert not tray.login_action.isVisible()
+    assert "sign-in expired" not in tray.tray.toolTip()
+    assert tray.tray.icon().pixmap(32, 32).toImage() == plain
+
+
+def test_clicking_the_tray_icon_opens_the_login_help_only_while_it_is_expired(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("app.companion.ui.app.find_cli", lambda: None)
+    _enable(fake, process_events)
+    tray = ui.tray
+    assert tray is not None
+    trigger = QSystemTrayIcon.ActivationReason.Trigger
+    tray._on_activated(trigger)
+    assert ui.login_dialog is None
+    assert ui.status_window.isVisible()
+
+    fake.assistant_service.publish(state="ready", login_expired=True)
+    assert process_events(lambda: tray.login_expired)
+    tray._on_activated(trigger)
+    assert ui.login_dialog is not None
+    assert ui.login_dialog.isVisible()
+
+
+def test_the_expired_login_is_notified_once_per_occurrence(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("app.companion.ui.app.find_cli", lambda: None)
+    _enable(fake, process_events)
+    fake.assistant_service.publish(state="ready", login_expired=True)
+    assert process_events(lambda: bool(ui.notifications.shown))
+    fake.assistant_service.publish(messages=(ChatMessage("notice", "x"),))  # another snapshot, still expired
+    process_events()
+    assert [n.title for n in ui.notifications.shown] == ["Sign in to Claude again"]
+    assert ui.notifications.last_action == "show_login_help"
+
+    ui.notifications.on_clicked()  # a click on the balloon
+    assert ui.login_dialog is not None
+    assert ui.login_dialog.isVisible()
+
+    fake.assistant_service.publish(login_expired=False)
+    process_events()
+    fake.assistant_service.publish(login_expired=True)
+    assert process_events(lambda: len(ui.notifications.shown) == 2)
+
+
+def test_the_assistant_window_offers_the_login_help_while_it_is_expired(
+    ui: CompanionUi, fake: FakeController, process_events: Callable[..., bool], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("app.companion.ui.app.find_cli", lambda: None)
+    window = _window(ui)
+    assert window.login_button.isHidden()
+    fake.assistant_service.publish(state="ready", login_expired=True)
+    assert process_events(lambda: window.snapshot.login_expired)
+    assert not window.login_button.isHidden()
+    assert "sign-in expired" in window.status_label.text()
+    assert window.input.isEnabled()  # it can be tried again once signed in
+    window.login_button.click()
+    assert ui.login_dialog is not None
+    fake.assistant_service.publish(login_expired=False)
+    assert process_events(lambda: window.login_button.isHidden())
+
+
+def test_the_login_dialog_names_the_program_copies_the_command_and_links_the_guide(
+    qapp: QApplication, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dialog = LoginHelpDialog("C:/Users/me/.local/bin/claude.exe")
+    assert "claude.exe" in dialog.program.text()
+    assert LOGIN_COMMAND in dialog.command_label.text()
+    assert "login-expired" in dialog.guide.text()
+    assert dialog.guide_url in dialog.guide.text()
+    dialog.copy_button.click()
+    assert QGuiApplication.clipboard().text() == LOGIN_COMMAND
+
+    missing = LoginHelpDialog(None)
+    assert "did not find" in missing.program.text()
+
+    # Kept between uses: shown again, it reads the program and the guide's language again.
+    missing.refresh("C:/new/claude.exe")
+    assert "C:/new/claude.exe" in missing.program.text()
+    monkeypatch.setattr("app.companion.ui.login_dialog.active_language", lambda: "pt_BR")
+    missing.refresh(None)
+    assert "assistant.pt-BR.md#login-expired" in missing.guide.text()
+
+
+def test_the_login_dialog_keeps_the_account_name_off_the_screen(
+    qapp: QApplication, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("USERPROFILE", r"C:\Users\someone")
+    assert display_path(r"C:\Users\someone\.local\bin\claude.exe") == r"%USERPROFILE%\.local\bin\claude.exe"
+    assert display_path(r"C:\Program Files\claude.exe") == r"C:\Program Files\claude.exe"
+    assert display_path(r"C:\Users\someone2\claude.exe") == r"C:\Users\someone2\claude.exe"
+    dialog = LoginHelpDialog(r"C:\Users\someone\.local\bin\claude.exe")
+    assert "someone" not in dialog.program.text()
+    assert not dialog.icon.pixmap().isNull()

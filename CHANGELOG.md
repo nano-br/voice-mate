@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- VoiceMate tells you when the assistant's Claude sign-in expires, instead of going silent. The tray
+  icon shows an attention badge, its tooltip and menu say "Sign in to Claude again...", and one
+  notification appears. Clicking any of them opens a window with plain steps, the location of the
+  `claude` program it uses, a button that copies the sign-in command, and a link to the guide in
+  your language. The assistant also says it once, and the conversation shows the same advice in
+  place of the raw English error. It all clears on the next answer that goes through.
+
+### Changed
+
+- An expired sign-in no longer puts the assistant in an error state: you can type again as soon as
+  you sign in.
+
 ### Fixed
 
 - Sending to a Claude Desktop conversation works again with Desktop 6.28899. That version turned the

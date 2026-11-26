@@ -152,12 +152,19 @@ def _fallback_line(snapshot: CompanionSnapshot, state: TrayState, idle_chord: st
 
 
 def tooltip(
-    snapshot: CompanionSnapshot, idle_chord: str = "", now: float | None = None, *, answers_waiting: int = 0
+    snapshot: CompanionSnapshot,
+    idle_chord: str = "",
+    now: float | None = None,
+    *,
+    answers_waiting: int = 0,
+    login_expired: bool = False,
 ) -> str:
     line = status_line(snapshot, idle_chord, now)
     if snapshot.hotkeys_suspended and snapshot.tray_state == "idle":
         line = _("Shortcuts paused")
     text = f"{APP_NAME}\n{line}"
+    if login_expired:
+        text += "\n" + _("Claude sign-in expired: click to renew it")
     if answers_waiting:
         text += "\n" + _("Answers waiting: {count}").format(count=answers_waiting)
     return text if len(text) <= TOOLTIP_LIMIT else text[: TOOLTIP_LIMIT - 3] + "..."
@@ -262,12 +269,13 @@ def assistant_state_line(snapshot: AssistantSnapshot) -> str:
     if snapshot.state == "error":
         return {
             "cli_missing": _("Claude Code was not found"),
-            "not_logged_in": _("Claude Code is not signed in"),
             "start_failed": _("The assistant could not start"),
             "exited": _("The assistant stopped"),
             "setup_failed": _("The assistant could not be set up"),
             "no_conversation": _("No Claude Desktop conversation is chosen"),
         }.get(snapshot.error or "", _("The assistant has a problem"))
+    if snapshot.login_expired and snapshot.state in ("ready", "busy"):
+        return _("The Claude sign-in expired")
     return {
         "off": _("The assistant is off"),
         "starting": _("Starting..."),
@@ -286,7 +294,6 @@ def assistant_input_block(snapshot: AssistantSnapshot) -> str:
             "cli_missing": _(
                 "Install Claude Code, or set VOICEMATE_CLAUDE_CLI to its path, then restart the assistant."
             ),
-            "not_logged_in": _('Sign in with "claude auth login" in a terminal, then restart the assistant.'),
             "no_conversation": _("Choose the Claude Desktop conversation in Settings, Assistant."),
         }.get(snapshot.error or "", _("Restart the assistant to try again. The VoiceMate log has the details."))
     return {

@@ -78,6 +78,7 @@ def test_menu_layout_when_idle(ui: CompanionUi) -> None:
         "Open VoiceMate",
         "Assistant",  # hidden while the assistant is off
         "Hear what's ready",  # hidden while the assistant is off
+        "Sign in to Claude again...",  # hidden until the assistant's Claude sign-in expires
         "Dictate\tCtrl+Alt+V",
         "Ask Claude\tCtrl+Alt+A",
         "Cancel",
@@ -92,7 +93,7 @@ def test_menu_layout_when_idle(ui: CompanionUi) -> None:
     ]
     visible = [action.text() for action in menu.actions() if action.isVisible() and not action.isSeparator()]
     assert "Not copied" not in visible and "Restart WSL now..." not in visible
-    assert "Assistant" not in visible
+    assert "Assistant" not in visible and "Sign in to Claude again..." not in visible
     assert not _action(menu, "Cancel").isEnabled()
     assert _action(menu, "Dictate").isEnabled()
 

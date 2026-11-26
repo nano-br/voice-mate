@@ -349,6 +349,7 @@ La skill también documenta las acciones `remember`, `forget` y `follow_up` con 
 
 | Síntoma | Qué hacer |
 |---|---|
+| El asistente deja de responder y dice que su inicio de sesión de Claude caducó (insignia de aviso en el icono de la bandeja) | Inicia sesión en Claude de nuevo: mira [Iniciar sesión de nuevo](#login-expired) |
 | El asistente cuenta que no pudo enviar a una sesión de terminal o IDE porque está en uso (la central recibe `not sent (in use)`) | Esa sesión está abierta en un programa ahora mismo. Ciérrala allí, o espera 2 minutos desde su último cambio, y vuelve a pedirlo. Sin las herramientas de sesión, el asistente te dice qué escribir allí |
 | El asistente cuenta que la sesión está ocupada (`not sent (busy)`) | El último mensaje de VoiceMate a esa sesión todavía se está respondiendo, o se acaba de responder. Espera un momento y vuelve a pedirlo |
 | El asistente cuenta que la carpeta de la sesión ya no está (`not sent (no_folder)`) | La carpeta de la sesión ya no está en este equipo, así que no se puede reanudar |
@@ -358,6 +359,23 @@ La skill también documenta las acciones `remember`, `forget` y `follow_up` con 
 | Una vigilancia dejó de avisar | Sale de la lista tras 12 horas sin turno nuevo (una espera: 1 hora). Pide al asistente que la vigile otra vez |
 | Los avisos llegan agrupados o con retraso | Es a propósito: los turnos que terminan hasta 15 segundos después del primero se convierten en una nota, y salen como mucho 4 notas de vigilancia por minuto |
 | El asistente sigue con las instrucciones antiguas tras una actualización | Se conservó tu copia editada de la skill y la versión nueva está al lado como `.new`; la ventana lo dice. Combínalas, o borra tu copia |
+
+<a id="login-expired"></a>
+
+### Iniciar sesión de nuevo (sesión caducada)
+
+El asistente ejecuta el programa Claude Code (`claude`) en segundo plano, y ese programa necesita tu inicio de sesión en Claude. Cuando la sesión caduca (o cerraste sesión), el asistente no puede responder. El registro muestra `Failed to authenticate. API Error: 401 OAuth access token has expired` o pide `/login`. VoiceMate te avisa de varias maneras: una insignia de aviso en el icono de la bandeja con una línea en su descripción emergente, una notificación, una frase hablada, un mensaje sencillo en la ventana del asistente en lugar del error en bruto de Claude y un botón "Cómo iniciar sesión" en esa ventana.
+
+Para renovar el inicio de sesión:
+
+1. Haz clic en el icono de la bandeja (o en la notificación, o en "Iniciar sesión en Claude de nuevo..." en el menú de la bandeja, o en "Cómo iniciar sesión" en la ventana del asistente). Una ventana explica los pasos.
+2. Abre una terminal (Terminal de Windows, PowerShell o Símbolo del sistema): pulsa la tecla Windows, escribe `PowerShell` y pulsa Enter.
+3. Escribe `claude auth login` y pulsa Enter (la ventana tiene un botón "Copiar el comando"; pega con clic derecho o `Ctrl+V`). Con un Claude Code antiguo, sin ese comando, ejecuta `claude` y luego escribe `/login`.
+4. Sigue la página que se abre en el navegador y después vuelve a hablar con el asistente.
+
+La insignia desaparece sola con la primera respuesta que funcione. Si el asistente sigue fallando después de iniciar sesión, pulsa Reiniciar en la ventana del asistente. Si la terminal dice que no conoce `claude`, mira "¿Qué `claude`?" más abajo.
+
+**¿Qué `claude`?** La ventana muestra el programa exacto que ejecuta VoiceMate. Inicia sesión con ese: si tu terminal no encuentra `claude`, o tienes más de una copia (por ejemplo una dentro de WSL), ejecútalo con su ruta completa. `VOICEMATE_CLAUDE_CLI` cambia el programa que usa VoiceMate.
 
 Más mensajes: [troubleshooting.es.md](troubleshooting.es.md#asistente-de-voz).
 

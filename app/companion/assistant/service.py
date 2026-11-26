@@ -80,6 +80,7 @@ from app.companion.assistant.conversations import OwnedConversations, OwnedError
 from app.companion.assistant.desktop_port import DesktopConversationPort
 from app.companion.assistant.inbox import PREPARE_HEAD, Inbox, context_entries, digest_note, prepare_note
 from app.companion.assistant.instructions import StandingInstructions
+from app.companion.assistant.login import is_login_failure
 from app.companion.assistant.mcp_tools import VoiceMateTools
 from app.companion.assistant.notifier import (
     EVENT_MARKER,
@@ -211,6 +212,14 @@ def chat_message(raw: _Raw) -> ChatMessage:
     if parsed.degraded:
         return ChatMessage("assistant", parsed.display, degraded=True)
     return ChatMessage("assistant", parsed.display or parsed.voice)
+
+
+def login_message() -> str:
+    """Localized: shown in the conversation in place of Claude Code's own sign-in error."""
+    return _(
+        "The assistant cannot answer because its Claude sign-in expired. Choose "
+        '"Sign in to Claude again..." in the VoiceMate menu to see how to renew it.'
+    )
 
 
 def desktop_reason(error: DesktopError) -> str:
@@ -440,6 +449,8 @@ class AssistantServiceImpl:
         self._model_reminded = False  # the central was told its reply had no reply model; one note per streak
         self._unchecked_reply = ""  # message id of a reply that arrived live and was not handled at a turn end yet
         self._error_reply = ""  # message id of an error Claude Code wrote in place of a reply
+        self._login_transcript = False  # the transcript's last turn died on the Claude sign-in
+        self._login_told = False  # the voice already said that the sign-in expired (once per occurrence)
         self._digests: dict[str, tuple[InboxEntry, ...]] = {}  # digest note -> its items, until delivered
         self._preparing: tuple[InboxEntry, float] | None = None  # the held answer being summarized ahead, since when
         self._prepare_tried: set[tuple[str, str]] = set()  # held answers already sent for a summary, once each
@@ -783,6 +794,7 @@ class AssistantServiceImpl:
             self._profile_started = True
             self._check_profile(manual=False)
         self._running = True
+        self._set_login_transcript(False)
         self._port_status = PortStatus(state="starting")
         port = self._port_factory(settings)
         self._port = port
@@ -907,6 +919,7 @@ class AssistantServiceImpl:
             except Exception:  # noqa: BLE001 - quitting must go on
                 log.exception("assistant: stopping the conversation failed")
         self._port_status = PortStatus()
+        self._set_login_transcript(False)
 
     def _restart(self) -> None:
         if self._stopped:
@@ -1109,11 +1122,46 @@ class AssistantServiceImpl:
                     self._voice_reply(last, final=True)
                     self._handle_actions(last)
                     self._turn_voiced = False
+                # A turn that died on the sign-in: its error id, or (an error line without an id) the
+                # newest reply already replaced by the plain sign-in message.
+                died = (bool(event.message_id) and event.message_id == self._error_reply) or (
+                    last is not None and last.text == login_message()
+                )
+                if not died and (event.message_id or last is not None):
+                    # A turn that ended on its own (not on an error): the sign-in works again. The
+                    # error of a dead turn arrives as a reply line too, so the reply's text proves nothing.
+                    self._set_login_transcript(False)
         elif event.kind == "error":
             log.warning("assistant: the session reported an error: %s", event.text[:300])
             if event.message_id:
                 self._error_reply = event.message_id  # the turn ends with this error, not with a reply
+            if self._followed is None and is_login_failure(event.text):
+                return self._login_error_seen(event)
         return False
+
+    def _login_error_seen(self, event: ReaderEvent) -> bool:
+        """The own conversation's turn died on the sign-in: the window shows what to do instead of
+        the raw English error, and (for a turn that just happened) the person is told. True when
+        a message changed."""
+        if not self._replaying:
+            self._set_login_transcript(True)
+        for index in range(len(self._raw) - 1, -1, -1):
+            raw = self._raw[index]
+            if event.message_id:
+                match = raw.message_id == event.message_id
+            else:
+                # No id to join the lines by: the newest reply that is this very text.
+                match = raw.role == "assistant" and raw.text.strip() == event.text.strip()
+            if match and raw.text != login_message():
+                self._raw[index] = replace(raw, text=login_message())
+                return True
+            if match:
+                return False
+        return False
+
+    def _set_login_transcript(self, value: bool) -> None:
+        with self._lock:
+            self._login_transcript = value
 
     def _voice_reply(self, raw: _Raw, *, final: bool) -> None:
         """Speak the <voice> block of a new reply of the assistant's own conversation as it grows."""
@@ -1856,12 +1904,27 @@ class AssistantServiceImpl:
             return "stopped", None
         return self._port_status.state, self._port_status.error
 
+    def _login_expired(self) -> bool:
+        """The Claude sign-in expired (the port or the transcript saw it); the voice says so once."""
+        own = self._settings().mode == "own_session"  # before the lock: the callable is not ours
+        with self._lock:
+            expired = own and (self._port_status.login_expired or self._login_transcript)
+            tell = expired and not self._login_told
+            self._login_told = expired
+        if tell and self._voice is not None:  # outside the lock: the voice may take its time
+            self._voice.notice(
+                _("The Claude sign-in expired. Open the VoiceMate menu to see how to sign in again."),
+                self._language(),
+            )
+        return expired
+
     def _publish(self) -> None:
         self._away = self._followed is not None or self._direct is not None
         state, error = self._state()
         messages = self._merged_messages()
         status = self._port_status
         inbox = self._held().items() if self._settings().mode != "off" else ()
+        login_expired = self._login_expired()
         with self._lock:
             candidate = AssistantSnapshot(
                 rev=self._snapshot.rev,
@@ -1876,6 +1939,7 @@ class AssistantServiceImpl:
                 pending=tuple(self._pending),
                 window_requests=self._window_requests,
                 profile=self._profile_status(),
+                login_expired=login_expired,
             )
             if candidate == self._snapshot:
                 return

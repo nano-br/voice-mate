@@ -51,8 +51,9 @@ class TrayIcon(QObject):
         self._shell = shell
         self._snapshot = shell.bridge.snapshot
         self._tone: GlyphTone = taskbar_glyph_tone()
-        self._icons: dict[tuple[TrayState, GlyphTone, bool], QIcon] = {}
+        self._icons: dict[tuple[TrayState, GlyphTone, bool, bool], QIcon] = {}
         self._waiting = 0  # answers held in the assistant's inbox
+        self._login_expired = False  # the assistant's Claude sign-in expired: the attention badge
         self._flow_key: tuple[tuple[str, str], ...] = ()
         self._flow_actions: list[QAction] = []
         self._quitting = False
@@ -74,6 +75,7 @@ class TrayIcon(QObject):
         self._assistant_seen.connect(self._show_assistant)
         assistant = shell.controller.assistant()
         self._waiting = len(assistant.snapshot().inbox)
+        self._login_expired = assistant.snapshot().login_expired
         self._unsubscribe_assistant = assistant.subscribe(self._assistant_seen.emit)
         self.show_snapshot(self._snapshot)
 
@@ -89,6 +91,9 @@ class TrayIcon(QObject):
         self.assistant_action.triggered.connect(self._shell.show_assistant)
         self.hear_action = menu.addAction(_("Hear what's ready"))
         self.hear_action.triggered.connect(lambda _checked=False: self._shell.controller.assistant().hear_ready())
+        self.login_action = menu.addAction(_("Sign in to Claude again..."))
+        self.login_action.triggered.connect(self._shell.show_login_help)
+        self.login_action.setVisible(False)
         self._flows_separator = menu.addSeparator()
         self.cancel_action = menu.addAction(_("Cancel"))
         self.cancel_action.triggered.connect(self._shell.controller.cancel)
@@ -181,9 +186,11 @@ class TrayIcon(QObject):
 
     def _show_assistant(self, snapshot: AssistantSnapshot) -> None:
         """The inbox count: the corner badge, the tooltip and the "Hear what's ready" entry."""
-        if self._quitting or len(snapshot.inbox) == self._waiting:
+        if self._quitting or (len(snapshot.inbox) == self._waiting and snapshot.login_expired == self._login_expired):
             return
         self._waiting = len(snapshot.inbox)
+        self._login_expired = snapshot.login_expired
+        self.login_action.setVisible(self._login_expired)
         self._refresh_hear_action()
         self.tray.setIcon(self._icon_for(self._snapshot.tray_state))
         self.refresh_time()
@@ -191,6 +198,10 @@ class TrayIcon(QObject):
     @property
     def answers_waiting(self) -> int:
         return self._waiting
+
+    @property
+    def login_expired(self) -> bool:
+        return self._login_expired
 
     def _refresh_hear_action(self) -> None:
         waiting = self._waiting
@@ -203,7 +214,9 @@ class TrayIcon(QObject):
         snapshot = self._snapshot
         chord = idle_chord(snapshot, self._shell.settings())
         self.status_action.setText(menu_text(texts.status_line(snapshot, chord)))
-        self.tray.setToolTip(texts.tooltip(snapshot, chord, answers_waiting=self._waiting))
+        self.tray.setToolTip(
+            texts.tooltip(snapshot, chord, answers_waiting=self._waiting, login_expired=self._login_expired)
+        )
 
     def _refresh_settings_items(self) -> None:
         """What depends on the settings, read live (also right before the menu shows)."""
@@ -233,10 +246,10 @@ class TrayIcon(QObject):
         self._render_flow_actions(displayed_flows(self._snapshot, self._shell.settings()), self._snapshot)
 
     def _icon_for(self, state: TrayState) -> QIcon:
-        key = (state, self._tone, self._waiting > 0)
+        key = (state, self._tone, self._waiting > 0, self._login_expired)
         icon = self._icons.get(key)
         if icon is None:
-            icon = self._icons[key] = tray_icon(state, self._tone, self._waiting > 0)
+            icon = self._icons[key] = tray_icon(state, self._tone, self._waiting > 0, self._login_expired)
         return icon
 
     def _refresh_tone(self) -> None:
@@ -292,7 +305,11 @@ class TrayIcon(QObject):
 
     def _on_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         if reason in (QSystemTrayIcon.ActivationReason.Trigger, QSystemTrayIcon.ActivationReason.DoubleClick):
-            self._shell.show_status()
+            # An expired sign-in blocks the assistant: the click explains how to renew it.
+            if self._login_expired:
+                self._shell.show_login_help()
+            else:
+                self._shell.show_status()
 
 
 def result_label(item: RecentItem, limit: int) -> str:

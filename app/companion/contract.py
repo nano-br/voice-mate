@@ -136,7 +136,7 @@ HotkeyCheck = Literal["ok", "in_use", "duplicate", "invalid", "engine_owned"]
 CompanionCommand = Literal["show", "quit", "restart-engine", "restart-wsl", "settings"]
 NotificationLevel = Literal["info", "warning", "error"]
 # What clicking the notification does (tray balloons have no buttons; one click target).
-NotificationAction = Literal["none", "show_status", "open_logs", "open_settings"]
+NotificationAction = Literal["none", "show_status", "open_logs", "open_settings", "show_login_help"]
 
 SETTINGS_VERSION: Final = 1
 
