@@ -398,7 +398,7 @@ In Settings > **Assistant**, the "Claude Desktop profile" group shows which one 
 
 The tray icon is the VoiceMate figure; a small badge in its corner shows the state. A left click opens the status window.
 
-<p align="center"><img src="assets/screenshots/tray-states.png" width="584" alt="The tray icon in each state, on a dark and a light taskbar, and the badge shown when answers are waiting"></p>
+<p align="center"><img src="assets/screenshots/tray-states.png" width="584" alt="The tray icon in each state, on a dark and a light taskbar, then the badge shown when answers are waiting and the one shown when the Claude sign-in expired"></p>
 
 | Badge (left to right) | State | What the menu and tooltip say |
 |---|---|---|
@@ -408,17 +408,17 @@ The tray icon is the VoiceMate figure; a small badge in its corner shows the sta
 | Speech bubble | Thinking (Claude) | "Claude is answering..." |
 | Speaker | Speaking (Claude) | "Claude is answering..." |
 | Check mark | Ready, for 3 seconds | "Copied: ..." |
-| Blue disc with an envelope flap | Answers from other conversations are waiting in the assistant's inbox (shown only over a quiet state) | "Answers waiting: 2" |
-| Triangle, over a quiet state | The assistant's Claude sign-in expired (see [Signing in again](assistant.md#login-expired)); the tooltip adds a line and the menu an item "Sign in to Claude again..." | "Claude sign-in expired: click to renew it" |
 | Ring | Starting | "Starting engine..." |
 | Circular arrow | Restarting | "Restarting (attempt 2)" |
 | Triangle | Warning | "No microphone" or "WSL audio stopped" |
 | Cross | Error | "The engine stopped working" |
 | Grey octagon, icon dimmed | Stopped | "VoiceMate is stopped" |
+| Blue disc with an envelope flap | Answers from other conversations are waiting in the assistant's inbox (shown only over a quiet state) | "Answers waiting: 2" |
+| Yellow triangle, over a quiet state | The assistant's Claude sign-in expired (see [Sign in to Claude again](sign-in-again.md)); the tooltip adds a line and the menu an item "Sign in to Claude again..." | "Claude sign-in expired: click to renew it" |
 
 The menu has:
 
-- The status line, then "Open VoiceMate", and "Assistant" and "Hear what's ready" when the voice assistant is on, and "Sign in to Claude again..." while the assistant's Claude sign-in is expired ([how to renew it](assistant.md#login-expired)).
+- The status line, then "Open VoiceMate", and "Assistant" and "Hear what's ready" when the voice assistant is on, and "Sign in to Claude again..." while the assistant's Claude sign-in is expired ([how to renew it](sign-in-again.md)).
 - "Dictate" and "Ask Claude" with their hotkeys ("Stop and copy" and "Stop and ask Claude" while recording), and "Cancel".
 - "Recent": the last transcriptions; click one to copy it again.
 - "Not copied ({count})": only when something failed to reach the clipboard; click an item to copy it; "Clear list" empties it after asking 'Clear the "Not copied" list?'.

@@ -25,10 +25,10 @@ Writes (`--lang all`, the default; `--lang <one>` writes only that language's fo
 - `<out>/<lang>/<name>.png` for every name in `SCREENSHOT_NAMES`: the status window, one
   image per settings tab plus the lower sections of the Assistant tab (personality, skill and
   Claude Desktop profile), the assistant text screen (a conversation, then answers waiting and
-  the "Waiting for" list), the tray menu, the two question boxes and `hero`, the status window
+  the "Waiting for" list), the tray menu, the two question boxes, the sign-in help window and `hero`, the status window
   and the tray menu side by side.
 - `<out>/tray-states.png`: the tray glyph of every state on a dark and a light taskbar strip,
-  then the "answers waiting" badge (over the idle state).
+  then the "answers waiting" badge and the "Claude sign-in expired" badge (over the idle state).
 - `<brand-out>/banner-light.png` and `banner-dark.png`: the app icon and the wordmark, for
   light and dark page backgrounds.
 
@@ -60,6 +60,7 @@ from PySide6.QtGui import (
     QGuiApplication,
     QImage,
     QImageWriter,
+    QLinearGradient,
     QPainter,
     QPainterPath,
     QPen,
@@ -88,6 +89,7 @@ from app.companion.assistant.contract import ChatMessage, InboxEntry, PendingEnt
 from app.companion.contract import AssistantSettings, CompanionSettings, RecentItem, TrayState
 from app.companion.ui.demo_controller import DEMO_INSTANCE, FakeController
 from app.companion.ui.icons import GlyphTone, brand_image, glyph_color, glyph_image
+from app.companion.ui.login_dialog import LoginHelpDialog
 from app.protocol.models import ResultKind, ResultRecord
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[1]
@@ -113,6 +115,7 @@ SCREENSHOT_NAMES: Final = (
     "tray-menu",
     "dialog-restart-wsl",
     "dialog-language",
+    "dialog-login",
     "hero",
 )
 
@@ -141,6 +144,7 @@ TRAY_STATES: Final[tuple[TrayState, ...]] = (
 )
 # After the states: the "answers waiting" badge, over the state it is drawn on.
 TRAY_INBOX_OVER: Final[TrayState] = "idle"
+SAMPLE_CLI: Final = Path(".local", "bin", "claude.exe")  # where the Claude Code installer puts it
 TRAY_GLYPH_SIZE: Final = 32  # logical; the tray paints this size itself at 200 %
 TRAY_GLYPH_GAP: Final = 20
 TRAY_STRIP_PADDING: Final = 16
@@ -155,6 +159,20 @@ BANNER_GAP: Final = 36
 BANNER_TEXT_PX: Final = 104
 BANNER_WORDMARK: Final = "VoiceMate"  # product name: never translated
 BANNER_INK: Final = {"light": "#1F2328", "dark": "#F0F6FC"}  # GitHub's text colors per page theme
+# The repository's social preview (GitHub: Settings > General > Social preview), in device pixels:
+# the size GitHub asks for. English, like the README it stands for.
+SOCIAL_SIZE: Final = (1280, 640)
+SOCIAL_ICON: Final = 200
+SOCIAL_GAP: Final = 44
+SOCIAL_TEXT_PX: Final = 128
+SOCIAL_TAGLINE_PX: Final = 40
+SOCIAL_TAGLINES: Final = (
+    "Press a hotkey, speak, paste.",
+    "Local voice dictation and a voice assistant for Claude Code.",
+)
+SOCIAL_BACKGROUND: Final = ("#1B1446", "#0D1117")  # the mark's deep blue to GitHub's dark page
+SOCIAL_TAGLINE_INK: Final = "#C9D1D9"
+AVATAR_SIZE: Final = 512  # the GitHub organization picture: the app icon
 
 PNG_DOTS_PER_METER: Final = round(96 * SCALE / 0.0254)
 # The clock time the sample answers and requests show (local time, so every time zone shows 09:40).
@@ -351,6 +369,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     render_tray_states(out / "tray-states.png")
     for theme in ("light", "dark"):
         render_banner(theme, brand_out / f"banner-{theme}.png")
+    render_social_preview(brand_out / "social-preview.png")
+    save_png(brand_image(AVATAR_SIZE), brand_out / "avatar.png")
     del qapp
     failed = []
     for language in LANGUAGES:
@@ -606,6 +626,15 @@ def _render_with_catalogs(qapp: QApplication, language: str, out: Path, locales:
         image = _grab_question(qapp, opener, partial(getattr, ui, attribute), name, warnings)
         _save(target, name, frame(image), written)
 
+    # The sign-in help window, with the program path of a default Claude Code install: under the
+    # home folder, so it shows as %USERPROFILE% and no account name reaches the image.
+    login = LoginHelpDialog(str(Path(os.environ.get("USERPROFILE") or Path.home()) / SAMPLE_CLI))
+    login.show()
+    _pump(qapp)
+    _save(target, "dialog-login", frame(_grab(login, "dialog-login", warnings)), written)
+    login.close()
+    login.deleteLater()
+
     _save(target, "hero", hero(status_image, menu_image), written)
     if written != set(SCREENSHOT_NAMES):
         raise SystemExit(f"rendered {sorted(written)}, expected {sorted(SCREENSHOT_NAMES)}")
@@ -683,6 +712,9 @@ def clipped_texts(root: QWidget) -> list[str]:
             needed = max(metrics.horizontalAdvance(line) for line in widget.text().split("\n"))
             if widget.width() + 1 < needed:
                 problems.append(f"label clipped ({widget.width()} < {needed}): {widget.text()!r}")
+        elif isinstance(widget, QLabel) and widget.wordWrap() and widget.text():
+            if widget.height() + 1 < widget.heightForWidth(widget.width()):
+                problems.append(f"wrapped label cut ({widget.height()} < {widget.heightForWidth(widget.width())})")
         elif isinstance(widget, (QPushButton, QCheckBox)) and widget.text():
             if widget.width() + 1 < widget.sizeHint().width():
                 problems.append(f"{type(widget).__name__} clipped: {widget.text()!r}")
@@ -770,11 +802,12 @@ def hero(status: QImage, menu: QImage) -> QImage:
 
 def render_tray_states(path: Path) -> None:
     """Every state's tray glyph (the code the tray uses, at the 200 % tray size) on a
-    dark and a light taskbar strip, then the "answers waiting" badge. No text: the READMEs
-    caption it."""
+    dark and a light taskbar strip, then the "answers waiting" badge and the "Claude sign-in
+    expired" badge. No text: the READMEs caption it."""
     glyph = TRAY_GLYPH_SIZE * SCALE
     gap, padding = TRAY_GLYPH_GAP * SCALE, TRAY_STRIP_PADDING * SCALE
-    shown: list[tuple[TrayState, bool]] = [(state, False) for state in TRAY_STATES] + [(TRAY_INBOX_OVER, True)]
+    shown: list[tuple[TrayState, bool, bool]] = [(state, False, False) for state in TRAY_STATES]
+    shown += [(TRAY_INBOX_OVER, True, False), (TRAY_INBOX_OVER, False, True)]
     strip_width = len(shown) * glyph + (len(shown) - 1) * gap + 2 * padding
     strip_height = glyph + 2 * padding
     spacing = 12 * SCALE
@@ -787,8 +820,8 @@ def render_tray_states(path: Path) -> None:
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(taskbar))
         painter.drawRoundedRect(QRectF(0, top, strip_width, strip_height), 8 * SCALE, 8 * SCALE)
-        for index, (state, waiting) in enumerate(shown):
-            image = glyph_image(state, glyph_color(tone, state), glyph, answers_waiting=waiting)
+        for index, (state, waiting, attention) in enumerate(shown):
+            image = glyph_image(state, glyph_color(tone, state), glyph, answers_waiting=waiting, attention=attention)
             painter.drawImage(QPointF(padding + index * (glyph + gap), top + padding), image)
     painter.end()
     save_png(out, path)
@@ -820,6 +853,53 @@ def render_banner(theme: str, path: Path) -> None:
     painter.setPen(Qt.PenStyle.NoPen)
     painter.setBrush(QColor(BANNER_INK[theme]))
     painter.drawPath(path_text)
+    painter.end()
+    save_png(out, path)
+
+
+def render_social_preview(path: Path) -> None:
+    """The icon and the wordmark over the README's tagline, on an opaque dark background: link
+    previews (chats, social networks) show it on any color, and GitHub crops a margin around it."""
+    width, height = SOCIAL_SIZE
+    out = QImage(width, height, QImage.Format.Format_ARGB32_Premultiplied)
+    painter = QPainter(out)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+    gradient = QLinearGradient(0, 0, width, height)
+    gradient.setColorAt(0, QColor(SOCIAL_BACKGROUND[0]))
+    gradient.setColorAt(1, QColor(SOCIAL_BACKGROUND[1]))
+    painter.fillRect(0, 0, width, height, gradient)
+
+    icon = brand_image(SOCIAL_ICON)
+    font = QFont()
+    font.setFamilies(["Segoe UI Variable Display", "Segoe UI"])
+    font.setWeight(QFont.Weight.DemiBold)
+    font.setPixelSize(SOCIAL_TEXT_PX)
+    metrics = QFontMetricsF(font)
+    text = metrics.tightBoundingRect(BANNER_WORDMARK)
+    tagline_font = QFont()
+    tagline_font.setFamilies(["Segoe UI Variable Text", "Segoe UI"])
+    tagline_font.setPixelSize(SOCIAL_TAGLINE_PX)
+    tagline_metrics = QFontMetricsF(tagline_font)
+    line_height = tagline_metrics.height() * 1.15
+    block = icon.height() + 56 + line_height * len(SOCIAL_TAGLINES)
+    top = (height - block) / 2
+
+    left = (width - (icon.width() + SOCIAL_GAP + text.width())) / 2
+    painter.drawImage(QPointF(left, top), icon)
+    baseline = top + icon.height() / 2 + metrics.capHeight() / 2
+    wordmark = QPainterPath()
+    wordmark.addText(QPointF(left + icon.width() + SOCIAL_GAP - text.left(), baseline), font, BANNER_WORDMARK)
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(QColor(BANNER_INK["dark"]))
+    painter.drawPath(wordmark)
+
+    painter.setFont(tagline_font)
+    painter.setPen(QColor(SOCIAL_TAGLINE_INK))
+    y = top + icon.height() + 56
+    for line in SOCIAL_TAGLINES:
+        painter.drawText(QRectF(0, y, width, line_height), Qt.AlignmentFlag.AlignHCenter, line)
+        y += line_height
     painter.end()
     save_png(out, path)
 

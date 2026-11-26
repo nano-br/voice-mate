@@ -600,7 +600,7 @@ def test_the_login_dialog_names_the_program_copies_the_command_and_links_the_gui
     dialog = LoginHelpDialog("C:/Users/me/.local/bin/claude.exe")
     assert "claude.exe" in dialog.program.text()
     assert LOGIN_COMMAND in dialog.command_label.text()
-    assert "login-expired" in dialog.guide.text()
+    assert "docs/sign-in-again.md" in dialog.guide.text()
     assert dialog.guide_url in dialog.guide.text()
     dialog.copy_button.click()
     assert QGuiApplication.clipboard().text() == LOGIN_COMMAND
@@ -613,7 +613,7 @@ def test_the_login_dialog_names_the_program_copies_the_command_and_links_the_gui
     assert "C:/new/claude.exe" in missing.program.text()
     monkeypatch.setattr("app.companion.ui.login_dialog.active_language", lambda: "pt_BR")
     missing.refresh(None)
-    assert "assistant.pt-BR.md#login-expired" in missing.guide.text()
+    assert "docs/sign-in-again.pt-BR.md" in missing.guide.text()
 
 
 def test_the_login_dialog_keeps_the_account_name_off_the_screen(

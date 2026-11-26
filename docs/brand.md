@@ -110,6 +110,22 @@ with a blue-to-magenta gradient, around a deep-indigo inner square.
 The mark fills about 86 % of the inner square's width. At 16 and 20 px the frame is a
 one-pixel bright edge around the dark square.
 
+## On GitHub: banner, social preview and organization picture
+
+`make docs-screenshots` draws these from the same code as the app icon, so they never drift
+from it:
+
+- `docs/assets/brand/banner-light.png` and `banner-dark.png`: the icon and the wordmark on a
+  transparent background, at the top of every README (one per page theme).
+- `docs/assets/brand/social-preview.png`: 1280 x 640, the icon, the wordmark and the README's
+  tagline in English on an opaque dark background. It is the repository's social preview
+  (GitHub: Settings, General, Social preview), the picture chats and social networks show
+  for a link to the repository.
+- `docs/assets/brand/avatar.png`: 512 x 512, the app icon. It is the picture of the GitHub
+  organization, shown next to the repository's name. GitHub has no per-repository icon.
+
+GitHub keeps its own copy of both pictures: after changing them here, upload them again.
+
 ## Do and don't
 
 - **Do** keep the body's V lower than the arms and the head above the shoulders, with a

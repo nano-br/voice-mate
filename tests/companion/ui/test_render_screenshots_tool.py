@@ -11,7 +11,7 @@ import pytest
 pytest.importorskip("PySide6")
 
 from app.companion.contract import TrayState, UiLanguage  # noqa: E402
-from app.companion.ui.icons import INBOX_BADGE, badge_for  # noqa: E402
+from app.companion.ui.icons import ATTENTION_BADGE, INBOX_BADGE, badge_for  # noqa: E402
 from tools import render_screenshots  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -44,6 +44,8 @@ def test_tray_states_image_shows_every_state_once() -> None:
     assert sorted(render_screenshots.TRAY_STATES) == sorted(get_args(TrayState))
     # The "answers waiting" badge is drawn after them, over a quiet state that shows it.
     assert badge_for(render_screenshots.TRAY_INBOX_OVER, answers_waiting=True) == INBOX_BADGE
+    # Then the "Claude sign-in expired" badge, over the same state.
+    assert badge_for(render_screenshots.TRAY_INBOX_OVER, attention=True) == ATTENTION_BADGE
 
 
 def test_there_is_one_image_per_settings_tab() -> None:
@@ -60,6 +62,8 @@ def test_committed_images_match_the_tool() -> None:
     assert (SHOTS / "tray-states.png").is_file()
     assert (BRAND / "banner-light.png").is_file()
     assert (BRAND / "banner-dark.png").is_file()
+    assert (BRAND / "social-preview.png").is_file()
+    assert (BRAND / "avatar.png").is_file()
 
 
 def test_refuses_to_run_outside_windows(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-26
+
 ### Added
 
 - VoiceMate tells you when the assistant's Claude sign-in expires, instead of going silent. The tray
@@ -15,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `claude` program it uses, a button that copies the sign-in command, and a link to the guide in
   your language. The assistant also says it once, and the conversation shows the same advice in
   place of the raw English error. It all clears on the next answer that goes through.
+- A guide page just for signing in again, in every language of the docs
+  ([docs/sign-in-again.md](docs/sign-in-again.md)): what happened, the steps with pictures of the
+  window and of the tray badge, which `claude` to sign in with, and what to try when the assistant
+  still does not answer. The window's "Open the guide" link opens it.
 
 ### Changed
 
@@ -578,7 +584,8 @@ Development happened on `main` and in seven pull requests before this first rele
 - [#7](https://github.com/nano-br/voice-mate/pull/7): choose the dictation language in
   the companion.
 
-[Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.5.3...HEAD
+[Unreleased]: https://github.com/nano-br/voice-mate/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/nano-br/voice-mate/compare/v0.5.3...v0.6.0
 [0.5.3]: https://github.com/nano-br/voice-mate/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/nano-br/voice-mate/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/nano-br/voice-mate/compare/v0.5.0...v0.5.1

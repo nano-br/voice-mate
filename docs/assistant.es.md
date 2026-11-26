@@ -364,20 +364,11 @@ La skill también documenta las acciones `remember`, `forget` y `follow_up` con 
 
 ### Iniciar sesión de nuevo (sesión caducada)
 
-El asistente ejecuta el programa Claude Code (`claude`) en segundo plano, y ese programa necesita tu inicio de sesión en Claude. Cuando la sesión caduca (o cerraste sesión), el asistente no puede responder. El registro muestra `Failed to authenticate. API Error: 401 OAuth access token has expired` o pide `/login`. VoiceMate te avisa de varias maneras: una insignia de aviso en el icono de la bandeja con una línea en su descripción emergente, una notificación, una frase hablada, un mensaje sencillo en la ventana del asistente en lugar del error en bruto de Claude y un botón "Cómo iniciar sesión" en esa ventana.
+El asistente ejecuta el programa Claude Code (`claude`) en segundo plano, y ese programa necesita tu inicio de sesión en Claude. Cuando la sesión caduca (o cerraste sesión), el asistente no puede responder. VoiceMate te avisa con una insignia de aviso en el icono de la bandeja, una notificación, una frase hablada y un mensaje sencillo en la ventana del asistente. Haz clic en el icono de la bandeja: una ventana muestra los pasos, el comando `claude auth login` con un botón que lo copia y con qué programa `claude` debes iniciar sesión. La insignia desaparece sola con la primera respuesta que funcione.
 
-Para renovar el inicio de sesión:
+<p align="center"><img src="assets/screenshots/es/dialog-login.png" width="540" alt="La ventana Inicia sesión en Claude de nuevo"></p>
 
-1. Haz clic en el icono de la bandeja (o en la notificación, o en "Iniciar sesión en Claude de nuevo..." en el menú de la bandeja, o en "Cómo iniciar sesión" en la ventana del asistente). Una ventana explica los pasos.
-2. Abre una terminal (Terminal de Windows, PowerShell o Símbolo del sistema): pulsa la tecla Windows, escribe `PowerShell` y pulsa Enter.
-3. Escribe `claude auth login` y pulsa Enter (la ventana tiene un botón "Copiar el comando"; pega con clic derecho o `Ctrl+V`). Con un Claude Code antiguo, sin ese comando, ejecuta `claude` y luego escribe `/login`.
-4. Sigue la página que se abre en el navegador y después vuelve a hablar con el asistente.
-
-La insignia desaparece sola con la primera respuesta que funcione. Si el asistente sigue fallando después de iniciar sesión, pulsa Reiniciar en la ventana del asistente. Si la terminal dice que no conoce `claude`, mira "¿Qué `claude`?" más abajo.
-
-**¿Qué `claude`?** La ventana muestra el programa exacto que ejecuta VoiceMate. Inicia sesión con ese: si tu terminal no encuentra `claude`, o tienes más de una copia (por ejemplo una dentro de WSL), ejecútalo con su ruta completa. `VOICEMATE_CLAUDE_CLI` cambia el programa que usa VoiceMate.
-
-Más mensajes: [troubleshooting.es.md](troubleshooting.es.md#asistente-de-voz).
+Los pasos completos, y qué hacer cuando sigue sin responder: [Inicia sesión en Claude de nuevo](sign-in-again.es.md).
 
 ## 🚧 Límites
 

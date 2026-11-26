@@ -398,7 +398,7 @@ Em Configurações > **Assistente**, o grupo "Perfil do Claude Desktop" mostra q
 
 O ícone da bandeja é a figura do VoiceMate; um pequeno selo no canto dele mostra o estado. Um clique com o botão esquerdo abre a janela de status.
 
-<p align="center"><img src="assets/screenshots/tray-states.png" width="584" alt="O ícone da bandeja em cada estado, numa barra de tarefas escura e numa clara, e o selo mostrado quando há respostas aguardando"></p>
+<p align="center"><img src="assets/screenshots/tray-states.png" width="584" alt="O ícone da bandeja em cada estado, numa barra de tarefas escura e numa clara, depois o selo mostrado quando há respostas aguardando e o mostrado quando o login no Claude expirou"></p>
 
 | Selo (da esquerda para a direita) | Estado | O que o menu e a dica dizem |
 |---|---|---|
@@ -408,16 +408,17 @@ O ícone da bandeja é a figura do VoiceMate; um pequeno selo no canto dele most
 | Balão de fala | Pensando (Claude) | "O Claude está respondendo..." |
 | Alto-falante | Falando (Claude) | "O Claude está respondendo..." |
 | Marca de verificação | Pronto, por 3 segundos | "Copiado: ..." |
-| Disco azul com a aba de um envelope | Há respostas de outras conversas aguardando na caixa de entrada do assistente (mostrado só sobre um estado de repouso) | "Respostas aguardando: 2" |
 | Anel | Iniciando | "Iniciando o motor..." |
 | Seta circular | Reiniciando | "Reiniciando (tentativa 2)" |
 | Triângulo | Aviso | "Sem microfone" ou "O áudio do WSL parou" |
 | Cruz | Erro | "O motor parou de funcionar" |
 | Octógono cinza, ícone esmaecido | Parado | "O VoiceMate está parado" |
+| Disco azul com a aba de um envelope | Há respostas de outras conversas aguardando na caixa de entrada do assistente (mostrado só sobre um estado de repouso) | "Respostas aguardando: 2" |
+| Triângulo amarelo, sobre um estado de repouso | O login do assistente no Claude expirou (veja [Entre no Claude de novo](sign-in-again.pt-BR.md)); a dica ganha uma linha e o menu um item "Entrar no Claude de novo..." | "Login do Claude expirou: clique para renovar" |
 
 O menu tem:
 
-- A linha de status, depois "Abrir o VoiceMate", e "Assistente" e "Ouvir o que está pronto" quando o assistente de voz está ligado, e "Entrar no Claude de novo..." enquanto o login do assistente no Claude estiver expirado ([como renovar](assistant.pt-BR.md#login-expired)).
+- A linha de status, depois "Abrir o VoiceMate", e "Assistente" e "Ouvir o que está pronto" quando o assistente de voz está ligado, e "Entrar no Claude de novo..." enquanto o login do assistente no Claude estiver expirado ([como renovar](sign-in-again.pt-BR.md)).
 - "Ditar" e "Perguntar ao Claude" com os atalhos deles ("Parar e copiar" e "Parar e perguntar ao Claude" durante a gravação), e "Cancelar".
 - "Recentes": as últimas transcrições; clique numa para copiá-la de novo.
 - "Não copiadas ({count})": só quando algo não chegou à área de transferência; clique num item para copiá-lo; "Limpar lista" a esvazia depois de perguntar 'Limpar a lista "Não copiadas"?'.

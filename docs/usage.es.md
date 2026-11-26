@@ -398,7 +398,7 @@ En Configuración > **Asistente**, el grupo "Perfil de Claude Desktop" muestra c
 
 El icono de la bandeja es la figura de VoiceMate; una pequeña insignia en su esquina muestra el estado. Un clic izquierdo abre la ventana de estado.
 
-<p align="center"><img src="assets/screenshots/tray-states.png" width="584" alt="El icono de la bandeja en cada estado, sobre una barra de tareas oscura y una clara, y la insignia que aparece cuando hay respuestas en espera"></p>
+<p align="center"><img src="assets/screenshots/tray-states.png" width="584" alt="El icono de la bandeja en cada estado, sobre una barra de tareas oscura y una clara, después la insignia que aparece cuando hay respuestas en espera y la que aparece cuando caducó el inicio de sesión de Claude"></p>
 
 | Insignia (de izquierda a derecha) | Estado | Qué dicen el menú y la descripción emergente |
 |---|---|---|
@@ -408,16 +408,17 @@ El icono de la bandeja es la figura de VoiceMate; una pequeña insignia en su es
 | Bocadillo | Pensando (Claude) | "Claude está respondiendo..." |
 | Altavoz | Hablando (Claude) | "Claude está respondiendo..." |
 | Marca de verificación | Listo, durante 3 segundos | "Copiado: ..." |
-| Disco azul con una solapa de sobre | Hay respuestas de otras conversaciones esperando en la bandeja de entrada del asistente (se muestra solo sobre un estado tranquilo) | "Respuestas en espera: 2" |
 | Anillo | Iniciando | "Iniciando el motor..." |
 | Flecha circular | Reiniciando | "Reiniciando (intento 2)" |
 | Triángulo | Advertencia | "Sin micrófono" o "El audio de WSL se detuvo" |
 | Cruz | Error | "El motor se detuvo inesperadamente" |
 | Octógono gris, icono atenuado | Detenido | "VoiceMate está detenido" |
+| Disco azul con una solapa de sobre | Hay respuestas de otras conversaciones esperando en la bandeja de entrada del asistente (se muestra solo sobre un estado tranquilo) | "Respuestas en espera: 2" |
+| Triángulo amarillo, sobre un estado tranquilo | Caducó el inicio de sesión del asistente en Claude (mira [Inicia sesión en Claude de nuevo](sign-in-again.es.md)); la descripción emergente añade una línea y el menú un elemento "Iniciar sesión en Claude de nuevo..." | "El inicio de sesión de Claude caducó: haz clic para renovarlo" |
 
 El menú tiene:
 
-- La línea de estado, luego "Abrir VoiceMate", y "Asistente" y "Escuchar lo que está listo" cuando el asistente de voz está activado, y "Iniciar sesión en Claude de nuevo..." mientras el inicio de sesión del asistente en Claude esté caducado ([cómo renovarlo](assistant.es.md#login-expired)).
+- La línea de estado, luego "Abrir VoiceMate", y "Asistente" y "Escuchar lo que está listo" cuando el asistente de voz está activado, y "Iniciar sesión en Claude de nuevo..." mientras el inicio de sesión del asistente en Claude esté caducado ([cómo renovarlo](sign-in-again.es.md)).
 - "Dictar" y "Preguntar a Claude" con sus atajos ("Detener y copiar" y "Detener y preguntar a Claude" mientras graba), y "Cancelar".
 - "Recientes": las últimas transcripciones; haz clic en una para copiarla otra vez.
 - "No copiadas ({count})": solo cuando algo no llegó al portapapeles; haz clic en un elemento para copiarlo; "Vaciar lista" la vacía tras preguntar '¿Vaciar la lista "No copiadas"?'.

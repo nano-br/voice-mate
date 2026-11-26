@@ -94,7 +94,7 @@ A demonstration and live test of the personal AI agent, in Brazilian Portuguese 
 
 <p align="center"><img src="docs/assets/screenshots/en/settings-assistant-sections.png" width="743" alt="The Assistant tab of VoiceMate Settings, scrolled to the Personality, Skill and Claude Desktop profile groups"><br><sub>The "Assistant" tab scrolled down: the "Personality", "Skill" and "Claude Desktop profile" groups.</sub></p>
 
-<p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="The tray icon in each state, on a dark and a light taskbar, and the badge shown when answers are waiting"><br><sub>The tray icon shows the state with a badge, and a blue one when answers are waiting. What each badge means: <a href="docs/usage.md#tray-icon-and-menu">Usage, tray icon and menu</a>.</sub></p>
+<p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="The tray icon in each state, on a dark and a light taskbar, then the badge shown when answers are waiting and the one shown when the Claude sign-in expired"><br><sub>The tray icon shows the state with a badge, a blue one when answers are waiting and a yellow triangle when the assistant's Claude sign-in expired (<a href="docs/sign-in-again.md">how to sign in again</a>). What each badge means: <a href="docs/usage.md#tray-icon-and-menu">Usage, tray icon and menu</a>.</sub></p>
 
 ## Quick start
 

@@ -358,7 +358,7 @@ The glyph is the VoiceMate mark (a figure with raised arms whose body is a sound
 and a coral head; see [brand.md](brand.md)) with no tile, in the taskbar's foreground
 color, the same size and place in every state; only a small badge in the bottom-right
 corner changes. Badges differ by shape, not only color.
-An expired Claude sign-in of the assistant shows the `warning` triangle over a quiet state (before the inbox badge, since it blocks the assistant), adds the tooltip line "Claude sign-in expired: click to renew it", shows the menu item "Sign in to Claude again..." and makes a click on the icon open the help window ([assistant.md](assistant.md#login-expired)).
+An expired Claude sign-in of the assistant shows the `warning` triangle over a quiet state (before the inbox badge, since it blocks the assistant), adds the tooltip line "Claude sign-in expired: click to renew it", shows the menu item "Sign in to Claude again..." and makes a click on the icon open the help window ([sign-in-again.md](sign-in-again.md)).
 The glyph follows the taskbar theme
 (`HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize\SystemUsesLightTheme`).
 No animation by default.
@@ -730,7 +730,7 @@ The service owns one `ConversationPort`, chosen by `mode`; switching stops one a
 | First prompt | `/voicemate-assistant`, then the `remote_control` request (link in the window; the assistant keeps working locally if it fails) | `/voicemate-assistant`, once per VoiceMate start |
 | Tools of the central | The `voicemate` tools (below) | The Desktop's own session tools (the `voicemate` tools do not exist) |
 | Session id | Kept in `assistant-session.json`; resumed with `--resume` only when no live process owns it | The Desktop's |
-| Errors shown | `cli_missing`, `start_failed`, `exited`, `setup_failed` (an expired Claude sign-in is not an error state: `login_expired` in the snapshot, see [assistant.md](assistant.md#login-expired)) | `no_conversation` (none chosen), `setup_failed` (no transcript with that title), `start_failed` (a flash failed) |
+| Errors shown | `cli_missing`, `start_failed`, `exited`, `setup_failed` (an expired Claude sign-in is not an error state: `login_expired` in the snapshot, see [sign-in-again.md](sign-in-again.md)) | `no_conversation` (none chosen), `setup_failed` (no transcript with that title), `start_failed` (a flash failed) |
 
 **A flash** (`app/companion/win/claude_desktop.py`, Windows only, UI Automation) brings the Claude Desktop window forward, clears the prompt's draft, pastes the text through the clipboard (the previous content is saved, and restored only if nobody copied anything during the flash: the clipboard sequence number is checked before the paste and before Enter; the text stays out of the Win+V history), presses Enter and gives the foreground back, in about 2 seconds. Three guards are checked before every key (each key is its own press): the Claude window owns the foreground, the open conversation is exactly `<title> - Claude Code`, and the keyboard focus is in the prompt.
 
