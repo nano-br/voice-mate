@@ -94,7 +94,7 @@ Uma demonstração e teste ao vivo do agente pessoal de IA, por enquanto em port
 
 <p align="center"><img src="docs/assets/screenshots/pt-BR/settings-assistant-sections.png" width="770" alt="A aba Assistente de Configurações do VoiceMate, rolada até os grupos Personalidade, Skill e Perfil do Claude Desktop"><br><sub>A aba "Assistente" rolada: os grupos "Personalidade", "Skill" e "Perfil do Claude Desktop".</sub></p>
 
-<p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="O ícone da bandeja em cada estado, numa barra de tarefas escura e numa clara, e o selo mostrado quando há respostas esperando"><br><sub>O ícone da bandeja mostra o estado com um selo, e um selo azul quando há respostas esperando. O que cada selo significa: <a href="docs/usage.pt-BR.md#ícone-e-menu-da-bandeja">Uso, ícone e menu da bandeja</a>.</sub></p>
+<p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="O ícone da bandeja em cada estado, numa barra de tarefas escura e numa clara, depois o selo mostrado quando há respostas esperando e o mostrado quando o login no Claude expirou"><br><sub>O ícone da bandeja mostra o estado com um selo, um selo azul quando há respostas esperando e um triângulo amarelo quando o login do assistente no Claude expirou (<a href="docs/sign-in-again.pt-BR.md">como entrar de novo</a>). O que cada selo significa: <a href="docs/usage.pt-BR.md#ícone-e-menu-da-bandeja">Uso, ícone e menu da bandeja</a>.</sub></p>
 
 ## Início rápido
 

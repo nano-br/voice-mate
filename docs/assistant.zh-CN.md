@@ -364,20 +364,11 @@ flowchart LR
 
 ### 重新登录（登录已过期）
 
-助手在后台运行 Claude Code 程序（`claude`），这个程序需要您的 Claude 登录。登录过期（或您已退出账号）后，助手就无法回答。日志里会出现 `Failed to authenticate. API Error: 401 OAuth access token has expired`，或要求执行 `/login`。VoiceMate 会用多种方式提醒您：托盘图标上的警告角标（提示文字里多一行说明）、一条通知、一句语音、助手窗口里一条通俗的消息（代替 Claude 的原始错误），以及该窗口里的“如何登录”按钮。
+助手在后台运行 Claude Code 程序（`claude`），这个程序需要您的 Claude 登录。登录过期（或您已退出账号）后，助手就无法回答。VoiceMate 会用托盘图标上的警告角标、一条通知、一句语音，以及助手窗口里一条通俗的消息来提醒您。点击托盘图标：弹出的窗口会显示步骤、`claude auth login` 命令（带一个复制它的按钮），以及该用哪个 `claude` 程序登录。第一次成功回答后，角标会自动消失。
 
-重新登录的步骤：
+<p align="center"><img src="assets/screenshots/zh-CN/dialog-login.png" width="540" alt="“请重新登录 Claude”窗口"></p>
 
-1. 点击托盘图标（或通知，或托盘菜单里的“重新登录 Claude...”，或助手窗口里的“如何登录”）。弹出的窗口会说明步骤。
-2. 打开终端（Windows 终端、PowerShell 或命令提示符）：按 Windows 键，输入 `PowerShell`，按回车。
-3. 输入 `claude auth login` 并按回车（窗口里有“复制命令”按钮；用鼠标右键或 `Ctrl+V` 粘贴）。如果 Claude Code 版本较旧、没有这个命令，就运行 `claude`，然后输入 `/login`。
-4. 按照浏览器中打开的页面操作，然后回来继续和助手说话。
-
-第一次成功回答后，角标会自动消失。如果登录后助手仍然失败，请在助手窗口里点击“重新启动”。如果终端提示不认识 `claude`，请看下面的“用的是哪个 `claude`？”。
-
-**用的是哪个 `claude`？** 窗口里会显示 VoiceMate 实际运行的程序。请用它来登录：如果终端找不到 `claude`，或者您有多个副本（例如 WSL 里还有一个），请用完整路径运行它。`VOICEMATE_CLAUDE_CLI` 可以更改 VoiceMate 使用的程序。
-
-更多消息：[troubleshooting.zh-CN.md](troubleshooting.zh-CN.md#语音助手)。
+完整步骤，以及助手仍然不回答时该怎么办：[请重新登录 Claude](sign-in-again.zh-CN.md)。
 
 ## 🚧 限制
 

@@ -13,7 +13,7 @@ from typing import Final
 
 # The project URL comes from pyproject.toml (`repository`), as for the Desktop profile.
 REPOSITORY_URL: Final = "https://github.com/nano-br/voice-mate"
-GUIDE_ANCHOR: Final = "login-expired"
+GUIDE_PAGE: Final = "sign-in-again"  # docs/sign-in-again.md and its translations
 # What the person types in a terminal (the CLI has had `claude auth login` since its auth commands).
 LOGIN_COMMAND: Final = "claude auth login"
 # The doc of each catalog ("assistant.md" is English); `app.i18n.active_language()` names the catalog.
@@ -58,6 +58,6 @@ def is_login_failure(text: str) -> bool:
 
 
 def guide_url(catalog: str) -> str:
-    """The "Signing in again" section of the assistant guide, in the language of `catalog`
-    (English when that language has no translation), on the main branch."""
-    return f"{REPOSITORY_URL}/blob/main/docs/assistant{_GUIDE_SUFFIXES.get(catalog, '')}.md#{GUIDE_ANCHOR}"
+    """The "Sign in to Claude again" guide, in the language of `catalog` (English when that
+    language has no translation), on the main branch."""
+    return f"{REPOSITORY_URL}/blob/main/docs/{GUIDE_PAGE}{_GUIDE_SUFFIXES.get(catalog, '')}.md"

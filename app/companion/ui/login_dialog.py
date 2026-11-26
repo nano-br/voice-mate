@@ -21,6 +21,7 @@ from app.companion.ui.icons import app_icon, state_pixmap
 from app.i18n import _, active_language
 
 HEADER_ICON_SIZE = 40  # as in the status window
+WINDOW_WIDTH = 540
 
 
 def display_path(path: str) -> str:
@@ -41,10 +42,10 @@ class LoginHelpDialog(QDialog):
         self._cli = cli
         self.setWindowTitle(_("Sign in to Claude again"))
         self.setWindowIcon(app_icon())
-        self.resize(520, 380)
         self.guide_url = ""
 
         layout = QVBoxLayout(self)
+        self._layout = layout
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
@@ -136,6 +137,17 @@ class LoginHelpDialog(QDialog):
         self.program.setText(self.program_text())
         link = '<a href="{url}">{text}</a>'.format(url=escape(self.guide_url), text=escape(_("Open the guide")))
         self.guide.setText(link)
+        self._fit()
+
+    def _fit(self) -> None:
+        """Tall enough for every wrapped text at the window's width: their length depends on the
+        language and on the program path, and a top-level window does not grow by itself."""
+        layout = self._layout
+        layout.activate()
+        width = max(self.width(), WINDOW_WIDTH) if self.isVisible() else WINDOW_WIDTH
+        height = layout.totalHeightForWidth(WINDOW_WIDTH)
+        self.setMinimumSize(WINDOW_WIDTH, height)
+        self.resize(width, max(self.height(), layout.totalHeightForWidth(width)) if self.isVisible() else height)
 
     def program_text(self) -> str:
         """Which `claude` program VoiceMate runs: sign in with that one."""

@@ -94,7 +94,7 @@ Una demostración y prueba en vivo del agente personal de IA, por ahora en portu
 
 <p align="center"><img src="docs/assets/screenshots/es/settings-assistant-sections.png" width="766" alt="La pestaña Asistente de Configuración de VoiceMate, desplazada hasta los grupos Personalidad, Skill y Perfil de Claude Desktop"><br><sub>La pestaña "Asistente" desplazada: los grupos "Personalidad", "Skill" y "Perfil de Claude Desktop".</sub></p>
 
-<p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="El icono de la bandeja en cada estado, sobre una barra de tareas oscura y una clara, y la insignia que aparece cuando hay respuestas en espera"><br><sub>El icono de la bandeja muestra el estado con una insignia, y una insignia azul cuando hay respuestas en espera. Qué significa cada insignia: <a href="docs/usage.es.md#icono-y-menú-de-la-bandeja">Uso, icono y menú de la bandeja</a>.</sub></p>
+<p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="El icono de la bandeja en cada estado, sobre una barra de tareas oscura y una clara, después la insignia que aparece cuando hay respuestas en espera y la que aparece cuando caducó el inicio de sesión de Claude"><br><sub>El icono de la bandeja muestra el estado con una insignia, una insignia azul cuando hay respuestas en espera y un triángulo amarillo cuando caducó el inicio de sesión del asistente en Claude (<a href="docs/sign-in-again.es.md">cómo iniciar sesión de nuevo</a>). Qué significa cada insignia: <a href="docs/usage.es.md#icono-y-menú-de-la-bandeja">Uso, icono y menú de la bandeja</a>.</sub></p>
 
 ## Inicio rápido
 

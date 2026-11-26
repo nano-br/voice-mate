@@ -94,7 +94,7 @@ VoiceMate 是开源的，采用 MIT 许可证。如果你试用了，请告诉�
 
 <p align="center"><img src="docs/assets/screenshots/zh-CN/settings-assistant-sections.png" width="724" alt="“VoiceMate 设置”的“助手”选项卡，滚动到“个性”“技能”和“Claude Desktop 配置文件”分组"><br><sub>向下滚动的“助手”选项卡：“个性”“技能”和“Claude Desktop 配置文件”分组。</sub></p>
 
-<p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="托盘图标在各个状态下的样子，分别显示在深色和浅色任务栏上，以及有待听的回答时显示的角标"><br><sub>托盘图标用角标显示状态，有待听的回答时显示蓝色角标。每个角标的含义：<a href="docs/usage.zh-CN.md#托盘图标和菜单">使用，托盘图标和菜单</a>。</sub></p>
+<p align="center"><img src="docs/assets/screenshots/tray-states.png" width="584" alt="托盘图标在各个状态下的样子，分别显示在深色和浅色任务栏上，然后是有待听的回答时显示的角标，以及 Claude 登录过期时显示的角标"><br><sub>托盘图标用角标显示状态，有待听的回答时显示蓝色角标，助手的 Claude 登录过期时显示黄色三角形（<a href="docs/sign-in-again.zh-CN.md">如何重新登录</a>）。每个角标的含义：<a href="docs/usage.zh-CN.md#托盘图标和菜单">使用，托盘图标和菜单</a>。</sub></p>
 
 ## 快速开始
 

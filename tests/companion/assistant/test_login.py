@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
-from app.companion.assistant.login import GUIDE_ANCHOR, guide_url, is_login_failure
+from app.companion.assistant.login import guide_url, is_login_failure
 
 
 @pytest.mark.parametrize(
@@ -45,13 +47,15 @@ def test_other_errors_are_not_sign_in_failures(text: str) -> None:
 @pytest.mark.parametrize(
     ("catalog", "doc"),
     [
-        ("en", "assistant.md"),
-        ("pt_BR", "assistant.pt-BR.md"),
-        ("es", "assistant.es.md"),
-        ("ru", "assistant.ru.md"),
-        ("zh_CN", "assistant.zh-CN.md"),
-        ("xx", "assistant.md"),
+        ("en", "sign-in-again.md"),
+        ("pt_BR", "sign-in-again.pt-BR.md"),
+        ("es", "sign-in-again.es.md"),
+        ("ru", "sign-in-again.ru.md"),
+        ("zh_CN", "sign-in-again.zh-CN.md"),
+        ("xx", "sign-in-again.md"),
     ],
 )
 def test_the_guide_link_follows_the_language(catalog: str, doc: str) -> None:
-    assert guide_url(catalog) == f"https://github.com/nano-br/voice-mate/blob/main/docs/{doc}#{GUIDE_ANCHOR}"
+    assert guide_url(catalog) == f"https://github.com/nano-br/voice-mate/blob/main/docs/{doc}"
+    # The page the link opens is in the repository, in that language.
+    assert (Path(__file__).resolve().parents[3] / "docs" / doc).is_file()
