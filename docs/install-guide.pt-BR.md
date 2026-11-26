@@ -2,11 +2,11 @@
 
 [English](install-guide.md) | **Português** | [Español](install-guide.es.md) | [Русский](install-guide.ru.md) | [简体中文](install-guide.zh-CN.md)
 
-Objetivo: um passo a passo de um PC Windows limpo até o seu primeiro ditado, com capturas de tela do instalador. Todos os comandos estão aqui e nada é presumido. A referência técnica completa (cada caminho, cada opção) é a [installation.md](installation.md) (em inglês). Voltar ao [README](../README.pt-BR.md).
+Objetivo: um passo a passo de um PC Windows limpo até o seu primeiro ditado e a sua primeira conversa com o assistente, com capturas de tela do instalador. Todos os comandos estão aqui e nada é presumido. A referência técnica completa (cada caminho, cada opção) é a [installation.md](installation.md) (em inglês). Voltar ao [README](../README.pt-BR.md).
 
 ## 🎯 O que você está instalando
 
-Escrevi este guia para quem quer o VoiceMate funcionando e não quer ler a documentação inteira. São cerca de quatro passos, e o mais demorado é o primeiro download do modelo de fala.
+O VoiceMate é um assistente pessoal de voz para o Claude Code e o Claude Desktop, com ditado local. Escrevi este guia para quem quer ele funcionando e não quer ler a documentação inteira. São cinco passos, e o mais demorado é o primeiro download do modelo de fala.
 
 O VoiceMate tem duas peças. O **motor** é a parte que escuta e transforma fala em texto: ele roda no seu próprio computador, dentro de um pequeno Linux que o Windows já sabe executar (o WSL2). O **companion** é o aplicativo do Windows que você vê: o ícone da bandeja, os atalhos, as configurações e a janela do assistente. O companion vem num instalador; o motor vem do GitHub.
 
@@ -14,20 +14,18 @@ O VoiceMate tem duas peças. O **motor** é a parte que escuta e transforma fala
 flowchart LR
     s1["1. WSL2 e Ubuntu<br/>PowerShell"] --> s2["2. O motor<br/>git clone, make setup"]
     s2 --> s3["3. O instalador do Windows<br/>VoiceMate-Setup.exe"]
-    s3 --> s4["4. Primeira execução<br/>Ctrl+Alt+V"]
-    s4 -.-> s5["5. Opcional<br/>o assistente de voz"]
+    s3 --> s4["4. Primeira execução<br/>o seu primeiro ditado"]
+    s4 --> s5["5. O assistente de voz<br/>Claude Code, depois fale"]
 
     classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
     classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
     classDef ok fill:#2e7d32,stroke:#1b5e20,color:#ffffff
-    classDef optional fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff,stroke-dasharray:5 5
     class s1,s2 container
     class s3 system
-    class s4 ok
-    class s5 optional
+    class s4,s5 ok
 ```
 
-Azul: os passos que instalam algo; verde: o momento em que funciona; tracejado: opcional.
+Azul: os passos que instalam algo; verde: os momentos em que funciona.
 
 ## 📋 Requisitos
 
@@ -38,7 +36,7 @@ Azul: os passos que instalam algo; verde: o momento em que funciona; tracejado: 
 | WSL2 com Ubuntu | Instalado no passo 1 (o Ubuntu 24.04 traz o Python 3.12, que o motor exige) |
 | Uma placa de vídeo | Opcional. Placas NVIDIA e AMD funcionam; sem uma, o VoiceMate transcreve no processador |
 | Internet, uma vez | Para baixar o Ubuntu, o motor e o modelo de fala Whisper (o modelo é baixado na primeira inicialização) |
-| Para o assistente de voz | Claude Code instalado e com login feito (passo 5). O ditado não precisa disso |
+| Para o assistente de voz | Claude Code instalado e com login feito (passo 5). Só o ditado funciona sem isso |
 
 Você não precisa de conta de administrador para o VoiceMate em si. Instalar o WSL2 no passo 1 pode pedir uma, conforme o Windows decidir.
 
@@ -153,13 +151,13 @@ Clique em **Avançar**.
 
 Clique com o botão direito no ícone da bandeja para ver o menu, e abra Configurações para mudar os atalhos, os sons, o idioma e o modo de transcrição (CPU ou GPU). Se uma notificação disser "Pasta do motor não encontrada", defina "Pasta do motor:" em Configurações > **Geral** e o VoiceMate tenta de novo.
 
-## 🎙️ Passo 5. O assistente de voz (opcional)
+## 🎙️ Passo 5. O assistente de voz
 
-O assistente é uma conversa do Claude com a qual você fala por voz, no mesmo Claude Code e Claude Desktop que você já usa. Ele precisa do Claude Code no Windows e de um login do Claude neste computador:
+Este passo transforma o VoiceMate no seu assistente pessoal: uma conversa do Claude com a qual você fala por voz, no mesmo Claude Code e Claude Desktop que você já usa, que acha, lê e conduz as suas outras conversas. Se o ditado é tudo o que você quer, pode parar no passo 4. O assistente precisa do Claude Code no Windows e de um login do Claude neste computador:
 
 1. Instale o [Claude Code](https://docs.claude.com/en/docs/claude-code) e rode `claude auth login` uma vez num terminal. O login do Claude Desktop não conta.
 2. Na janela de status, clique em **Assistente**, ou abra Configurações > **Assistente** e escolha "Modo do assistente:".
-3. Aperte `Ctrl+Alt+S` e fale, depois aperte de novo. Ou clique em **Falar** na janela do assistente; o botão vira **Parar e enviar** enquanto grava.
+3. Aperte `Ctrl+Alt+S` (ou uma tecla de macro ligada a ele) e fale, depois aperte de novo. Ou clique em **Falar** na janela do assistente; o botão vira **Parar e enviar** enquanto grava.
 
 <p align="center"><img src="assets/screenshots/pt-BR/assistant.png" width="568" alt="A janela do assistente com o botão Falar e uma conversa de exemplo"></p>
 
@@ -202,6 +200,7 @@ Mais problemas e as mensagens exatas: [troubleshooting.pt-BR.md](troubleshooting
 
 ## 📚 O que ler em seguida
 
-- [usage.pt-BR.md](usage.pt-BR.md): atalhos, o ícone da bandeja, modos de transcrição e modelos.
+- [assistant.pt-BR.md](assistant.pt-BR.md): o que o assistente faz por você, com exemplos do que dizer.
+- [usage.pt-BR.md](usage.pt-BR.md): atalhos e as outras formas de iniciar, o ícone da bandeja, modos de transcrição e modelos.
 - [voice-assistant.md](voice-assistant.md): o assistente, os dois modos e como ele conduz as suas outras conversas (em inglês).
 - [installation.md](installation.md): todos os caminhos de instalação, a partir do código-fonte e no Linux (em inglês).

@@ -2,13 +2,23 @@
 
 # Usage
 
-Purpose: how to use VoiceMate day to day: the flows, the hotkeys, the companion app, the transcription modes, the Whisper models, the voice options and the voice assistant. Back to the [README](../README.md).
+Purpose: how to use VoiceMate day to day: the assistant, the quick questions to Claude, dictation, the hotkeys and the other ways to start them, the companion app, the transcription modes, the Whisper models and the voice options. Back to the [README](../README.md).
+
+VoiceMate does three things with your voice, and each one starts with one press:
+
+| You want to | Default hotkey | Where it is explained |
+|---|---|---|
+| Talk to your assistant, which conducts your Claude Code and Claude Desktop conversations and answers out loud | `Ctrl+Alt+S` | [Voice assistant](#voice-assistant) |
+| Ask Claude a quick question and hear the answer | `Ctrl+Alt+A` | [Claude flow](#claude-flow) |
+| Dictate text and paste it anywhere | `Ctrl+Alt+V` | [Clipboard flow](#clipboard-flow) |
+
+A press does not have to be a keyboard shortcut. A macro key or a mouse button that sends the same keys works the same way, the tray menu has the actions, and the assistant window has a **Talk** button.
 
 ## Hotkeys
 
 | Default hotkey | Flow | Tray menu action | Result |
 |---|---|---|---|
-| `Ctrl+Alt+V` | Clipboard (core) | "Dictate" | The transcription goes to the clipboard |
+| `Ctrl+Alt+V` | Clipboard (dictation) | "Dictate" | The transcription goes to the clipboard |
 | `Ctrl+Alt+A` | Claude | "Ask Claude" | The transcription goes to Claude; the answer goes to the clipboard and is read aloud |
 
 The voice assistant adds its own hotkeys (`Ctrl+Alt+S` to talk to it, `Ctrl+Alt+W` for its window, `Ctrl+Alt+R` to hear the answers waiting, plus two with no default): see [Talk to it](#talk-to-it).
@@ -35,7 +45,7 @@ A recording stops by itself after 10 minutes (`--max-recording-seconds`), with a
 
 ## Claude flow
 
-This second module turns VoiceMate into a voice conversation with Claude. It is optional.
+This flow is a quick voice conversation with Claude: you ask, and the answer is read aloud. It needs the `claude` module, chosen in `make setup`.
 
 1. Press `Ctrl+Alt+A`, speak your question, press `Ctrl+Alt+A` again.
 2. VoiceMate transcribes and copies the transcription to the clipboard, then sends it to Claude.
@@ -163,7 +173,7 @@ The companion ignores it.
 
 ## Voice assistant
 
-The voice assistant is one Claude conversation, the "central conversation", that you talk to by voice or by typing. It knows what your other Claude conversations are doing: it can list them, read them, ask them things, start new ones in the background and tell you when they answer. It is off by default. What it does for you (routing, initiative, waits and watches, standing instructions, limits) is in [assistant.md](assistant.md).
+The voice assistant is what makes VoiceMate a personal assistant. It is one Claude conversation, the "central conversation", that you talk to by voice or by typing. It knows what your other Claude conversations are doing: it can list them, read them, ask them things, start new ones in the background and tell you when they answer. You turn it on once ([Turn it on](#turn-it-on)). What it does for you (routing, initiative, waits and watches, standing instructions, limits) is in [assistant.md](assistant.md).
 
 The whole flow, explained with diagrams (the two modes, how it conducts your other conversations, how answers come back), is in [voice-assistant.md](voice-assistant.md); the component diagram is in [architecture.md](architecture.md#61-voice-assistant), and the design is in the [research notes](research/voice-assistant-design.md).
 

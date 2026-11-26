@@ -8,7 +8,7 @@
   <img alt="VoiceMate" src="docs/assets/brand/banner-light.png" width="640">
 </picture>
 
-**Press a hotkey, speak, paste. Local voice dictation to the clipboard, powered by Whisper on your own computer.**
+**Your personal voice assistant for Claude Code and Claude Desktop. One press, then speak: it conducts your conversations, answers out loud and turns speech into text you can paste anywhere, with Whisper running on your own computer.**
 
 [![CI](https://github.com/nano-br/voice-mate/actions/workflows/ci.yml/badge.svg)](https://github.com/nano-br/voice-mate/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/nano-br/voice-mate?include_prereleases&sort=semver&style=flat)](https://github.com/nano-br/voice-mate/releases/latest)
@@ -25,13 +25,17 @@
 
 ## Why VoiceMate
 
-VoiceMate is a personal voice assistant that runs on your computer and integrates with Claude Desktop and Claude Code. It started as dictation: press a shortcut, speak, and the text is ready to paste into any AI tool, with Whisper running locally so your audio never leaves your machine. Today it goes further: a personal AI agent, with a name and personality you choose, orchestrates your Claude Code conversations by voice and changes VoiceMate's own settings in natural conversation. For developers working with Claude Code, it means talking in the same conversation you are working in. For people who need accessibility, it means using Claude Code without depending on the keyboard.
+VoiceMate is a personal voice assistant that runs on your computer and works inside Claude Code and Claude Desktop. You speak, and it takes care of your Claude conversations: it finds the one you mean, reads where it stands, sends it your message, watches it while it works, starts new ones in the background and tells you out loud when an answer arrives.
+
+It has a name and a personality you choose, remembers the rules you give it and changes VoiceMate's own settings when you ask. For developers, it means running several Claude Code conversations without switching windows. For people who need accessibility, it means using Claude Code without depending on the keyboard.
 
 I built it because I believe one simple thing: the faster and easier it is to express an idea to an AI, and the more detail you give it, the better the result. Speaking is much faster than typing, and when you think out loud you give far more context than you would ever type.
 
-**Dictation to the clipboard is the core.** I have used it for real work practically every working day since March 2026, on Windows with an NVIDIA GPU. When I replaced my GPU with an AMD card, I adapted VoiceMate to AMD through WSL2 and ROCm 7.2, and it is tested there too (Radeon RX 9070 XT, `gfx1201`). Whisper runs locally: dictation needs no cloud service and no fee.
+**It started as dictation, and dictation is still the simplest thing it does.** One press, you speak, and the text is on the clipboard, ready to paste into any tool. Whisper runs locally: your audio never leaves your machine, and dictation needs no cloud service and no fee. Day to day I do not even use the keyboard shortcut: one click on a macro key of my keyboard or my mouse starts and stops it.
 
-**The voice assistant is a central conversation** that orchestrates your other Claude Code conversations: it lists them, reads them, asks them things and tells you, by voice, when they answer. It runs in two modes: its own session (with Claude Desktop closed) or inside Claude Desktop, with its native tools. You choose its name, its personality (a Markdown file, which can live in your Obsidian vault) and a vault of notes it can read. The voice conversation with Claude (`Ctrl+Alt+A`) is the lighter sibling: speech in, answer read aloud.
+**I use it for real work.** Practically every working day since March 2026, first on Windows with an NVIDIA GPU. When I replaced my GPU with an AMD card, I adapted VoiceMate to AMD through WSL2 and ROCm 7.2, and it is tested there too (Radeon RX 9070 XT, `gfx1201`).
+
+**The assistant is a central conversation** that conducts your other Claude conversations: it lists them, reads them, asks them things and tells you, by voice, when they answer. It runs in two modes: its own session (with Claude Desktop closed) or inside Claude Desktop, with its native tools. You choose its name, its personality (a Markdown file, which can live in your Obsidian vault) and a vault of notes it can read. For a quick question there is also a direct voice conversation with Claude (`Ctrl+Alt+A` by default): speech in, answer read aloud.
 
 VoiceMate is open source under the MIT license. If you try it, tell me how it went.
 
@@ -47,8 +51,20 @@ A demonstration and live test of the personal AI agent, in Brazilian Portuguese 
 
 ## Features
 
-**Dictation (core)**
-- One hotkey starts and stops the recording (`Ctrl+Alt+V` by default). The text lands in the clipboard, ready to paste.
+**Personal assistant for Claude Code and Claude Desktop**
+- One central Claude conversation that takes care of the others: it finds, reads and sends to your Claude Code and Claude Desktop conversations, watches them until you say stop and starts new ones in the background. It works in two modes: VoiceMate's own conversation (a Claude Code process that VoiceMate starts, also visible in Claude Desktop and on your phone) or a Claude Desktop conversation you already have (written by a brief keyboard "flash", Windows only).
+- It takes initiative: it finds the conversation you mean, asks it for the status, and tells you when it answers, asking you only for real decisions. It survives a restart, writes to closed terminal and IDE sessions, and keeps the rules you give it across sessions. See [the assistant guide](docs/assistant.md).
+- One press and you talk to it: a hotkey (`Ctrl+Alt+S` by default), a macro key bound to it, or **Talk** in its window (it turns into **Stop and send** while recording). You can also type. Voice commands in English, Portuguese and Spanish read the last answer, switch to a conversation, send to it or talk directly to it.
+- It answers out loud, with the voices Windows already has, with nothing to install, or with the engine's voice (Kokoro or your own provider): Settings > **Assistant** > "Voice source:". A window shows the chat and the answers waiting; its voice waits while you record and while the recording is transcribed, then repeats what you cut; a blue tray badge and an "Answer ready" sound tell you when one arrives, and `Ctrl+Alt+R` reads what is ready.
+- It can change a fixed list of VoiceMate settings by voice, takes a personality (a file, a note in an Obsidian vault or a text you write) and uses a skill in English or Brazilian Portuguese that also works on its own in any Claude Code conversation.
+- You turn it on in Settings > **Assistant**; it needs Claude Code installed and signed in. See [Voice assistant](#voice-assistant) and the [full guide](docs/voice-assistant.md).
+
+**Quick questions to Claude, answered out loud**
+- One press (`Ctrl+Alt+A` by default) sends your speech to Claude through the Claude Code CLI (your own sign-in: the transcribed text goes to Anthropic, the audio does not). The answer is copied to the clipboard and read aloud.
+- TTS engines: the default local engine (used when nothing is saved), Kokoro (the one `make setup` proposes) and VoxCPM2. Or your own: any service that follows the [TTS provider protocol](docs/tts-provider-protocol.md) (Settings > Voice > Custom provider). The conversation continues across turns; any hotkey interrupts the answer and starts a new recording.
+
+**Dictation anywhere**
+- One press starts the recording and one more stops it: a hotkey (`Ctrl+Alt+V` by default), a macro key bound to it, or "Dictate" in the tray menu. The text lands in the clipboard, ready to paste.
 - Local Whisper models, `large-v3-turbo` by default. No audio leaves your computer.
 - The dictation language is pinned for stable results, and English technical terms inside other languages are still transcribed.
 - Sound cues for start, transcribing, copied, warning and error. A recording stops by itself after 10 minutes (configurable).
@@ -67,16 +83,6 @@ A demonstration and live test of the personal AI agent, in Brazilian Portuguese 
 - The engine inside WSL2 (the companion's setup) and AMD GPUs (ROCm 7.2) through WSL2: tested on a Radeon RX 9070 XT (RDNA4, `gfx1201`).
 - AMD with Vulkan on Windows, and Linux (X11, Wayland) with an optional companion, use the same setup.
 - CPU fallback everywhere. `make setup` detects the platform and the GPU and installs the matching PyTorch build and speech-to-text backend. Or transcribe with a service you run yourself, through the [STT provider protocol](docs/stt-provider-protocol.md) (`--stt-engine external`).
-
-**Voice conversation with Claude**
-- `Ctrl+Alt+A` sends your speech to Claude through the Claude Code CLI (your own sign-in: the transcribed text goes to Anthropic, the audio does not). The answer is copied to the clipboard and read aloud.
-- TTS engines: the default local engine (used when nothing is saved), Kokoro (the one `make setup` proposes) and VoxCPM2. Or your own: any service that follows the [TTS provider protocol](docs/tts-provider-protocol.md) (Settings > Voice > Custom provider). The conversation continues across turns; any hotkey interrupts the answer and starts a new recording.
-
-**Voice assistant (off by default)**
-- One central Claude conversation in two modes: VoiceMate's own conversation (a Claude Code process that VoiceMate starts, also visible in Claude Desktop and on your phone) or a Claude Desktop conversation you already have (written by a brief keyboard "flash", Windows only). It lists, reads and sends to your other conversations and starts new ones in the background.
-- Talk to it with `Ctrl+Alt+S`, or click **Talk** in its window (it turns into **Stop and send** while recording). It speaks with the voices Windows already has, with nothing to install, or with the engine's voice (Kokoro or your own provider): Settings > **Assistant** > "Voice source:". Voice commands in English, Portuguese and Spanish read the last answer, switch to a conversation, send to it or talk directly to it. A window shows the chat and the answers waiting; its voice waits while you record and while the recording is transcribed, then repeats what you cut; a blue tray badge and an "Answer ready" sound tell you when one arrives, and `Ctrl+Alt+R` reads what is ready.
-- It can change a fixed list of VoiceMate settings by voice, takes a personality (a file, a note in an Obsidian vault or a text you write) and uses a skill in English or Brazilian Portuguese that also works on its own in any Claude Code conversation. See [Voice assistant](#voice-assistant) and the [full guide](docs/voice-assistant.md).
-- It takes initiative: it finds the conversation you mean, asks it for the status, and tells you when it answers, asking you only for real decisions. It watches conversations until you say stop, survives a restart, writes to closed terminal and IDE sessions, and keeps the rules you give it across sessions. See [the assistant guide](docs/assistant.md).
 
 ## Screenshots
 
@@ -120,6 +126,7 @@ The installer contains the companion app only. The engine runs inside a WSL2 dis
 4. Download `VoiceMate-Setup-x.y.z.exe` from the [latest release](https://github.com/nano-br/voice-mate/releases/latest) and run it. The installer is not code-signed, so Windows SmartScreen may warn you: choose **More info**, then **Run anyway**. It installs for your user only, with no administrator prompt.
 5. Start VoiceMate. The tray shows "Starting engine..." while the model loads (10 to 60 seconds once the model is downloaded), then "Listening for Ctrl+Alt+V".
 6. Optional: pin it to the taskbar. Open Start, search for VoiceMate, right-click it and choose **Pin to taskbar**.
+7. To talk to the assistant, turn it on: see [Voice assistant](#voice-assistant) below.
 
 ### From source
 
@@ -139,15 +146,17 @@ To run the companion from source on Windows, with the engine in WSL2: `make comp
 
 ## Usage
 
-| Hotkey | Tray menu action | What happens |
+Everything starts with one press: a hotkey, a macro key or mouse button bound to that hotkey, an item in the tray menu, or **Talk** in the assistant window. The table shows the default hotkeys; change them in Settings > **Hotkeys**.
+
+| Default hotkey | Tray menu action | What happens |
 |---|---|---|
-| `Ctrl+Alt+V` | "Dictate" | Speech to text, copied to the clipboard |
-| `Ctrl+Alt+A` | "Ask Claude" | Speech to Claude, answer copied and read aloud  |
-| `Ctrl+Alt+S` | "Talk to the assistant" | Speech to the assistant instead of the clipboard |
+| `Ctrl+Alt+S` | "Talk to the assistant" | Speech to the assistant, which answers out loud |
 | `Ctrl+Alt+W` | "Open the assistant window" | Opens or closes the assistant window |
 | `Ctrl+Alt+R` | "Hear what's ready" | The assistant reads the answers that are waiting |
+| `Ctrl+Alt+A` | "Ask Claude" | Speech to Claude, answer copied and read aloud  |
+| `Ctrl+Alt+V` | "Dictate" | Speech to text, copied to the clipboard |
 
-Press `Ctrl+Alt+V`, speak after the start cue, press `Ctrl+Alt+V` again, then paste with `Ctrl+V` anywhere. The hotkey that stops the recording decides where the text goes. A text that could not reach the clipboard waits in **Not copied** (tray menu and status window), where one click copies it. To quit, choose **Quit VoiceMate** in the tray menu; an engine that the companion did not start keeps running.
+**To dictate:** press `Ctrl+Alt+V`, speak after the start cue, press `Ctrl+Alt+V` again, then paste with `Ctrl+V` anywhere. The hotkey that stops the recording decides where the text goes. A text that could not reach the clipboard waits in **Not copied** (tray menu and status window), where one click copies it. To quit, choose **Quit VoiceMate** in the tray menu; an engine that the companion did not start keeps running.
 
 **Dictation language.** In Settings > **General**, "Dictation language:" decides the language you speak. The default is "Same as the interface"; "Detect automatically" lets Whisper detect each recording (Claude keeps answering in the interface language; with Kokoro, pin a language instead); or pick one language. The companion passes it to the engine it starts as `--transcription-language` and `--output-lang`, and changing it restarts the engine. An engine the companion only connects to (a systemd unit, or one started by hand) keeps its own flags.
 
@@ -157,7 +166,7 @@ The voice conversation with Claude needs the Claude Code CLI installed and signe
 
 ### Voice assistant
 
-The assistant is one Claude conversation, the central one, that knows what your other conversations are doing and conducts them for you: it lists them, reads them, sends them a message, starts new ones in the background and tells you when they answer. It is off by default.
+The assistant is one Claude conversation, the central one, that knows what your other conversations are doing and conducts them for you: it lists them, reads them, sends them a message, starts new ones in the background and tells you when they answer. You turn it on once, in Settings (step 2 below).
 
 Stop switching windows to check on your conversations. Just say what you want:
 
@@ -181,7 +190,7 @@ It acts first and reports back, asks only about what is really yours to decide (
 
 1. **Requirements:** the Claude Code CLI (`claude` on the `PATH` of Windows, in `~/.local/bin` or `%APPDATA%\npm`, or its path in `VOICEMATE_CLAUDE_CLI`) and a Claude login on that computer (`claude auth login` once).
 2. **Turn it on:** press **Assistant** in the status window (it says how when the assistant is off), or go to Settings > **Assistant** and set "Assistant mode:".
-3. **Use it:** press `Ctrl+Alt+S`, speak, press `Ctrl+Alt+S` again, and it answers in the engine's voice. Or type in its window (`Ctrl+Alt+W`). `Ctrl+Alt+R` reads the answers that are waiting.
+3. **Use it:** press `Ctrl+Alt+S` (or the macro key you bound to it, or **Talk** in its window), speak, press it again, and it answers out loud. Or type in its window (`Ctrl+Alt+W`). `Ctrl+Alt+R` reads the answers that are waiting.
 
 > [!WARNING]
 > "Full access, never ask (risky)" (`bypassPermissions`) lets the conversations the assistant starts change any file and run any command without asking. Keep the default unless you trust what you ask them to do.
@@ -204,7 +213,7 @@ Every engine flag, every settings key and every environment variable: [docs/conf
 
 ## Architecture
 
-VoiceMate has two parts. The **engine** records, transcribes and runs the Claude flow; it is a Python daemon with a local HTTP API. The **companion** is a PySide6 tray app on Windows that owns the hotkeys and the clipboard and supervises the engine inside WSL2. The engine also runs alone from the command line. The diagrams below are simplified overviews; each one links to the full diagram in [docs/architecture.md](docs/architecture.md), which also has the component diagrams, the HTTP API and the design choices.
+VoiceMate has two parts. The **engine** records, transcribes, speaks and runs the Claude flow; it is a Python daemon with a local HTTP API. The **companion** is a PySide6 tray app on Windows that owns the hotkeys and the clipboard, runs the assistant and supervises the engine inside WSL2. The engine also runs alone from the command line. The diagrams below are simplified overviews; each one links to the full diagram in [docs/architecture.md](docs/architecture.md), which also has the component diagrams, the HTTP API and the design choices.
 
 <details>
 <summary>System context (overview)</summary>
@@ -213,7 +222,7 @@ VoiceMate has two parts. The **engine** records, transcribes and runs the Claude
 flowchart TB
     user(["User"])
     subgraph pc["Your PC"]
-        vm["VoiceMate<br/>local dictation"]
+        vm["VoiceMate<br/>voice assistant, local dictation"]
         desk["Desktop<br/>hotkeys, clipboard, tray"]
         audio["Microphone and speakers"]
         gpu["GPU or CPU<br/>runs Whisper"]
@@ -222,7 +231,7 @@ flowchart TB
         hub["Model downloads"]
         claude["Claude<br/>through Claude Code CLI"]
     end
-    user -->|"Hotkey, speech"| vm
+    user -->|"One press, speech"| vm
     user -->|"Pastes the text"| desk
     vm -->|"Writes the clipboard, shows the tray"| desk
     vm -->|"Records"| audio
@@ -499,7 +508,7 @@ More problems and the exact messages: [docs/troubleshooting.md](docs/troubleshoo
 - [Installation](docs/installation.md): every install path, updating and uninstalling.
 - [The VoiceMate assistant](docs/assistant.md): what the assistant does for you, how it routes a request, waits and watches, the conversations it reaches, standing instructions and limits.
 - [Voice assistant and Claude](docs/voice-assistant.md): the whole assistant flow with diagrams, the two modes and how it conducts your other conversations.
-- [Usage](docs/usage.md): flows, hotkeys, tray icon, transcription modes, models, voice options and the voice assistant.
+- [Usage](docs/usage.md): the assistant, the flows, hotkeys and other triggers, tray icon, transcription modes, models and voice options.
 - [Configuration](docs/configuration.md): engine flags, settings files, environment variables, speech-to-text modes and benchmark.
 - [Troubleshooting](docs/troubleshooting.md): `make doctor`, WSL audio, logs, known messages.
 - [Architecture](docs/architecture.md): diagrams and design choices.

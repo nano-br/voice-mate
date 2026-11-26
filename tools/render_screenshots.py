@@ -167,8 +167,8 @@ SOCIAL_GAP: Final = 44
 SOCIAL_TEXT_PX: Final = 128
 SOCIAL_TAGLINE_PX: Final = 40
 SOCIAL_TAGLINES: Final = (
-    "Press a hotkey, speak, paste.",
-    "Local voice dictation and a voice assistant for Claude Code.",
+    "Your personal voice assistant for Claude Code.",
+    "Speak, and it runs your conversations and answers out loud.",
 )
 SOCIAL_BACKGROUND: Final = ("#1B1446", "#0D1117")  # the mark's deep blue to GitHub's dark page
 SOCIAL_TAGLINE_INK: Final = "#C9D1D9"

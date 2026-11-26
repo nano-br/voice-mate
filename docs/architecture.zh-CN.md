@@ -4,16 +4,18 @@
 
 目的：VoiceMate 是如何构建的，包括每个层级的图表、HTTP API、包结构树，以及主要设计选择背后的理由。返回 [README](../README.zh-CN.md)。
 
+VoiceMate 是服务于 Claude Code 和 Claude Desktop 的个人语音助手，同时带有本地听写。这一切由同样的两部分支撑：引擎负责聆听、转写和朗读，配套应用负责触发方式、剪贴板和助手。
+
 本页描述的是 Windows + WSL2 的部署方式（配套应用在 Windows 上，引擎在 WSL2 内），配套应用就是为这种方式构建的。Linux 的 `local` 模式和命令行模式只在它们有所不同的地方提到。代码变动时，本页会在同一个 pull request 中一起更新。协议约定的完整细节见 [companion-app.md](companion-app.md)。
 
 ## 1. 系统上下文
 
 ```mermaid
 flowchart TB
-    user(["用户<br/>用语音听写"])
+    user(["用户<br/>对 VoiceMate 说话"])
 
     subgraph pc["用户的电脑"]
-        vm["VoiceMate<br/>本地语音听写"]
+        vm["VoiceMate<br/>语音助手，本地听写"]
         win["Windows 桌面<br/>快捷键、剪贴板、托盘、声音"]
         wsl["WSL2 Linux 虚拟机<br/>WSLg 音频桥"]
         gpu["GPU<br/>AMD ROCm 或 NVIDIA CUDA"]

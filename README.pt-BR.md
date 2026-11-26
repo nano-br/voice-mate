@@ -8,7 +8,7 @@
   <img alt="VoiceMate" src="docs/assets/brand/banner-light.png" width="640">
 </picture>
 
-**Aperte um atalho, fale, cole. Ditado por voz local para a área de transferência, com o Whisper rodando no seu próprio computador.**
+**Seu assistente pessoal de voz para o Claude Code e o Claude Desktop. Um toque, depois é só falar: ele conduz as suas conversas, responde em voz alta e transforma fala em texto que você cola em qualquer lugar, com o Whisper rodando no seu próprio computador.**
 
 [![CI](https://github.com/nano-br/voice-mate/actions/workflows/ci.yml/badge.svg)](https://github.com/nano-br/voice-mate/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/nano-br/voice-mate?include_prereleases&sort=semver&style=flat)](https://github.com/nano-br/voice-mate/releases/latest)
@@ -25,13 +25,17 @@
 
 ## Por que o VoiceMate
 
-O VoiceMate é um assistente pessoal de voz que roda no seu computador e se integra ao Claude Desktop e ao Claude Code. Ele nasceu do ditado: você aperta um atalho, fala, e o texto fica pronto para colar em qualquer ferramenta de IA, com o Whisper rodando local, sem o áudio sair da sua máquina. Hoje ele vai além: um agente pessoal de IA, com nome e personalidade escolhidos por você, orquestra suas conversas do Claude Code por voz e altera as configurações do próprio VoiceMate em conversa natural. Para quem programa com o Claude Code, é falar na mesma conversa em que está trabalhando. Para quem precisa de acessibilidade, é usar o Claude Code sem depender do teclado.
+O VoiceMate é um assistente pessoal de voz que roda no seu computador e funciona dentro do Claude Code e do Claude Desktop. Você fala, e ele cuida das suas conversas com o Claude: acha a que você quis dizer, lê em que pé ela está, manda a sua mensagem, acompanha enquanto ela trabalha, inicia novas em segundo plano e avisa em voz alta quando chega uma resposta.
+
+Ele tem um nome e uma personalidade que você escolhe, lembra das regras que você ensina e altera as configurações do próprio VoiceMate quando você pede. Para quem programa, é conduzir várias conversas do Claude Code sem trocar de janela. Para quem precisa de acessibilidade, é usar o Claude Code sem depender do teclado.
 
 Criei o VoiceMate porque acredito numa coisa simples: quanto mais rápido e fácil é expressar uma ideia para uma IA, e quanto mais detalhes você dá, melhor o resultado. Falar é muito mais rápido do que digitar, e quando você pensa em voz alta dá muito mais contexto do que jamais digitaria.
 
-**O ditado para a área de transferência é o coração.** Uso no trabalho de verdade, praticamente todo dia útil, desde março de 2026, no Windows com uma GPU NVIDIA. Quando troquei minha GPU por uma AMD, adaptei o VoiceMate para AMD via WSL2 e ROCm 7.2, e ele também é testado lá (Radeon RX 9070 XT, `gfx1201`). O Whisper roda localmente: o ditado não precisa de serviço na nuvem nem de mensalidade.
+**Ele nasceu como ditado, e o ditado continua sendo a coisa mais simples que ele faz.** Um toque, você fala, e o texto fica na área de transferência, pronto para colar em qualquer ferramenta. O Whisper roda localmente: o seu áudio nunca sai da sua máquina, e o ditado não precisa de serviço na nuvem nem de mensalidade. No dia a dia, eu nem uso o atalho de teclado: um clique numa tecla de macro do teclado ou do mouse inicia e para a gravação.
 
-**O assistente de voz é uma conversa central** que orquestra as suas outras conversas do Claude Code: lista, lê, pergunta e avisa, por voz, quando elas respondem. Ele roda em dois modos: uma sessão própria (com o Claude Desktop fechado) ou dentro do Claude Desktop, com as ferramentas nativas dele. Você escolhe o nome, a personalidade (um arquivo Markdown, que pode ficar no seu cofre do Obsidian) e um cofre de notas que ele pode ler. A conversa por voz com o Claude (`Ctrl+Alt+A`) é a irmã mais leve: fala entra, a resposta é lida em voz alta.
+**Uso no trabalho de verdade.** Praticamente todo dia útil desde março de 2026, primeiro no Windows com uma GPU NVIDIA. Quando troquei minha GPU por uma AMD, adaptei o VoiceMate para AMD via WSL2 e ROCm 7.2, e ele também é testado lá (Radeon RX 9070 XT, `gfx1201`).
+
+**O assistente é uma conversa central** que conduz as suas outras conversas do Claude: lista, lê, pergunta e avisa, por voz, quando elas respondem. Ele roda em dois modos: uma sessão própria (com o Claude Desktop fechado) ou dentro do Claude Desktop, com as ferramentas nativas dele. Você escolhe o nome, a personalidade (um arquivo Markdown, que pode ficar no seu cofre do Obsidian) e um cofre de notas que ele pode ler. Para uma pergunta rápida, há também uma conversa por voz direta com o Claude (`Ctrl+Alt+A` por padrão): fala entra, a resposta é lida em voz alta.
 
 O VoiceMate é de código aberto, sob a licença MIT. Se testar, me conta como foi.
 
@@ -47,8 +51,20 @@ Uma demonstração e teste ao vivo do agente pessoal de IA, por enquanto em port
 
 ## Recursos
 
-**Ditado (o essencial)**
-- Um único atalho inicia e para a gravação (`Ctrl+Alt+V` por padrão). O texto vai para a área de transferência, pronto para colar.
+**Assistente pessoal para o Claude Code e o Claude Desktop**
+- Uma conversa central do Claude que cuida das outras: ela acha, lê e envia mensagem às suas conversas do Claude Code e do Claude Desktop, acompanha até você mandar parar e inicia novas em segundo plano. Funciona em dois modos: a conversa própria do VoiceMate (um processo do Claude Code que o VoiceMate inicia, visível também no Claude Desktop e no celular) ou uma conversa do Claude Desktop que você já tem (escrita por um "flash" rápido de teclado, só no Windows).
+- Ele tem iniciativa: acha a conversa que você quis dizer, pergunta como ela está e conta quando ela responde, e só pergunta a você as decisões de verdade. Continua depois de reiniciar, escreve em sessões de terminal e IDE fechadas e guarda as regras que você ensina de uma sessão para outra. Veja [o guia do assistente](docs/assistant.pt-BR.md).
+- Um toque e você fala com ele: um atalho (`Ctrl+Alt+S` por padrão), uma tecla de macro ligada a ele ou **Falar** na janela dele (o botão vira **Parar e enviar** enquanto grava). Você também pode escrever. Comandos de voz em português, inglês e espanhol leem a última resposta, trocam de conversa, enviam para ela ou falam direto com ela.
+- Ele responde em voz alta, com as vozes que o Windows já tem, sem instalar nada, ou com a voz do motor (Kokoro ou o seu provedor): Configurações > **Assistente** > "Origem da voz:". Uma janela mostra o chat e as respostas esperando; a voz dele espera enquanto você grava e enquanto a gravação é transcrita, e depois repete o que você cortou; um selo azul na bandeja e o som "Resposta pronta" avisam quando uma chega, e `Ctrl+Alt+R` lê o que está pronto.
+- Ele muda por voz uma lista fixa de configurações do VoiceMate, aceita uma personalidade (um arquivo, uma nota num cofre do Obsidian ou um texto que você escreve) e usa uma skill em português ou inglês que também funciona sozinha em qualquer conversa do Claude Code.
+- Você liga o assistente em Configurações > **Assistente**; ele precisa do Claude Code instalado e com login feito. Veja [Assistente de voz](#assistente-de-voz) e o [guia completo](docs/voice-assistant.md).
+
+**Perguntas rápidas ao Claude, respondidas em voz alta**
+- Um toque (`Ctrl+Alt+A` por padrão) envia a sua fala ao Claude pela CLI do Claude Code (com o seu próprio login: o texto transcrito vai para a Anthropic, o áudio não). A resposta é copiada para a área de transferência e lida em voz alta.
+- Motores de TTS: o motor local padrão (o usado quando nada foi salvo), Kokoro (o que o `make setup` propõe) e VoxCPM2. Ou o seu: qualquer serviço que siga o [protocolo de provedor de TTS](docs/tts-provider-protocol.md) (Configurações > Voz > Provedor personalizado). A conversa continua entre os turnos; qualquer atalho interrompe a resposta e inicia uma nova gravação.
+
+**Ditado em qualquer lugar**
+- Um toque inicia a gravação e outro para: um atalho (`Ctrl+Alt+V` por padrão), uma tecla de macro ligada a ele ou "Ditar" no menu da bandeja. O texto vai para a área de transferência, pronto para colar.
 - Modelos Whisper locais, `large-v3-turbo` por padrão. Nenhum áudio sai do seu computador.
 - O idioma do ditado fica fixado para dar resultados estáveis, e termos técnicos em inglês no meio de outros idiomas continuam sendo transcritos.
 - Sons de aviso para início, transcrição, copiado, alerta e erro. Uma gravação para sozinha após 10 minutos (configurável).
@@ -67,16 +83,6 @@ Uma demonstração e teste ao vivo do agente pessoal de IA, por enquanto em port
 - O motor dentro do WSL2 (a configuração do companion) e GPUs AMD (ROCm 7.2) via WSL2: testado numa Radeon RX 9070 XT (RDNA4, `gfx1201`).
 - AMD com Vulkan no Windows, e Linux (X11, Wayland) com um companion opcional, usam a mesma configuração.
 - Em qualquer plataforma, a CPU serve de alternativa. O `make setup` detecta a plataforma e a GPU e instala o build do PyTorch e o backend de reconhecimento de fala correspondentes. Ou transcreva com um serviço que você roda, pelo [protocolo de provedor de STT](docs/stt-provider-protocol.pt-BR.md) (`--stt-engine external`).
-
-**Conversa por voz com o Claude**
-- `Ctrl+Alt+A` envia a sua fala ao Claude pela CLI do Claude Code (com o seu próprio login: o texto transcrito vai para a Anthropic, o áudio não). A resposta é copiada para a área de transferência e lida em voz alta.
-- Motores de TTS: o motor local padrão (o usado quando nada foi salvo), Kokoro (o que o `make setup` propõe) e VoxCPM2. Ou o seu: qualquer serviço que siga o [protocolo de provedor de TTS](docs/tts-provider-protocol.md) (Configurações > Voz > Provedor personalizado). A conversa continua entre os turnos; qualquer atalho interrompe a resposta e inicia uma nova gravação.
-
-**Assistente de voz (desligado por padrão)**
-- Uma conversa central do Claude em dois modos: a conversa própria do VoiceMate (um processo do Claude Code que o VoiceMate inicia, visível também no Claude Desktop e no celular) ou uma conversa do Claude Desktop que você já tem (escrita por um "flash" rápido de teclado, só no Windows). Ele lista, lê e envia mensagem às suas outras conversas e inicia novas em segundo plano.
-- Fale com ele em `Ctrl+Alt+S`, ou clique em **Falar** na janela dele (o botão vira **Parar e enviar** enquanto grava). Ele fala com as vozes que o Windows já tem, sem instalar nada, ou com a voz do motor (Kokoro ou o seu provedor): Configurações > **Assistente** > "Origem da voz:". Comandos de voz em português, inglês e espanhol leem a última resposta, trocam de conversa, enviam para ela ou falam direto com ela. Uma janela mostra o chat e as respostas esperando; a voz dele espera enquanto você grava e enquanto a gravação é transcrita, e depois repete o que você cortou; um selo azul na bandeja e o som "Resposta pronta" avisam quando uma chega, e `Ctrl+Alt+R` lê o que está pronto.
-- Ele muda por voz uma lista fixa de configurações do VoiceMate, aceita uma personalidade (um arquivo, uma nota num cofre do Obsidian ou um texto que você escreve) e usa uma skill em português ou inglês que também funciona sozinha em qualquer conversa do Claude Code. Veja [Assistente de voz](#assistente-de-voz) e o [guia completo](docs/voice-assistant.md).
-- Ele tem iniciativa: acha a conversa que você quis dizer, pergunta como ela está e conta quando ela responde, e só pergunta a você as decisões de verdade. Acompanha conversas até você mandar parar, continua depois de reiniciar, escreve em sessões de terminal e IDE fechadas e guarda as regras que você ensina de uma sessão para outra. Veja [o guia do assistente](docs/assistant.pt-BR.md).
 
 ## Capturas de tela
 
@@ -120,6 +126,7 @@ O instalador traz só o aplicativo companion. O motor roda dentro de uma distro 
 4. Baixe o `VoiceMate-Setup-x.y.z.exe` da [última versão](https://github.com/nano-br/voice-mate/releases/latest) e execute. O instalador não tem assinatura de código, então o Windows SmartScreen pode avisar: escolha **Mais informações** e depois **Executar assim mesmo**. Ele instala só para o seu usuário, sem pedir permissão de administrador.
 5. Abra o VoiceMate. A bandeja mostra "Iniciando o motor..." enquanto o modelo carrega (de 10 a 60 segundos depois que o modelo foi baixado), e então "Aguardando Ctrl+Alt+V".
 6. Opcional: fixe na barra de tarefas. Abra o Iniciar, pesquise VoiceMate, clique nele com o botão direito e escolha **Fixar na barra de tarefas**.
+7. Para falar com o assistente, ligue-o: veja [Assistente de voz](#assistente-de-voz) abaixo.
 
 ### A partir do código-fonte
 
@@ -139,15 +146,17 @@ Para rodar o companion a partir do código-fonte no Windows, com o motor no WSL2
 
 ## Uso
 
-| Atalho | Ação no menu da bandeja | O que acontece |
+Tudo começa com um toque: um atalho, uma tecla de macro ou um botão do mouse ligado a esse atalho, um item do menu da bandeja ou **Falar** na janela do assistente. A tabela mostra os atalhos padrão; mude-os em Configurações > **Atalhos**.
+
+| Atalho padrão | Ação no menu da bandeja | O que acontece |
 |---|---|---|
-| `Ctrl+Alt+V` | "Ditar" | Fala vira texto, copiado para a área de transferência |
-| `Ctrl+Alt+A` | "Perguntar ao Claude" | Fala enviada ao Claude, resposta copiada e lida em voz alta |
-| `Ctrl+Alt+S` | "Falar com o assistente" | Fala para o assistente em vez da área de transferência |
+| `Ctrl+Alt+S` | "Falar com o assistente" | Fala para o assistente, que responde em voz alta |
 | `Ctrl+Alt+W` | "Abrir a janela do assistente" | Abre ou fecha a janela do assistente |
 | `Ctrl+Alt+R` | "Ouvir o que está pronto" | O assistente lê as respostas que estão esperando |
+| `Ctrl+Alt+A` | "Perguntar ao Claude" | Fala enviada ao Claude, resposta copiada e lida em voz alta |
+| `Ctrl+Alt+V` | "Ditar" | Fala vira texto, copiado para a área de transferência |
 
-Aperte `Ctrl+Alt+V`, fale depois do sinal de início, aperte `Ctrl+Alt+V` de novo e cole com `Ctrl+V` em qualquer lugar. O atalho que para a gravação decide para onde o texto vai. Um texto que não conseguiu chegar à área de transferência espera em **Não copiadas** (menu da bandeja e janela de status), onde um clique o copia. Para sair, escolha **Sair do VoiceMate** no menu da bandeja; um motor que o companion não iniciou continua rodando.
+**Para ditar:** aperte `Ctrl+Alt+V`, fale depois do sinal de início, aperte `Ctrl+Alt+V` de novo e cole com `Ctrl+V` em qualquer lugar. O atalho que para a gravação decide para onde o texto vai. Um texto que não conseguiu chegar à área de transferência espera em **Não copiadas** (menu da bandeja e janela de status), onde um clique o copia. Para sair, escolha **Sair do VoiceMate** no menu da bandeja; um motor que o companion não iniciou continua rodando.
 
 **Idioma do ditado.** Em Configurações > **Geral**, "Idioma do ditado:" define o idioma que você fala. O padrão é "Igual ao da interface"; "Detectar automaticamente" deixa o Whisper detectar cada gravação (o Claude continua respondendo no idioma da interface; com o Kokoro, fixe um idioma); ou escolha um idioma. O companion repassa a escolha ao motor que ele inicia, usando `--transcription-language` e `--output-lang`, e mudar o idioma reinicia o motor. Um motor ao qual o companion só se conecta (uma unidade do systemd, ou um iniciado à mão) mantém as próprias opções.
 
@@ -157,7 +166,7 @@ A conversa por voz com o Claude precisa da CLI do Claude Code instalada e com lo
 
 ### Assistente de voz
 
-O assistente é uma conversa do Claude, a central, que sabe o que as suas outras conversas estão fazendo e as conduz por você: lista, lê, manda mensagem, inicia novas em segundo plano e avisa quando elas respondem. Vem desligado.
+O assistente é uma conversa do Claude, a central, que sabe o que as suas outras conversas estão fazendo e as conduz por você: lista, lê, manda mensagem, inicia novas em segundo plano e avisa quando elas respondem. Você o liga uma vez, em Configurações (passo 2 abaixo).
 
 Chega de trocar de janela para saber das suas conversas. É só dizer o que você quer:
 
@@ -181,7 +190,7 @@ Ele age primeiro e conta depois, só pergunta o que é seu de decidir (apagar, g
 
 1. **Requisitos:** a CLI do Claude Code (`claude` no `PATH` do Windows, em `~/.local/bin` ou em `%APPDATA%\npm`, ou o caminho dela em `VOICEMATE_CLAUDE_CLI`) e um login do Claude nesse computador (`claude auth login`, uma vez).
 2. **Ligar:** clique em **Assistente** na janela de status (ela explica como quando o assistente está desligado), ou vá em Configurações > **Assistente** e defina "Modo do assistente:".
-3. **Usar:** aperte `Ctrl+Alt+S`, fale, aperte `Ctrl+Alt+S` de novo, e ele responde na voz do motor. Ou escreva na janela dele (`Ctrl+Alt+W`). `Ctrl+Alt+R` lê as respostas que estão esperando.
+3. **Usar:** aperte `Ctrl+Alt+S` (ou a tecla de macro ligada a ele, ou **Falar** na janela dele), fale, aperte de novo, e ele responde em voz alta. Ou escreva na janela dele (`Ctrl+Alt+W`). `Ctrl+Alt+R` lê as respostas que estão esperando.
 
 > [!WARNING]
 > "Acesso total, nunca perguntar (arriscado)" (`bypassPermissions`) deixa as conversas que o assistente inicia alterar qualquer arquivo e rodar qualquer comando sem perguntar. Mantenha o padrão, a menos que você confie no que pede a elas.
@@ -204,7 +213,7 @@ Todas as opções do motor, todas as chaves de configurações e todas as variá
 
 ## Arquitetura
 
-O VoiceMate tem duas partes. O **motor** grava, transcreve e executa o fluxo do Claude; é um daemon em Python com uma API HTTP local. O **companion** é um aplicativo de bandeja em PySide6 no Windows que cuida dos atalhos e da área de transferência e supervisiona o motor dentro do WSL2. O motor também roda sozinho pela linha de comando. Os diagramas abaixo são visões gerais simplificadas; cada um aponta para o diagrama completo em [docs/architecture.pt-BR.md](docs/architecture.pt-BR.md), que traz também os diagramas de componentes, a API HTTP e as decisões de projeto.
+O VoiceMate tem duas partes. O **motor** grava, transcreve, fala e executa o fluxo do Claude; é um daemon em Python com uma API HTTP local. O **companion** é um aplicativo de bandeja em PySide6 no Windows que cuida dos atalhos e da área de transferência, executa o assistente e supervisiona o motor dentro do WSL2. O motor também roda sozinho pela linha de comando. Os diagramas abaixo são visões gerais simplificadas; cada um aponta para o diagrama completo em [docs/architecture.pt-BR.md](docs/architecture.pt-BR.md), que traz também os diagramas de componentes, a API HTTP e as decisões de projeto.
 
 <details>
 <summary>Contexto do sistema (visão geral)</summary>
@@ -213,7 +222,7 @@ O VoiceMate tem duas partes. O **motor** grava, transcreve e executa o fluxo do 
 flowchart TB
     user(["Usuário"])
     subgraph pc["Seu PC"]
-        vm["VoiceMate<br/>ditado local"]
+        vm["VoiceMate<br/>assistente de voz, ditado local"]
         desk["Área de trabalho<br/>atalhos, área de transferência, bandeja"]
         audio["Microfone e alto-falantes"]
         gpu["GPU ou CPU<br/>executa o Whisper"]
@@ -222,7 +231,7 @@ flowchart TB
         hub["Download de modelos"]
         claude["Claude<br/>pela CLI do Claude Code"]
     end
-    user -->|"Atalho, fala"| vm
+    user -->|"Um toque, fala"| vm
     user -->|"Cola o texto"| desk
     vm -->|"Escreve na área de transferência, mostra a bandeja"| desk
     vm -->|"Grava"| audio
@@ -510,7 +519,7 @@ Mais problemas e as mensagens exatas: [docs/troubleshooting.pt-BR.md](docs/troub
 - [Installation](docs/installation.md) (em inglês): todos os caminhos de instalação, atualização e desinstalação.
 - [O assistente do VoiceMate](docs/assistant.pt-BR.md): o que o assistente faz por você, como ele encaminha um pedido, espera e acompanha, as conversas que alcança, as instruções permanentes e os limites.
 - [Voice assistant and Claude](docs/voice-assistant.md) (em inglês): o fluxo inteiro do assistente com diagramas, os dois modos e como ele conduz as suas outras conversas.
-- [Usage](docs/usage.pt-BR.md): fluxos, atalhos, ícone da bandeja, modos de transcrição, modelos, opções de voz e o assistente de voz.
+- [Usage](docs/usage.pt-BR.md): o assistente, os fluxos, atalhos e outras formas de iniciar, ícone da bandeja, modos de transcrição, modelos e opções de voz.
 - [Configuration](docs/configuration.pt-BR.md): opções do motor, arquivos de configurações, variáveis de ambiente, modos de reconhecimento de fala e benchmark.
 - [Troubleshooting](docs/troubleshooting.pt-BR.md): `make doctor`, áudio do WSL, logs, mensagens conhecidas.
 - [Architecture](docs/architecture.pt-BR.md): diagramas e decisões de projeto.

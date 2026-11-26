@@ -1,9 +1,9 @@
 # Voice assistant and Claude
 
 > [!NOTE]
-> The voice assistant is off by default. Dictation to the clipboard does not need any of this.
+> You turn the assistant on in Settings > **Assistant** ([Getting started](#9-getting-started)). It needs Claude Code installed and signed in; dictation works without it.
 
-The voice assistant is one Claude conversation, the **central conversation**, that you talk to by voice or by typing. It knows what your other Claude conversations are doing: it lists them, reads them, asks them things, starts new ones in the background and tells you when they answer. You keep working; the assistant keeps track.
+The voice assistant is what makes VoiceMate a personal assistant for Claude Code and Claude Desktop. It is one Claude conversation, the **central conversation**, that you talk to by voice or by typing. It knows what your other Claude conversations are doing: it lists them, reads them, asks them things, starts new ones in the background and tells you when they answer. You keep working; the assistant keeps track.
 
 This page explains the whole flow: how VoiceMate plugs into Claude, the two modes, how the assistant orchestrates your other conversations, how answers come back to you and how the voice works. The step-by-step settings are in [usage.md](usage.md#voice-assistant), and the component-level diagram is in [architecture.md](architecture.md#61-voice-assistant).
 
@@ -334,7 +334,7 @@ The list covers 23 settings: the mode, model and effort, permissions, answer del
 1. Install [Claude Code](https://docs.claude.com/en/docs/claude-code) and run `claude auth login` once in a terminal.
 2. In the VoiceMate status window, press **Assistant**. While the assistant is off, its window says how to turn it on.
 3. Settings > **Assistant**: choose "Assistant mode:". For the Desktop mode, type the exact title of the conversation in "Desktop conversation:".
-4. Press `Ctrl+Alt+S` (or **Talk** in the assistant window), say "what are my conversations doing?", and press it again (**Stop and send**). The assistant answers with the voices of Windows until you set up a voice of your own.
+4. Press `Ctrl+Alt+S` (or a macro key bound to it, or **Talk** in the assistant window), say "what are my conversations doing?", and press it again (**Stop and send**). The assistant answers with the voices of Windows until you set up a voice of your own.
 
 <p align="center"><img src="assets/screenshots/en/settings-assistant.png" width="568" alt="The Assistant tab of the settings window"></p>
 

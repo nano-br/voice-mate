@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "voice-mate"
 version = "0.6.0"
-description = "Local voice dictation to the clipboard with Whisper, with a Windows tray companion: press a hotkey, speak, paste."
+description = "Personal voice assistant for Claude Code and Claude Desktop, with local Whisper dictation and a Windows tray app."
 license = "MIT"
 authors = ["Álli Terhorst <alli.terhorst@gmail.com>"]
 readme = "README.md"
