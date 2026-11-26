@@ -21,13 +21,16 @@ when hooks are configured, a later `stop_hook_summary` line). `parse_line` repor
 
 from __future__ import annotations
 
+import heapq
 import json
 import os
 import re
 import sys
+import unicodedata
 from collections import deque
 from collections.abc import Iterator
 from dataclasses import dataclass, replace
+from datetime import datetime
 from pathlib import Path
 from typing import Final, Literal
 
@@ -36,6 +39,19 @@ MAX_SANITIZED_LENGTH: Final = 200
 TITLE_TAIL_BYTES: Final = 256_000
 # Whether a turn is running is decided by the last lines of the transcript.
 ACTIVITY_TAIL_BYTES: Final = 512_000
+# Where the last message of a transcript is looked for: a first window, widened up to the maximum.
+LAST_MESSAGE_TAIL_BYTES: Final = 64_000
+LAST_MESSAGE_MAX_BYTES: Final = 4_096_000
+# How many of the most recently modified transcripts a title search looks at.
+SEARCH_SCAN_LIMIT: Final = 1500
+_MESSAGE_KINDS: Final = frozenset({"user", "assistant"})
+# The first prompt of a run of a Claude Desktop scheduled task starts with this tag.
+SCHEDULED_TASK_TAG: Final = "<scheduled-task "
+SCHEDULED_HEAD_BYTES: Final = 64_000
+_META_LINE: Final = re.compile(rb'"isMeta":\s*true')
+# The start of a first prompt cut by that window, as JSON text: `"content":"<scheduled-task ` or the
+# same inside a text block, after any escaped or plain whitespace.
+_CUT_SCHEDULED_PROMPT: Final = re.compile(rb'"(?:content|text)":\s*"(?:\\[nrt]|\s)*<scheduled-task ')
 _SANITIZE_RE: Final = re.compile(r"[^a-zA-Z0-9]")
 _BASE36_DIGITS: Final = "0123456789abcdefghijklmnopqrstuvwxyz"
 
@@ -533,8 +549,88 @@ def _session_title(path: Path) -> str:
     return ai
 
 
-def list_conversations_raw(limit: int) -> list[ConversationInfo]:
-    """Like `list_conversations`, without reading the titles (`title` is empty)."""
+def _timestamp(value: object) -> float | None:
+    """Epoch seconds of an ISO 8601 `timestamp` ("2026-10-08T19:59:43.962Z"); None when it is not one."""
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return None
+
+
+def last_message_time(path: str | Path) -> float | None:
+    """When the last user or assistant message of a transcript was written (epoch seconds, from its
+    `timestamp`); None when the end of the file holds none. Never raises.
+
+    The file's modification time does not say when a conversation was last used: the Claude Desktop
+    (6.28899 and later) appends bookkeeping lines (`cost-state`, `mode`, `last-prompt`) to the
+    transcript of every conversation it loads, so a conversation nobody touched for weeks looks as
+    recent as the last Desktop start. Reads backwards from the end, at most `LAST_MESSAGE_MAX_BYTES`.
+    """
+    window = LAST_MESSAGE_TAIL_BYTES
+    while True:
+        try:
+            size = os.stat(path).st_size
+            with open(path, "rb") as f:
+                start = max(0, size - window)
+                f.seek(start)
+                lines = f.read().split(b"\n")
+        except OSError:
+            return None
+        if start:
+            lines = lines[1:]  # the first one is cut in the middle
+        for line in reversed(lines):
+            if b'"timestamp"' not in line or (b'"user"' not in line and b'"assistant"' not in line):
+                continue
+            try:
+                d = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(d, dict) or d.get("type") not in _MESSAGE_KINDS or d.get("isMeta") is True:
+                continue
+            found = _timestamp(d.get("timestamp"))
+            if found is not None:
+                return found
+        if not start or window >= LAST_MESSAGE_MAX_BYTES:
+            return None
+        window *= 4
+
+
+def last_activity(path: Path, mtime: float) -> float:
+    """The time of the last message, or the modification time when there is none (it is never later)."""
+    found = last_message_time(path)
+    return mtime if found is None else min(found, mtime)
+
+
+def is_scheduled_run(path: str | Path) -> bool:
+    """Whether a transcript is one run of a Claude Desktop scheduled task (its first prompt is a
+    `<scheduled-task ...>` block): a run is not a conversation the person continues, and the Desktop
+    does not list it in the sidebar. Reads only the start of the file; never raises."""
+    try:
+        with open(path, "rb") as f:
+            lines = f.read(SCHEDULED_HEAD_BYTES).split(b"\n")
+    except OSError:
+        return False
+    for line in lines:
+        if b'"user"' not in line:
+            continue
+        try:
+            d = json.loads(line)
+        except ValueError:
+            # Only the last line can be cut by the window: a first prompt too long to fit in it.
+            return _META_LINE.search(line) is None and _CUT_SCHEDULED_PROMPT.search(line) is not None
+        if not isinstance(d, dict) or d.get("type") != "user" or d.get("isMeta") is True:
+            continue
+        message = d.get("message")
+        content = message.get("content") if isinstance(message, dict) else None
+        text = _text_blocks(content) if isinstance(content, list) else content
+        return isinstance(text, str) and text.lstrip().startswith(SCHEDULED_TASK_TAG)
+    return False
+
+
+def _transcripts_by_mtime() -> list[tuple[float, Path]]:
+    """Every transcript with its modification time, most recently modified first."""
     found: list[tuple[float, Path]] = []
     for project in _project_folders():
         try:
@@ -544,12 +640,68 @@ def list_conversations_raw(limit: int) -> list[ConversationInfo]:
         except OSError:
             continue
     found.sort(key=lambda item: item[0], reverse=True)
-    return [ConversationInfo(p.stem, p, "", mtime, p.parent.name) for mtime, p in found[: max(0, limit)]]
+    return found
 
 
-def list_conversations(limit: int = 15) -> list[ConversationInfo]:
-    """The most recently modified transcripts across all projects, newest first."""
-    return [replace(info, title=_session_title(info.path)) for info in list_conversations_raw(limit)]
+def list_conversations_raw(limit: int, *, skip_scheduled: bool = False) -> list[ConversationInfo]:
+    """Like `list_conversations`, without reading the titles (`title` is empty)."""
+    if limit <= 0:
+        return []
+    # A min-heap of the `limit` transcripts with the newest last message. The last message is never
+    # later than the file's modification time, so the files are visited newest modified first and
+    # the walk stops at the first one modified before the `limit`-th newest message: only the files
+    # touched since then are read.
+    best: list[tuple[float, str, Path]] = []
+    for mtime, path in _transcripts_by_mtime():
+        if len(best) == limit and mtime <= best[0][0]:
+            break
+        item = (last_activity(path, mtime), str(path), path)
+        if len(best) == limit and item[0] <= best[0][0]:
+            continue  # would not enter the heap: no need to read its start
+        if skip_scheduled and is_scheduled_run(path):
+            continue
+        if len(best) < limit:
+            heapq.heappush(best, item)
+        elif item[0] > best[0][0]:
+            heapq.heapreplace(best, item)
+    ordered = sorted(best, key=lambda item: item[0], reverse=True)
+    return [ConversationInfo(p.stem, p, "", when, p.parent.name) for when, _, p in ordered]
+
+
+def list_conversations(limit: int = 15, *, skip_scheduled: bool = False) -> list[ConversationInfo]:
+    """The transcripts with the most recent last message across all projects, newest first
+    (`modified` is the time of that message). `skip_scheduled` leaves out the runs of scheduled tasks."""
+    infos = list_conversations_raw(limit, skip_scheduled=skip_scheduled)
+    return [replace(info, title=_session_title(info.path)) for info in infos]
+
+
+def fold_text(text: str) -> str:
+    """`text` for a loose comparison: no accents, case folded, single spaces."""
+    decomposed = unicodedata.normalize("NFKD", text)
+    plain = "".join(c for c in decomposed if not unicodedata.combining(c))
+    return " ".join(plain.casefold().split())
+
+
+def search_conversations(query: str, limit: int = 20) -> list[ConversationInfo]:
+    """Transcripts whose title contains every word of `query` (accents and case ignored), newest
+    last message first; runs of scheduled tasks are left out. Looks at the `SEARCH_SCAN_LIMIT`
+    most recently modified transcripts."""
+    words = fold_text(query).split()
+    if not words or limit <= 0:
+        return []
+    matches: list[ConversationInfo] = []
+    for mtime, path in _transcripts_by_mtime()[:SEARCH_SCAN_LIMIT]:
+        title = _session_title(path)
+        folded = fold_text(title)
+        if title and all(word in folded for word in words) and not is_scheduled_run(path):
+            matches.append(ConversationInfo(path.stem, path, title, last_activity(path, mtime), path.parent.name))
+    matches.sort(key=lambda info: info.modified, reverse=True)
+    return matches[:limit]
+
+
+def session_title(path: Path) -> str:
+    """The title a conversation shows: its last custom title, else its last AI title ("" when none)."""
+    return _session_title(path)
 
 
 def _custom_title(path: Path) -> str:
@@ -583,15 +735,16 @@ def find_sessions_by_title(title: str, limit: int = 2000) -> list[ConversationIn
     # The file holds the title raw (Node writers) or escaped (Python writers).
     needles = (json.dumps(wanted, ensure_ascii=False)[1:-1], json.dumps(wanted)[1:-1])
     matches: list[ConversationInfo] = []
-    for info in list_conversations_raw(limit):
+    for mtime, path in _transcripts_by_mtime()[: max(0, limit)]:
         try:
-            with open(info.path, "rb") as f:
-                f.seek(max(0, info.path.stat().st_size - TITLE_TAIL_BYTES))
+            with open(path, "rb") as f:
+                f.seek(max(0, path.stat().st_size - TITLE_TAIL_BYTES))
                 tail = f.read().decode("utf-8", "replace")
         except OSError:
             continue
         if not any(needle in tail for needle in needles):
             continue
-        if _custom_title(info.path) == wanted:
-            matches.append(ConversationInfo(info.session_id, info.path, wanted, info.modified, info.project))
+        if _custom_title(path) == wanted:
+            matches.append(ConversationInfo(path.stem, path, wanted, last_activity(path, mtime), path.parent.name))
+    matches.sort(key=lambda info: info.modified, reverse=True)
     return matches

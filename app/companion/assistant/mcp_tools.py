@@ -28,7 +28,13 @@ from pathlib import Path
 from typing import Final
 
 from app.companion.assistant.cli_resume import CliResumer, ResumeError, busy_text
-from app.companion.assistant.conversations import ConversationEntry, OwnedConversations, OwnedError, list_entries
+from app.companion.assistant.conversations import (
+    ConversationEntry,
+    OwnedConversations,
+    OwnedError,
+    entry_by_id,
+    list_entries,
+)
 from app.companion.assistant.mcp_server import JsonObject, McpServer, Tool, ToolError
 from app.companion.assistant.notifier import AnswerWatcher
 from app.companion.assistant.session_reader import (
@@ -78,6 +84,8 @@ class _Deps:
     central_id: Callable[[], str]
     new_defaults: Callable[[], tuple[str, str]]
     entries: Callable[[int, list[str]], list[ConversationEntry]]
+    search: Callable[[str, int, list[str]], list[ConversationEntry]]
+    lookup: Callable[[str], ConversationEntry | None]
     resumer: CliResumer | None
     find_file: Callable[[str], Path | None]
     read: Callable[[Path, int], list[Message]]
@@ -99,6 +107,8 @@ class VoiceMateTools:
         central_id: Callable[[], str] = lambda: "",
         new_defaults: Callable[[], tuple[str, str]] = lambda: ("sonnet", "medium"),
         entries: Callable[[int, list[str]], list[ConversationEntry]] | None = None,
+        search: Callable[[str, int, list[str]], list[ConversationEntry]] | None = None,
+        lookup: Callable[[str], ConversationEntry | None] | None = None,
         resumer: CliResumer | None = None,
         find_file: Callable[[str], Path | None] = find_session_file,
         read: Callable[[Path, int], list[Message]] = last_messages,
@@ -112,6 +122,8 @@ class VoiceMateTools:
             central_id,
             new_defaults,
             entries or (lambda limit, exclude: list_entries(owned, limit, exclude=exclude)),
+            search or (lambda query, limit, exclude: list_entries(owned, limit, exclude=exclude, query=query)),
+            lookup or (lambda conversation_id: entry_by_id(owned, conversation_id, find_file=find_file)),
             resumer,
             find_file,
             read,
@@ -128,14 +140,25 @@ class VoiceMateTools:
         return [
             Tool(
                 "list_conversations",
-                "List the Claude Code conversations on this computer, newest first: id, title, owner "
+                "List the Claude Code conversations on this computer, the one with the newest message first: "
+                "id, title, owner "
                 "(desktop: a Claude Desktop conversation; voicemate: one VoiceMate started; cli: another "
                 "local session such as a terminal, IDE or Remote Control one, writable only while no program "
                 "has it open), state (busy, idle or waiting), last activity, cwd. Desktop and VoiceMate "
-                "conversations come first, then the cli ones.",
+                "conversations come first, then the cli ones. last_activity is when its last message was "
+                "written. When the person names a conversation by part of its title, pass `query` with those "
+                "words: it searches the titles of the last 1500 conversations touched, ignoring accents and case."
+                " An empty result means no title there holds every word: try fewer or other words.",
                 {
                     "type": "object",
-                    "properties": {"limit": {"type": "integer", "default": 20, "description": "At most this many."}},
+                    "properties": {
+                        "limit": {"type": "integer", "default": 20, "description": "At most this many."},
+                        "query": {
+                            "type": "string",
+                            "default": "",
+                            "description": "Only conversations whose title holds every word of this text.",
+                        },
+                    },
                 },
                 self._list,
             ),
@@ -205,6 +228,9 @@ class VoiceMateTools:
 
     def _list(self, args: JsonObject) -> str:
         limit = max(1, min(int(args["limit"]), 100))
+        query = str(args.get("query") or "").strip()
+        if query:
+            return _json([entry.as_json() for entry in self._d.search(query, limit, self._excluded())])
         return _json([entry.as_json() for entry in self._d.entries(limit, self._excluded())])
 
     def _read(self, args: JsonObject) -> str:
@@ -320,6 +346,8 @@ class VoiceMateTools:
     def _entry(self, conversation_id: str) -> ConversationEntry:
         entries = self._d.entries(100, self._excluded())
         entry = next((e for e in entries if e.id == conversation_id), None)
+        if entry is None and conversation_id not in self._excluded():
+            entry = self._d.lookup(conversation_id)  # an older one, found by a title search
         if entry is None:
             raise ToolError(f"no conversation on this computer has the id {conversation_id}")
         return entry

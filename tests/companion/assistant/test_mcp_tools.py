@@ -102,6 +102,9 @@ class FakeDesktop:
         self.sent.append((title, text))
 
 
+# A conversation too old for the newest 100: only a title search or a lookup by id finds it.
+OLD = ConversationEntry("desk-old", "Old desk", "desktop", "idle", "2026-08-01T10:00:00+00:00", "C:\\d")
+
 ENTRIES = [
     ConversationEntry("desk-1", "Desk", "desktop", "idle", "2026-10-28T10:00:00+00:00", "C:\\d"),
     ConversationEntry("own-1", "Mine", "voicemate", "busy", "2026-10-28T09:00:00+00:00", "C:\\m"),
@@ -134,6 +137,12 @@ class Rig:
             self.excluded.append(exclude)
             return [e for e in ENTRIES if e.id not in exclude][:limit]
 
+        self.searches: list[tuple[str, int, list[str]]] = []
+
+        def search(query: str, limit: int, exclude: list[str]) -> list[ConversationEntry]:
+            self.searches.append((query, limit, exclude))
+            return [OLD] if "old" in query.lower() else []
+
         self.server = VoiceMateTools(
             self.owned,  # type: ignore[arg-type]
             watcher or self.watcher,  # type: ignore[arg-type]
@@ -141,6 +150,8 @@ class Rig:
             central_id=lambda: "central",
             new_defaults=lambda: defaults,
             entries=entries,
+            search=search,
+            lookup=lambda cid: OLD if cid == OLD.id else None,
             resumer=self.resumer,  # type: ignore[arg-type]
             find_file=lambda cid: self.transcript if cid == "desk-1" else None,
             read=lambda _path, n: [Message("user", "q"), Message("assistant", "a" * 5000)][-n:],
@@ -365,3 +376,18 @@ def test_read_conversation_tells_a_long_silence_from_work_and_from_an_answer(rig
     read = json.loads(rig.call("read_conversation", id="desk-1")[0])
     assert read["state"] == "quiet" and read["seconds_since_last_write"] == 1500
     assert "25 min" in read["status"] and "did not answer yet" in read["status"]
+
+
+def test_list_conversations_searches_by_part_of_the_title(rig: Rig) -> None:
+    text, failed = rig.call("list_conversations", limit=5, query="  OLD desk ")
+    assert not failed
+    assert [e["id"] for e in json.loads(text)] == ["desk-old"]
+    assert rig.searches == [("OLD desk", 5, ["central"])]
+    text, _ = rig.call("list_conversations", limit=5, query="")
+    assert "desk-old" not in text and len(rig.searches) == 1  # an empty query is the plain list
+
+
+def test_send_reaches_a_conversation_older_than_the_list(rig: Rig) -> None:
+    assert rig.call("send_to_conversation", id="desk-old", text="hi") == ("sent", False)
+    assert rig.desktop is not None and rig.desktop.sent == [("Old desk", "hi")]
+    assert rig.call("send_to_conversation", id="ghost", text="hi")[1] is True

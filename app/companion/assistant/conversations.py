@@ -39,8 +39,12 @@ from app.companion.assistant.session_reader import (
     ConversationInfo,
     LiveSession,
     find_session_file,
+    fold_text,
+    last_activity,
     list_conversations,
     live_sessions,
+    search_conversations,
+    session_title,
 )
 from app.companion.contract import AssistantEffort, AssistantPermission, AssistantSettings
 
@@ -580,23 +584,59 @@ def _live_state(live: LiveSession | None) -> ConversationState:
     return "busy" if live.status == "busy" else "waiting"
 
 
+def entry_by_id(
+    owned: OwnedConversations,
+    session_id: str,
+    *,
+    find_file: Callable[[str], Path | None] = find_session_file,
+    sessions: Callable[[], dict[str, LiveSession]] = live_sessions,
+    head: Callable[[Path], tuple[str, str]] = transcript_head,
+    title_of: Callable[[Path], str] = session_title,
+) -> ConversationEntry | None:
+    """The entry of one conversation by its id, however old it is (`list_entries` holds only the
+    newest ones). None when no transcript or VoiceMate record has that id."""
+    record = owned.record(session_id)
+    path = find_file(session_id)
+    try:
+        mtime = path.stat().st_mtime if path is not None else None
+    except OSError:
+        mtime = None
+    if record is not None:
+        when = record.created if path is None or mtime is None else last_activity(path, mtime)
+        return ConversationEntry(record.id, record.title, "voicemate", owned.state(record.id), _iso(when), record.cwd)
+    if path is None or mtime is None:
+        return None
+    entrypoint, cwd = head(path)
+    session = sessions().get(session_id)
+    title = title_of(path) or (session.name if session is not None else "")
+    owner: ConversationOwner = "desktop" if entrypoint == DESKTOP_ENTRYPOINT else "cli"
+    return ConversationEntry(session_id, title, owner, _live_state(session), _iso(last_activity(path, mtime)), cwd)
+
+
 def list_entries(
     owned: OwnedConversations,
     limit: int = 20,
     *,
     exclude: Iterable[str] = (),
-    lister: Callable[[int], list[ConversationInfo]] = list_conversations,
+    lister: Callable[[int], list[ConversationInfo]] = lambda n: list_conversations(n, skip_scheduled=True),
     sessions: Callable[[], dict[str, LiveSession]] = live_sessions,
     head: Callable[[Path], tuple[str, str]] = transcript_head,
+    query: str = "",
+    searcher: Callable[[str, int], list[ConversationInfo]] = search_conversations,
 ) -> list[ConversationEntry]:
     """Desktop and VoiceMate-owned conversations, newest activity first, then the other local
-    Claude Code sessions, newest first. `exclude` drops ids (the central conversation itself)."""
+    Claude Code sessions, newest first. `exclude` drops ids (the central conversation itself).
+    Activity is the time of the last message, not the file's modification time, and the runs of
+    scheduled tasks are left out. With `query`, only the conversations whose title holds every word
+    of it (accents and case ignored)."""
     limit = max(1, min(limit, 100))
     skip = set(exclude)
+    words = fold_text(query).split()
     live = sessions()
     entries: dict[str, ConversationEntry] = {}
     # Many transcripts are not Desktop ones (labs, CLI runs): scan more than asked.
-    for info in lister(limit * 4 + 20):
+    infos = searcher(query, limit * 4 + 20) if words else lister(limit * 4 + 20)
+    for info in infos:
         if info.session_id in skip:
             continue
         record = owned.record(info.session_id)
@@ -609,12 +649,17 @@ def list_entries(
         session = live.get(info.session_id)
         title = info.title or (session.name if session is not None else "")
         owner: ConversationOwner = "desktop" if entrypoint == DESKTOP_ENTRYPOINT else "cli"
-        if owner == "cli" and not title and session is None:
-            continue  # an untitled finished run (a script's `claude -p`): not a conversation to follow
+        if not title and session is None:
+            # An untitled finished run: a script's `claude -p`, or a one-prompt run another
+            # conversation started from the Desktop (it inherits the Desktop entrypoint). The Desktop
+            # titles every conversation it shows after its first turn, so neither is in the sidebar.
+            continue
         entries[info.session_id] = ConversationEntry(
             info.session_id, title, owner, _live_state(session), _iso(info.modified), cwd
         )
     for record in owned.records():
+        if words and not all(word in fold_text(record.title) for word in words):
+            continue
         if record.id not in entries and record.id not in skip:
             entries[record.id] = ConversationEntry(
                 record.id, record.title, "voicemate", owned.state(record.id), _iso(record.created), record.cwd

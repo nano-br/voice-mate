@@ -18,6 +18,8 @@ The published copy is `profiles/claude-desktop.json` at the repository root. The
 
 The update check is an HTTPS GET with `If-None-Match` (ETag), a 5 second timeout and no redirect to plain HTTP. It adopts a profile only when all of these hold: it is valid, its `schema` is supported, its `min_voicemate` (if any) is not above the running VoiceMate, and its `profile_version` is higher than the active packaged or cached one. A network error, a bad file or a refused profile is logged and the current profile stays.
 
+**Versions.** Profile version 2 matches the sidebar rows of Claude Desktop 6.28899 and later, which are links (older Desktops showed them as buttons, which version 1 matched). An older Desktop no longer matches the packaged profile. A profile with a higher `profile_version` published at the URL above reaches installed apps on their next check, without a release.
+
 ## Format (schema 1)
 
 One JSON object. Unknown keys, wrong types, out of range numbers, duplicate keys, NaN and files over 64 KiB are refused, and the reason names the field.

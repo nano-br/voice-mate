@@ -82,7 +82,7 @@ flowchart TD
 
 Blue: VoiceMate; purple: the central conversation at work; green: the answer you get.
 
-- **Finding the conversation.** It matches "the conversation about X", "the other one" or "that build" against the titles, and reads the last messages of the likely ones when titles are not enough. When two still fit, it takes the one with the most recent activity on that subject and says which one it took, so you can correct it.
+- **Finding the conversation.** It matches "the conversation about X", "the other one" or "that build" against the titles, and reads the last messages of the likely ones when titles are not enough. When two still fit, it takes the one with the most recent activity on that subject and says which one it took, so you can correct it. Titles are searched by any part of the name, ignoring accents and case, among the last 1500 conversations touched, so an old conversation is found too.
 - **Where a conversation is.** A question such as "did it finish?" or "any news?" is answered from the transcript, read at that moment. `read_conversation` returns the last messages with a state: **working** (the turn is running, so the last message is progress), **finished** (the turn ended, so the last message is the answer, whether or not a note about it arrived) or **quiet** (the turn did not end and nothing was written for 10 minutes). The messages before a summary of the conversation are still read.
 - **Focus.** When you say "let's go back to the conversation about X", follow-up questions go there until you leave it ("ok, back to you", "new subject").
 - **Ambiguous requests** such as "change the model" are decided from the focus and the last messages. It asks a short question only when both readings are likely and the wrong one would disrupt something.
@@ -209,7 +209,7 @@ The list keeps the 20 newest entries.
 
 ## 🗂️ The conversations it sees
 
-In VoiceMate's own conversation, `list_conversations` reads the transcripts that Claude Code keeps on this computer and shows each conversation with an **owner** and a state (busy, idle or waiting). Claude Desktop and VoiceMate conversations come first, then the other local sessions, newest first in each group. A local session appears only when it has a title or a live process, so one-shot scripted runs stay out of the way. The central conversation never lists itself.
+In VoiceMate's own conversation, `list_conversations` reads the transcripts that Claude Code keeps on this computer and shows each conversation with an **owner** and a state (busy, idle or waiting). Claude Desktop and VoiceMate conversations come first, then the other local sessions, the one with the newest message first in each group (the time of the last message, not of the last change to the file). A local session appears only when it has a title or a live process, so one-shot scripted runs stay out of the way. The runs of Desktop scheduled tasks and the untitled one-prompt runs that other conversations start are left out too. When you name a conversation by part of its title, the assistant searches the titles (`query`: any part of the title, accents and case ignored, the last 1500 conversations touched), and it can read or send to one older than the newest 100 by its id. The central conversation never lists itself.
 
 | Conversation | Read and watch | Send a message | Start, change model, stop |
 |---|---|---|---|
@@ -343,6 +343,7 @@ The skill also documents the `remember`, `forget` and `follow_up` actions with `
 | The assistant says it could not send to a terminal or IDE session because the session is in use (the central gets `not sent (in use)`) | That session is open in a program right now. Close it there, or wait 2 minutes after its last change, and ask again. Without the session tools, the assistant tells you what to type there |
 | The assistant says the session is busy (`not sent (busy)`) | VoiceMate's last message to that session is still being answered, or was answered a moment ago. Wait a moment and ask again |
 | The assistant says the session's folder is gone (`not sent (no_folder)`) | The session's folder is no longer on this computer, so it cannot be resumed |
+| The assistant says it could not find a conversation you named | The words are not all in its title, the conversation is one of the Desktop's scheduled-task or untitled one-prompt runs (these are left out), or it was last touched before the newest 1500 | Name a distinctive part of the title (fewer words match more), or ask for the latest conversations and pick one |
 | A rule you gave is not followed in a new session | Ask "what rules do you keep?"; it reads `instructions` in `assistant.json`. If the file was unreadable, look for `assistant-instructions.json.bad` in the state folder |
 | "Standing instruction not removed" | No rule matched, or more than one did: say more of its exact text |
 | A watch stopped reporting | It leaves the list after 12 hours without a new turn (a wait: 1 hour). Ask the assistant to watch it again |

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -497,3 +498,124 @@ def test_a_turn_that_dies_on_an_error_ends(tmp_path: Path) -> None:
     assert kinds == [("assistant_text", "The context is full."), ("error", "The context is full."), ("turn_end", "")]
     assert [e.kind for e in sr.parse_line(_assistant("cut", stop="max_tokens"))] == ["assistant_text"]
     assert [e.kind for e in sr.parse_line(_tool_use())] == []
+
+
+# --- activity by the last message, not by the file's modification time -------------------------
+
+
+def _at(iso: str, kind: str = "user", **kw: object) -> str:
+    return _line(type=kind, uuid="x", timestamp=iso, message={"role": kind, "content": "hi"}, **kw)
+
+
+def test_last_message_time_skips_the_bookkeeping_the_desktop_appends(claude_dir: Path) -> None:
+    path = _write(
+        claude_dir / "projects" / "p" / "s.jsonl",
+        _at("2026-10-08T19:59:40.000Z"),
+        _at("2026-10-08T19:59:43.500Z", "assistant"),
+        _at("2026-11-26T18:00:00.000Z", isMeta=True),  # a meta line written when the session is loaded
+        _line(type="last-prompt", lastPrompt="hello"),
+        _line(type="cost-state", totalCostUSD=3.3),
+        _line(type="mode", mode="normal"),
+    )
+    assert sr.last_message_time(path) == datetime(2026, 10, 8, 19, 59, 43, 500000, tzinfo=UTC).timestamp()
+
+
+def test_last_message_time_without_messages_or_file(claude_dir: Path) -> None:
+    path = _write(claude_dir / "projects" / "p" / "s.jsonl", _line(type="mode", mode="normal"))
+    assert sr.last_message_time(path) is None
+    assert sr.last_message_time(claude_dir / "missing.jsonl") is None
+    assert sr.last_message_time(_write(claude_dir / "projects" / "p" / "t.jsonl", _user("a"))) is None  # no ISO time
+
+
+def test_last_message_time_widens_the_window_past_long_bookkeeping(
+    claude_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sr, "LAST_MESSAGE_TAIL_BYTES", 100)
+    filler = [_line(type="cost-state", pad="z" * 80) for _ in range(20)]
+    path = _write(claude_dir / "projects" / "p" / "s.jsonl", _at("2026-10-08T10:00:00Z"), *filler)
+    assert sr.last_message_time(path) == datetime(2026, 10, 8, 10, tzinfo=UTC).timestamp()
+    monkeypatch.setattr(sr, "LAST_MESSAGE_MAX_BYTES", 400)
+    assert sr.last_message_time(path) is None
+
+
+def test_list_conversations_orders_by_the_last_message(claude_dir: Path) -> None:
+    def conv(name: str, iso: str, mtime: float) -> Path:
+        path = _write(
+            claude_dir / "projects" / "p" / f"{name}.jsonl", _at(iso), _line(type="custom-title", customTitle=name)
+        )
+        os.utime(path, (mtime, mtime))
+        return path
+
+    base = datetime(2026, 11, 1, tzinfo=UTC).timestamp()
+    conv("touched-old", "2026-10-08T10:00:00Z", base + 9000)  # loaded by the Desktop today, last used in October
+    conv("recent", "2026-11-01T02:00:00Z", base + 7300)
+    conv("middle", "2026-10-20T10:00:00Z", base + 100)
+    items = sr.list_conversations(limit=2)
+    assert [i.title for i in items] == ["recent", "middle"]
+    assert items[0].modified == datetime(2026, 11, 1, 2, tzinfo=UTC).timestamp()
+    assert [i.title for i in sr.list_conversations(limit=5)] == ["recent", "middle", "touched-old"]
+
+
+def test_list_conversations_never_dates_a_file_after_its_modification(claude_dir: Path) -> None:
+    path = _write(claude_dir / "projects" / "p" / "s.jsonl", _at("2030-01-01T00:00:00Z"))
+    os.utime(path, (5000, 5000))
+    assert sr.list_conversations(limit=1)[0].modified == 5000
+
+
+def test_fold_text_and_search_by_part_of_the_title(claude_dir: Path) -> None:
+    assert sr.fold_text("  Tradução  GTAVXR ") == "traducao gtavxr"
+    for name, title, iso in (
+        ("a", "Tradução GTAVXR mod pt-BR", "2026-10-01T00:00:00Z"),
+        ("b", "GTAVXR compatibilidade de mods", "2026-10-05T00:00:00Z"),
+        ("c", "Site pessoal e domínio", "2026-10-09T00:00:00Z"),
+    ):
+        _write(claude_dir / "projects" / "p" / f"{name}.jsonl", _at(iso), _line(type="custom-title", customTitle=title))
+    assert [i.session_id for i in sr.search_conversations("gtavxr")] == ["b", "a"]
+    assert [i.session_id for i in sr.search_conversations("traducao MOD")] == ["a"]
+    assert [i.session_id for i in sr.search_conversations("DOMINIO site")] == ["c"]
+    assert sr.search_conversations("gtavxr", limit=1)[0].session_id == "b"
+    assert sr.search_conversations("   ") == []
+    assert sr.search_conversations("nothing like it") == []
+
+
+def test_runs_of_scheduled_tasks_are_recognized_and_left_out(claude_dir: Path) -> None:
+    run_prompt = '<scheduled-task name="check" file="C:\\t\\SKILL.md">\nThis is an automated run.\n</scheduled-task>'
+    run = _write(
+        claude_dir / "projects" / "p" / "run.jsonl",
+        _line(type="queue-operation", operation="enqueue"),
+        _at("2026-11-25T05:00:00Z", isMeta=True),
+        _line(type="user", timestamp="2026-11-25T05:00:01Z", message={"role": "user", "content": run_prompt}),
+        _line(type="custom-title", customTitle="Check the board"),
+    )
+    blocks = _write(
+        claude_dir / "projects" / "p" / "blocks.jsonl",
+        _line(
+            type="user",
+            timestamp="2026-11-25T04:00:00Z",
+            message={"role": "user", "content": [{"type": "text", "text": "  " + run_prompt}]},
+        ),
+        _line(type="custom-title", customTitle="Check again"),
+    )
+    talk = _write(
+        claude_dir / "projects" / "p" / "talk.jsonl",
+        _at("2026-11-20T10:00:00Z"),
+        _line(type="custom-title", customTitle="Check my notes"),
+    )
+    assert sr.is_scheduled_run(run) and sr.is_scheduled_run(blocks)
+    assert not sr.is_scheduled_run(talk)
+    assert not sr.is_scheduled_run(claude_dir / "missing.jsonl")
+    # A first prompt longer than the window is cut, and still recognized from its start.
+    long_run = _write(
+        claude_dir / "projects" / "q" / "long.jsonl",
+        _line(type="user", message={"role": "user", "content": run_prompt + "x" * sr.SCHEDULED_HEAD_BYTES}),
+    )
+    long_talk = _write(
+        claude_dir / "projects" / "q" / "long_talk.jsonl",
+        _line(type="user", message={"role": "user", "content": "hello " + "x" * sr.SCHEDULED_HEAD_BYTES}),
+    )
+    assert sr.is_scheduled_run(long_run) and not sr.is_scheduled_run(long_talk)
+    long_run.unlink()
+    long_talk.unlink()
+    assert [i.title for i in sr.list_conversations(5)] == ["Check the board", "Check again", "Check my notes"]
+    assert [i.title for i in sr.list_conversations(5, skip_scheduled=True)] == ["Check my notes"]
+    assert [i.title for i in sr.search_conversations("check")] == ["Check my notes"]
