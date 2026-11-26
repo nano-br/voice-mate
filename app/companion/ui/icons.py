@@ -89,9 +89,18 @@ INBOX_BADGE: Final[Badge] = "inbox"
 _INBOX_OVER: Final = frozenset({"none", "check"})
 
 
-def badge_for(state: TrayState, answers_waiting: bool = False) -> Badge:
+# Something needs the person (the Claude sign-in expired): the warning badge, over the same quiet
+# states and before the inbox one, since it blocks the assistant.
+ATTENTION_BADGE: Final[Badge] = "triangle"
+
+
+def badge_for(state: TrayState, answers_waiting: bool = False, attention: bool = False) -> Badge:
     badge = STATE_BADGES[state]
-    return INBOX_BADGE if answers_waiting and badge in _INBOX_OVER else badge
+    if badge not in _INBOX_OVER:
+        return badge
+    if attention:
+        return ATTENTION_BADGE
+    return INBOX_BADGE if answers_waiting else badge
 
 
 CORAL: Final = QColor("#FB7185")  # the head: the same in every state but `stopped`
@@ -281,32 +290,42 @@ def glyph_color(tone: GlyphTone, state: TrayState) -> QColor:
     return QColor(_WHITE) if tone == "light" else QColor("#111111")
 
 
-def tray_icon(state: TrayState, tone: GlyphTone, answers_waiting: bool = False) -> QIcon:
+def tray_icon(state: TrayState, tone: GlyphTone, answers_waiting: bool = False, attention: bool = False) -> QIcon:
     icon = QIcon()
     for size in TRAY_SIZES:
-        icon.addPixmap(tray_pixmap(state, tone, size, answers_waiting))
+        icon.addPixmap(tray_pixmap(state, tone, size, answers_waiting, attention))
     return icon
 
 
-def tray_pixmap(state: TrayState, tone: GlyphTone, size: int, answers_waiting: bool = False) -> QPixmap:
-    return state_pixmap(state, glyph_color(tone, state), size, answers_waiting=answers_waiting)
+def tray_pixmap(
+    state: TrayState, tone: GlyphTone, size: int, answers_waiting: bool = False, attention: bool = False
+) -> QPixmap:
+    return state_pixmap(state, glyph_color(tone, state), size, answers_waiting=answers_waiting, attention=attention)
 
 
 def state_pixmap(
-    state: TrayState, glyph: QColor, size: int, device_pixel_ratio: float = 1.0, *, answers_waiting: bool = False
+    state: TrayState,
+    glyph: QColor,
+    size: int,
+    device_pixel_ratio: float = 1.0,
+    *,
+    answers_waiting: bool = False,
+    attention: bool = False,
 ) -> QPixmap:
     """The mark in `glyph` color with the badge of `state` (also used in the status window)."""
     pixels = max(int(round(size * device_pixel_ratio)), 1)
-    pixmap = QPixmap.fromImage(glyph_image(state, glyph, pixels, answers_waiting))
+    pixmap = QPixmap.fromImage(glyph_image(state, glyph, pixels, answers_waiting, attention))
     pixmap.setDevicePixelRatio(device_pixel_ratio)
     return pixmap
 
 
-def glyph_image(state: TrayState, glyph: QColor, size: int, answers_waiting: bool = False) -> QImage:
+def glyph_image(
+    state: TrayState, glyph: QColor, size: int, answers_waiting: bool = False, attention: bool = False
+) -> QImage:
     """The tray glyph of `state` at `size` px: the mark without a tile, the same in every
     state (only `stopped` dims it), plus the state's small badge in the bottom-right corner
-    (the "answers waiting" badge instead, over a quiet state)."""
-    badge = badge_for(state, answers_waiting)
+    (the "answers waiting" or the attention badge instead, over a quiet state)."""
+    badge = badge_for(state, answers_waiting, attention)
     image = QImage(size, size, QImage.Format.Format_ARGB32_Premultiplied)
     image.fill(Qt.GlobalColor.transparent)
     painter = QPainter(image)

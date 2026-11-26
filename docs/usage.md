@@ -409,6 +409,7 @@ The tray icon is the VoiceMate figure; a small badge in its corner shows the sta
 | Speaker | Speaking (Claude) | "Claude is answering..." |
 | Check mark | Ready, for 3 seconds | "Copied: ..." |
 | Blue disc with an envelope flap | Answers from other conversations are waiting in the assistant's inbox (shown only over a quiet state) | "Answers waiting: 2" |
+| Triangle, over a quiet state | The assistant's Claude sign-in expired (see [Signing in again](assistant.md#login-expired)); the tooltip adds a line and the menu an item "Sign in to Claude again..." | "Claude sign-in expired: click to renew it" |
 | Ring | Starting | "Starting engine..." |
 | Circular arrow | Restarting | "Restarting (attempt 2)" |
 | Triangle | Warning | "No microphone" or "WSL audio stopped" |
@@ -417,7 +418,7 @@ The tray icon is the VoiceMate figure; a small badge in its corner shows the sta
 
 The menu has:
 
-- The status line, then "Open VoiceMate", and "Assistant" and "Hear what's ready" when the voice assistant is on.
+- The status line, then "Open VoiceMate", and "Assistant" and "Hear what's ready" when the voice assistant is on, and "Sign in to Claude again..." while the assistant's Claude sign-in is expired ([how to renew it](assistant.md#login-expired)).
 - "Dictate" and "Ask Claude" with their hotkeys ("Stop and copy" and "Stop and ask Claude" while recording), and "Cancel".
 - "Recent": the last transcriptions; click one to copy it again.
 - "Not copied ({count})": only when something failed to reach the clipboard; click an item to copy it; "Clear list" empties it after asking 'Clear the "Not copied" list?'.

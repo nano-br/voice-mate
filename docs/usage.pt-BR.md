@@ -417,7 +417,7 @@ O ícone da bandeja é a figura do VoiceMate; um pequeno selo no canto dele most
 
 O menu tem:
 
-- A linha de status, depois "Abrir o VoiceMate", e "Assistente" e "Ouvir o que está pronto" quando o assistente de voz está ligado.
+- A linha de status, depois "Abrir o VoiceMate", e "Assistente" e "Ouvir o que está pronto" quando o assistente de voz está ligado, e "Entrar no Claude de novo..." enquanto o login do assistente no Claude estiver expirado ([como renovar](assistant.pt-BR.md#login-expired)).
 - "Ditar" e "Perguntar ao Claude" com os atalhos deles ("Parar e copiar" e "Parar e perguntar ao Claude" durante a gravação), e "Cancelar".
 - "Recentes": as últimas transcrições; clique numa para copiá-la de novo.
 - "Não copiadas ({count})": só quando algo não chegou à área de transferência; clique num item para copiá-lo; "Limpar lista" a esvazia depois de perguntar 'Limpar a lista "Não copiadas"?'.

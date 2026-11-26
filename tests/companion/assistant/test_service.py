@@ -294,6 +294,30 @@ def _assistant(text: str, uuid: str, mid: str = "m1") -> str:
     )
 
 
+def _api_error(text: str, uuid: str, mid: str | None) -> str:
+    """The line Claude Code writes when a turn dies on an API error (`mid` None: a line without an id)."""
+    message: dict[str, object] = {"role": "assistant", "content": [{"type": "text", "text": text}]}
+    if mid is not None:
+        message["id"] = mid
+    return json.dumps({"type": "assistant", "uuid": uuid, "isApiErrorMessage": True, "message": message})
+
+
+def _finished(text: str, uuid: str, mid: str) -> str:
+    """A reply that ends its turn (what a turn that went through writes last)."""
+    return json.dumps(
+        {
+            "type": "assistant",
+            "uuid": uuid,
+            "message": {
+                "id": mid,
+                "role": "assistant",
+                "stop_reason": "end_turn",
+                "content": [{"type": "text", "text": text}],
+            },
+        }
+    )
+
+
 def _append(path: Path, *lines: str) -> None:
     with open(path, "a", encoding="utf-8", newline="\n") as file:
         for line in lines:
@@ -1969,3 +1993,79 @@ def test_what_the_assistant_waits_for_follows_a_conversation_that_changes_id(mak
     _append(new, _user("go on", "n1"), _turn([], "n2", "mn"))
     _until(lambda: len(rig.port.sent) > sent)
     assert '"Build"' in rig.port.sent[-1]
+
+
+# --- the Claude sign-in expired --------------------------------------------------------------------
+
+LOGIN_ERROR = "Failed to authenticate. API Error: 401 OAuth access token has expired. Re-authenticate to continue."
+
+
+def test_a_turn_that_died_on_the_login_shows_a_plain_message_and_flags_the_snapshot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "claude-home"
+    home.mkdir()
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(home))
+    voice = FakeVoice()
+    rig = Rig(home, voice=voice)
+    try:
+        rig.ready()
+        assert not rig.service.snapshot().login_expired
+        _append(rig.transcript("s1"), _user("hello", "u1"), _api_error(LOGIN_ERROR, "a1", "e1"))
+        snapshot = rig.wait(lambda s: s.login_expired)
+        assert snapshot.state == "ready"  # the person can try again once signed in
+        shown = snapshot.messages[-1].text
+        assert "Sign in to Claude again" in shown
+        assert "401" not in shown  # not the raw API error
+        assert len(voice.notices) == 1  # told aloud, once
+
+        _append(rig.transcript("s1"), _user("again", "u2"), _api_error(LOGIN_ERROR, "a2", "e2"))
+        rig.wait(lambda s: s.messages[-1].role == "assistant" and len(s.messages) >= 4)
+        assert len(voice.notices) == 1  # still the same occurrence
+
+        # A reply that goes through ends it, and a new failure is told again.
+        # Even a reply that talks about the login: the turn went through, whatever its text says.
+        reply = "<voice>Run /login if the OAuth token has expired.</voice>"
+        _append(rig.transcript("s1"), _user("third", "u3"), _finished(reply, "a3", "m3"))
+        rig.wait(lambda s: not s.login_expired)
+        _append(rig.transcript("s1"), _user("fourth", "u4"), _api_error(LOGIN_ERROR, "a4", "e4"))
+        rig.wait(lambda s: s.login_expired)
+        assert len(voice.notices) == 2
+    finally:
+        rig.service.stop()
+
+
+def test_the_port_reporting_the_login_flags_the_snapshot_until_it_clears(rig: Rig) -> None:
+    rig.ready()
+    rig.port.set(PortStatus(state="ready", session_id="s1", login_expired=True))
+    assert rig.wait(lambda s: s.login_expired).state == "ready"
+    rig.port.set(PortStatus(state="ready", session_id="s1"))
+    rig.wait(lambda s: not s.login_expired)
+
+
+def test_an_old_login_error_in_the_transcript_does_not_flag_a_fresh_start(rig: Rig) -> None:
+    rig.service.start()
+    rig.wait(lambda s: s.state == "starting")
+    _append(rig.transcript("s1"), _user("hello", "u1"), _api_error(LOGIN_ERROR, "a1", "e1"))
+    rig.port.set(PortStatus(state="ready", session_id="s1"))
+    snapshot = rig.wait(lambda s: len(s.messages) == 2)
+    assert not snapshot.login_expired
+    assert "Sign in to Claude again" in snapshot.messages[1].text  # the history is still plain
+
+
+def test_a_login_error_line_without_an_id_is_still_shown_in_plain_words(rig: Rig) -> None:
+    rig.ready()
+    _append(rig.transcript("s1"), _user("hello", "u1"), _api_error(LOGIN_ERROR, "a1", None))
+    snapshot = rig.wait(lambda s: s.login_expired)
+    assert "Sign in to Claude again" in snapshot.messages[-1].text
+    assert all("401" not in message.text for message in snapshot.messages)
+
+
+def test_a_turn_end_without_an_id_after_a_reply_clears_the_login(rig: Rig) -> None:
+    rig.ready()
+    _append(rig.transcript("s1"), _user("hello", "u1"), _api_error(LOGIN_ERROR, "a1", None))
+    rig.wait(lambda s: s.login_expired)
+    ended = json.loads(_finished("<voice>Hi again.</voice>", "a2", "m2"))
+    del ended["message"]["id"]  # a turn that went through, written without a message id
+    _append(rig.transcript("s1"), _user("again", "u2"), json.dumps(ended))
+    rig.wait(lambda s: not s.login_expired)

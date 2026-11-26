@@ -117,6 +117,9 @@ class AssistantWindow(QWidget):
             Qt.TextInteractionFlag.TextSelectableByMouse | Qt.TextInteractionFlag.LinksAccessibleByMouse
         )
         header.addWidget(self.status_label, 1)
+        self.login_button = QPushButton(_("How to sign in"))
+        self.login_button.clicked.connect(self._shell.show_login_help)
+        header.addWidget(self.login_button)
         self.restart_button = QPushButton(_("Restart"))
         self.restart_button.clicked.connect(self._service.restart)
         header.addWidget(self.restart_button)
@@ -216,7 +219,8 @@ class AssistantWindow(QWidget):
                 url=escape(snapshot.session_url), text=escape(_("Open on claude.ai"))
             )
         self.status_label.setText(status)
-        self.restart_button.setVisible(snapshot.state in ("error", "stopped"))
+        self.restart_button.setVisible(snapshot.state in ("error", "stopped") or snapshot.login_expired)
+        self.login_button.setVisible(snapshot.login_expired)
         self.back_button.setVisible(bool(snapshot.followed_title or snapshot.direct_title))
         self.direct_banner.setVisible(bool(snapshot.direct_title))
         self.direct_banner.setText(

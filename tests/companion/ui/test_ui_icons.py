@@ -292,3 +292,21 @@ def test_answers_waiting_change_only_the_quiet_icons(qapp: QApplication, tone: i
         waiting = icons.tray_pixmap(state, tone, size, True).toImage()
         quiet = icons.STATE_BADGES[state] in ("none", "check")
         assert (plain != waiting) == quiet, f"{state} at {size} px"
+
+
+def test_the_attention_badge_wins_over_the_inbox_over_a_quiet_state_only() -> None:
+    for state in ALL_STATES:
+        base = icons.STATE_BADGES[state]
+        expected = icons.ATTENTION_BADGE if base in ("none", "check") else base
+        assert icons.badge_for(state, False, True) == expected, state
+        assert icons.badge_for(state, True, True) == expected, state
+
+
+@pytest.mark.parametrize("size", icons.TRAY_SIZES)
+@pytest.mark.parametrize("tone", TONES)
+def test_attention_changes_only_the_quiet_icons(qapp: QApplication, tone: icons.GlyphTone, size: int) -> None:
+    for state in ALL_STATES:
+        plain = icons.tray_pixmap(state, tone, size).toImage()
+        attention = icons.tray_pixmap(state, tone, size, False, True).toImage()
+        quiet = icons.STATE_BADGES[state] in ("none", "check")
+        assert (plain != attention) == quiet, f"{state} at {size} px"

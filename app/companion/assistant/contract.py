@@ -19,9 +19,7 @@ MAX_MESSAGES: Final = 30  # what the text screen keeps
 AssistantState = Literal["off", "starting", "ready", "busy", "error", "stopped"]
 # Why the state is "error".
 # "no_conversation": mode desktop without a Desktop conversation chosen in the settings.
-AssistantErrorCode = Literal[
-    "cli_missing", "not_logged_in", "start_failed", "exited", "setup_failed", "no_conversation"
-]
+AssistantErrorCode = Literal["cli_missing", "start_failed", "exited", "setup_failed", "no_conversation"]
 # "notice" is a line from VoiceMate itself (a command result), never part of the conversation.
 MessageRole = Literal["user", "assistant", "notice"]
 RemoteState = Literal["off", "pending", "on", "failed"]
@@ -90,6 +88,8 @@ class AssistantSnapshot:
     # Bumped by every request to show the assistant window (its hotkey): the UI presents it.
     window_requests: int = 0
     profile: ProfileStatus | None = None  # None until the Desktop profile is loaded
+    # The Claude sign-in expired: the last turn failed on it, until a turn goes through again.
+    login_expired: bool = False
 
 
 AssistantListener = Callable[[AssistantSnapshot], None]
@@ -173,6 +173,7 @@ class PortStatus:
     session_id: str = ""
     session_url: str = ""
     remote: RemoteState = "off"
+    login_expired: bool = False  # the last turn (or Remote Control) failed on the sign-in
 
 
 PortListener = Callable[[PortStatus], None]

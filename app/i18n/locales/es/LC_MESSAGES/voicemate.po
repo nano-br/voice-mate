@@ -2892,10 +2892,6 @@ msgstr "Escuchar lo que está listo"
 msgid "Claude Code was not found"
 msgstr "No se encontró Claude Code"
 
-#: app/companion/ui/texts.py:265
-msgid "Claude Code is not signed in"
-msgstr "Claude Code no ha iniciado sesión"
-
 #: app/companion/ui/texts.py:267
 msgid "The assistant stopped"
 msgstr "El asistente se detuvo"
@@ -2931,14 +2927,6 @@ msgid ""
 msgstr ""
 "Instala Claude Code, o apunta VOICEMATE_CLAUDE_CLI hacia él, y reinicia "
 "el asistente."
-
-#: app/companion/ui/texts.py:289
-msgid ""
-"Sign in with \"claude auth login\" in a terminal, then restart the "
-"assistant."
-msgstr ""
-"Inicia sesión con \"claude auth login\" en una terminal y reinicia el "
-"asistente."
 
 #: app/companion/ui/texts.py:290
 msgid "Choose the Claude Desktop conversation in Settings, Assistant."
@@ -5131,6 +5119,74 @@ msgstr "[stt] ✓ Modo {mode} listo: {detail}"
 #, python-brace-format
 msgid "[stt] ⚠ {mode} mode still not ready: {detail}"
 msgstr "[stt] ⚠ El modo {mode} todavía no está listo: {detail}"
+
+#: app/companion/ui/texts.py:167
+msgid "Claude sign-in expired: click to renew it"
+msgstr "El inicio de sesión de Claude caducó: haz clic para renovarlo"
+
+#: app/companion/ui/login_dialog.py:58
+msgid "Copy the command"
+msgstr "Copiar el comando"
+
+#: app/companion/ui/login_dialog.py:48
+msgid "Follow the page that opens in your browser, then come back and talk to the assistant."
+msgstr "Sigue la página que se abre en el navegador y luego vuelve a hablar con el asistente."
+
+#: app/companion/ui/assistant_window.py:120
+msgid "How to sign in"
+msgstr "Cómo iniciar sesión"
+
+#: app/companion/ui/login_dialog.py:64
+msgid "Older versions of Claude Code have no such command: type \"claude\", press Enter, then type \"/login\"."
+msgstr "Las versiones antiguas de Claude Code no tienen ese comando: escribe \"claude\", pulsa Enter y luego escribe \"/login\"."
+
+#: app/companion/ui/login_dialog.py:46
+msgid "Open a terminal (Windows Terminal, PowerShell or Command Prompt)."
+msgstr "Abre una terminal (Terminal de Windows, PowerShell o Símbolo del sistema)."
+
+#: app/companion/ui/login_dialog.py:75
+msgid "Open the guide"
+msgstr "Abrir la guía"
+
+#: app/companion/ui/app.py:185
+msgid "Sign in to Claude again"
+msgstr "Inicia sesión en Claude de nuevo"
+
+#: app/companion/ui/tray.py:94
+msgid "Sign in to Claude again..."
+msgstr "Iniciar sesión en Claude de nuevo..."
+
+#: app/companion/ui/texts.py:278
+msgid "The Claude sign-in expired"
+msgstr "El inicio de sesión de Claude caducó"
+
+#: app/companion/assistant/service.py:1898
+msgid "The Claude sign-in expired. Open the VoiceMate menu to see how to sign in again."
+msgstr "El inicio de sesión de Claude caducó. Abre el menú de VoiceMate para ver cómo iniciar sesión de nuevo."
+
+#: app/companion/assistant/service.py:220
+msgid "The assistant cannot answer because its Claude sign-in expired. Choose \"Sign in to Claude again...\" in the VoiceMate menu to see how to renew it."
+msgstr "El asistente no puede responder porque su inicio de sesión de Claude caducó. Elige \"Iniciar sesión en Claude de nuevo...\" en el menú de VoiceMate para ver cómo renovarlo."
+
+#: app/companion/ui/app.py:186
+msgid "The assistant cannot answer until you renew its Claude sign-in. Click here to see how."
+msgstr "El asistente no puede responder hasta que renueves su inicio de sesión de Claude. Haz clic aquí para ver cómo."
+
+#: app/companion/ui/login_dialog.py:37
+msgid "The assistant needs you to sign in to Claude again. Its sign-in expired, so it cannot answer until you renew it. This takes about a minute and nothing you said or wrote is lost."
+msgstr "El asistente necesita que inicies sesión en Claude de nuevo. Su inicio de sesión caducó, así que no puede responder hasta que lo renueves. Lleva cerca de un minuto y no se pierde nada de lo que dijiste o escribiste."
+
+#: app/companion/ui/login_dialog.py:47
+msgid "Type the command below and press Enter."
+msgstr "Escribe el comando de abajo y pulsa Enter."
+
+#: app/companion/ui/login_dialog.py:94
+msgid "VoiceMate did not find the Claude Code program on this computer. Install it first, or set VOICEMATE_CLAUDE_CLI to its path, then restart the assistant."
+msgstr "VoiceMate no encontró el programa de Claude Code en este equipo. Instálalo primero, o define VOICEMATE_CLAUDE_CLI con su ruta, y luego reinicia el asistente."
+
+#: app/companion/ui/login_dialog.py:99
+msgid "VoiceMate uses this Claude Code program, so sign in with it:"
+msgstr "VoiceMate usa este programa de Claude Code, así que inicia sesión con él:"
 
 #~ msgid "Engine default"
 #~ msgstr "Predeterminada del motor"

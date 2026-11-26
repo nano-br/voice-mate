@@ -13,6 +13,8 @@ from typing import Final, get_args
 from PySide6.QtCore import QCoreApplication, QObject, Qt, QTimer, Signal
 from PySide6.QtWidgets import QAbstractButton, QMessageBox, QSystemTrayIcon
 
+from app.companion.assistant.contract import AssistantSnapshot
+from app.companion.assistant.own_session import find_cli
 from app.companion.contract import (
     CompanionCommand,
     CompanionController,
@@ -26,6 +28,7 @@ from app.companion.ui import texts
 from app.companion.ui.assistant_window import AssistantWindow
 from app.companion.ui.bridge import ControllerBridge
 from app.companion.ui.icons import app_icon
+from app.companion.ui.login_dialog import LoginHelpDialog
 from app.companion.ui.notifications import NotificationPresenter
 from app.companion.ui.settings_window import SettingsDialog
 from app.companion.ui.status_window import StatusWindow
@@ -100,10 +103,16 @@ class CompanionUi(QObject):
         self.status_window = StatusWindow(self)
         self.settings_dialog: SettingsDialog | None = None
         self.assistant_window: AssistantWindow | None = None
+        self.login_dialog: LoginHelpDialog | None = None
         self.notifications = NotificationPresenter(
             None,
             self.status_window,
-            {"show_status": self.show_status, "open_logs": controller.open_logs, "open_settings": self.show_settings},
+            {
+                "show_status": self.show_status,
+                "open_logs": controller.open_logs,
+                "open_settings": self.show_settings,
+                "show_login_help": self.show_login_help,
+            },
             self,
         )
         if tray_available if tray_available is not None else tray_probe():
@@ -120,8 +129,9 @@ class CompanionUi(QObject):
         # The assistant's window hotkey: each new request presents the window.
         assistant = controller.assistant()
         self._window_requests = assistant.snapshot().window_requests
+        self._login_notified = assistant.snapshot().login_expired
         self._unsubscribe_assistant = assistant.subscribe(
-            lambda snapshot: self._bridge.call_soon(lambda: self._assistant_changed(snapshot.window_requests))
+            lambda snapshot: self._bridge.call_soon(lambda: self._assistant_changed(snapshot))
         )
 
     # ------------------------------------------------------------------ Shell
@@ -163,10 +173,21 @@ class CompanionUi(QObject):
             return
         self.settings_dialog.present(reload=not self.settings_dialog.isVisible())
 
-    def _assistant_changed(self, window_requests: int) -> None:
-        if window_requests > self._window_requests:
-            self._window_requests = window_requests
+    def _assistant_changed(self, snapshot: AssistantSnapshot) -> None:
+        if snapshot.window_requests > self._window_requests:
+            self._window_requests = snapshot.window_requests
             self.show_assistant()
+        # The Claude sign-in expired: one notification per occurrence (it ends when a turn works again).
+        if snapshot.login_expired and not self._login_notified:
+            self._present_notification(
+                Notification(
+                    "warning",
+                    _("Sign in to Claude again"),
+                    _("The assistant cannot answer until you renew its Claude sign-in. Click here to see how."),
+                    "show_login_help",
+                )
+            )
+        self._login_notified = snapshot.login_expired
 
     def show_assistant(self) -> None:
         if self._quitting:
@@ -174,6 +195,14 @@ class CompanionUi(QObject):
         if self.assistant_window is None:
             self.assistant_window = AssistantWindow(self)
         self.assistant_window.present()
+
+    def show_login_help(self) -> None:
+        if self._quitting:
+            return
+        cli = find_cli()  # read each time: it may have been installed since
+        if self.login_dialog is None:
+            self.login_dialog = LoginHelpDialog(cli)
+        self.login_dialog.present(cli)
 
     def confirm_wsl_restart(self) -> None:
         if self._wsl_box is not None:

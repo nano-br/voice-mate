@@ -38,6 +38,9 @@ class Shell(Protocol):
 
     def show_assistant(self) -> None: ...
 
+    def show_login_help(self) -> None:
+        """Explain how to sign in to Claude again (the assistant's login expired)."""
+
     def confirm_wsl_restart(self) -> None:
         """Answer the controller's pending question (policy "ask")."""
 

@@ -349,6 +349,7 @@ A skill também documenta as ações `remember`, `forget` e `follow_up` com `"wa
 
 | Sintoma | O que fazer |
 |---|---|
+| O assistente para de responder e diz que o login dele no Claude expirou (selo de aviso no ícone da bandeja) | Entre no Claude de novo: veja [Entrar de novo](#login-expired) |
 | O assistente conta que não conseguiu mandar para uma sessão de terminal ou IDE porque ela está em uso (a central recebe `not sent (in use)`) | A sessão está aberta num programa agora. Feche lá, ou espere 2 minutos depois da última mudança, e peça de novo. Sem as ferramentas de sessão, o assistente diz o que você deve digitar lá |
 | O assistente conta que a sessão está ocupada (`not sent (busy)`) | A última mensagem do VoiceMate para aquela sessão ainda está sendo respondida, ou acabou de ser. Espere um pouco e peça de novo |
 | O assistente conta que a pasta da sessão sumiu (`not sent (no_folder)`) | A pasta da sessão não está mais neste computador, então ela não pode ser retomada |
@@ -358,6 +359,23 @@ A skill também documenta as ações `remember`, `forget` e `follow_up` com `"wa
 | Uma observação parou de avisar | Ela sai da lista depois de 12 horas sem turno novo (uma espera: 1 hora). Peça para o assistente observar de novo |
 | Os avisos chegam agrupados ou atrasados | É de propósito: turnos que terminam em até 15 segundos depois do primeiro viram uma nota, e saem no máximo 4 notas de observação por minuto |
 | O assistente continua com as instruções antigas depois de uma atualização | A sua cópia editada da skill foi mantida, e a versão nova está ao lado dela como `.new`; a janela avisa. Junte as duas, ou apague a sua cópia |
+
+<a id="login-expired"></a>
+
+### Entrar de novo (login expirado)
+
+O assistente roda o programa Claude Code (`claude`) em segundo plano, e esse programa precisa do seu login no Claude. Quando o login expira (ou você saiu da conta), o assistente não consegue responder. O log mostra `Failed to authenticate. API Error: 401 OAuth access token has expired` ou pede `/login`. O VoiceMate avisa de vários jeitos: um selo de aviso no ícone da bandeja com uma linha na dica dele, uma notificação, uma frase falada, uma mensagem simples na janela do assistente no lugar do erro cru do Claude e um botão "Como entrar" nessa janela.
+
+Para renovar o login:
+
+1. Clique no ícone da bandeja (ou na notificação, ou em "Entrar no Claude de novo..." no menu da bandeja, ou em "Como entrar" na janela do assistente). Uma janela explica os passos.
+2. Abra um terminal (Terminal do Windows, PowerShell ou Prompt de Comando): aperte a tecla Windows, digite `PowerShell` e tecle Enter.
+3. Digite `claude auth login` e tecle Enter (a janela tem um botão "Copiar o comando"; cole com o botão direito do mouse ou `Ctrl+V`). Com um Claude Code antigo, sem esse comando, rode `claude` e depois digite `/login`.
+4. Siga a página que abrir no navegador e depois fale com o assistente de novo.
+
+O selo some sozinho na primeira resposta que funcionar. Se o assistente ainda falhar depois do login, aperte Reiniciar na janela do assistente. Se o terminal disser que não conhece o `claude`, veja "Qual `claude`?" abaixo.
+
+**Qual `claude`?** A janela mostra o programa exato que o VoiceMate roda. Entre com esse: se o seu terminal não acha o `claude`, ou você tem mais de uma cópia (por exemplo uma dentro do WSL), rode-o pelo caminho completo. `VOICEMATE_CLAUDE_CLI` troca o programa que o VoiceMate usa.
 
 Mais mensagens: [troubleshooting.pt-BR.md](troubleshooting.pt-BR.md#assistente-de-voz).
 

@@ -91,7 +91,7 @@ bottom-right corner; it may cover the tip of the right arm, never the body's V.
 | `error` | red rounded square with a white X |
 
 Badges differ by SHAPE (disc, ring, open ring, octagon, triangle, rounded square, speech
-bubble, hourglass, loudspeaker) and by their symbol, never only by color. The symbols are
+bubble, hourglass, loudspeaker) and by their symbol, never only by color. The `warning` triangle is also the attention badge: it shows over a quiet state while the assistant's Claude sign-in is expired. The symbols are
 simple and strong so they survive at 6 x 6 pixels. No animation by default.
 
 ## The app icon: the framed tile
