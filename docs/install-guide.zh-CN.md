@@ -2,11 +2,11 @@
 
 [English](install-guide.md) | [Português](install-guide.pt-BR.md) | [Español](install-guide.es.md) | [Русский](install-guide.ru.md) | **简体中文**
 
-目的：从一台干净的 Windows 电脑出发，一步一步走到第一次听写，并附有安装程序的截图。所有命令都在这里，不需要任何预备知识。完整的技术参考（所有路径、所有选项）见 [installation.md](installation.md)（英文）。返回 [README](../README.zh-CN.md)。
+目的：从一台干净的 Windows 电脑出发，一步一步走到第一次听写和第一次与助手对话，并附有安装程序的截图。所有命令都在这里，不需要任何预备知识。完整的技术参考（所有路径、所有选项）见 [installation.md](installation.md)（英文）。返回 [README](../README.zh-CN.md)。
 
 ## 🎯 你要安装什么
 
-我写这份指南，是为了那些想让 VoiceMate 尽快用起来、又不想读完全部文档的人。大约四步，其中最久的是第一次下载语音模型。
+VoiceMate 是服务于 Claude Code 和 Claude Desktop 的个人语音助手，同时带有本地听写。我写这份指南，是为了那些想让它尽快用起来、又不想读完全部文档的人。一共五步，其中最久的是第一次下载语音模型。
 
 VoiceMate 有两个部分。**引擎**负责聆听并把语音转成文字：它运行在你自己的电脑上，在 Windows 本来就能运行的一个小型 Linux（WSL2）里。**配套应用**是你看得到的 Windows 应用：托盘图标、快捷键、设置和助手窗口。配套应用以安装程序提供；引擎来自 GitHub。
 
@@ -14,20 +14,18 @@ VoiceMate 有两个部分。**引擎**负责聆听并把语音转成文字：它
 flowchart LR
     s1["1. WSL2 和 Ubuntu<br/>PowerShell"] --> s2["2. 引擎<br/>git clone、make setup"]
     s2 --> s3["3. Windows 安装程序<br/>VoiceMate-Setup.exe"]
-    s3 --> s4["4. 首次运行<br/>Ctrl+Alt+V"]
-    s4 -.-> s5["5. 可选<br/>语音助手"]
+    s3 --> s4["4. 首次运行<br/>第一次听写"]
+    s4 --> s5["5. 语音助手<br/>Claude Code，然后说话"]
 
     classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
     classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
     classDef ok fill:#2e7d32,stroke:#1b5e20,color:#ffffff
-    classDef optional fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff,stroke-dasharray:5 5
     class s1,s2 container
     class s3 system
-    class s4 ok
-    class s5 optional
+    class s4,s5 ok
 ```
 
-蓝色：安装内容的步骤；绿色：开始能用的时刻；虚线：可选。
+蓝色：安装内容的步骤；绿色：开始能用的时刻。
 
 ## 📋 要求
 
@@ -38,7 +36,7 @@ flowchart LR
 | 带 Ubuntu 的 WSL2 | 在第 1 步安装（Ubuntu 24.04 自带引擎需要的 Python 3.12） |
 | 显卡 | 可选。NVIDIA 和 AMD 显卡都可以；没有显卡时，VoiceMate 用处理器转写 |
 | 联网，一次即可 | 用于下载 Ubuntu、引擎和 Whisper 语音模型（模型在第一次启动时下载） |
-| 语音助手 | 已安装并登录的 Claude Code（第 5 步）。听写不需要它 |
+| 语音助手 | 已安装并登录的 Claude Code（第 5 步）。只有听写可以不用它 |
 
 VoiceMate 本身不需要管理员账户。第 1 步安装 WSL2 时可能会要求管理员权限，这由 Windows 决定。
 
@@ -153,13 +151,13 @@ make run
 
 右键单击托盘图标打开菜单，打开设置可以修改快捷键、提示音、语言和转写模式（CPU 或 GPU）。如果通知提示“未找到引擎文件夹”，请在设置 > **常规** 中指定“引擎文件夹：”，VoiceMate 会再试一次。
 
-## 🎙️ 第 5 步：语音助手（可选）
+## 🎙️ 第 5 步：语音助手
 
-助手是一个你用语音与之交谈的 Claude 对话，就在你已经在用的 Claude Code 和 Claude Desktop 里。它需要 Windows 上的 Claude Code，以及这台电脑上的 Claude 登录：
+这一步把 VoiceMate 变成你的个人助手：一个你用语音与之交谈的 Claude 对话，就在你已经在用的 Claude Code 和 Claude Desktop 里，它会查找、阅读并统筹你的其他对话。如果你只想要听写，做到第 4 步就可以了。助手需要 Windows 上的 Claude Code，以及这台电脑上的 Claude 登录：
 
 1. 安装 [Claude Code](https://docs.claude.com/en/docs/claude-code)，并在终端里运行一次 `claude auth login`。Claude Desktop 的登录不算。
 2. 在状态窗口中点 **助手**，或打开设置 > **助手** 并选择“助手模式：”。
-3. 按 `Ctrl+Alt+S` 说话，再按一次结束。或者在助手窗口里点 **说话**；录音时它会变成 **停止并发送**。
+3. 按 `Ctrl+Alt+S`（或绑定到它的宏键）说话，再按一次结束。或者在助手窗口里点 **说话**；录音时它会变成 **停止并发送**。
 
 <p align="center"><img src="assets/screenshots/zh-CN/assistant.png" width="568" alt="助手窗口，含“说话”按钮和一段示例对话"></p>
 
@@ -202,6 +200,7 @@ make run
 
 ## 📚 接下来读什么
 
-- [usage.zh-CN.md](usage.zh-CN.md)：快捷键、托盘图标、转写模式和模型。
+- [assistant.zh-CN.md](assistant.zh-CN.md)：助手能为你做什么，附有可以怎么说的例子。
+- [usage.zh-CN.md](usage.zh-CN.md)：快捷键和其他启动方式、托盘图标、转写模式和模型。
 - [voice-assistant.md](voice-assistant.md)：助手、它的两种模式，以及它如何统筹你的其他对话（英文）。
 - [installation.md](installation.md)：所有安装方式，包括从源码安装和在 Linux 上安装（英文）。

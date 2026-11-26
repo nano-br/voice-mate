@@ -2,13 +2,23 @@
 
 # Uso
 
-Objetivo: como usar o VoiceMate no dia a dia: os fluxos, os atalhos, o aplicativo companion, os modos de transcrição, os modelos Whisper, as opções de voz e o assistente de voz. Voltar ao [README](../README.pt-BR.md).
+Objetivo: como usar o VoiceMate no dia a dia: o assistente, as perguntas rápidas ao Claude, o ditado, os atalhos e as outras formas de iniciá-los, o aplicativo companion, os modos de transcrição, os modelos Whisper e as opções de voz. Voltar ao [README](../README.pt-BR.md).
+
+O VoiceMate faz três coisas com a sua voz, e cada uma começa com um toque:
+
+| Você quer | Atalho padrão | Onde está explicado |
+|---|---|---|
+| Falar com o seu assistente, que conduz as suas conversas do Claude Code e do Claude Desktop e responde em voz alta | `Ctrl+Alt+S` | [Assistente de voz](#assistente-de-voz) |
+| Fazer uma pergunta rápida ao Claude e ouvir a resposta | `Ctrl+Alt+A` | [Fluxo do Claude](#fluxo-do-claude) |
+| Ditar um texto e colar em qualquer lugar | `Ctrl+Alt+V` | [Fluxo da área de transferência](#fluxo-da-área-de-transferência) |
+
+Um toque não precisa ser um atalho de teclado. Uma tecla de macro ou um botão do mouse que envia as mesmas teclas funciona do mesmo jeito, o menu da bandeja tem as ações, e a janela do assistente tem um botão **Falar**.
 
 ## Atalhos
 
 | Atalho padrão | Fluxo | Ação no menu da bandeja | Resultado |
 |---|---|---|---|
-| `Ctrl+Alt+V` | Área de transferência (o essencial) | "Ditar" | A transcrição vai para a área de transferência |
+| `Ctrl+Alt+V` | Área de transferência (ditado) | "Ditar" | A transcrição vai para a área de transferência |
 | `Ctrl+Alt+A` | Claude | "Perguntar ao Claude" | A transcrição vai para o Claude; a resposta vai para a área de transferência e é lida em voz alta |
 
 O assistente de voz acrescenta os próprios atalhos (`Ctrl+Alt+S` para falar com ele, `Ctrl+Alt+W` para a janela dele, `Ctrl+Alt+R` para ouvir as respostas que estão esperando, mais dois sem padrão): veja [Falar com ele](#falar-com-ele).
@@ -35,7 +45,7 @@ Uma gravação para sozinha depois de 10 minutos (`--max-recording-seconds`), co
 
 ## Fluxo do Claude
 
-Este segundo módulo transforma o VoiceMate numa conversa por voz com o Claude. Ele é opcional.
+Este fluxo é uma conversa rápida por voz com o Claude: você pergunta, e a resposta é lida em voz alta. Ele precisa do módulo `claude`, escolhido no `make setup`.
 
 1. Aperte `Ctrl+Alt+A`, fale a sua pergunta, aperte `Ctrl+Alt+A` de novo.
 2. O VoiceMate transcreve e copia a transcrição para a área de transferência, e então a envia ao Claude.
@@ -163,7 +173,7 @@ O companion a ignora.
 
 ## Assistente de voz
 
-O assistente de voz é uma conversa do Claude, a "conversa central", com a qual você fala por voz ou escrevendo. Ele sabe o que as suas outras conversas do Claude estão fazendo: pode listá-las, lê-las, perguntar coisas a elas, iniciar novas em segundo plano e avisar quando elas respondem. Vem desligado. O que ele faz por você (encaminhamento, iniciativa, esperas e observações, instruções permanentes, limites) está em [assistant.pt-BR.md](assistant.pt-BR.md).
+O assistente de voz é o que faz do VoiceMate um assistente pessoal. É uma conversa do Claude, a "conversa central", com a qual você fala por voz ou escrevendo. Ele sabe o que as suas outras conversas do Claude estão fazendo: pode listá-las, lê-las, perguntar coisas a elas, iniciar novas em segundo plano e avisar quando elas respondem. Você o liga uma vez ([Ligar](#ligar)). O que ele faz por você (encaminhamento, iniciativa, esperas e observações, instruções permanentes, limites) está em [assistant.pt-BR.md](assistant.pt-BR.md).
 
 O fluxo inteiro, explicado com diagramas (os dois modos, como ele conduz as suas outras conversas, como as respostas voltam), está em [voice-assistant.md](voice-assistant.md); o diagrama de componentes está em [architecture.pt-BR.md](architecture.pt-BR.md#61-assistente-de-voz), e o projeto está nas [notas de pesquisa](research/voice-assistant-design.md).
 

@@ -4,7 +4,7 @@
 
 **Di lo que quieres. El asistente encuentra la conversación correcta de Claude Code, lee en qué punto está, le pregunta lo que necesitas y te avisa por voz cuando responde.**
 
-Seguramente tienes varias conversaciones de Claude Code abiertas a la vez: una en Claude Desktop, otra en una terminal, otra trabajando en segundo plano. Seguirles la pista obliga a cambiar de ventana, desplazarte y escribir el mismo "¿cómo va?" una y otra vez. El asistente de VoiceMate lo hace por ti. Tú hablas, él decide adónde van tus palabras, hace los pasos obvios sin preguntar y vuelve solo con resultados o con las decisiones que de verdad son tuyas.
+Seguramente tienes varias conversaciones de Claude Code abiertas a la vez: una en Claude Desktop, otra en una terminal, otra trabajando en segundo plano. Seguirles la pista obliga a cambiar de ventana, desplazarte y escribir el mismo "¿cómo va?" una y otra vez. El asistente de VoiceMate lo hace por ti. Tú hablas, él decide adónde van tus palabras, hace los pasos obvios sin preguntar y vuelve solo con resultados o con las decisiones que de verdad son tuyas. Como todo pasa por tu voz, también es una forma de usar Claude Code sin depender del teclado.
 
 Esta página explica qué hace el asistente por ti y cómo lo hace. Cómo se conecta VoiceMate con Claude (los dos modos, la plantilla de respuesta, la voz) está en [voice-assistant.md](voice-assistant.md) (en inglés); cada ajuste paso a paso está en [usage.es.md](usage.es.md#asistente-de-voz).
 
@@ -12,7 +12,7 @@ Esta página explica qué hace el asistente por ti y cómo lo hace. Cómo se con
 
 ## ✨ Qué hace por ti
 
-Hablas (`Ctrl+Alt+S`) o escribes en la ventana del asistente. Algunas cosas que puedes decir, y lo que pasa:
+Hablas tras una pulsación (`Ctrl+Alt+S` por defecto, una tecla de macro asociada a él, o **Hablar** en la ventana del asistente), o escribes en esa ventana. Algunas cosas que puedes decir, y lo que pasa:
 
 | Dices | Lo que hace el asistente |
 |---|---|

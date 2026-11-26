@@ -4,16 +4,18 @@
 
 Objetivo: como o VoiceMate é construído, com os diagramas de todos os níveis, a API HTTP, a árvore de pacotes e as razões por trás das principais decisões de projeto. Voltar ao [README](../README.pt-BR.md).
 
+O VoiceMate é um assistente pessoal de voz para o Claude Code e o Claude Desktop, com ditado local. As mesmas duas partes servem a tudo: o motor ouve, transcreve e fala, e o companion cuida dos gatilhos, da área de transferência e do assistente.
+
 Esta página descreve a configuração Windows + WSL2 (aplicativo companion no Windows, motor dentro do WSL2), a configuração para a qual o companion foi construído. O modo `local` do Linux e o modo de linha de comando são mencionados onde diferem. Quando o código muda, esta página muda no mesmo pull request. O contrato do protocolo, com todos os detalhes, está em [companion-app.md](companion-app.md).
 
 ## 1. Contexto do sistema
 
 ```mermaid
 flowchart TB
-    user(["Usuário<br/>dita por voz"])
+    user(["Usuário<br/>fala com o VoiceMate"])
 
     subgraph pc["PC do usuário"]
-        vm["VoiceMate<br/>ditado por voz local"]
+        vm["VoiceMate<br/>assistente de voz, ditado local"]
         win["Área de trabalho do Windows<br/>atalhos, área de transferência, bandeja, sons"]
         wsl["VM Linux WSL2<br/>ponte de áudio WSLg"]
         gpu["GPU<br/>AMD ROCm ou NVIDIA CUDA"]

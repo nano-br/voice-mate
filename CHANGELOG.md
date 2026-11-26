@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The documentation now presents VoiceMate as what it is today: a personal voice assistant for
+  Claude Code and Claude Desktop that finds, reads, sends to, watches and starts your conversations
+  and answers out loud, with local dictation as its simplest use. The README opening, the "Why
+  VoiceMate" story, the feature list and the introductions of the usage, assistant, architecture
+  and installation guides say so in every language. Nothing in the app changed.
+- The guides describe how you start an action as "one press" (a hotkey, a macro key or mouse
+  button bound to it, the tray menu, the **Talk** button) instead of tying everything to the
+  keyboard shortcut. The installation guide treats the voice assistant as its fifth step, no
+  longer as an optional extra.
+
 ## [0.6.0] - 2026-11-26
 
 ### Added

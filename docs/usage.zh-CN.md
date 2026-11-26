@@ -2,13 +2,23 @@
 
 # 使用
 
-目的：说明如何在日常中使用 VoiceMate：各种流程、快捷键、配套应用、转写模式、Whisper 模型、语音选项和语音助手。返回 [README](../README.zh-CN.md)。
+目的：说明如何在日常中使用 VoiceMate：助手、向 Claude 快速提问、听写、快捷键和其他启动方式、配套应用、转写模式、Whisper 模型和语音选项。返回 [README](../README.zh-CN.md)。
+
+VoiceMate 用你的声音做三件事，每一件都从按一下开始：
+
+| 你想要 | 默认快捷键 | 说明在哪里 |
+|---|---|---|
+| 与你的助手对话，它统筹你的 Claude Code 和 Claude Desktop 对话，并用语音回答 | `Ctrl+Alt+S` | [语音助手](#语音助手) |
+| 向 Claude 快速提问并听到回答 | `Ctrl+Alt+A` | [Claude 流程](#claude-流程) |
+| 听写文本并粘贴到任何地方 | `Ctrl+Alt+V` | [剪贴板流程](#剪贴板流程) |
+
+按一下不一定非得是键盘快捷键。发送同样按键的宏键或鼠标按键效果相同，托盘菜单里有这些操作，助手窗口里还有一个 **说话** 按钮。
 
 ## 快捷键
 
 | 默认快捷键 | 流程 | 托盘菜单项 | 结果 |
 |---|---|---|---|
-| `Ctrl+Alt+V` | 剪贴板（核心） | “听写” | 转写文本进入剪贴板 |
+| `Ctrl+Alt+V` | 剪贴板（听写） | “听写” | 转写文本进入剪贴板 |
 | `Ctrl+Alt+A` | Claude | “询问 Claude” | 转写文本发送给 Claude；回答进入剪贴板并被朗读出来 |
 
 语音助手有自己的快捷键（`Ctrl+Alt+S` 对它说话，`Ctrl+Alt+W` 打开它的窗口，`Ctrl+Alt+R` 收听待听的回答，另有两个没有默认值）：见 [与助手对话](#与助手对话)。
@@ -35,7 +45,7 @@
 
 ## Claude 流程
 
-这第二个模块把 VoiceMate 变成与 Claude 的语音对话。它是可选的。
+这个流程是与 Claude 的一段快速语音对话：你提问，回答被朗读出来。它需要 `claude` 模块，在 `make setup` 中选择。
 
 1. 按下 `Ctrl+Alt+A`，说出你的问题，再按一次 `Ctrl+Alt+A`。
 2. VoiceMate 转写并把转写文本复制到剪贴板，然后发送给 Claude。
@@ -163,7 +173,7 @@ $env:VOICEMATE_LANG="en"; make run  # PowerShell: engine run natively on Windows
 
 ## 语音助手
 
-语音助手是一个 Claude 对话，即“中央对话”，你可以用语音或打字与它交流。它知道你的其他 Claude 对话在做什么：可以列出它们、读取它们、向它们提问、在后台启动新的对话，并在它们回答时告诉你。它默认关闭。它为你做的事（请求的去向、主动性、等待与关注、长期指令、限制）见 [assistant.zh-CN.md](assistant.zh-CN.md)。
+语音助手让 VoiceMate 成为个人助手。它是一个 Claude 对话，即“中央对话”，你可以用语音或打字与它交流。它知道你的其他 Claude 对话在做什么：可以列出它们、读取它们、向它们提问、在后台启动新的对话，并在它们回答时告诉你。你只需开启一次（[开启](#开启)）。它为你做的事（请求的去向、主动性、等待与关注、长期指令、限制）见 [assistant.zh-CN.md](assistant.zh-CN.md)。
 
 整个流程配有图表说明（两种模式、它如何统筹你的其他对话、回答如何回来），见 [voice-assistant.md](voice-assistant.md)；组件图在 [architecture.zh-CN.md](architecture.zh-CN.md#61-语音助手)，设计见[研究笔记](research/voice-assistant-design.md)。
 
