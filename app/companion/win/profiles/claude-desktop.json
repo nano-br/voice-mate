@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "profile_version": 1,
+  "profile_version": 2,
   "min_voicemate": "0.1.0",
   "app": {
     "name": "Claude Desktop",
     "tested_versions": [
-      "4.29.0"
+      "6.28899.6"
     ],
-    "notes": "Code tab: sidebar rows are buttons with a label group, the conversation is a document named '<title> - Claude Code', the prompt is a ProseMirror editor."
+    "notes": "Code tab: sidebar rows are links (they were buttons before 6.28899, which this profile no longer matches) with a label group, the conversation is a document named '<title> - Claude Code', the prompt is a ProseMirror editor."
   },
   "window": {
     "control_type": "WindowControl",
@@ -24,7 +24,7 @@
     },
     "row": {
       "match": {
-        "control_type": "ButtonControl",
+        "control_type": "HyperlinkControl",
         "class_prefix": "w-full shrink-0 border-none"
       },
       "max_depth": 12
