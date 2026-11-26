@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Sending to a Claude Desktop conversation works again with Desktop 6.28899. That version turned the
+  conversations of the sidebar from buttons into links, so VoiceMate found none of them and every
+  send failed with "conversation missing". The Desktop profile (version 2) now looks for links.
+  Installed copies pick it up on their next profile check, without a new release.
+  A Desktop older than 6.28899 no longer matches this profile; the Desktop updates itself, so update
+  it if sending stops working.
+
 ## [0.5.3] - 2026-11-16
 
 ### Fixed

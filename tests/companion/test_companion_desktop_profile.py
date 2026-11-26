@@ -31,6 +31,8 @@ from app.companion.win.desktop_profile import (
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGED_JSON = dp.PACKAGED_PROFILE_PATH
 URL = "https://example.test/claude-desktop.json"
+# The packaged profile's version; remote and override versions in the tests are relative to it.
+PV: int = json.loads(PACKAGED_JSON.read_text(encoding="utf-8"))["profile_version"]
 Json = Any  # a JSON value or a loosely typed argument
 
 
@@ -68,7 +70,7 @@ def test_the_repo_copy_is_the_packaged_profile() -> None:
 
 def test_the_default_profile_has_the_values_the_driver_had_hard_coded() -> None:
     p = load_packaged()
-    assert (p.schema, p.profile_version) == (1, 1)
+    assert (p.schema, p.profile_version) == (1, 2)
     assert p.window == dp.Matcher("WindowControl", class_prefix="Chrome_WidgetWin", name_equals="Claude")
     assert p.conversation.document_name("T") == "T - Claude Code"
     assert p.conversation.title_of("T - Claude Code") == "T"
@@ -91,8 +93,11 @@ def test_the_default_profile_finds_the_same_controls_as_the_old_code() -> None:
     assert p.sidebar.container.steps[0].match.matches(group)
     assert not p.sidebar.container.steps[0].match.matches(FakeControl("PaneControl", "dframe-sidebar"))
     row_class = "w-full shrink-0 border-none rounded"
-    assert p.sidebar.row.match.matches(FakeControl("ButtonControl", row_class))
-    assert not p.sidebar.row.match.matches(FakeControl("ButtonControl", "other"))
+    assert p.sidebar.row.match.matches(FakeControl("HyperlinkControl", row_class))
+    assert not p.sidebar.row.match.matches(FakeControl("HyperlinkControl", "other"))
+    # Since Desktop 6.28899 the navigation items (Create, Search, Plugins) are buttons with the same
+    # classes and a label group, and only the conversations are links.
+    assert not p.sidebar.row.match.matches(FakeControl("ButtonControl", row_class))
     assert p.sidebar.label.matches(FakeControl("GroupControl", "a dframe-fade-label"))
     assert p.sidebar.status.matches(FakeControl("StatusBarControl", ""))
     doc = p.conversation.document.steps[0].match
@@ -251,13 +256,15 @@ def test_a_newer_valid_remote_profile_is_adopted_cached_and_reloaded(tmp_path: P
 
 
 def test_only_a_higher_version_is_adopted(tmp_path: Path) -> None:
-    m, _ = manager(tmp_path, ok(variant(1)), ok(variant(1, timeouts__open_wait_s=9)), ok(variant(3)), ok(variant(2)))
+    m, _ = manager(
+        tmp_path, ok(variant(PV)), ok(variant(PV, timeouts__open_wait_s=9)), ok(variant(PV + 2)), ok(variant(PV + 1))
+    )
     assert m.check_for_update().status == "not_newer"  # equal to the packaged one
     assert m.check_for_update().status == "not_newer"
     assert m.check_for_update().status == "updated"
-    assert m.current().profile_version == 3
+    assert m.current().profile_version == PV + 2
     assert m.check_for_update().status == "not_newer"  # older than the cached one
-    assert m.current().profile_version == 3
+    assert m.current().profile_version == PV + 2
 
 
 def test_an_unsupported_schema_or_invalid_remote_profile_keeps_the_current_one(tmp_path: Path) -> None:
@@ -266,7 +273,7 @@ def test_an_unsupported_schema_or_invalid_remote_profile_keeps_the_current_one(t
         result = m.check_for_update()
         assert result.status == "invalid"
         assert result.detail
-    assert (m.source(), m.current().profile_version) == ("packaged", 1)
+    assert (m.source(), m.current().profile_version) == ("packaged", PV)
     assert not (tmp_path / "cache" / "remote-profile.json").exists()
 
 
@@ -275,7 +282,7 @@ def test_a_profile_that_needs_a_newer_voicemate_is_not_adopted(tmp_path: Path) -
     result = m.check_for_update()
     assert result.status == "incompatible"
     assert "2.0.0" in result.detail
-    assert m.current().profile_version == 1
+    assert m.current().profile_version == PV
 
 
 def test_the_etag_is_sent_back_and_a_304_changes_nothing(tmp_path: Path) -> None:
@@ -325,7 +332,7 @@ def test_a_corrupt_cache_is_ignored_with_a_reason(tmp_path: Path) -> None:
     cache.mkdir()
     (cache / "remote-profile.json").write_text("{broken", encoding="utf-8")
     m, _ = manager(tmp_path)
-    assert (m.source(), m.current().profile_version) == ("packaged", 1)
+    assert (m.source(), m.current().profile_version) == ("packaged", PV)
     assert "cached profile ignored" in m.last_error
 
 
@@ -427,9 +434,9 @@ def test_a_failing_changed_callback_does_not_break_the_manager(tmp_path: Path) -
     def boom(_: DesktopProfile) -> None:
         raise RuntimeError("ui gone")
 
-    m, _ = manager(tmp_path, ok(variant(2)), changed=boom)
+    m, _ = manager(tmp_path, ok(variant(PV + 1)), changed=boom)
     assert m.check_for_update().status == "updated"
-    assert m.current().profile_version == 2
+    assert m.current().profile_version == PV + 1
 
 
 def test_the_default_fetcher_reads_a_304_as_an_answer(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -634,9 +641,10 @@ def test_sidebar_rows_follow_the_profile_selectors() -> None:
     def row(label_class: str, title: str) -> FakeControl:
         label = FakeControl("GroupControl", label_class, children=[FakeControl("TextControl", name=title)])
         status = FakeControl("StatusBarControl", children=[FakeControl("TextControl", name="Running")])
-        return FakeControl("ButtonControl", "w-full shrink-0 border-none", children=[label, status])
+        return FakeControl("HyperlinkControl", "w-full shrink-0 border-none", children=[label, status])
 
-    nav = FakeControl("ButtonControl", "w-full shrink-0 border-none", children=[FakeControl("GroupControl", "icon")])
+    nav_label = FakeControl("GroupControl", "dframe-fade-label", children=[FakeControl("TextControl", name="Plugins")])
+    nav = FakeControl("ButtonControl", "w-full shrink-0 border-none", children=[nav_label])
     sidebar = FakeControl("GroupControl", "dframe-sidebar", children=[nav, row("dframe-fade-label", "Alpha")])
     window = FakeControl("WindowControl", children=[FakeControl("PaneControl", children=[sidebar])])
     default = fake_backend([]).sidebar_entries(window)
@@ -698,11 +706,11 @@ def test_the_document_prompt_and_visible_text_follow_the_profile() -> None:
 
 
 def test_the_backend_snapshots_the_profile_per_session() -> None:
-    profiles = [load_packaged(), parse_profile(as_bytes(variant(2)))]
+    profiles = [load_packaged(), parse_profile(as_bytes(variant(PV + 1)))]
     backend = fake_backend([])
     backend._source = lambda: profiles[0]
     with backend.session():
         profiles.reverse()  # an update lands midway: this session keeps the one it started with
-        assert backend._p().profile_version == 1
+        assert backend._p().profile_version == PV
     with backend.session():
-        assert backend._p().profile_version == 2
+        assert backend._p().profile_version == PV + 1
